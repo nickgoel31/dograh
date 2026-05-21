@@ -37,7 +37,7 @@ if ($Dev) {
 
 # Install pipecat in editable mode with all extras
 Write-Host "Installing pipecat dependencies..."
-pip install -e './pipecat[cartesia,deepgram,openai,elevenlabs,groq,google,azure,sarvam,soundfile,silero,webrtc,speechmatics,openrouter,camb,smallest]'
+pip install -e './pipecat[cartesia,deepgram,openai,elevenlabs,groq,google,azure,sarvam,soundfile,silero,webrtc,speechmatics,openrouter,camb]'
 
 if ($Dev) {
     Write-Host "Installing pipecat dev dependencies..."

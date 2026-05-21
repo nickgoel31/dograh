@@ -392,25 +392,6 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
-    elif user_config.tts.provider == ServiceProviders.SMALLEST.value:
-        from pipecat.services.smallest.tts import (
-            SmallestHttpTTSService,
-            SmallestTTSSettings,
-        )
-
-        voice = getattr(user_config.tts, "voice", None) or "emily"
-        speed = getattr(user_config.tts, "speed", None)
-        return SmallestHttpTTSService(
-            api_key=user_config.tts.api_key,
-            settings=SmallestTTSSettings(
-                model=user_config.tts.model,
-                voice=voice,
-                speed=speed,
-            ),
-            text_filters=[xml_function_tag_filter],
-            skip_aggregator_types=["recording_router", "recording"],
-            silence_time_s=1.0,
-        )
     else:
         raise HTTPException(
             status_code=400, detail=f"Invalid TTS provider {user_config.tts.provider}"

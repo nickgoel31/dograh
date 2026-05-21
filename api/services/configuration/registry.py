@@ -35,7 +35,6 @@ class ServiceProviders(str, Enum):
     OPENAI_REALTIME = "openai_realtime"
     GOOGLE_REALTIME = "google_realtime"
     GOOGLE_VERTEX_REALTIME = "google_vertex_realtime"
-    SMALLEST = "smallest"
 
 
 class BaseServiceConfiguration(BaseModel):
@@ -56,7 +55,6 @@ class BaseServiceConfiguration(BaseModel):
         ServiceProviders.OPENAI_REALTIME,
         ServiceProviders.GOOGLE_REALTIME,
         ServiceProviders.GOOGLE_VERTEX_REALTIME,
-        ServiceProviders.SMALLEST,
         # ServiceProviders.SARVAM,
     ]
     api_key: str | list[str]
@@ -785,31 +783,6 @@ class SpeachesTTSConfiguration(BaseTTSConfiguration):
     )
 
 
-SMALLEST_TTS_MODELS = ["lightning", "lightning-large"]
-SMALLEST_VOICES = ["emily", "aria", "michael", "james", "aditi", "ananya", "arjun", "diya", "kabir", "meera", "riya", "rohit", "sara", "vikram"]
-
-@register_tts
-class SmallestTTSConfiguration(BaseTTSConfiguration):
-    provider: Literal[ServiceProviders.SMALLEST] = ServiceProviders.SMALLEST
-    model: str = Field(
-        default="lightning",
-        json_schema_extra={
-            "examples": SMALLEST_TTS_MODELS,
-            "allow_custom_input": True,
-        },
-    )
-    voice: str = Field(
-        default="emily",
-        json_schema_extra={
-            "examples": SMALLEST_VOICES,
-            "allow_custom_input": True,
-        },
-    )
-    speed: float | None = Field(
-        default=None, ge=0.5, le=2.0, description="Speech speed multiplier."
-    )
-
-
 TTSConfig = Annotated[
     Union[
         DeepgramTTSConfiguration,
@@ -821,7 +794,6 @@ TTSConfig = Annotated[
         CambTTSConfiguration,
         RimeTTSConfiguration,
         SpeachesTTSConfiguration,
-        SmallestTTSConfiguration,
     ],
     Field(discriminator="provider"),
 ]
