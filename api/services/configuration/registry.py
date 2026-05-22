@@ -25,6 +25,7 @@ class ServiceProviders(str, Enum):
     AZURE = "azure"
     DOGRAH = "dograh"
     SARVAM = "sarvam"
+    SMALLEST = "smallest"
     SPEECHMATICS = "speechmatics"
     CAMB = "camb"
     AWS_BEDROCK = "aws_bedrock"
@@ -710,6 +711,45 @@ class SarvamTTSConfiguration(BaseTTSConfiguration):
     )
 
 
+SMALLEST_TTS_MODELS = ["lightning", "lightning-large", "lightning-v3.1"]
+SMALLEST_TTS_VOICES = [
+    "emily",
+    "sophia",
+    "magnus",
+    "arnav",
+    "ananya",
+    "aria",
+    "michael",
+    "james",
+    "aditi",
+    "diya",
+    "kabir",
+    "meera",
+    "riya",
+    "rohit",
+    "sara",
+    "vikram",
+]
+
+
+@register_tts
+class SmallestTTSConfiguration(BaseTTSConfiguration):
+    provider: Literal[ServiceProviders.SMALLEST] = ServiceProviders.SMALLEST
+    model: str = Field(
+        default="lightning-v3.1",
+        description="Smallest AI TTS model.",
+        json_schema_extra={"examples": SMALLEST_TTS_MODELS, "allow_custom_input": True},
+    )
+    voice: str = Field(
+        default="sophia",
+        description="Smallest AI voice name.",
+        json_schema_extra={"examples": SMALLEST_TTS_VOICES, "allow_custom_input": True},
+    )
+    speed: float = Field(
+        default=1.0, ge=0.5, le=2.0, description="Speech speed multiplier."
+    )
+
+
 CAMB_TTS_MODELS = ["mars-flash", "mars-pro", "mars-instruct"]
 
 
@@ -791,6 +831,7 @@ TTSConfig = Annotated[
         CartesiaTTSConfiguration,
         DograhTTSService,
         SarvamTTSConfiguration,
+        SmallestTTSConfiguration,
         CambTTSConfiguration,
         RimeTTSConfiguration,
         SpeachesTTSConfiguration,
