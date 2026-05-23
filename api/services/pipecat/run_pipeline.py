@@ -7,6 +7,10 @@ from loguru import logger
 from api.db import db_client
 from api.enums import WorkflowRunMode
 from api.services.configuration.registry import ServiceProviders
+from api.services.integrations import (
+    IntegrationRuntimeContext,
+    create_runtime_sessions,
+)
 from api.services.pipecat.audio_config import AudioConfig, create_audio_config
 from api.services.pipecat.event_handlers import (
     register_audio_data_handler,
@@ -24,6 +28,9 @@ from api.services.pipecat.pipeline_engine_callbacks_processor import (
 )
 from api.services.pipecat.pipeline_metrics_aggregator import PipelineMetricsAggregator
 from api.services.pipecat.pre_call_fetch import execute_pre_call_fetch
+from api.services.pipecat.realtime_feedback_events import (
+    build_node_transition_event,
+)
 from api.services.pipecat.realtime_feedback_observer import (
     RealtimeFeedbackObserver,
     register_turn_log_handlers,
@@ -106,6 +113,16 @@ def _create_realtime_user_turn_config(provider: str):
         # OpenAI Realtime already emits speaking-state frames and interruption
         # events from the provider, so the aggregator should follow those
         # external signals rather than run its own local VAD.
+        return (
+            UserTurnStrategies(
+                start=[ExternalUserTurnStartStrategy()],
+                stop=[ExternalUserTurnStopStrategy()],
+            ),
+            None,
+        )
+    if provider == ServiceProviders.GROK_REALTIME.value:
+        # Grok Voice Agent emits server-side speech-start/stop and
+        # interruption signals, so local VAD should stay out of the way.
         return (
             UserTurnStrategies(
                 start=[ExternalUserTurnStartStrategy()],
@@ -461,16 +478,13 @@ async def _run_pipeline(
         # Update current node on the buffer so subsequent events are tagged
         in_memory_logs_buffer.set_current_node(node_id, node_name)
 
-        message = {
-            "type": RealtimeFeedbackType.NODE_TRANSITION.value,
-            "payload": {
-                "node_id": node_id,
-                "node_name": node_name,
-                "previous_node_id": previous_node_id,
-                "previous_node_name": previous_node_name,
-                "allow_interrupt": allow_interrupt,
-            },
-        }
+        message = build_node_transition_event(
+            node_id=node_id,
+            node_name=node_name,
+            previous_node_id=previous_node_id,
+            previous_node_name=previous_node_name,
+            allow_interrupt=allow_interrupt,
+        )
         # Send via WebSocket if available
         if ws_sender:
             try:
@@ -524,6 +538,18 @@ async def _run_pipeline(
 
     # Create pipeline components
     audio_buffer, context = create_pipeline_components(audio_config)
+
+    integration_runtime_sessions = create_runtime_sessions(
+        IntegrationRuntimeContext(
+            workflow_run_id=workflow_run_id,
+            workflow_run=workflow_run,
+            workflow_graph=workflow_graph,
+            run_definition=run_definition,
+            user_config=user_config,
+            is_realtime=is_realtime,
+            context_messages_provider=lambda: context.messages,
+        )
+    )
 
     # Set the context, audio_config, and audio_buffer after creation
     engine.set_context(context)
@@ -717,6 +743,14 @@ async def _run_pipeline(
     # Create pipeline task with audio configuration
     task = create_pipeline_task(pipeline, workflow_run_id, audio_config)
 
+    for runtime_session in integration_runtime_sessions:
+        runtime_session.attach(task)
+        logger.info(
+            "[integrations] attached runtime session '{}' for workflow run {}",
+            runtime_session.name,
+            workflow_run_id,
+        )
+
     # Now set the task and transport output on the engine
     engine.set_task(task)
     engine.set_transport_output(transport.output())
@@ -779,8 +813,8 @@ async def _run_pipeline(
         pipeline_metrics_aggregator=pipeline_metrics_aggregator,
         audio_config=audio_config,
         pre_call_fetch_task=pre_call_fetch_task,
-        fetch_recording_audio=fetch_audio,
         user_provider_id=user_provider_id,
+        integration_runtime_sessions=integration_runtime_sessions,
     )
 
     register_audio_data_handler(audio_buffer, workflow_run_id, in_memory_audio_buffer)

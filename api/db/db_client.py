@@ -2,6 +2,7 @@ from api.db.agent_trigger_client import AgentTriggerClient
 from api.db.api_key_client import APIKeyClient
 from api.db.campaign_client import CampaignClient
 from api.db.embed_token_client import EmbedTokenClient
+from api.db.folder_client import FolderClient
 from api.db.integration_client import IntegrationClient
 from api.db.knowledge_base_client import KnowledgeBaseClient
 from api.db.organization_client import OrganizationClient
@@ -16,12 +17,14 @@ from api.db.webhook_credential_client import WebhookCredentialClient
 from api.db.workflow_client import WorkflowClient
 from api.db.workflow_recording_client import WorkflowRecordingClient
 from api.db.workflow_run_client import WorkflowRunClient
+from api.db.workflow_run_text_session_client import WorkflowRunTextSessionClient
 from api.db.workflow_template_client import WorkflowTemplateClient
 
 
 class DBClient(
     WorkflowClient,
     WorkflowRunClient,
+    WorkflowRunTextSessionClient,
     UserClient,
     OrganizationClient,
     OrganizationConfigurationClient,
@@ -39,6 +42,7 @@ class DBClient(
     WorkflowRecordingClient,
     TelephonyConfigurationClient,
     TelephonyPhoneNumberClient,
+    FolderClient,
 ):
     """
     Unified database client that combines all specialized database operations.
@@ -60,6 +64,7 @@ class DBClient(
     - WebhookCredentialClient: handles webhook credential operations
     - ToolClient: handles tool operations for reusable HTTP API tools
     - KnowledgeBaseClient: handles knowledge base document and vector search operations
+    - FolderClient: handles folder operations for grouping workflows (agents)
     """
 
     pass

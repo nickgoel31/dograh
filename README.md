@@ -18,7 +18,8 @@
 
 <p align="center">
   <a href="https://docs.dograh.com">📖 Docs</a> &nbsp;·&nbsp;
-  <a href="LICENSE">📜 BSD 2-Clause</a>
+  <a href="LICENSE">📜 BSD 2-Clause</a> &nbsp;·&nbsp;
+  <a href="README.zh-CN.md">🌐 中文</a>
 </p>
 
 <p align="center">
@@ -130,6 +131,11 @@ Visit [https://www.dograh.com](https://www.dograh.com/) for our managed cloud of
 ## 📚Documentation
 
 You can go to [https://docs.dograh.com](https://docs.dograh.com/) for our documentation.
+
+## 📦 SDKs
+
+- **Python SDK** — [pypi.org/project/dograh-sdk](https://pypi.org/project/dograh-sdk/)
+- **Node SDK** — [npmjs.com/package/@dograh/sdk](https://www.npmjs.com/package/@dograh/sdk)
 
 ## 🤝Community & Support
 
