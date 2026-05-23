@@ -39,11 +39,14 @@ if [[ $EUID -ne 0 ]]; then
     dograh_fail "This script must be run as root or with sudo"
 fi
 
-if [[ ! -d "dograh" ]]; then
-    echo -e "${RED}Error: 'dograh' directory not found.${NC}"
-    echo -e "${YELLOW}Please run this script from the directory containing your Dograh installation.${NC}"
-    echo -e "${YELLOW}If you haven't set up Dograh yet, run the remote setup first:${NC}"
-    echo -e "${BLUE}  curl -o setup_remote.sh https://raw.githubusercontent.com/dograh-hq/dograh/main/scripts/setup_remote.sh && chmod +x setup_remote.sh && ./setup_remote.sh${NC}"
+# Detect if we are already inside the dograh project directory or in the parent directory
+if [[ -f "docker-compose.yaml" && -f "remote_up.sh" ]]; then
+    DOGRAH_DIR="."
+elif [[ -d "dograh" ]]; then
+    DOGRAH_DIR="dograh"
+else
+    echo -e "${RED}Error: Could not locate Dograh installation directory.${NC}"
+    echo -e "${YELLOW}Please run this script from the 'dograh' root directory or its parent directory.${NC}"
     exit 1
 fi
 
@@ -98,7 +101,7 @@ fi
 echo -e "${GREEN}✓ Certbot installed${NC}"
 
 echo -e "${BLUE}[3/7] Stopping Dograh services...${NC}"
-cd dograh
+cd "$DOGRAH_DIR"
 DOGRAH_DEPLOY_PROJECT_DIR="$(pwd)"
 
 if [[ ! -f remote_up.sh || ! -f scripts/lib/setup_common.sh ]]; then

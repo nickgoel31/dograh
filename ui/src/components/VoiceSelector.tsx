@@ -69,6 +69,33 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
             return;
         }
 
+        if (providerKey === "smallest") {
+            setVoices([
+                { voice_id: "sunidhi", name: "Sunidhi", gender: "Female" },
+                { voice_id: "chinmayi", name: "Chinmayi", gender: "Female" },
+                { voice_id: "aanya", name: "Aanya", gender: "Female" },
+                { voice_id: "siya", name: "Siya", gender: "Female" },
+                { voice_id: "anuja", name: "Anuja", gender: "Female" },
+                { voice_id: "avni", name: "Avni", gender: "Female" },
+                { voice_id: "ishani", name: "Ishani", gender: "Female" },
+                { voice_id: "yuvika", name: "Yuvika", gender: "Female" },
+                { voice_id: "advika", name: "Advika", gender: "Female" },
+                { voice_id: "sana", name: "Sana", gender: "Female" },
+                { voice_id: "sameera", name: "Sameera", gender: "Female" },
+                { voice_id: "srishti", name: "Srishti", gender: "Female" },
+                { voice_id: "sakshi", name: "Sakshi", gender: "Female" },
+                { voice_id: "maya", name: "Maya", gender: "Female" },
+                { voice_id: "wasim", name: "Wasim", gender: "Male" },
+                { voice_id: "rehan", name: "Rehan", gender: "Male" },
+                { voice_id: "parth", name: "Parth", gender: "Male" },
+                { voice_id: "atharv", name: "Atharv", gender: "Male" },
+                { voice_id: "vivaan", name: "Vivaan", gender: "Male" },
+                { voice_id: "devansh", name: "Devansh", gender: "Male" },
+                { voice_id: "aarush", name: "Aarush", gender: "Male" }
+            ]);
+            return;
+        }
+
         setIsLoading(true);
         setError(null);
 

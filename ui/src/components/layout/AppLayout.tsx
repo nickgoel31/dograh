@@ -1,6 +1,7 @@
 "use client";
 
 import { Menu } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import posthog from "posthog-js";
@@ -22,7 +23,16 @@ function AppHeader() {
         <Button variant="ghost" size="icon" onClick={toggleSidebar} aria-label="Open menu" className="md:hidden">
           <Menu className="h-5 w-5" />
         </Button>
-        <Link href="/" className="text-lg font-bold md:hidden">Parrot AI by TWJ Labs</Link>
+        <Link href="/" className="flex items-center gap-2 text-lg font-bold md:hidden">
+          <Image
+            src="/logo.png"
+            alt="Parrot AI Logo"
+            width={24}
+            height={24}
+            className="rounded-md object-cover"
+          />
+          <span>Parrot AI</span>
+        </Link>
       </div>
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" asChild>

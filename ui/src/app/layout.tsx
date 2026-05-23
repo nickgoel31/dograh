@@ -28,7 +28,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Parrot AI by TWJ Labs",
+  title: "Parrot AI",
   description: "Open Source Voice Assistant Workflow Builder",
 };
 

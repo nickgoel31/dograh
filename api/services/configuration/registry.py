@@ -713,22 +713,27 @@ class SarvamTTSConfiguration(BaseTTSConfiguration):
 
 SMALLEST_TTS_MODELS = ["lightning", "lightning-large", "lightning-v3.1"]
 SMALLEST_TTS_VOICES = [
-    "emily",
-    "sophia",
-    "magnus",
-    "arnav",
-    "ananya",
-    "aria",
-    "michael",
-    "james",
-    "aditi",
-    "diya",
-    "kabir",
-    "meera",
-    "riya",
-    "rohit",
-    "sara",
-    "vikram",
+    "sunidhi",
+    "chinmayi",
+    "aanya",
+    "siya",
+    "anuja",
+    "avni",
+    "ishani",
+    "yuvika",
+    "advika",
+    "sana",
+    "sameera",
+    "srishti",
+    "sakshi",
+    "maya",
+    "wasim",
+    "rehan",
+    "parth",
+    "atharv",
+    "vivaan",
+    "devansh",
+    "aarush",
 ]
 
 
@@ -741,7 +746,7 @@ class SmallestTTSConfiguration(BaseTTSConfiguration):
         json_schema_extra={"examples": SMALLEST_TTS_MODELS, "allow_custom_input": True},
     )
     voice: str = Field(
-        default="sophia",
+        default="sunidhi",
         description="Smallest AI voice name.",
         json_schema_extra={"examples": SMALLEST_TTS_VOICES, "allow_custom_input": True},
     )

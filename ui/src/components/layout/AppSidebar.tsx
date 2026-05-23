@@ -22,6 +22,7 @@ import {
   Workflow,
   Wrench,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useRef } from "react";
@@ -262,13 +263,20 @@ export function AppSidebar() {
           <div className={cn("flex items-center gap-2", isCollapsed && "hidden")}>
             <Link
               href="/"
-              className="notranslate flex items-center gap-2 px-2 text-xl font-bold"
+              className="notranslate flex items-center gap-2.5 px-2 text-xl font-bold hover:opacity-90 transition-opacity"
               translate="no"
             >
-              Parrot AI by TWJ Labs
+              <Image
+                src="/logo.png"
+                alt="Parrot AI Logo"
+                width={32}
+                height={32}
+                className="rounded-lg object-cover"
+              />
+              <span className="tracking-tight">Parrot AI</span>
               {versionInfo && (
                 <span
-                  className="notranslate text-xs font-normal text-muted-foreground"
+                  className="notranslate text-xs font-normal text-muted-foreground self-end mb-0.5"
                   translate="no"
                 >
                   v{versionInfo.ui}
