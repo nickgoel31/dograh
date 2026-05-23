@@ -272,6 +272,7 @@ export function AppSidebar() {
                 width={32}
                 height={32}
                 className="rounded-lg object-cover"
+                unoptimized
               />
               <span className="tracking-tight">Parrot AI</span>
               {versionInfo && (

@@ -30,6 +30,7 @@ function AppHeader() {
             width={24}
             height={24}
             className="rounded-md object-cover"
+            unoptimized
           />
           <span>Parrot AI</span>
         </Link>
