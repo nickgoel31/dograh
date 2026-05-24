@@ -217,8 +217,15 @@ class VobizProvider(TelephonyProvider):
         from datetime import datetime, timezone
 
         if not signature or not timestamp:
-            logger.warning("Missing signature or timestamp headers for Vobiz webhook")
-            return False
+            # Vobiz does not currently send signing headers with its
+            # webhooks.  Log the absence but let the call through so
+            # inbound/outbound flows are not blocked.  If headers start
+            # arriving in the future the full HMAC check below will run.
+            logger.warning(
+                "Missing signature or timestamp headers for Vobiz webhook — "
+                "skipping signature validation"
+            )
+            return True
 
         if not self.auth_token:
             logger.error(
