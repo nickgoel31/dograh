@@ -12,6 +12,7 @@ import {
   Database,
   FileText,
   Home,
+  IndianRupee,
   Key,
   LogOut,
   type LucideIcon,
@@ -136,6 +137,11 @@ const NAV_SECTIONS: SidebarNavSection[] = [
         title: "Agent Runs",
         url: "/usage",
         icon: TrendingUp,
+      },
+      {
+        title: "Billing",
+        url: "/billing",
+        icon: IndianRupee,
       },
       {
         title: "Reports",
