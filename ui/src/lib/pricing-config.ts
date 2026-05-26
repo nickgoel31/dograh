@@ -6,7 +6,7 @@ export interface TierConfig {
   maxCalls: number;
 }
 
-export const TIER_THRESHOLDS: TierConfig[] = [
+export const DEFAULT_TIER_THRESHOLDS: TierConfig[] = [
   { label: 'Tier 1', maxCalls: 5000 },
   { label: 'Tier 2', maxCalls: 25000 },
   { label: 'Tier 3a', maxCalls: 50000 },
@@ -14,7 +14,7 @@ export const TIER_THRESHOLDS: TierConfig[] = [
   { label: 'Tier 4', maxCalls: Infinity }, // anything above 100k
 ];
 
-export const PRICES: Record<TierKey, Record<BillingMode, number>> = {
+export const DEFAULT_PRICES: Record<string, Record<BillingMode, number>> = {
   'Tier 1': {
     per_minute: 5.71,
     per_30s: 3.06,
@@ -37,6 +37,11 @@ export const PRICES: Record<TierKey, Record<BillingMode, number>> = {
   },
 };
 
+export interface BillingConfiguration {
+  tiers: TierConfig[];
+  prices: Record<string, Record<BillingMode, number>>;
+}
+
 /**
  * Returns the number of billable units for a call.
  * per_minute: rounded up to the nearest minute.
@@ -53,25 +58,26 @@ export function getBillableUnits(durationSeconds: number, mode: BillingMode): nu
 /**
  * Returns the tier based on the total monthly call count.
  */
-export function getTier(monthlyCallCount: number): TierKey {
-  for (const threshold of TIER_THRESHOLDS) {
-    if (monthlyCallCount <= threshold.maxCalls) {
+export function getTier(monthlyCallCount: number, thresholds: TierConfig[] = DEFAULT_TIER_THRESHOLDS): TierKey | string {
+  for (const threshold of thresholds) {
+    if (threshold.maxCalls === null || monthlyCallCount <= threshold.maxCalls) {
       return threshold.label;
     }
   }
-  return 'Tier 4'; // Fallback
+  // Fallback to the last tier if no match
+  return thresholds.length > 0 ? thresholds[thresholds.length - 1].label : 'Tier 4';
 }
 
 /**
  * Returns the next tier's configuration to display how close the user is,
  * or null if they are on the highest tier.
  */
-export function getNextTier(monthlyCallCount: number): TierConfig | null {
-  for (const threshold of TIER_THRESHOLDS) {
-    if (monthlyCallCount <= threshold.maxCalls) {
-      const currentIndex = TIER_THRESHOLDS.indexOf(threshold);
-      if (currentIndex < TIER_THRESHOLDS.length - 1) {
-        return TIER_THRESHOLDS[currentIndex + 1];
+export function getNextTier(monthlyCallCount: number, thresholds: TierConfig[] = DEFAULT_TIER_THRESHOLDS): TierConfig | null {
+  for (let i = 0; i < thresholds.length; i++) {
+    const threshold = thresholds[i];
+    if (threshold.maxCalls === null || monthlyCallCount <= threshold.maxCalls) {
+      if (i < thresholds.length - 1) {
+        return thresholds[i + 1];
       }
       return null;
     }
@@ -82,13 +88,18 @@ export function getNextTier(monthlyCallCount: number): TierConfig | null {
 /**
  * Returns the selling price per unit for a given tier and mode.
  */
-export function getPricePerUnit(tier: TierKey, mode: BillingMode): number {
-  return PRICES[tier][mode];
+export function getPricePerUnit(tier: TierKey | string, mode: BillingMode, prices: Record<string, Record<BillingMode, number>> = DEFAULT_PRICES): number {
+  return prices[tier]?.[mode] ?? DEFAULT_PRICES[tier]?.[mode] ?? 0;
 }
 
 /**
  * Returns the charge for a single call in ₹.
  */
-export function calculateCallCharge(durationSeconds: number, tier: TierKey, mode: BillingMode): number {
-  return getBillableUnits(durationSeconds, mode) * getPricePerUnit(tier, mode);
+export function calculateCallCharge(
+  durationSeconds: number, 
+  tier: TierKey | string, 
+  mode: BillingMode,
+  prices: Record<string, Record<BillingMode, number>> = DEFAULT_PRICES
+): number {
+  return getBillableUnits(durationSeconds, mode) * getPricePerUnit(tier, mode, prices);
 }

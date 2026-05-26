@@ -26,6 +26,10 @@ from api.schemas.telephony_phone_number import (
     PhoneNumberUpdateRequest,
     ProviderSyncStatus,
 )
+from api.schemas.billing import (
+    BillingConfigurationRequest,
+    BillingConfigurationResponse,
+)
 from api.services.auth.depends import get_user
 from api.services.configuration.masking import is_mask_of, mask_key
 from api.services.posthog_client import capture_event
@@ -833,6 +837,54 @@ async def delete_langfuse_credentials(user: UserModel = Depends(get_user)):
     )
 
     return {"message": "Langfuse credentials deleted successfully"}
+
+
+@router.get("/billing-config", response_model=BillingConfigurationResponse)
+async def get_billing_configuration(user: UserModel = Depends(get_user)):
+    """Get the billing configuration for the organization."""
+    if not user.selected_organization_id:
+        raise HTTPException(status_code=400, detail="No organization selected")
+
+    config = await db_client.get_configuration(
+        user.selected_organization_id,
+        OrganizationConfigurationKey.BILLING_CONFIGURATION.value,
+    )
+
+    if not config or not config.value:
+        return BillingConfigurationResponse(tiers=[], prices={})
+
+    return BillingConfigurationResponse(
+        tiers=config.value.get("tiers", []),
+        prices=config.value.get("prices", {}),
+        configured=True,
+    )
+
+
+@router.post("/billing-config", response_model=BillingConfigurationResponse)
+async def save_billing_configuration(
+    request: BillingConfigurationRequest,
+    user: UserModel = Depends(get_user),
+):
+    """Save the billing configuration for the organization."""
+    if not user.selected_organization_id:
+        raise HTTPException(status_code=400, detail="No organization selected")
+
+    config_value = {
+        "tiers": [t.model_dump() for t in request.tiers],
+        "prices": {k: v.model_dump() for k, v in request.prices.items()},
+    }
+
+    await db_client.upsert_configuration(
+        user.selected_organization_id,
+        OrganizationConfigurationKey.BILLING_CONFIGURATION.value,
+        config_value,
+    )
+
+    return BillingConfigurationResponse(
+        tiers=request.tiers,
+        prices=request.prices,
+        configured=True,
+    )
 
 
 class RetryConfigResponse(BaseModel):

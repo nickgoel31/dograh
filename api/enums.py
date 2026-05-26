@@ -89,6 +89,9 @@ class OrganizationConfigurationKey(Enum):
     LANGFUSE_CREDENTIALS = (
         "LANGFUSE_CREDENTIALS"  # Org-level Langfuse tracing credentials
     )
+    BILLING_CONFIGURATION = (
+        "BILLING_CONFIGURATION"  # Org-level custom billing configuration
+    )
 
 
 class WorkflowStatus(Enum):

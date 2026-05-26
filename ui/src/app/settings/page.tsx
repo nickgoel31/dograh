@@ -4,6 +4,7 @@ import { ExternalLink } from "lucide-react";
 
 import { MCPSection } from "@/components/MCPSection";
 import { TelemetrySection } from "@/components/TelemetrySection";
+import { BillingConfigSection } from "@/components/BillingConfigSection";
 import {
   Card,
   CardContent,
@@ -61,6 +62,18 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <TelemetrySection />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Billing Configuration</CardTitle>
+            <CardDescription>
+              Configure the tier thresholds and call pricing for your organization.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BillingConfigSection />
           </CardContent>
         </Card>
       </div>

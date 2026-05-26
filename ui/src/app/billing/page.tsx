@@ -16,8 +16,12 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/lib/auth';
+import { getBillingConfig } from '@/lib/billing-api';
 import {
   type BillingMode,
+  type BillingConfiguration,
+  DEFAULT_TIER_THRESHOLDS,
+  DEFAULT_PRICES,
   calculateCallCharge,
   getBillableUnits,
   getNextTier,
@@ -34,6 +38,12 @@ export default function BillingPage() {
   // Billing mode (per_minute | per_30s)
   const [billingMode, setBillingMode] = useState<BillingMode>('per_minute');
   const [isModeLoaded, setIsModeLoaded] = useState(false);
+
+  // Billing Config
+  const [billingConfig, setBillingConfig] = useState<BillingConfiguration>({
+    tiers: DEFAULT_TIER_THRESHOLDS,
+    prices: DEFAULT_PRICES
+  });
 
   // Agents / Workflows
   const [workflows, setWorkflows] = useState<WorkflowSummaryResponse[]>([]);
@@ -79,6 +89,22 @@ export default function BillingPage() {
       }
     }
     fetchWorkflows();
+  }, [auth.isAuthenticated]);
+
+  // Fetch billing config
+  useEffect(() => {
+    async function fetchConfig() {
+      if (!auth.isAuthenticated) return;
+      try {
+        const data = await getBillingConfig();
+        if (data && data.configured) {
+          setBillingConfig({ tiers: data.tiers, prices: data.prices });
+        }
+      } catch (err) {
+        console.error("Failed to fetch billing config", err);
+      }
+    }
+    fetchConfig();
   }, [auth.isAuthenticated]);
 
   // Fetch all runs for the month (to calculate tier)
@@ -194,14 +220,14 @@ export default function BillingPage() {
 
   // Computations
   const orgTotalCalls = allMonthRuns.length;
-  const tier = getTier(orgTotalCalls);
-  const nextTier = getNextTier(orgTotalCalls);
-  const currentRate = getPricePerUnit(tier, billingMode);
+  const tier = getTier(orgTotalCalls, billingConfig.tiers);
+  const nextTier = getNextTier(orgTotalCalls, billingConfig.tiers);
+  const currentRate = getPricePerUnit(tier, billingMode, billingConfig.prices);
 
   // Summary Card computations based on filtered runs
   const totalMinutes = filteredRuns.reduce((acc, run) => acc + (run.call_duration_seconds / 60), 0);
   const totalBillableUnits = filteredRuns.reduce((acc, run) => acc + getBillableUnits(run.call_duration_seconds, billingMode), 0);
-  const totalRevenue = filteredRuns.reduce((acc, run) => acc + calculateCallCharge(run.call_duration_seconds, tier, billingMode), 0);
+  const totalRevenue = filteredRuns.reduce((acc, run) => acc + calculateCallCharge(run.call_duration_seconds, tier, billingMode, billingConfig.prices), 0);
   const avgRevenuePerCall = filteredRuns.length > 0 ? totalRevenue / filteredRuns.length : 0;
 
   // Per-Agent breakdown computation
@@ -221,7 +247,7 @@ export default function BillingPage() {
     existing.calls += 1;
     existing.minutes += (run.call_duration_seconds / 60);
     existing.billableUnits += getBillableUnits(run.call_duration_seconds, billingMode);
-    existing.revenue += calculateCallCharge(run.call_duration_seconds, tier, billingMode);
+    existing.revenue += calculateCallCharge(run.call_duration_seconds, tier, billingMode, billingConfig.prices);
 
     breakdownByAgent.set(key, existing);
   });
@@ -507,7 +533,7 @@ export default function BillingPage() {
                 ) : paginatedRuns.length > 0 ? (
                   paginatedRuns.map(run => {
                     const units = getBillableUnits(run.call_duration_seconds, billingMode);
-                    const charge = calculateCallCharge(run.call_duration_seconds, tier, billingMode);
+                    const charge = calculateCallCharge(run.call_duration_seconds, tier, billingMode, billingConfig.prices);
                     return (
                       <TableRow key={run.id}>
                         <TableCell className="text-sm whitespace-nowrap">{formatDate(run.created_at)}</TableCell>
