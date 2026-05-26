@@ -2,7 +2,7 @@ export type BillingMode = 'per_minute' | 'per_30s';
 export type TierKey = 'Tier 1' | 'Tier 2' | 'Tier 3a' | 'Tier 3b' | 'Tier 4';
 
 export interface TierConfig {
-  label: TierKey;
+  label: string;
   maxCalls: number;
 }
 
