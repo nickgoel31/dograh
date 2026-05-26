@@ -214,7 +214,7 @@ export default function BillingPage() {
   }>();
 
   filteredRuns.forEach(run => {
-    const key = run.workflow_id || 'unknown';
+    const key = run.workflow_id?.toString() || 'unknown';
     const name = run.workflow_name || 'Unknown Agent';
     const existing = breakdownByAgent.get(key) || { name, calls: 0, minutes: 0, billableUnits: 0, revenue: 0 };
 
