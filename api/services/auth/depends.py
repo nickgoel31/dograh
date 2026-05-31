@@ -1,7 +1,7 @@
 from typing import Annotated, Optional
 
 import httpx
-from fastapi import Header, HTTPException, Query, WebSocket
+from fastapi import Depends, Header, HTTPException, Query, WebSocket
 from loguru import logger
 from pydantic import ValidationError
 
