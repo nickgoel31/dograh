@@ -150,7 +150,7 @@ export default function SuperadminUsersPage() {
                 body: { role: newRole },
             });
             toast.success("User role updated successfully");
-            fetchUsers(page);
+            fetchUsers(page, selectedOrgFilter);
         } catch {
             toast.error("Failed to update user role");
         }
@@ -181,7 +181,7 @@ export default function SuperadminUsersPage() {
                 body: { is_superuser: !currentStatus },
             });
             toast.success("Superuser status updated");
-            fetchUsers(page);
+            fetchUsers(page, selectedOrgFilter);
         } catch {
             toast.error("Failed to update superuser status");
         }
