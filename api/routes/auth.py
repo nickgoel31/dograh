@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
+from pydantic import BaseModel
 
 from api.db import db_client
 from api.db.models import UserModel
