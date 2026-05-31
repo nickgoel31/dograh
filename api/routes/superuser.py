@@ -177,3 +177,82 @@ async def list_all_organizations(user: UserModel = Depends(get_superuser)):
         orgs = result.scalars().all()
 
     return [{"id": o.id, "name": o.name, "provider_id": o.provider_id} for o in orgs]
+
+
+class SuperuserUserResponse(BaseModel):
+    id: int
+    email: Optional[str]
+    role: str
+    is_superuser: bool
+    created_at: datetime
+    selected_organization_id: Optional[int]
+    provider_id: Optional[str] = None
+
+
+class SuperuserUsersListResponse(BaseModel):
+    users: List[SuperuserUserResponse]
+    total_count: int
+    page: int
+    limit: int
+    total_pages: int
+
+
+@router.get("/users", response_model=SuperuserUsersListResponse)
+async def list_all_users(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+    user: UserModel = Depends(get_superuser),
+):
+    """List all users in the system."""
+    users, total_count = await db_client.get_all_users_paginated(page=page, limit=limit)
+    total_pages = (total_count + limit - 1) // limit
+    
+    return SuperuserUsersListResponse(
+        users=[
+            SuperuserUserResponse(
+                id=u.id,
+                email=u.email,
+                role=u.role,
+                is_superuser=u.is_superuser,
+                created_at=u.created_at,
+                selected_organization_id=u.selected_organization_id,
+                provider_id=u.provider_id,
+            )
+            for u in users
+        ],
+        total_count=total_count,
+        page=page,
+        limit=limit,
+        total_pages=total_pages,
+    )
+
+
+class UpdateUserRoleRequest(BaseModel):
+    role: Optional[str] = None
+    is_superuser: Optional[bool] = None
+
+
+@router.patch("/users/{user_id}/role", response_model=SuperuserUserResponse)
+async def update_user_role(
+    user_id: int,
+    request: UpdateUserRoleRequest,
+    user: UserModel = Depends(get_superuser),
+):
+    """Update a user's role and/or superuser status."""
+    try:
+        updated_user = await db_client.update_user_role_and_superuser(
+            user_id=user_id,
+            role=request.role,
+            is_superuser=request.is_superuser,
+        )
+        return SuperuserUserResponse(
+            id=updated_user.id,
+            email=updated_user.email,
+            role=updated_user.role,
+            is_superuser=updated_user.is_superuser,
+            created_at=updated_user.created_at,
+            selected_organization_id=updated_user.selected_organization_id,
+            provider_id=updated_user.provider_id,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))

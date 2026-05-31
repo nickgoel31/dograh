@@ -69,7 +69,7 @@ async def get_default_configurations() -> DefaultConfigurationsResponse:
 
 @router.get("/auth/user")
 async def get_auth_user(
-    user: UserModel = Depends(require_role([UserRole.ADMIN])),
+    user: UserModel = Depends(get_user),
 ) -> AuthUserResponse:
     return {
         "id": user.id,

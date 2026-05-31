@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "@/lib/auth";
+
 import { getAuthUserApiV1UserAuthUserGet } from "@/client/sdk.gen";
+import { useAuth } from "@/lib/auth";
 
 export function useCurrentUserRole() {
   const { getAccessToken, isAuthenticated } = useAuth();

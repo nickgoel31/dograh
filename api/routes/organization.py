@@ -1014,3 +1014,123 @@ async def get_campaign_defaults(user: UserModel = Depends(require_role([UserRole
         default_retry_config=RetryConfigResponse(**DEFAULT_CAMPAIGN_RETRY_CONFIG),
         last_campaign_settings=last_campaign_settings,
     )
+
+
+class MemberResponse(BaseModel):
+    id: int
+    email: Optional[str]
+    role: str
+    is_superuser: bool
+
+
+class InviteRequest(BaseModel):
+    email: str
+    role: str = "client"  # default to client
+
+
+class InviteResponse(BaseModel):
+    invite_url: str
+    token: str
+
+
+class UpdateMemberRoleRequest(BaseModel):
+    role: str
+
+
+@router.get("/members", response_model=List[MemberResponse])
+async def list_members(
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
+):
+    """List all members of the current user's organization."""
+    if not user.selected_organization_id:
+        raise HTTPException(status_code=400, detail="User has no selected organization")
+    
+    users = await db_client.get_users_by_organization_id(user.selected_organization_id)
+    return [
+        MemberResponse(
+            id=u.id,
+            email=u.email,
+            role=u.role,
+            is_superuser=u.is_superuser
+        ) for u in users
+    ]
+
+
+@router.patch("/members/{member_id}/role", response_model=MemberResponse)
+async def update_member_role(
+    member_id: int,
+    request: UpdateMemberRoleRequest,
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
+):
+    """Update role of an organization member."""
+    if not user.selected_organization_id:
+        raise HTTPException(status_code=400, detail="User has no selected organization")
+
+    # Get the member and check if they belong to this organization
+    members = await db_client.get_users_by_organization_id(user.selected_organization_id)
+    target_member = next((m for m in members if m.id == member_id), None)
+    if not target_member:
+        raise HTTPException(status_code=404, detail="Member not found in organization")
+
+    # Update role
+    updated = await db_client.update_user_role_and_superuser(
+        user_id=member_id,
+        role=request.role
+    )
+    return MemberResponse(
+        id=updated.id,
+        email=updated.email,
+        role=updated.role,
+        is_superuser=updated.is_superuser
+    )
+
+
+@router.delete("/members/{member_id}")
+async def remove_member(
+    member_id: int,
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
+):
+    """Remove a member from the organization."""
+    if not user.selected_organization_id:
+        raise HTTPException(status_code=400, detail="User has no selected organization")
+
+    # Prevent self-removal
+    if member_id == user.id:
+        raise HTTPException(status_code=400, detail="Cannot remove yourself from organization")
+
+    # Get the member and check if they belong to this organization
+    members = await db_client.get_users_by_organization_id(user.selected_organization_id)
+    target_member = next((m for m in members if m.id == member_id), None)
+    if not target_member:
+        raise HTTPException(status_code=404, detail="Member not found in organization")
+
+    # Remove organization association
+    await db_client.remove_user_from_organization(member_id, user.selected_organization_id)
+    return {"detail": "Member removed successfully"}
+
+
+@router.post("/invites", response_model=InviteResponse)
+async def create_invite(
+    request: InviteRequest,
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
+):
+    """Create an organization invitation token and link."""
+    import jwt
+    from datetime import datetime, UTC, timedelta
+    from api.constants import OSS_JWT_SECRET, UI_APP_URL
+
+    if not user.selected_organization_id:
+        raise HTTPException(status_code=400, detail="User has no selected organization")
+
+    # Generate token
+    payload = {
+        "org_id": user.selected_organization_id,
+        "email": request.email,
+        "role": request.role,
+        "exp": datetime.now(UTC) + timedelta(days=7),
+        "iat": datetime.now(UTC),
+    }
+    token = jwt.encode(payload, OSS_JWT_SECRET, algorithm="HS256")
+    invite_url = f"{UI_APP_URL}/signup?invite_token={token}"
+
+    return InviteResponse(invite_url=invite_url, token=token)

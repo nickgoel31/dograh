@@ -5,6 +5,8 @@ import { ExternalLink } from "lucide-react";
 import { MCPSection } from "@/components/MCPSection";
 import { TelemetrySection } from "@/components/TelemetrySection";
 import { BillingConfigSection } from "@/components/BillingConfigSection";
+import { TeamSection } from "@/components/TeamSection";
+import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
 import {
   Card,
   CardContent,
@@ -14,6 +16,10 @@ import {
 } from "@/components/ui/card";
 
 export default function SettingsPage() {
+  const { role, isSuperadmin, loading } = useCurrentUserRole();
+
+  const showTeamSection = !loading && (role === "admin" || role === "super_admin" || isSuperadmin);
+
   return (
     <div className="flex justify-center py-12 px-4">
       <div className="w-full max-w-2xl space-y-6">
@@ -23,6 +29,20 @@ export default function SettingsPage() {
             Manage your platform configuration and integrations.
           </p>
         </div>
+
+        {showTeamSection && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Team Members</CardTitle>
+              <CardDescription>
+                Manage team members, roles, and invite new members to join your workspace.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TeamSection />
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

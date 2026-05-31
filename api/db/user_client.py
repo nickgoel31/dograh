@@ -174,7 +174,7 @@ class UserClient(BaseDBClient):
             return result.scalars().first()
 
     async def create_user_with_email(
-        self, email: str, password_hash: str, name: str | None = None
+        self, email: str, password_hash: str, name: str | None = None, role: str = "admin"
     ) -> UserModel:
         """Create a new user with email and password hash."""
         async with self.async_session() as session:
@@ -182,8 +182,69 @@ class UserClient(BaseDBClient):
                 provider_id=f"oss_{int(datetime.now(timezone.utc).timestamp())}_{uuid.uuid4()}",
                 email=email,
                 password_hash=password_hash,
+                role=role,
             )
             session.add(user)
             await session.commit()
             await session.refresh(user)
             return user
+
+    async def get_all_users_paginated(self, page: int = 1, limit: int = 50) -> tuple[list[UserModel], int]:
+        """Fetch all users paginated for superadmin view."""
+        async with self.async_session() as session:
+            from sqlalchemy import func
+            
+            # Count total
+            count_stmt = select(func.count()).select_from(UserModel)
+            total_count = (await session.execute(count_stmt)).scalar() or 0
+            
+            # Get users
+            stmt = select(UserModel).offset((page - 1) * limit).limit(limit).order_by(UserModel.id.desc())
+            result = await session.execute(stmt)
+            users = result.scalars().all()
+            return list(users), total_count
+
+    async def update_user_role_and_superuser(
+        self, user_id: int, role: str | None = None, is_superuser: bool | None = None
+    ) -> UserModel:
+        """Update a user's role and/or superuser status."""
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(UserModel).where(UserModel.id == user_id)
+            )
+            user = result.scalars().first()
+            if not user:
+                raise ValueError(f"User with ID {user_id} not found")
+            
+            if role is not None:
+                user.role = role
+            if is_superuser is not None:
+                user.is_superuser = is_superuser
+                
+            await session.commit()
+            await session.refresh(user)
+            return user
+
+    async def get_users_by_organization_id(self, organization_id: int) -> list[UserModel]:
+        """Fetch all users associated with a specific organization."""
+        async with self.async_session() as session:
+            from api.db.models import organization_users_association
+            stmt = (
+                select(UserModel)
+                .join(organization_users_association)
+                .where(organization_users_association.c.organization_id == organization_id)
+            )
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
+    async def remove_user_from_organization(self, user_id: int, organization_id: int) -> None:
+        """Remove a user from an organization association."""
+        async with self.async_session() as session:
+            from api.db.models import organization_users_association
+            from sqlalchemy import delete
+            stmt = delete(organization_users_association).where(
+                (organization_users_association.c.user_id == user_id) &
+                (organization_users_association.c.organization_id == organization_id)
+            )
+            await session.execute(stmt)
+            await session.commit()

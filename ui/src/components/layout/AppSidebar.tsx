@@ -19,6 +19,7 @@ import {
   Megaphone,
   Phone,
   Settings,
+  Shield,
   TrendingUp,
   Workflow,
   Wrench,
@@ -27,6 +28,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useRef } from "react";
+import { toast } from "sonner";
 
 import ThemeToggle from "@/components/ThemeSwitcher";
 import { Button } from "@/components/ui/button";
@@ -55,12 +57,11 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppConfig } from "@/context/AppConfigContext";
 import { useTelephonyConfigWarnings } from "@/context/TelephonyConfigWarningsContext";
+import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
 import { useLatestReleaseVersion } from "@/hooks/useLatestReleaseVersion";
 import type { LocalUser } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
-import { toast } from "sonner";
 
 type SidebarNavItem = {
   title: string;
@@ -192,14 +193,21 @@ export function AppSidebar() {
   );
 
   React.useEffect(() => {
-    if (!roleLoading && role === "client") {
-      const restrictedPaths = ["/billing", "/telephony-configurations", "/model-configurations", "/settings", "/tools", "/api-keys", "/reports", "/usage"];
-      if (restrictedPaths.some(p => pathname.startsWith(p))) {
-        toast.error("You don't have permission to access this page.");
-        router.push("/overview");
+    if (!roleLoading) {
+      if (role === "client") {
+        const restrictedPaths = ["/billing", "/telephony-configurations", "/model-configurations", "/settings", "/tools", "/api-keys", "/reports", "/usage", "/superadmin"];
+        if (restrictedPaths.some(p => pathname.startsWith(p))) {
+          toast.error("You don't have permission to access this page.");
+          router.push("/overview");
+        }
+      } else if (role !== "super_admin" && !isSuperadmin) {
+        if (pathname.startsWith("/superadmin")) {
+          toast.error("Access denied. Superadmin only.");
+          router.push("/overview");
+        }
       }
     }
-  }, [pathname, role, roleLoading, router]);
+  }, [pathname, role, isSuperadmin, roleLoading, router]);
 
   const isActive = (path: string) => pathname.startsWith(path);
 
@@ -362,42 +370,60 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className={cn("notranslate", isCollapsed && "px-0")} translate="no">
-        {!roleLoading && NAV_SECTIONS.map((section, index) => {
-          const filteredItems = section.items.filter(item => {
-            if (role === "client") {
-              return ["Voice Agents", "Recordings", "Campaigns"].includes(item.title);
-            }
-            return true;
+        {!roleLoading && (() => {
+          let sections = [...NAV_SECTIONS];
+          if (role === "super_admin" || isSuperadmin) {
+            sections = [
+              ...sections,
+              {
+                label: "ADMIN",
+                items: [
+                  {
+                    title: "Superadmin",
+                    url: "/superadmin",
+                    icon: Shield,
+                  },
+                ],
+              },
+            ];
+          }
+          return sections.map((section, index) => {
+            const filteredItems = section.items.filter(item => {
+              if (role === "client") {
+                return ["Voice Agents", "Recordings", "Campaigns"].includes(item.title);
+              }
+              return true;
+            });
+
+            if (filteredItems.length === 0) return null;
+
+            return (
+              <SidebarGroup
+                key={section.label ?? "overview"}
+                className={index === 0 ? "mt-2" : "mt-6"}
+              >
+                {section.label && (
+                  <SidebarGroupLabel
+                    className={cn(
+                      "notranslate text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+                      isCollapsed && "hidden"
+                    )}
+                    translate="no"
+                  >
+                    {section.label}
+                  </SidebarGroupLabel>
+                )}
+                <SidebarMenu>
+                  {filteredItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarLink item={item} />
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroup>
+            );
           });
-
-          if (filteredItems.length === 0) return null;
-
-          return (
-            <SidebarGroup
-              key={section.label ?? "overview"}
-              className={index === 0 ? "mt-2" : "mt-6"}
-            >
-              {section.label && (
-                <SidebarGroupLabel
-                  className={cn(
-                    "notranslate text-xs font-semibold uppercase tracking-wider text-muted-foreground",
-                    isCollapsed && "hidden"
-                  )}
-                  translate="no"
-                >
-                  {section.label}
-                </SidebarGroupLabel>
-              )}
-              <SidebarMenu>
-                {filteredItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarLink item={item} />
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroup>
-          );
-        })}
+        })()}
       </SidebarContent>
 
       <SidebarFooter
