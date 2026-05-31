@@ -197,8 +197,8 @@ export default function SuperadminPage() {
     };
 
     const filteredOrgs = organizations.filter(org =>
-        org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        org.slug.toLowerCase().includes(searchQuery.toLowerCase())
+        (org.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (org.slug || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     // Calculate overall stats
@@ -341,8 +341,8 @@ export default function SuperadminPage() {
                                         filteredOrgs.map((org) => (
                                             <TableRow key={org.id}>
                                                 <TableCell>
-                                                    <div className="font-medium">{org.name}</div>
-                                                    <div className="text-xs text-muted-foreground font-mono">{org.slug}</div>
+                                                    <div className="font-medium">{org.name || "Unnamed Organization"}</div>
+                                                    <div className="text-xs text-muted-foreground font-mono">{org.slug || org.provider_id}</div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
