@@ -163,3 +163,11 @@ class PostHogEvent(str, Enum):
     AGENT_EMBEDDED = "agent_embedded"
     SIGNED_UP = "signed_up"
     SIGNED_IN = "signed_in"
+
+
+class UserRole(str, Enum):
+    """User access roles for RBAC"""
+
+    SUPER_ADMIN = "super_admin"
+    ADMIN = "admin"
+    CLIENT = "client"

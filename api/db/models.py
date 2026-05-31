@@ -32,6 +32,7 @@ from ..enums import (
     WebhookCredentialType,
     WorkflowRunState,
     WorkflowStatus,
+    UserRole,
 )
 
 Base = declarative_base()
@@ -69,6 +70,12 @@ class UserModel(Base):
     is_superuser = Column(Boolean, default=False)
     email = Column(String, unique=True, index=True, nullable=True)
     password_hash = Column(String, nullable=True)
+    role = Column(
+        String,
+        nullable=False,
+        default=UserRole.ADMIN.value,
+        server_default=text("'admin'"),
+    )
 
 
 class UserConfigurationModel(Base):

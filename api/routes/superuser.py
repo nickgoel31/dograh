@@ -1,16 +1,22 @@
 import json
+import time
+from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
+from sqlalchemy import select
 
 from api.db import db_client
-from api.db.models import UserModel
+from api.db.models import OrganizationModel, UserModel
 from api.services.auth.depends import get_superuser
 from api.services.auth.stack_auth import stackauth
 
 router = APIRouter(prefix="/superuser", tags=["superuser"])
+
+# Simple in-memory rate limiter for impersonation
+impersonate_rate_limits = defaultdict(list)
 
 
 class ImpersonateRequest(BaseModel):
@@ -58,12 +64,25 @@ class SuperuserWorkflowRunsListResponse(BaseModel):
 
 @router.post("/impersonate")
 async def impersonate(
-    request: ImpersonateRequest, user: UserModel = Depends(get_superuser)
+    request: ImpersonateRequest, 
+    fastapi_request: Request,
+    user: UserModel = Depends(get_superuser)
 ) -> ImpersonateResponse:
     """Impersonate a user as a super-admin.
     Internally, Stack Auth requires the **provider user ID** (a UUID-ish string)
     to create an impersonation session.
     """
+    client_ip = fastapi_request.client.host if fastapi_request.client else "unknown"
+    current_time = time.time()
+    
+    # Clean up old entries (older than 1 minute)
+    impersonate_rate_limits[client_ip] = [t for t in impersonate_rate_limits[client_ip] if current_time - t < 60]
+    
+    # Allow max 10 requests per minute
+    if len(impersonate_rate_limits[client_ip]) >= 10:
+        raise HTTPException(status_code=429, detail="Too many impersonation requests. Please try again later.")
+        
+    impersonate_rate_limits[client_ip].append(current_time)
 
     provider_user_id: str | None = request.provider_user_id
 
@@ -149,3 +168,12 @@ async def get_workflow_runs(
         limit=limit,
         total_pages=total_pages,
     )
+
+@router.get("/organizations")
+async def list_all_organizations(user: UserModel = Depends(get_superuser)):
+    """List all organizations on the platform."""
+    async with db_client.async_session_maker() as session:
+        result = await session.execute(select(OrganizationModel))
+        orgs = result.scalars().all()
+
+    return [{"id": o.id, "name": o.name, "provider_id": o.provider_id} for o in orgs]

@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from api.constants import AUTH_PROVIDER, DOGRAH_MPS_SECRET_KEY, MPS_API_URL
 from api.db import db_client
 from api.db.models import UserModel
-from api.enums import PostHogEvent
+from api.enums import PostHogEvent, UserRole
 from api.schemas.user_configuration import UserConfiguration
 from api.services.auth.stack_auth import stackauth
 from api.services.configuration.registry import ServiceProviders
@@ -282,12 +282,32 @@ async def get_superuser(
     """
     user = await get_user(authorization, x_api_key)
 
-    if not user.is_superuser:
+    if not user.is_superuser and user.role != UserRole.SUPER_ADMIN.value:
         raise HTTPException(
             status_code=403, detail="Access denied. Superuser privileges required."
         )
 
     return user
+
+
+def require_role(allowed_roles: list[UserRole]):
+    """
+    Dependency generator to check if the authenticated user has an allowed role.
+    Superusers automatically bypass this check.
+    """
+    async def role_checker(
+        user: UserModel = Depends(get_user)
+    ) -> UserModel:
+        user_role = getattr(user, 'role', None) or UserRole.ADMIN.value
+        
+        if user.is_superuser or user_role == UserRole.SUPER_ADMIN.value:
+            return user
+        if user_role not in [role.value for role in allowed_roles]:
+            raise HTTPException(
+                status_code=403, detail="Access denied. Insufficient role permissions."
+            )
+        return user
+    return role_checker
 
 
 async def get_user_ws(

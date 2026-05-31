@@ -24,7 +24,8 @@ from api.db.models import UserModel
 from api.enums import CallType, WorkflowRunState
 from api.errors.telephony_errors import TelephonyError
 from api.sdk_expose import sdk_expose
-from api.services.auth.depends import get_user
+from api.services.auth.depends import get_user, require_role
+from api.enums import UserRole
 from api.services.quota_service import check_dograh_quota_by_user_id
 from api.services.telephony.call_transfer_manager import get_call_transfer_manager
 from api.services.telephony.factory import (
@@ -77,7 +78,7 @@ def _get_execution_user_id(workflow) -> int:
     ),
 )
 async def initiate_call(
-    request: InitiateCallRequest, user: UserModel = Depends(get_user)
+    request: InitiateCallRequest, user: UserModel = Depends(require_role([UserRole.ADMIN]))
 ):
     """Initiate a call using the configured telephony provider from web browser. This is
     supposed to be a test call method for the draft version of the agent."""

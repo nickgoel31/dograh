@@ -9,7 +9,8 @@ from api.db import db_client
 from api.db.models import (
     UserModel,
 )
-from api.services.auth.depends import get_user
+from api.services.auth.depends import get_user, require_role
+from api.enums import UserRole
 from api.services.configuration.check_validity import (
     APIKeyStatusResponse,
     UserConfigurationValidator,
@@ -26,6 +27,7 @@ router = APIRouter(prefix="/user")
 class AuthUserResponse(TypedDict):
     id: int
     is_superuser: bool
+    role: str
 
 
 class DefaultConfigurationsResponse(TypedDict):
@@ -67,11 +69,12 @@ async def get_default_configurations() -> DefaultConfigurationsResponse:
 
 @router.get("/auth/user")
 async def get_auth_user(
-    user: UserModel = Depends(get_user),
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> AuthUserResponse:
     return {
         "id": user.id,
         "is_superuser": user.is_superuser,
+        "role": user.role,
     }
 
 
@@ -89,7 +92,7 @@ class UserConfigurationRequestResponseSchema(BaseModel):
 
 @router.get("/configurations/user")
 async def get_user_configurations(
-    user: UserModel = Depends(get_user),
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> UserConfigurationRequestResponseSchema:
     user_configurations = await db_client.get_user_configurations(user.id)
     masked_config = mask_user_config(user_configurations)
@@ -110,7 +113,7 @@ async def get_user_configurations(
 @router.put("/configurations/user")
 async def update_user_configurations(
     request: UserConfigurationRequestResponseSchema,
-    user: UserModel = Depends(get_user),
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> UserConfigurationRequestResponseSchema:
     existing_config = await db_client.get_user_configurations(user.id)
 
@@ -163,7 +166,7 @@ async def update_user_configurations(
 @router.get("/configurations/user/validate")
 async def validate_user_configurations(
     validity_ttl_seconds: int = Query(default=60, ge=0, le=86400),
-    user: UserModel = Depends(get_user),
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> APIKeyStatusResponse:
     configurations = await db_client.get_user_configurations(user.id)
 
@@ -213,7 +216,7 @@ class CreateAPIKeyResponse(BaseModel):
 @router.get("/api-keys")
 async def get_api_keys(
     include_archived: bool = Query(default=False),
-    user: UserModel = Depends(get_user),
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> List[APIKeyResponse]:
     """Get all API keys for the user's selected organization."""
     if not user.selected_organization_id:
@@ -240,7 +243,7 @@ async def get_api_keys(
 @router.post("/api-keys")
 async def create_api_key(
     request: CreateAPIKeyRequest,
-    user: UserModel = Depends(get_user),
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> CreateAPIKeyResponse:
     """Create a new API key for the user's selected organization."""
     if not user.selected_organization_id:
@@ -264,7 +267,7 @@ async def create_api_key(
 @router.delete("/api-keys/{api_key_id}")
 async def archive_api_key(
     api_key_id: int,
-    user: UserModel = Depends(get_user),
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> dict:
     """Archive an API key (soft delete)."""
     if not user.selected_organization_id:
@@ -287,7 +290,7 @@ async def archive_api_key(
 @router.put("/api-keys/{api_key_id}/reactivate")
 async def reactivate_api_key(
     api_key_id: int,
-    user: UserModel = Depends(get_user),
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> dict:
     """Reactivate an archived API key."""
     if not user.selected_organization_id:
@@ -331,7 +334,7 @@ async def get_voices(
     provider: TTSProvider,
     model: Optional[str] = None,
     language: Optional[str] = None,
-    user: UserModel = Depends(get_user),
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> VoicesResponse:
     """Get available voices for a TTS provider."""
     try:

@@ -26,6 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { SETTINGS_DOCUMENTATION_URLS } from "@/constants/documentation";
 import { UnsavedChangesProvider, useUnsavedChanges, useUnsavedChangesContext } from "@/context/UnsavedChangesContext";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
+import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
 import { useAuth } from "@/lib/auth";
 import logger from "@/lib/logger";
 import {
@@ -1124,6 +1125,7 @@ function WorkflowSettingsInner({
 }) {
     const router = useRouter();
     const { dirtySections, confirmNavigate } = useUnsavedChangesContext();
+    const { role: userRole } = useCurrentUserRole();
 
     const [isEmbedDialogOpen, setIsEmbedDialogOpen] = useState(false);
     const [activeSection, setActiveSection] = useState("general");
@@ -1219,36 +1221,38 @@ function WorkflowSettingsInner({
                             />
 
                             {/* Model Overrides */}
-                            <Card id="models">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-base">
-                                        <Brain className="h-4 w-4" />
-                                        Model Overrides
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Override global model settings for this workflow. Toggle individual services to
-                                        customize.{" "}
-                                        <a href={SETTINGS_DOCUMENTATION_URLS.modelOverrides} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">Learn more <ExternalLink className="h-3 w-3" /></a>
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ServiceConfigurationForm
-                                        mode="override"
-                                        currentOverrides={workflowConfigurations.model_overrides}
-                                        submitLabel="Save Model Overrides"
-                                        onSave={async (config) => {
-                                            await saveWorkflowConfigurations(
-                                                {
-                                                    ...workflowConfigurations,
-                                                    model_overrides:
-                                                        config.model_overrides as WorkflowConfigurations["model_overrides"],
-                                                } as WorkflowConfigurations,
-                                                workflowName,
-                                            );
-                                        }}
-                                    />
-                                </CardContent>
-                            </Card>
+                            {userRole !== "client" && (
+                                <Card id="models">
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2 text-base">
+                                            <Brain className="h-4 w-4" />
+                                            Model Overrides
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Override global model settings for this workflow. Toggle individual services to
+                                            customize.{" "}
+                                            <a href={SETTINGS_DOCUMENTATION_URLS.modelOverrides} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">Learn more <ExternalLink className="h-3 w-3" /></a>
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ServiceConfigurationForm
+                                            mode="override"
+                                            currentOverrides={workflowConfigurations.model_overrides}
+                                            submitLabel="Save Model Overrides"
+                                            onSave={async (config) => {
+                                                await saveWorkflowConfigurations(
+                                                    {
+                                                        ...workflowConfigurations,
+                                                        model_overrides:
+                                                            config.model_overrides as WorkflowConfigurations["model_overrides"],
+                                                    } as WorkflowConfigurations,
+                                                    workflowName,
+                                                );
+                                            }}
+                                        />
+                                    </CardContent>
+                                </Card>
+                            )}
 
                             {/* Template Variables */}
                             <TemplateVariablesSection
@@ -1325,7 +1329,7 @@ function WorkflowSettingsInner({
                         <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                             On this page
                         </p>
-                        {NAV_ITEMS.map((item) => (
+                        {NAV_ITEMS.filter((item) => userRole !== "client" || item.id !== "models").map((item) => (
                             <a
                                 key={item.id}
                                 href={`#${item.id}`}

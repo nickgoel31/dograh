@@ -6,6 +6,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
 import type { WorkflowConfigurations } from "@/types/workflow-configurations";
 
 interface ModelConfigurationDialogProps {
@@ -23,31 +24,41 @@ export const ModelConfigurationDialog = ({
     workflowName,
     onSave,
 }: ModelConfigurationDialogProps) => {
+    const { role } = useCurrentUserRole();
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Model Configuration</DialogTitle>
                     <DialogDescription>
-                        Override global model settings for this workflow. Toggle individual services to customize.
+                        {role === "client"
+                            ? "You do not have permission to modify model configurations or API keys."
+                            : "Override global model settings for this workflow. Toggle individual services to customize."}
                     </DialogDescription>
                 </DialogHeader>
 
-                <ServiceConfigurationForm
-                    mode="override"
-                    currentOverrides={workflowConfigurations?.model_overrides}
-                    submitLabel="Save"
-                    onSave={async (config) => {
-                        await onSave(
-                            {
-                                ...workflowConfigurations,
-                                model_overrides: config.model_overrides as WorkflowConfigurations["model_overrides"],
-                            } as WorkflowConfigurations,
-                            workflowName,
-                        );
-                        onOpenChange(false);
-                    }}
-                />
+                {role !== "client" ? (
+                    <ServiceConfigurationForm
+                        mode="override"
+                        currentOverrides={workflowConfigurations?.model_overrides}
+                        submitLabel="Save"
+                        onSave={async (config) => {
+                            await onSave(
+                                {
+                                    ...workflowConfigurations,
+                                    model_overrides: config.model_overrides as WorkflowConfigurations["model_overrides"],
+                                } as WorkflowConfigurations,
+                                workflowName,
+                            );
+                            onOpenChange(false);
+                        }}
+                    />
+                ) : (
+                    <div className="py-6 text-center text-sm text-muted-foreground">
+                        Please contact your administrator to change model configurations or API keys.
+                    </div>
+                )}
             </DialogContent>
         </Dialog>
     );

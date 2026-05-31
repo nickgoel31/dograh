@@ -53,7 +53,7 @@ async def signup(request: SignupRequest):
         )
 
     # Create JWT token
-    token = create_jwt_token(user.id, request.email)
+    token = create_jwt_token(user.id, request.email, user.role, user.is_superuser)
 
     capture_event(
         distinct_id=str(user.provider_id),
@@ -88,7 +88,7 @@ async def login(request: LoginRequest):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     # Create JWT token
-    token = create_jwt_token(user.id, user.email)
+    token = create_jwt_token(user.id, user.email, user.role, user.is_superuser)
 
     capture_event(
         distinct_id=str(user.provider_id),

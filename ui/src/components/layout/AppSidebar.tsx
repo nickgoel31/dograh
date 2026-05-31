@@ -59,6 +59,8 @@ import { useLatestReleaseVersion } from "@/hooks/useLatestReleaseVersion";
 import type { LocalUser } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
+import { toast } from "sonner";
 
 type SidebarNavItem = {
   title: string;
@@ -165,6 +167,7 @@ export function AppSidebar() {
   const { state, isMobile, setOpenMobile } = useSidebar();
   const { provider, getSelectedTeam, logout, user } = useAuth();
   const { config } = useAppConfig();
+  const { role, isSuperadmin, loading: roleLoading } = useCurrentUserRole();
   const { telnyxMissingWebhookPublicKeyCount } = useTelephonyConfigWarnings();
   const hasTelephonyWarning = telnyxMissingWebhookPublicKeyCount > 0;
   const isCollapsed = !isMobile && state === "collapsed";
@@ -187,6 +190,16 @@ export function AppSidebar() {
     versionInfo?.ui,
     { enabled: config?.deploymentMode === "oss" },
   );
+
+  React.useEffect(() => {
+    if (!roleLoading && role === "client") {
+      const restrictedPaths = ["/billing", "/telephony-configurations", "/model-configurations", "/settings", "/tools", "/api-keys", "/reports", "/usage"];
+      if (restrictedPaths.some(p => pathname.startsWith(p))) {
+        toast.error("You don't have permission to access this page.");
+        router.push("/overview");
+      }
+    }
+  }, [pathname, role, roleLoading, router]);
 
   const isActive = (path: string) => pathname.startsWith(path);
 
@@ -330,7 +343,7 @@ export function AppSidebar() {
           </SidebarTrigger>
         </div>
 
-        {provider === "stack" && (
+        {provider === "stack" && isSuperadmin && (
           <div className={cn("mt-3 notranslate", isCollapsed && "hidden")} translate="no">
             <React.Suspense
               fallback={
@@ -349,31 +362,42 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className={cn("notranslate", isCollapsed && "px-0")} translate="no">
-        {NAV_SECTIONS.map((section, index) => (
-          <SidebarGroup
-            key={section.label ?? "overview"}
-            className={index === 0 ? "mt-2" : "mt-6"}
-          >
-            {section.label && (
-              <SidebarGroupLabel
-                className={cn(
-                  "notranslate text-xs font-semibold uppercase tracking-wider text-muted-foreground",
-                  isCollapsed && "hidden"
-                )}
-                translate="no"
-              >
-                {section.label}
-              </SidebarGroupLabel>
-            )}
-            <SidebarMenu>
-              {section.items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarLink item={item} />
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
-        ))}
+        {!roleLoading && NAV_SECTIONS.map((section, index) => {
+          const filteredItems = section.items.filter(item => {
+            if (role === "client") {
+              return ["Voice Agents", "Recordings", "Campaigns"].includes(item.title);
+            }
+            return true;
+          });
+
+          if (filteredItems.length === 0) return null;
+
+          return (
+            <SidebarGroup
+              key={section.label ?? "overview"}
+              className={index === 0 ? "mt-2" : "mt-6"}
+            >
+              {section.label && (
+                <SidebarGroupLabel
+                  className={cn(
+                    "notranslate text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+                    isCollapsed && "hidden"
+                  )}
+                  translate="no"
+                >
+                  {section.label}
+                </SidebarGroupLabel>
+              )}
+              <SidebarMenu>
+                {filteredItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarLink item={item} />
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+          );
+        })}
       </SidebarContent>
 
       <SidebarFooter

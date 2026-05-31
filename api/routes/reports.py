@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from api.db.models import UserModel
-from api.services.auth.depends import get_user
+from api.enums import UserRole
+from api.services.auth.depends import get_user, require_role
 from api.services.reports import DailyReportService
 
 router = APIRouter(prefix="/organizations/reports")
@@ -42,7 +43,7 @@ async def get_daily_report(
     workflow_id: Optional[int] = Query(
         None, description="Optional workflow ID to filter by"
     ),
-    user: UserModel = Depends(get_user),
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> DailyReportResponse:
     """
     Get daily report for the specified date and timezone.
@@ -76,7 +77,7 @@ async def get_daily_report(
 
 @router.get("/workflows", response_model=List[WorkflowOption])
 async def get_workflow_options(
-    user: UserModel = Depends(get_user),
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> List[WorkflowOption]:
     """
     Get all workflows for the user's organization.
@@ -101,7 +102,7 @@ async def get_daily_runs_detail(
     workflow_id: Optional[int] = Query(
         None, description="Optional workflow ID to filter by"
     ),
-    user: UserModel = Depends(get_user),
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> List[WorkflowRunDetail]:
     """
     Get detailed workflow runs for the specified date.

@@ -10,7 +10,8 @@ from pydantic import BaseModel, Field
 from api.constants import DEPLOYMENT_MODE
 from api.db import db_client
 from api.db.models import UserModel
-from api.services.auth.depends import get_user
+from api.enums import UserRole
+from api.services.auth.depends import get_user, require_role
 from api.services.mps_service_key_client import mps_service_key_client
 from api.services.reports import generate_usage_runs_report_csv
 from api.utils.artifacts import artifact_url
@@ -96,7 +97,7 @@ class DailyUsageBreakdownResponse(BaseModel):
 
 
 @router.get("/usage/current-period", response_model=CurrentUsageResponse)
-async def get_current_period_usage(user: UserModel = Depends(get_user)):
+async def get_current_period_usage(user: UserModel = Depends(require_role([UserRole.ADMIN]))):
     """Get current billing period usage for the user's organization."""
     if not user.selected_organization_id:
         raise HTTPException(status_code=400, detail="No organization selected")
@@ -109,7 +110,7 @@ async def get_current_period_usage(user: UserModel = Depends(get_user)):
 
 
 @router.get("/usage/mps-credits", response_model=MPSCreditsResponse)
-async def get_mps_credits(user: UserModel = Depends(get_user)):
+async def get_mps_credits(user: UserModel = Depends(require_role([UserRole.ADMIN]))):
     """Get aggregated usage and quota from MPS.
 
     OSS users: queries by provider_id (created_by).
@@ -191,7 +192,7 @@ async def get_usage_history(
             '[{"attribute":"dispositionCode","type":"multiSelect","value":{"codes":["XFER","DNC"]}}]',
         ],
     ),
-    user: UserModel = Depends(get_user),
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ):
     """Get paginated workflow runs with usage for the organization."""
     if not user.selected_organization_id:
@@ -261,7 +262,7 @@ async def download_usage_runs_report(
         None,
         description=FILTERS_DESCRIPTION,
     ),
-    user: UserModel = Depends(get_user),
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> StreamingResponse:
     """Download a CSV of runs matching the same filters as `/usage/runs`."""
     if not user.selected_organization_id:
@@ -294,7 +295,7 @@ async def download_usage_runs_report(
 @router.get("/usage/daily-breakdown", response_model=DailyUsageBreakdownResponse)
 async def get_daily_usage_breakdown(
     days: int = Query(7, ge=1, le=30, description="Number of days to include"),
-    user: UserModel = Depends(get_user),
+    user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ):
     """Get daily usage breakdown for the last N days. Only available for organizations with pricing."""
     if not user.selected_organization_id:

@@ -40,4 +40,17 @@ export function setupAuthInterceptor(apiClient: Client, getAccessToken: () => Pr
         }
         return request;
     });
+
+    apiClient.interceptors.response.use((response) => {
+        if (!response.ok && response.status === 401) {
+            // Check if we have an impersonation cookie using a simple string match
+            const isImpersonating = typeof document !== 'undefined' && document.cookie.includes('__stack_impersonation');
+            if (isImpersonating) {
+                // Clear the impersonation token and redirect
+                document.cookie = '__stack_impersonation=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                window.location.href = '/superadmin?expired=true';
+            }
+        }
+        return response;
+    });
 }

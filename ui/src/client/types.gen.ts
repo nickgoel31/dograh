@@ -215,6 +215,10 @@ export type AuthUserResponse = {
      * Is Superuser
      */
     is_superuser: boolean;
+    /**
+     * Role
+     */
+    role?: string;
 };
 
 /**
