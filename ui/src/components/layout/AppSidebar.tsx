@@ -23,6 +23,7 @@ import {
   TrendingUp,
   Workflow,
   Wrench,
+  Users,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -173,6 +174,24 @@ export function AppSidebar() {
   const hasTelephonyWarning = telnyxMissingWebhookPublicKeyCount > 0;
   const isCollapsed = !isMobile && state === "collapsed";
 
+  const [isImpersonating, setIsImpersonating] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasLocalToken = !!sessionStorage.getItem('impersonation_token');
+      const hasStackCookie = document.cookie.includes('__stack_impersonation');
+      setIsImpersonating(hasLocalToken || hasStackCookie);
+    }
+  }, []);
+
+  const handleStopImpersonation = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('impersonation_token');
+      document.cookie = '__stack_impersonation=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      window.location.href = '/superadmin/users';
+    }
+  };
+
   // Get selected team for Stack auth (cast to Team type from Stack)
   // Stabilize the reference so SelectedTeamSwitcher only sees a change when the team ID changes,
   // preventing unnecessary PATCH calls to Stack Auth on every route navigation.
@@ -285,6 +304,17 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader className="border-b px-2 py-3 notranslate" translate="no">
+        {isImpersonating && (
+          <div className={cn("mb-3 mt-1 rounded-md bg-amber-500 px-3 py-2 text-xs font-medium text-white shadow-sm flex flex-col gap-2", isCollapsed && "hidden")}>
+            <div className="flex items-center gap-1.5">
+              <Shield className="h-4 w-4 shrink-0" />
+              <span>Impersonating Workspace</span>
+            </div>
+            <Button size="sm" variant="secondary" className="w-full text-[10px] h-6 text-black" onClick={handleStopImpersonation}>
+              Exit Impersonation
+            </Button>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div className={cn("flex items-center gap-2", isCollapsed && "hidden")}>
             <Link
@@ -379,9 +409,14 @@ export function AppSidebar() {
                 label: "ADMIN",
                 items: [
                   {
-                    title: "Superadmin",
+                    title: "Platform Orgs",
                     url: "/superadmin",
                     icon: Shield,
+                  },
+                  {
+                    title: "Users Directory",
+                    url: "/superadmin/users",
+                    icon: Users,
                   },
                 ],
               },
@@ -456,6 +491,12 @@ export function AppSidebar() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  {isImpersonating && (
+                    <DropdownMenuItem onClick={handleStopImpersonation} className="cursor-pointer text-amber-600 focus:text-amber-600">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Stop Impersonating
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     Platform Settings
@@ -497,6 +538,12 @@ export function AppSidebar() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  {isImpersonating && (
+                    <DropdownMenuItem onClick={handleStopImpersonation} className="cursor-pointer text-amber-600 focus:text-amber-600">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Stop Impersonating
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => router.push("/handler/account-settings")} className="cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     Account settings

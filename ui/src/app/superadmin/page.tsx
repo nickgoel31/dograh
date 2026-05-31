@@ -1,23 +1,39 @@
 "use client";
 
-import { ArrowRight, ChevronLeft, ChevronRight, List, Loader2, Shield, UserCheck } from 'lucide-react';
-import Link from "next/link";
+import { AlertTriangle, ArrowRight, Bot, Building2, MoreHorizontal, Plus, Search, Settings2, Trash2, UserMinus,Users } from 'lucide-react';
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { client } from "@/client/client.gen";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription,CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -27,347 +43,412 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from '@/lib/auth';
-import { impersonateAsSuperadmin } from "@/lib/utils";
 
-interface PlatformUser {
+interface Organization {
   id: number;
-  email: string | null;
-  role: string;
-  is_superuser: boolean;
+  name: string;
+  slug: string;
+  provider_id: string;
   created_at: string;
-  selected_organization_id: number | null;
-  provider_id: string | null;
-}
-
-interface UsersListResponse {
-  users: PlatformUser[];
-  total_count: number;
-  page: number;
-  limit: number;
-  total_pages: number;
+  is_active: boolean;
+  member_count: number;
+  admin_count: number;
+  client_count: number;
+  agent_count: number;
 }
 
 export default function SuperadminPage() {
-    const [userId, setUserId] = useState("");
-    const [error, setError] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
     const { user, getAccessToken } = useAuth();
 
-    // User management state
-    const [users, setUsers] = useState<PlatformUser[]>([]);
-    const [loadingUsers, setLoadingUsers] = useState(true);
-    const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [totalCount, setTotalCount] = useState(0);
+    const [organizations, setOrganizations] = useState<Organization[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    // Create Org State
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [newOrgName, setNewOrgName] = useState("");
+    const [isCreating, setIsCreating] = useState(false);
+    const slugPreview = newOrgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+
+    // Impersonate state
+    const [isSwitching, setIsSwitching] = useState(false);
+
+    // Manage Members State
+    const [selectedOrgForMembers, setSelectedOrgForMembers] = useState<number | null>(null);
+    const [orgMembers, setOrgMembers] = useState<any[]>([]);
+    const [loadingMembers, setLoadingMembers] = useState(false);
 
     useEffect(() => {
         if (user) {
-            fetchUsers(page);
+            fetchOrganizations();
         }
-    }, [user, page]);
+    }, [user]);
 
-    const fetchUsers = async (targetPage: number) => {
-        setLoadingUsers(true);
+    const fetchOrganizations = async () => {
+        setLoading(true);
         try {
-            const res = await client.request<UsersListResponse>({
+            const res = await client.request<Organization[]>({
                 method: "GET",
-                url: `/api/v1/superuser/users?page=${targetPage}&limit=10`,
+                url: `/api/v1/superuser/organizations`,
             });
             if (res.data) {
-                setUsers(res.data.users);
-                setTotalPages(res.data.total_pages);
-                setTotalCount(res.data.total_count);
+                setOrganizations(res.data);
             }
         } catch {
-            toast.error("Failed to fetch platform users");
+            toast.error("Failed to fetch organizations");
         } finally {
-            setLoadingUsers(false);
+            setLoading(false);
         }
     };
 
-    const handleImpersonate = async (e: React.FormEvent) => {
+    const handleManageMembers = async (orgId: number) => {
+        setSelectedOrgForMembers(orgId);
+        setLoadingMembers(true);
+        try {
+            const res = await client.request<any[]>({
+                method: "GET",
+                url: `/api/v1/superuser/organizations/${orgId}/members`,
+            });
+            if (res.data) {
+                setOrgMembers(res.data);
+            }
+        } catch {
+            toast.error("Failed to fetch organization members");
+        } finally {
+            setLoadingMembers(false);
+        }
+    };
+
+    const handleRemoveMember = async (orgId: number, userId: number) => {
+        try {
+            await client.request({
+                method: "POST",
+                url: `/api/v1/superuser/organizations/${orgId}/remove-user`,
+                body: { user_id: userId }
+            });
+            toast.success("Member removed");
+            fetchOrganizations();
+            handleManageMembers(orgId);
+        } catch (error: any) {
+            toast.error(error.response?.data?.detail || "Failed to remove member");
+        }
+    };
+
+    const handleCreateOrganization = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError("");
-        setIsLoading(true);
-
+        setIsCreating(true);
         try {
-            if (!user) {
-                setError("User not authenticated. Please log in and try again.");
-                setIsLoading(false);
-                return;
-            }
-            const accessToken = await getAccessToken();
-            if (!accessToken) {
-                throw new Error('Missing admin access token');
-            }
-
-            await impersonateAsSuperadmin({
-                accessToken: accessToken,
-                providerUserId: userId,
-                redirectPath: '/workflow',
-                openInNewTab: true,
+            await client.request({
+                method: "POST",
+                url: "/api/v1/superuser/organizations",
+                body: { name: newOrgName }
             });
-        } catch (err) {
-            setError("Failed to impersonate user. Please try again.");
-            console.error("Impersonation error:", err);
+            toast.success("Organization created successfully");
+            setNewOrgName("");
+            setIsCreateModalOpen(false);
+            fetchOrganizations();
+        } catch (error: any) {
+            toast.error(error.response?.data?.detail || "Failed to create organization");
         } finally {
-            setIsLoading(false);
+            setIsCreating(false);
         }
     };
 
-    const handleQuickImpersonate = async (providerUserId: string) => {
-        setError("");
+    const handleToggleActive = async (orgId: number, currentActive: boolean) => {
         try {
-            if (!user) {
-                toast.error("User not authenticated");
-                return;
-            }
-            const accessToken = await getAccessToken();
-            if (!accessToken) {
-                toast.error("Missing admin access token");
-                return;
-            }
-            toast.info("Starting impersonation session...");
-            await impersonateAsSuperadmin({
-                accessToken: accessToken,
-                providerUserId: providerUserId,
-                redirectPath: '/workflow',
-                openInNewTab: true,
-            });
-        } catch (err) {
-            toast.error("Failed to impersonate user");
-            console.error(err);
-        }
-    };
-
-    const handleUpdateUserRole = async (targetUserId: number, newRole: string) => {
-        try {
-            await client.request<PlatformUser>({
+            await client.request({
                 method: "PATCH",
-                url: `/api/v1/superuser/users/${targetUserId}/role`,
-                body: { role: newRole },
+                url: `/api/v1/superuser/organizations/${orgId}`,
+                body: { is_active: !currentActive }
             });
-            toast.success("User role updated successfully");
-            fetchUsers(page);
+            toast.success("Organization status updated");
+            fetchOrganizations();
         } catch {
-            toast.error("Failed to update user role");
+            toast.error("Failed to update organization status");
         }
     };
 
-    const handleToggleSuperuser = async (targetUserId: number, currentStatus: boolean) => {
+    const handleSwitchToOrg = async (orgId: number) => {
+        setIsSwitching(true);
         try {
-            await client.request<PlatformUser>({
-                method: "PATCH",
-                url: `/api/v1/superuser/users/${targetUserId}/role`,
-                body: { is_superuser: !currentStatus },
-            });
-            toast.success("Superuser status updated");
-            fetchUsers(page);
-        } catch {
-            toast.error("Failed to update superuser status");
+            const res = await client.request({
+                method: "POST",
+                url: "/api/v1/superuser/switch-org",
+                body: { org_id: orgId }
+            }) as any;
+
+            if (res.data?.access_token) {
+                // Store impersonation token in sessionStorage
+                sessionStorage.setItem("impersonation_token", res.data.access_token);
+                toast.success(`Switched to ${res.data.org_name}`);
+
+                // Hard reload to redirect user to dashboard with the new token
+                window.location.href = "/dashboard";
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.detail || "Failed to switch organization");
+        } finally {
+            setIsSwitching(false);
         }
     };
+
+    const filteredOrgs = organizations.filter(org =>
+        org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        org.slug.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // Calculate overall stats
+    const totalOrgs = organizations.length;
+    const totalAgents = organizations.reduce((sum, org) => sum + org.agent_count, 0);
+    const totalMembers = organizations.reduce((sum, org) => sum + org.member_count, 0);
 
     return (
-        <>
-            <main className="container mx-auto p-6 space-y-6 max-w-5xl">
-                <div className="text-center">
-                    <h1 className="text-3xl font-bold mb-2">Superadmin Dashboard</h1>
-                    <p className="text-sm text-muted-foreground">Manage users and view system-wide data</p>
+        <main className="container mx-auto p-6 space-y-6 max-w-7xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold mb-2">Platform Overview</h1>
+                    <p className="text-sm text-muted-foreground">Manage organizations and system-wide data</p>
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-2">
-                        {/* User Impersonation Card */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>User Impersonation</CardTitle>
-                                <CardDescription>
-                                    Impersonate a user account for debugging or support purposes
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <form onSubmit={handleImpersonate} className="space-y-4">
+                <div className="flex items-center gap-3">
+                    <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+                        <DialogTrigger asChild>
+                            <Button>
+                                <Plus className="w-4 h-4 mr-2" />
+                                New Organization
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <form onSubmit={handleCreateOrganization}>
+                                <DialogHeader>
+                                    <DialogTitle>Create Organization</DialogTitle>
+                                    <DialogDescription>
+                                        Create a new isolated organization on the platform.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="py-4 space-y-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="userId">Provider User ID</Label>
+                                        <Label htmlFor="orgName">Organization Name</Label>
                                         <Input
-                                            id="userId"
-                                            value={userId}
-                                            onChange={(e) => setUserId(e.target.value)}
-                                            placeholder="Enter provider user ID"
+                                            id="orgName"
+                                            placeholder="Acme Corp"
+                                            value={newOrgName}
+                                            onChange={(e) => setNewOrgName(e.target.value)}
                                             required
                                         />
-                                    </div>
-
-                                    {error && (
-                                        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-                                            {error}
-                                        </div>
-                                    )}
-
-                                    <Button
-                                        type="submit"
-                                        disabled={isLoading}
-                                        className="w-full"
-                                    >
-                                        {isLoading ? (
-                                            <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                Processing...
-                                            </>
-                                        ) : (
-                                            'Impersonate User'
+                                        {newOrgName && (
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Slug: <span className="font-mono bg-muted px-1.5 py-0.5 rounded">{slugPreview}</span>
+                                            </p>
                                         )}
-                                    </Button>
-                                </form>
-                            </CardContent>
-                        </Card>
-
-                        {/* Workflow Runs Card */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Workflow Runs</CardTitle>
-                                <CardDescription>
-                                    View and manage all workflow runs across organizations
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    <p className="text-sm text-muted-foreground">
-                                        Access detailed information about all workflow runs, including status,
-                                        recordings, transcripts, and usage data.
-                                    </p>
-                                    <Link href="/superadmin/runs">
-                                        <Button className="w-full">
-                                            <List className="mr-2 h-4 w-4" />
-                                            View All Runs
-                                            <ArrowRight className="ml-2 h-4 w-4" />
-                                        </Button>
-                                    </Link>
-                                </div>
-                            </CardContent>
-                        </Card>
-                </div>
-
-                {/* User & Role Management Table */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>User & Role Management</CardTitle>
-                        <CardDescription>
-                            View and edit roles or superuser status for all platform users.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {loadingUsers ? (
-                            <div className="flex justify-center items-center py-12">
-                                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                            </div>
-                        ) : (
-                            <>
-                                <div className="border rounded-md">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Email</TableHead>
-                                                <TableHead>Role</TableHead>
-                                                <TableHead>Superuser</TableHead>
-                                                <TableHead>Created At</TableHead>
-                                                <TableHead className="text-right">Actions</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {users.map((u) => (
-                                                <TableRow key={u.id}>
-                                                    <TableCell className="font-medium">
-                                                        <div className="flex flex-col">
-                                                            <span>{u.email || "No Email"}</span>
-                                                            <span className="text-[10px] text-muted-foreground font-mono">
-                                                                ID: {u.id}
-                                                            </span>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Select
-                                                            value={u.role}
-                                                            onValueChange={(val) => handleUpdateUserRole(u.id, val)}
-                                                        >
-                                                            <SelectTrigger className="w-[130px] h-8 text-xs">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="client">Client</SelectItem>
-                                                                <SelectItem value="admin">Admin</SelectItem>
-                                                                <SelectItem value="super_admin">Super Admin</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="flex items-center gap-2">
-                                                            <Switch
-                                                                checked={u.is_superuser}
-                                                                onCheckedChange={() => handleToggleSuperuser(u.id, u.is_superuser)}
-                                                            />
-                                                            {u.is_superuser && (
-                                                                <Shield className="h-3.5 w-3.5 text-primary" />
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="text-xs text-muted-foreground">
-                                                        {new Date(u.created_at).toLocaleDateString()}
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        {u.provider_id && (
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleQuickImpersonate(u.provider_id!)}
-                                                                className="h-8 text-xs"
-                                                            >
-                                                                <UserCheck className="mr-1.5 h-3.5 w-3.5" />
-                                                                Impersonate
-                                                            </Button>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-
-                                <div className="flex items-center justify-between mt-4">
-                                    <span className="text-xs text-muted-foreground">
-                                        Showing {users.length} of {totalCount} users
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                            disabled={page === 1}
-                                            className="h-8"
-                                        >
-                                            <ChevronLeft className="h-4 w-4 mr-1" />
-                                            Prev
-                                        </Button>
-                                        <span className="text-xs font-medium">
-                                            Page {page} of {totalPages}
-                                        </span>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                            disabled={page === totalPages}
-                                            className="h-8"
-                                        >
-                                            Next
-                                            <ChevronRight className="h-4 w-4 ml-1" />
-                                        </Button>
                                     </div>
                                 </div>
-                            </>
-                        )}
+                                <DialogFooter>
+                                    <Button variant="outline" type="button" onClick={() => setIsCreateModalOpen(false)}>Cancel</Button>
+                                    <Button type="submit" disabled={isCreating || !newOrgName.trim()}>
+                                        {isCreating ? 'Creating...' : 'Create Organization'}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid gap-4 md:grid-cols-3">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Organizations</CardTitle>
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{loading ? '-' : totalOrgs}</div>
                     </CardContent>
                 </Card>
-            </main>
-        </>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Workflows (Agents)</CardTitle>
+                        <Bot className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{loading ? '-' : totalAgents}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Members</CardTitle>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{loading ? '-' : totalMembers}</div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Organizations Table */}
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>Organizations</CardTitle>
+                            <CardDescription>
+                                Manage all organizations operating on the platform.
+                            </CardDescription>
+                        </div>
+                        <div className="relative w-64">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                type="search"
+                                placeholder="Search organizations..."
+                                className="pl-8"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {loading ? (
+                        <div className="flex justify-center items-center py-12">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        </div>
+                    ) : (
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Members</TableHead>
+                                        <TableHead>Agents</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Created</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredOrgs.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                                No organizations found
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        filteredOrgs.map((org) => (
+                                            <TableRow key={org.id}>
+                                                <TableCell>
+                                                    <div className="font-medium">{org.name}</div>
+                                                    <div className="text-xs text-muted-foreground font-mono">{org.slug}</div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{org.member_count}</span>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            ({org.admin_count} admin, {org.client_count} client)
+                                                        </span>
+                                                        {org.admin_count === 0 && org.is_active && (
+                                                            <div title="Organization has no admin" className="text-yellow-600">
+                                                                <AlertTriangle className="h-4 w-4" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>{org.agent_count}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={org.is_active ? "default" : "destructive"}>
+                                                        {org.is_active ? 'Active' : 'Disabled'}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    {new Date(org.created_at).toLocaleDateString()}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                <span className="sr-only">Open menu</span>
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                            <DropdownMenuItem onClick={() => handleSwitchToOrg(org.id)} disabled={!org.is_active || isSwitching}>
+                                                                <ArrowRight className="mr-2 h-4 w-4" />
+                                                                Switch to Workspace
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleManageMembers(org.id)}>
+                                                                <Users className="mr-2 h-4 w-4" />
+                                                                Manage Members
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem onClick={() => handleToggleActive(org.id, org.is_active)}>
+                                                                {org.is_active ? (
+                                                                    <><Trash2 className="mr-2 h-4 w-4 text-red-500" /> Disable Organization</>
+                                                                ) : (
+                                                                    <><Settings2 className="mr-2 h-4 w-4" /> Enable Organization</>
+                                                                )}
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Manage Members Side Panel */}
+            <Sheet open={selectedOrgForMembers !== null} onOpenChange={(open) => !open && setSelectedOrgForMembers(null)}>
+                <SheetContent className="w-[400px] sm:w-[540px]">
+                    <SheetHeader>
+                        <SheetTitle>Manage Organization Members</SheetTitle>
+                        <SheetDescription>
+                            View and remove members from this organization.
+                        </SheetDescription>
+                    </SheetHeader>
+                    <div className="py-6">
+                        {loadingMembers ? (
+                            <div className="flex justify-center items-center py-12">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                            </div>
+                        ) : orgMembers.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                                No members found in this organization.
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {orgMembers.map(member => (
+                                    <div key={member.id} className="flex items-center justify-between p-3 border rounded-md">
+                                        <div className="flex flex-col">
+                                            <span className="font-medium text-sm">{member.email || "No Email"}</span>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <Badge variant="outline" className="text-[10px]">
+                                                    {member.role.toUpperCase()}
+                                                </Badge>
+                                                <span className="text-[10px] text-muted-foreground font-mono">
+                                                    ID: {member.id}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleRemoveMember(selectedOrgForMembers!, member.id)}
+                                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                        >
+                                            <UserMinus className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </SheetContent>
+            </Sheet>
+        </main>
     );
 }

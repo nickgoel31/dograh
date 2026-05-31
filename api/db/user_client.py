@@ -189,17 +189,26 @@ class UserClient(BaseDBClient):
             await session.refresh(user)
             return user
 
-    async def get_all_users_paginated(self, page: int = 1, limit: int = 50) -> tuple[list[UserModel], int]:
-        """Fetch all users paginated for superadmin view."""
+    async def get_all_users_paginated(self, page: int = 1, limit: int = 50, org_id: int | None = None) -> tuple[list[UserModel], int]:
+        """Fetch all users paginated for superadmin view, optionally filtered by org."""
         async with self.async_session() as session:
             from sqlalchemy import func
             
-            # Count total
             count_stmt = select(func.count()).select_from(UserModel)
+            query = select(UserModel)
+            
+            if org_id is not None:
+                if org_id == 0:
+                    count_stmt = count_stmt.where(UserModel.selected_organization_id.is_(None))
+                    query = query.where(UserModel.selected_organization_id.is_(None))
+                else:
+                    count_stmt = count_stmt.where(UserModel.selected_organization_id == org_id)
+                    query = query.where(UserModel.selected_organization_id == org_id)
+            
             total_count = (await session.execute(count_stmt)).scalar() or 0
             
-            # Get users
-            stmt = select(UserModel).offset((page - 1) * limit).limit(limit).order_by(UserModel.id.desc())
+            from sqlalchemy.orm import selectinload
+            stmt = query.options(selectinload(UserModel.selected_organization)).offset((page - 1) * limit).limit(limit).order_by(UserModel.id.desc())
             result = await session.execute(stmt)
             users = result.scalars().all()
             return list(users), total_count

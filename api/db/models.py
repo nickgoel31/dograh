@@ -92,6 +92,9 @@ class OrganizationModel(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     provider_id = Column(String, unique=True, index=True, nullable=False)
+    name = Column(String, nullable=True, index=True)
+    slug = Column(String, unique=True, nullable=True, index=True)
+    is_active = Column(Boolean, nullable=False, default=True, server_default=text("true"))
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     # Quota fields

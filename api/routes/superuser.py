@@ -1,15 +1,20 @@
 import json
 import time
+import uuid
+import re
+import time
 from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from api.db import db_client
-from api.db.models import OrganizationModel, UserModel
+from api.db.models import OrganizationModel, UserModel, WorkflowModel, WorkflowRunModel, organization_users_association
+from api.utils.auth import create_jwt_token
+from api.enums import UserRole
 from api.services.auth.depends import get_superuser
 from api.services.auth.stack_auth import stackauth
 
@@ -169,14 +174,272 @@ async def get_workflow_runs(
         total_pages=total_pages,
     )
 
+def generate_slug(name: str) -> str:
+    slug = name.lower()
+    slug = re.sub(r'[^a-z0-9]+', '-', slug)
+    return slug.strip('-')
+
+class CreateOrganizationRequest(BaseModel):
+    name: str
+    slug: Optional[str] = None
+
+class UpdateOrganizationRequest(BaseModel):
+    name: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class AssignUserRequest(BaseModel):
+    user_id: int
+    role: str
+
+class RemoveUserRequest(BaseModel):
+    user_id: int
+
+class SwitchOrgRequest(BaseModel):
+    org_id: int
+
+@router.post("/organizations")
+async def create_organization(request: CreateOrganizationRequest, user: UserModel = Depends(get_superuser)):
+    name = request.name.strip()
+    if len(name) < 2 or len(name) > 100:
+        raise HTTPException(status_code=400, detail="Name must be between 2 and 100 characters")
+    
+    slug = request.slug or generate_slug(name)
+    
+    async with db_client.async_session_maker() as session:
+        # Check uniqueness
+        existing = await session.execute(
+            select(OrganizationModel).where(
+                (OrganizationModel.name == name) | (OrganizationModel.slug == slug)
+            )
+        )
+        if existing.scalars().first():
+            raise HTTPException(status_code=400, detail="Organization with this name or slug already exists")
+            
+        new_org = OrganizationModel(
+            name=name,
+            slug=slug,
+            provider_id=f"org_{uuid.uuid4().hex[:12]}",
+            is_active=True
+        )
+        session.add(new_org)
+        await session.commit()
+        await session.refresh(new_org)
+        
+        return {
+            "id": new_org.id,
+            "name": new_org.name,
+            "slug": new_org.slug,
+            "provider_id": new_org.provider_id,
+            "created_at": new_org.created_at
+        }
+
 @router.get("/organizations")
 async def list_all_organizations(user: UserModel = Depends(get_superuser)):
-    """List all organizations on the platform."""
+    """List all organizations with stats."""
     async with db_client.async_session_maker() as session:
-        result = await session.execute(select(OrganizationModel))
-        orgs = result.scalars().all()
+        # Using separate queries for stats to avoid complex group bys that might break
+        orgs = await session.execute(select(OrganizationModel))
+        orgs = orgs.scalars().all()
+        
+        result = []
+        for o in orgs:
+            # Members count
+            members_result = await session.execute(
+                select(UserModel)
+                .join(organization_users_association, UserModel.id == organization_users_association.c.user_id)
+                .where(organization_users_association.c.organization_id == o.id)
+            )
+            members = members_result.scalars().all()
+            
+            admin_count = sum(1 for m in members if m.role == 'admin')
+            client_count = sum(1 for m in members if m.role == 'client')
+            member_count = len(members)
+            
+            # Agents count
+            agents_result = await session.execute(
+                select(func.count(WorkflowModel.id))
+                .where(WorkflowModel.organization_id == o.id)
+            )
+            agent_count = agents_result.scalar() or 0
+            
+            result.append({
+                "id": o.id,
+                "name": o.name,
+                "slug": o.slug,
+                "provider_id": o.provider_id,
+                "created_at": o.created_at,
+                "is_active": o.is_active,
+                "member_count": member_count,
+                "admin_count": admin_count,
+                "client_count": client_count,
+                "agent_count": agent_count
+            })
+            
+    return result
 
-    return [{"id": o.id, "name": o.name, "provider_id": o.provider_id} for o in orgs]
+@router.patch("/organizations/{org_id}")
+async def update_organization(org_id: int, request: UpdateOrganizationRequest, user: UserModel = Depends(get_superuser)):
+    async with db_client.async_session_maker() as session:
+        org = await session.get(OrganizationModel, org_id)
+        if not org:
+            raise HTTPException(status_code=404, detail="Organization not found")
+            
+        if request.name is not None:
+            # check uniqueness
+            existing = await session.execute(
+                select(OrganizationModel).where(OrganizationModel.name == request.name, OrganizationModel.id != org_id)
+            )
+            if existing.scalars().first():
+                raise HTTPException(status_code=400, detail="Name already in use")
+            org.name = request.name
+            
+        if request.is_active is not None:
+            org.is_active = request.is_active
+            
+        await session.commit()
+        await session.refresh(org)
+        return {"id": org.id, "name": org.name, "is_active": org.is_active}
+
+@router.delete("/organizations/{org_id}")
+async def delete_organization(org_id: int, user: UserModel = Depends(get_superuser)):
+    async with db_client.async_session_maker() as session:
+        org = await session.get(OrganizationModel, org_id)
+        if not org:
+            raise HTTPException(status_code=404, detail="Organization not found")
+            
+        # check for active agents
+        active_agents = await session.execute(
+            select(WorkflowModel).where(WorkflowModel.organization_id == org_id, WorkflowModel.status == 'active')
+        )
+        if active_agents.scalars().first():
+            raise HTTPException(status_code=400, detail="Cannot deactivate organization with active agents")
+            
+        # check for active calls (not completed/failed)
+        active_calls = await session.execute(
+            select(WorkflowRunModel).where(
+                WorkflowRunModel.workflow.has(organization_id=org_id),
+                WorkflowRunModel.state.notin_(['completed', 'failed'])
+            )
+        )
+        if active_calls.scalars().first():
+            raise HTTPException(status_code=400, detail="Cannot deactivate organization with active calls")
+            
+        org.is_active = False
+        await session.commit()
+        return {"message": "Organization deactivated successfully"}
+
+@router.post("/organizations/{org_id}/assign-user")
+async def assign_user(org_id: int, request: AssignUserRequest, super_user: UserModel = Depends(get_superuser)):
+    if request.role not in ['admin', 'client']:
+        raise HTTPException(status_code=400, detail="Invalid role")
+        
+    async with db_client.async_session_maker() as session:
+        org = await session.get(OrganizationModel, org_id)
+        if not org:
+            raise HTTPException(status_code=404, detail="Organization not found")
+            
+        user = await session.get(UserModel, request.user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        if user.is_superuser or user.role == UserRole.SUPER_ADMIN.value:
+            raise HTTPException(status_code=400, detail="Cannot assign superadmin to an organization")
+            
+        # Remove from previous orgs in association table
+        await session.execute(
+            organization_users_association.delete().where(organization_users_association.c.user_id == user.id)
+        )
+        
+        # Add to new org
+        await session.execute(
+            organization_users_association.insert().values(
+                user_id=user.id,
+                organization_id=org.id
+            )
+        )
+        
+        user.selected_organization_id = org.id
+        user.role = request.role
+        await session.commit()
+        return {"message": "User assigned successfully"}
+
+@router.post("/organizations/{org_id}/remove-user")
+async def remove_user(org_id: int, request: RemoveUserRequest, super_user: UserModel = Depends(get_superuser)):
+    async with db_client.async_session_maker() as session:
+        # Check if user is the last admin
+        members_result = await session.execute(
+            select(UserModel)
+            .join(organization_users_association, UserModel.id == organization_users_association.c.user_id)
+            .where(organization_users_association.c.organization_id == org_id)
+        )
+        members = members_result.scalars().all()
+        
+        is_admin = any(m.id == request.user_id and m.role == 'admin' for m in members)
+        if is_admin:
+            admin_count = sum(1 for m in members if m.role == 'admin')
+            if admin_count <= 1:
+                raise HTTPException(status_code=400, detail="Cannot remove the last admin of an organization")
+        
+        # Remove from org
+        await session.execute(
+            organization_users_association.delete().where(
+                organization_users_association.c.user_id == request.user_id,
+                organization_users_association.c.organization_id == org_id
+            )
+        )
+        
+        user = await session.get(UserModel, request.user_id)
+        if user and user.selected_organization_id == org_id:
+            user.selected_organization_id = None
+            
+        await session.commit()
+        return {"message": "User removed successfully"}
+
+@router.get("/organizations/{org_id}/members")
+async def get_org_members(org_id: int, super_user: UserModel = Depends(get_superuser)):
+    async with db_client.async_session_maker() as session:
+        members_result = await session.execute(
+            select(UserModel)
+            .join(organization_users_association, UserModel.id == organization_users_association.c.user_id)
+            .where(organization_users_association.c.organization_id == org_id)
+        )
+        members = members_result.scalars().all()
+        
+        return [
+            {
+                "id": m.id,
+                "email": m.email,
+                "name": getattr(m, 'name', None) or m.email,
+                "role": m.role,
+                "joined_at": m.created_at,
+                "last_active": m.created_at # mock
+            } for m in members
+        ]
+
+@router.post("/switch-org")
+async def switch_org(request: SwitchOrgRequest, user: UserModel = Depends(get_superuser)):
+    async with db_client.async_session_maker() as session:
+        org = await session.get(OrganizationModel, request.org_id)
+        if not org:
+            raise HTTPException(status_code=404, detail="Organization not found")
+        if not getattr(org, 'is_active', True):
+            raise HTTPException(status_code=400, detail="Organization is deactivated")
+            
+        # Create scoped JWT
+        from datetime import timedelta
+        payload = {
+            "sub": str(user.id),
+            "acting_as_org_id": org.id,
+            "role": "super_admin",
+            "org_name": org.name
+        }
+        access_token = create_jwt_token(payload, expires_delta=timedelta(days=1))
+        
+        return {
+            "access_token": access_token,
+            "org_id": org.id,
+            "org_name": org.name
+        }
 
 
 class SuperuserUserResponse(BaseModel):
@@ -187,6 +450,7 @@ class SuperuserUserResponse(BaseModel):
     created_at: datetime
     selected_organization_id: Optional[int]
     provider_id: Optional[str] = None
+    org_name: Optional[str] = None
 
 
 class SuperuserUsersListResponse(BaseModel):
@@ -201,10 +465,11 @@ class SuperuserUsersListResponse(BaseModel):
 async def list_all_users(
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
+    org_id: Optional[int] = Query(None),
     user: UserModel = Depends(get_superuser),
 ):
     """List all users in the system."""
-    users, total_count = await db_client.get_all_users_paginated(page=page, limit=limit)
+    users, total_count = await db_client.get_all_users_paginated(page=page, limit=limit, org_id=org_id)
     total_pages = (total_count + limit - 1) // limit
     
     return SuperuserUsersListResponse(
@@ -217,6 +482,7 @@ async def list_all_users(
                 created_at=u.created_at,
                 selected_organization_id=u.selected_organization_id,
                 provider_id=u.provider_id,
+                org_name=u.selected_organization.name if u.selected_organization else None
             )
             for u in users
         ],

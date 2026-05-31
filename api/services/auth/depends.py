@@ -20,113 +20,137 @@ async def get_user(
     authorization: Annotated[str | None, Header()] = None,
     x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
 ) -> UserModel:
+    user = None
     # ------------------------------------------------------------------
     # Check if API key is provided (takes precedence)
     # ------------------------------------------------------------------
     if x_api_key:
-        return await _handle_api_key_auth(x_api_key)
+        user = await _handle_api_key_auth(x_api_key)
 
     # ------------------------------------------------------------------
     # Check if we're using local (email/password) auth
+    # or if we have an impersonation token (valid JWT)
     # ------------------------------------------------------------------
-    if AUTH_PROVIDER == "local":
-        return await _handle_oss_auth(authorization)
+    if not user and AUTH_PROVIDER == "local":
+        user = await _handle_oss_auth(authorization)
+    elif not user:
+        # Check if it's an impersonation token (local JWT)
+        if authorization and authorization.startswith("Bearer "):
+            token = authorization.replace("Bearer ", "")
+            try:
+                # If it decodes successfully as our JWT, handle it locally
+                decode_jwt_token(token)
+                user = await _handle_oss_auth(authorization)
+            except Exception:
+                pass # Fall through to stackauth
 
     # ------------------------------------------------------------------
     # 1. Validate and fetch the authenticated Stack user
     # ------------------------------------------------------------------
+    if not user:
+        stack_user = await stackauth.get_user(authorization)
+        if stack_user is None:
+            raise HTTPException(status_code=401, detail="Unauthorized")
 
-    stack_user = await stackauth.get_user(authorization)
-    if stack_user is None:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        # ------------------------------------------------------------------
+        # 2. Ensure the user has a team (Stack "selected_team_id")
+        # ------------------------------------------------------------------
 
-    # ------------------------------------------------------------------
-    # 2. Ensure the user has a team (Stack "selected_team_id")
-    # ------------------------------------------------------------------
+        selected_team_id: str | None = stack_user.get("selected_team_id")
+        if not selected_team_id and stack_user.get("selected_team"):
+            selected_team_id = stack_user["selected_team"].get("id")
 
-    selected_team_id: str | None = stack_user.get("selected_team_id")
-    if not selected_team_id and stack_user.get("selected_team"):
-        selected_team_id = stack_user["selected_team"].get("id")
+        if not selected_team_id:
+            raise HTTPException(status_code=400, detail="No team selected")
 
-    if not selected_team_id:
-        raise HTTPException(status_code=400, detail="No team selected")
+        # ------------------------------------------------------------------
+        # 3. Persist/Fetch the local User model
+        # ------------------------------------------------------------------
 
-    # ------------------------------------------------------------------
-    # 3. Persist/Fetch the local User model
-    # ------------------------------------------------------------------
+        try:
+            (
+                user_model,
+                user_was_created,
+            ) = await db_client.get_or_create_user_by_provider_id(stack_user["id"])
 
-    try:
-        (
-            user_model,
-            user_was_created,
-        ) = await db_client.get_or_create_user_by_provider_id(stack_user["id"])
-
-        # Sync email from Stack Auth if available and not already set
-        stack_email = stack_user.get("primary_email_verified") and stack_user.get(
-            "primary_email"
-        )
-        if stack_email and user_model.email != stack_email:
-            await db_client.update_user_email(user_model.id, stack_email)
-            user_model.email = stack_email
-
-        if user_was_created:
-            capture_event(
-                distinct_id=str(stack_user["id"]),
-                event=PostHogEvent.SIGNED_UP,
-                properties={
-                    "auth_provider": "stack",
-                },
+            # Sync email from Stack Auth if available and not already set
+            stack_email = stack_user.get("primary_email_verified") and stack_user.get(
+                "primary_email"
             )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error while creating user from database {e}"
-        )
+            if stack_email and user_model.email != stack_email:
+                await db_client.update_user_email(user_model.id, stack_email)
+                user_model.email = stack_email
 
-    # ------------------------------------------------------------------
-    # 4. Persist Organization (team) and mapping in local database
-    # ------------------------------------------------------------------
-
-    try:
-        (
-            organization,
-            org_was_created,
-        ) = await db_client.get_or_create_organization_by_provider_id(
-            org_provider_id=selected_team_id, user_id=user_model.id
-        )
-
-        # Check if user's selected organization differs from the current organization
-        if user_model.selected_organization_id != organization.id:
-            await db_client.add_user_to_organization(user_model.id, organization.id)
-
-            # Update user's selected organization
-            await db_client.update_user_selected_organization(
-                user_model.id, organization.id
+            if user_was_created:
+                capture_event(
+                    distinct_id=str(stack_user["id"]),
+                    event=PostHogEvent.SIGNED_UP,
+                    properties={
+                        "auth_provider": "stack",
+                    },
+                )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Error while creating user from database {e}"
             )
 
-            # Update the user_model object to reflect the change
-            user_model.selected_organization_id = organization.id
+        # ------------------------------------------------------------------
+        # 4. Persist Organization (team) and mapping in local database
+        # ------------------------------------------------------------------
 
-            # Only create default configuration if organization was just created
-            # This prevents race conditions where multiple concurrent requests
-            # might try to create configurations
-            if org_was_created:
-                existing_cfg = await db_client.get_user_configurations(user_model.id)
-                if not (existing_cfg.llm or existing_cfg.tts or existing_cfg.stt):
-                    mps_config = await create_user_configuration_with_mps_key(
-                        user_model.id, organization.id, stack_user["id"]
+        try:
+            (
+                organization,
+                org_was_created,
+            ) = await db_client.get_or_create_organization_by_provider_id(
+                org_provider_id=selected_team_id, user_id=user_model.id
+            )
+
+            # Check if user's selected organization differs from the current organization
+            if user_model.selected_organization_id != organization.id:
+                # To prevent fighting the SuperAdmin assignment, we only map the Stack team
+                # if the user currently has NO selected organization in Dograh.
+                if not user_model.selected_organization_id:
+                    await db_client.add_user_to_organization(user_model.id, organization.id)
+
+                    # Update user's selected organization
+                    await db_client.update_user_selected_organization(
+                        user_model.id, organization.id
                     )
-                    if mps_config:
-                        await db_client.update_user_configuration(
-                            user_model.id, mps_config
+
+                    # Update the user_model object to reflect the change
+                    user_model.selected_organization_id = organization.id
+
+                # Only create default configuration if organization was just created
+                # This prevents race conditions where multiple concurrent requests
+                # might try to create configurations
+                if org_was_created:
+                    existing_cfg = await db_client.get_user_configurations(user_model.id)
+                    if not (existing_cfg.llm or existing_cfg.tts or existing_cfg.stt):
+                        mps_config = await create_user_configuration_with_mps_key(
+                            user_model.id, organization.id, stack_user["id"]
                         )
+                        if mps_config:
+                            await db_client.update_user_configuration(
+                                user_model.id, mps_config
+                            )
 
-    except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to map user to organization: {exc}",
-        )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to map user to organization: {exc}",
+            )
+        user = user_model
 
-    return user_model
+    # SEC Check: Verify active organization
+    if user and user.selected_organization_id:
+        org = await db_client.get_organization_by_id(user.selected_organization_id)
+        if org and not getattr(org, 'is_active', True):
+            # Bypass the check for super admins so they can still manage deactivated orgs if impersonating
+            if not user.is_superuser and getattr(user, 'role', '') != UserRole.SUPER_ADMIN.value:
+                raise HTTPException(status_code=403, detail="Your organization has been deactivated. Contact support.")
+
+    return user
 
 
 async def _handle_oss_auth(authorization: str | None) -> UserModel:
@@ -151,6 +175,9 @@ async def _handle_oss_auth(authorization: str | None) -> UserModel:
         payload = decode_jwt_token(token)
         user = await db_client.get_user_by_id(int(payload["sub"]))
         if user:
+            acting_as_org_id = payload.get("acting_as_org_id")
+            if acting_as_org_id:
+                user.selected_organization_id = acting_as_org_id
             return user
         raise HTTPException(status_code=401, detail="User not found")
     except HTTPException:

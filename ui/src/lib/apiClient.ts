@@ -32,6 +32,16 @@ export function setupAuthInterceptor(apiClient: Client, getAccessToken: () => Pr
         if (request.headers.get('Authorization')) {
             return request;
         }
+        
+        // Use impersonation token if active
+        if (typeof sessionStorage !== 'undefined') {
+            const impersonationToken = sessionStorage.getItem('impersonation_token');
+            if (impersonationToken) {
+                request.headers.set('Authorization', `Bearer ${impersonationToken}`);
+                return request;
+            }
+        }
+        
         try {
             const token = await getAccessToken();
             request.headers.set('Authorization', `Bearer ${token}`);
@@ -43,6 +53,13 @@ export function setupAuthInterceptor(apiClient: Client, getAccessToken: () => Pr
 
     apiClient.interceptors.response.use((response) => {
         if (!response.ok && response.status === 401) {
+            // Clear impersonation token from sessionStorage if present
+            if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('impersonation_token')) {
+                sessionStorage.removeItem('impersonation_token');
+                window.location.href = '/superadmin?expired=true';
+                return response;
+            }
+            
             // Check if we have an impersonation cookie using a simple string match
             const isImpersonating = typeof document !== 'undefined' && document.cookie.includes('__stack_impersonation');
             if (isImpersonating) {
