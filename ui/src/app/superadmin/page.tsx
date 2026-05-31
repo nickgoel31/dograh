@@ -138,11 +138,15 @@ export default function SuperadminPage() {
         e.preventDefault();
         setIsCreating(true);
         try {
-            await client.request({
+            const { error } = await client.request({
                 method: "POST",
                 url: "/api/v1/superuser/organizations",
                 body: { name: newOrgName }
             });
+            if (error) {
+                toast.error((error as any)?.detail || "Failed to create organization");
+                return;
+            }
             toast.success("Organization created successfully");
             setNewOrgName("");
             setIsCreateModalOpen(false);

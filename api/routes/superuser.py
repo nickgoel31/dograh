@@ -205,7 +205,7 @@ async def create_organization(request: CreateOrganizationRequest, user: UserMode
     
     slug = request.slug or generate_slug(name)
     
-    async with db_client.async_session_maker() as session:
+    async with db_client.async_session() as session:
         # Check uniqueness
         existing = await session.execute(
             select(OrganizationModel).where(
@@ -236,7 +236,7 @@ async def create_organization(request: CreateOrganizationRequest, user: UserMode
 @router.get("/organizations")
 async def list_all_organizations(user: UserModel = Depends(get_superuser)):
     """List all organizations with stats."""
-    async with db_client.async_session_maker() as session:
+    async with db_client.async_session() as session:
         # Using separate queries for stats to avoid complex group bys that might break
         orgs = await session.execute(select(OrganizationModel))
         orgs = orgs.scalars().all()
@@ -279,7 +279,7 @@ async def list_all_organizations(user: UserModel = Depends(get_superuser)):
 
 @router.patch("/organizations/{org_id}")
 async def update_organization(org_id: int, request: UpdateOrganizationRequest, user: UserModel = Depends(get_superuser)):
-    async with db_client.async_session_maker() as session:
+    async with db_client.async_session() as session:
         org = await session.get(OrganizationModel, org_id)
         if not org:
             raise HTTPException(status_code=404, detail="Organization not found")
@@ -302,7 +302,7 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
 
 @router.delete("/organizations/{org_id}")
 async def delete_organization(org_id: int, user: UserModel = Depends(get_superuser)):
-    async with db_client.async_session_maker() as session:
+    async with db_client.async_session() as session:
         org = await session.get(OrganizationModel, org_id)
         if not org:
             raise HTTPException(status_code=404, detail="Organization not found")
@@ -333,7 +333,7 @@ async def assign_user(org_id: int, request: AssignUserRequest, super_user: UserM
     if request.role not in ['admin', 'client']:
         raise HTTPException(status_code=400, detail="Invalid role")
         
-    async with db_client.async_session_maker() as session:
+    async with db_client.async_session() as session:
         org = await session.get(OrganizationModel, org_id)
         if not org:
             raise HTTPException(status_code=404, detail="Organization not found")
@@ -365,7 +365,7 @@ async def assign_user(org_id: int, request: AssignUserRequest, super_user: UserM
 
 @router.post("/organizations/{org_id}/remove-user")
 async def remove_user(org_id: int, request: RemoveUserRequest, super_user: UserModel = Depends(get_superuser)):
-    async with db_client.async_session_maker() as session:
+    async with db_client.async_session() as session:
         # Check if user is the last admin
         members_result = await session.execute(
             select(UserModel)
@@ -397,7 +397,7 @@ async def remove_user(org_id: int, request: RemoveUserRequest, super_user: UserM
 
 @router.get("/organizations/{org_id}/members")
 async def get_org_members(org_id: int, super_user: UserModel = Depends(get_superuser)):
-    async with db_client.async_session_maker() as session:
+    async with db_client.async_session() as session:
         members_result = await session.execute(
             select(UserModel)
             .join(organization_users_association, UserModel.id == organization_users_association.c.user_id)
@@ -418,7 +418,7 @@ async def get_org_members(org_id: int, super_user: UserModel = Depends(get_super
 
 @router.post("/switch-org")
 async def switch_org(request: SwitchOrgRequest, user: UserModel = Depends(get_superuser)):
-    async with db_client.async_session_maker() as session:
+    async with db_client.async_session() as session:
         org = await session.get(OrganizationModel, request.org_id)
         if not org:
             raise HTTPException(status_code=404, detail="Organization not found")
