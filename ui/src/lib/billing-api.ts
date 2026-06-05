@@ -1,4 +1,5 @@
 import { client } from '@/client/client.gen';
+
 import { BillingConfiguration } from './pricing-config';
 
 export async function getBillingConfig() {

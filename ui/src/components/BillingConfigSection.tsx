@@ -1,24 +1,24 @@
 "use client";
 
+import { Plus,Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Trash2, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth";
 import { getBillingConfig, saveBillingConfig } from "@/lib/billing-api";
-import { DEFAULT_TIER_THRESHOLDS, DEFAULT_PRICES, BillingConfiguration, TierConfig } from "@/lib/pricing-config";
+import { BillingConfiguration, DEFAULT_PRICES, DEFAULT_TIER_THRESHOLDS, TierConfig } from "@/lib/pricing-config";
 
 export function BillingConfigSection() {
   const { user, loading: authLoading } = useAuth();
-  
+
   const [config, setConfig] = useState<BillingConfiguration>({
     tiers: DEFAULT_TIER_THRESHOLDS,
     prices: DEFAULT_PRICES
   });
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const hasFetched = useRef(false);
@@ -76,10 +76,10 @@ export function BillingConfigSection() {
     const newTiers = [...config.tiers];
     const removedLabel = newTiers[index].label;
     newTiers.splice(index, 1);
-    
+
     const newPrices = { ...config.prices };
     delete newPrices[removedLabel];
-    
+
     setConfig({ tiers: newTiers, prices: newPrices });
   };
 
@@ -109,23 +109,23 @@ export function BillingConfigSection() {
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>Tier Name</Label>
-                <Input 
-                  value={tier.label} 
-                  onChange={(e) => updateTier(index, 'label', e.target.value)} 
+                <Input
+                  value={tier.label}
+                  onChange={(e) => updateTier(index, 'label', e.target.value)}
                   required
                 />
               </div>
               <div className="space-y-1">
                 <Label>Max Monthly Calls</Label>
-                <Input 
+                <Input
                   type="number"
                   placeholder="Leave empty for Infinity"
-                  value={tier.maxCalls === null ? "" : tier.maxCalls} 
-                  onChange={(e) => updateTier(index, 'maxCalls', e.target.value ? parseInt(e.target.value) : null)} 
+                  value={tier.maxCalls === null ? "" : tier.maxCalls}
+                  onChange={(e) => updateTier(index, 'maxCalls', e.target.value ? parseInt(e.target.value) : null)}
                 />
               </div>
             </div>
@@ -133,7 +133,7 @@ export function BillingConfigSection() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>Price per Minute (₹)</Label>
-                <Input 
+                <Input
                   type="number"
                   step="0.01"
                   value={config.prices[tier.label]?.per_minute ?? 0}
@@ -143,7 +143,7 @@ export function BillingConfigSection() {
               </div>
               <div className="space-y-1">
                 <Label>Price per 30s (₹)</Label>
-                <Input 
+                <Input
                   type="number"
                   step="0.01"
                   value={config.prices[tier.label]?.per_30s ?? 0}

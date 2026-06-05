@@ -122,14 +122,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   return (
     <SidebarProvider defaultOpen>
       {shouldShowSidebar ? (
-        <div className="flex min-h-screen w-full">
+        <div className="flex min-h-screen w-full bg-background relative overflow-hidden transition-colors duration-300">
+          {/* Space background glows */}
+          <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/8 blur-[100px] pointer-events-none opacity-45 dark:opacity-80" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-500/8 blur-[120px] pointer-events-none opacity-45 dark:opacity-80" />
+
           <AppSidebar />
-          <SidebarInset className="flex-1">
+          <SidebarInset className="flex-1 flex flex-col min-w-0 bg-transparent border-l border-border/50">
             <BackendStatusBanner />
             {!isWorkflowEditor && <AppHeader />}
             {/* Optional header area for specific pages */}
             {headerActions && (
-              <header className="sticky top-0 z-50 w-full border-b bg-background">
+              <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
                 <div className="container mx-auto px-4 py-4">
                   <div className="flex items-center justify-center">
                     {headerActions}
@@ -140,7 +144,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
 
             {/* Optional sticky tabs */}
             {stickyTabs && (
-              <div className="sticky top-0 z-40 bg-[#2a2e39] border-b border-gray-700">
+              <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/80">
                 <div className="container mx-auto px-4">
                   <div className="flex items-center justify-center py-2">
                     {stickyTabs}
@@ -156,7 +160,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({
           </SidebarInset>
         </div>
       ) : (
-        <div className="flex-1 w-full">
+        <div className="flex-1 w-full bg-background relative overflow-hidden transition-colors duration-300">
+          <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/8 blur-[100px] pointer-events-none opacity-45 dark:opacity-80" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-500/8 blur-[120px] pointer-events-none opacity-45 dark:opacity-80" />
           <BackendStatusBanner />
           {children}
         </div>

@@ -2,11 +2,10 @@
 
 import { ExternalLink } from "lucide-react";
 
-import { MCPSection } from "@/components/MCPSection";
-import { TelemetrySection } from "@/components/TelemetrySection";
 import { BillingConfigSection } from "@/components/BillingConfigSection";
+import { MCPSection } from "@/components/MCPSection";
 import { TeamSection } from "@/components/TeamSection";
-import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
+import { TelemetrySection } from "@/components/TelemetrySection";
 import {
   Card,
   CardContent,
@@ -14,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
 
 export default function SettingsPage() {
   const { role, isSuperadmin, loading } = useCurrentUserRole();

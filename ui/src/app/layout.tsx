@@ -1,7 +1,7 @@
 import "./globals.css";
 
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { JetBrains_Mono,Plus_Jakarta_Sans } from "next/font/google";
 import { Suspense } from "react";
 
 import ChatwootWidget from "@/components/ChatwootWidget";
@@ -17,13 +17,13 @@ import { UserConfigProvider } from "@/context/UserConfigContext";
 import { AuthProvider } from "@/lib/auth";
 
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const sansFont = Plus_Jakarta_Sans({
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const monoFont = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
 });
 
@@ -34,9 +34,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children
-}: {
-  children: React.ReactNode
-}) {
+  }: {
+    children: React.ReactNode
+  }) {
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -60,7 +60,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        className={`${sansFont.variable} ${monoFont.variable} antialiased`}>
         <SentryErrorBoundary>
           <AuthProvider>
             <AppConfigProvider>

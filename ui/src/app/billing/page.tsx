@@ -18,11 +18,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useAuth } from '@/lib/auth';
 import { getBillingConfig } from '@/lib/billing-api';
 import {
-  type BillingMode,
   type BillingConfiguration,
-  DEFAULT_TIER_THRESHOLDS,
-  DEFAULT_PRICES,
+  type BillingMode,
   calculateCallCharge,
+  DEFAULT_PRICES,
+  DEFAULT_TIER_THRESHOLDS,
   getBillableUnits,
   getNextTier,
   getPricePerUnit,
@@ -176,11 +176,11 @@ export default function BillingPage() {
 
   // Filter runs by selected agents
   const unsortedFilteredRuns = selectedAgentIds.length === 0
-    ? allMonthRuns 
+    ? allMonthRuns
     : allMonthRuns.filter(r => selectedAgentIds.includes(r.workflow_id?.toString() || 'unknown'));
-    
+
   // Explicitly sort descending by created_at
-  const filteredRuns = [...unsortedFilteredRuns].sort((a, b) => 
+  const filteredRuns = [...unsortedFilteredRuns].sort((a, b) =>
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
@@ -312,8 +312,8 @@ export default function BillingPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="w-[200px] justify-between font-normal h-9">
-                {selectedAgentIds.length === 0 
-                  ? "All Agents" 
+                {selectedAgentIds.length === 0
+                  ? "All Agents"
                   : `${selectedAgentIds.length} Agent${selectedAgentIds.length > 1 ? 's' : ''} Selected`}
                 <span className="opacity-50 text-xs">▼</span>
               </Button>

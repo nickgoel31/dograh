@@ -96,8 +96,8 @@ export function getPricePerUnit(tier: TierKey | string, mode: BillingMode, price
  * Returns the charge for a single call in ₹.
  */
 export function calculateCallCharge(
-  durationSeconds: number, 
-  tier: TierKey | string, 
+  durationSeconds: number,
+  tier: TierKey | string,
   mode: BillingMode,
   prices: Record<string, Record<BillingMode, number>> = DEFAULT_PRICES
 ): number {

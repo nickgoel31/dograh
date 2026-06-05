@@ -21,9 +21,9 @@ import {
   Settings,
   Shield,
   TrendingUp,
+  Users,
   Workflow,
   Wrench,
-  Users,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -265,8 +265,8 @@ export function AppSidebar() {
         asChild
         tooltip={tooltip}
         className={cn(
-          "hover:bg-accent hover:text-accent-foreground",
-          isItemActive && "bg-accent text-accent-foreground"
+          "transition-all duration-300 hover:bg-accent/70 hover:text-accent-foreground hover:translate-x-1",
+          isItemActive && "bg-primary/10 text-primary font-semibold border-r-2 border-primary rounded-r-none"
         )}
       >
         <Link
@@ -275,7 +275,7 @@ export function AppSidebar() {
           className={cn("relative", isCollapsed && "justify-center")}
           translate="no"
         >
-          <Icon className="h-4 w-4 shrink-0" />
+          <Icon className={cn("h-4 w-4 shrink-0 transition-transform duration-300", isItemActive && "text-primary scale-110")} />
           <span
             className={cn("notranslate min-w-0 flex-1 truncate", isCollapsed && "sr-only")}
             translate="no"
