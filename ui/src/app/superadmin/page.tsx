@@ -59,6 +59,10 @@ interface Organization {
   billing_rate?: number;
   billing_pulse?: number;
   monthly_minutes_limit?: number;
+  monthly_minutes_start_year?: number;
+  monthly_minutes_start_month?: number;
+  monthly_minutes_end_year?: number;
+  monthly_minutes_end_month?: number;
 }
 
 export default function SuperadminPage() {
@@ -92,7 +96,20 @@ export default function SuperadminPage() {
     const [editCycleYear, setEditCycleYear] = useState<number>(new Date().getFullYear());
     const [editCycleMonth, setEditCycleMonth] = useState<number>(new Date().getMonth() + 1);
     const [editCustomMinutesUsed, setEditCustomMinutesUsed] = useState<string>("");
+    const [editStartYear, setEditStartYear] = useState<number | "">("");
+    const [editStartMonth, setEditStartMonth] = useState<number | "">("");
+    const [editEndYear, setEditEndYear] = useState<number | "">("");
+    const [editEndMonth, setEditEndMonth] = useState<number | "">("");
+
+    const [runs, setRuns] = useState<any[]>([]);
+    const [loadingRuns, setLoadingRuns] = useState(false);
+    const [hasFetchedRuns, setHasFetchedRuns] = useState(false);
     const [isSavingBilling, setIsSavingBilling] = useState(false);
+
+    useEffect(() => {
+        setRuns([]);
+        setHasFetchedRuns(false);
+    }, [editCycleYear, editCycleMonth, editingOrg]);
 
     useEffect(() => {
         if (user) {
@@ -212,6 +229,46 @@ export default function SuperadminPage() {
         }
     };
 
+    const fetchRunsForAudit = async () => {
+        if (!editingOrg) return;
+        setLoadingRuns(true);
+        try {
+            const res = await client.request<any[]>({
+                method: "GET",
+                url: `/api/v1/superuser/organizations/${editingOrg.id}/runs`,
+                query: {
+                    year: editCycleYear,
+                    month: editCycleMonth,
+                }
+            });
+            if (res.data) {
+                setRuns(res.data);
+                setHasFetchedRuns(true);
+            }
+        } catch {
+            toast.error("Failed to fetch runs for audit");
+        } finally {
+            setLoadingRuns(false);
+        }
+    };
+
+    const handleDeleteRun = async (runId: number) => {
+        if (!confirm("Are you sure you want to delete this run? It will be removed from billing and the monthly minutes will be recalculated.")) {
+            return;
+        }
+        try {
+            await client.request({
+                method: "DELETE",
+                url: `/api/v1/superuser/runs/${runId}`,
+            });
+            toast.success("Run deleted and billing minutes recalculated");
+            fetchRunsForAudit();
+            fetchOrganizations();
+        } catch {
+            toast.error("Failed to delete run");
+        }
+    };
+
     const handleSaveBilling = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingOrg) return;
@@ -225,6 +282,10 @@ export default function SuperadminPage() {
                     billing_rate: editBillingRate,
                     billing_pulse: editBillingPulse,
                     monthly_minutes_limit: editMonthlyMinutesLimit,
+                    monthly_minutes_start_year: editStartYear !== "" ? Number(editStartYear) : null,
+                    monthly_minutes_start_month: editStartMonth !== "" ? Number(editStartMonth) : null,
+                    monthly_minutes_end_year: editEndYear !== "" ? Number(editEndYear) : null,
+                    monthly_minutes_end_month: editEndMonth !== "" ? Number(editEndMonth) : null,
                     cycle_year: editCycleYear,
                     cycle_month: editCycleMonth,
                     custom_minutes_used: editCustomMinutesUsed !== "" ? parseFloat(editCustomMinutesUsed) : null
@@ -451,13 +512,17 @@ export default function SuperadminPage() {
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem onClick={() => {
                                                                 setEditingOrg(org);
-                                                                 setEditMonthlyMinutesLimit(org.monthly_minutes_limit ?? 0);
-                                                                 setEditCycleYear(new Date().getFullYear());
-                                                                 setEditCycleMonth(new Date().getMonth() + 1);
-                                                                 setEditCustomMinutesUsed("");
+                                                                setEditMonthlyMinutesLimit(org.monthly_minutes_limit ?? 0);
+                                                                setEditCycleYear(new Date().getFullYear());
+                                                                setEditCycleMonth(new Date().getMonth() + 1);
+                                                                setEditCustomMinutesUsed("");
                                                                 setEditBalance(org.balance ?? 0);
                                                                 setEditBillingRate(org.billing_rate ?? 0);
                                                                 setEditBillingPulse(org.billing_pulse ?? 60);
+                                                                setEditStartYear(org.monthly_minutes_start_year ?? "");
+                                                                setEditStartMonth(org.monthly_minutes_start_month ?? "");
+                                                                setEditEndYear(org.monthly_minutes_end_year ?? "");
+                                                                setEditEndMonth(org.monthly_minutes_end_month ?? "");
                                                                 setIsEditBillingOpen(true);
                                                             }}>
                                                                 <Settings2 className="mr-2 h-4 w-4" />
@@ -535,7 +600,7 @@ export default function SuperadminPage() {
 
             {/* Edit Wallet & Billing Dialog */}
             <Dialog open={isEditBillingOpen} onOpenChange={setIsEditBillingOpen}>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
                     <form onSubmit={handleSaveBilling}>
                         <DialogHeader>
                             <DialogTitle>Wallet & Billing Settings</DialogTitle>
@@ -606,6 +671,68 @@ export default function SuperadminPage() {
                                 </p>
                             </div>
                             <div className="border-t pt-4 space-y-4">
+                                <h4 className="text-sm font-semibold text-foreground">Active Contract Period</h4>
+                                <p className="text-xs text-muted-foreground">
+                                    Set the start and end month/year for the committed minutes contract. Leave empty/None to disable contract period gating.
+                                </p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="startYear" className="text-xs">Start Year</Label>
+                                        <Input
+                                            id="startYear"
+                                            type="number"
+                                            placeholder="None"
+                                            value={editStartYear}
+                                            onChange={(e) => setEditStartYear(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="startMonth" className="text-xs">Start Month</Label>
+                                        <select
+                                            id="startMonth"
+                                            value={editStartMonth}
+                                            onChange={(e) => setEditStartMonth(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
+                                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        >
+                                            <option value="">None</option>
+                                            {Array.from({ length: 12 }, (_, i) => (
+                                                <option key={i + 1} value={i + 1}>
+                                                    {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="endYear" className="text-xs">End Year</Label>
+                                        <Input
+                                            id="endYear"
+                                            type="number"
+                                            placeholder="None"
+                                            value={editEndYear}
+                                            onChange={(e) => setEditEndYear(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="endMonth" className="text-xs">End Month</Label>
+                                        <select
+                                            id="endMonth"
+                                            value={editEndMonth}
+                                            onChange={(e) => setEditEndMonth(e.target.value === "" ? "" : parseInt(e.target.value) || "")}
+                                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        >
+                                            <option value="">None</option>
+                                            {Array.from({ length: 12 }, (_, i) => (
+                                                <option key={i + 1} value={i + 1}>
+                                                    {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="border-t pt-4 space-y-4">
                                 <h4 className="text-sm font-semibold text-foreground">Adjust Custom Usage Cycle Minutes</h4>
                                 <p className="text-xs text-muted-foreground">
                                     Override or manually set minutes used for a specific cycle.
@@ -651,6 +778,51 @@ export default function SuperadminPage() {
                                     <p className="text-[10px] text-muted-foreground">
                                         Leave empty to keep default system-calculated minutes.
                                     </p>
+                                </div>
+                                <div className="border-t pt-4 space-y-4">
+                                    <h4 className="text-sm font-semibold text-foreground">Audit Agent Runs (Call Logs)</h4>
+                                    <p className="text-xs text-muted-foreground">
+                                        View or delete individual runs for the selected cycle month and year. Deleting a run automatically recalculates the cycle's used minutes.
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={fetchRunsForAudit}
+                                            disabled={loadingRuns}
+                                            className="w-full"
+                                        >
+                                            {loadingRuns ? "Fetching runs..." : "Fetch runs for selected cycle"}
+                                        </Button>
+                                    </div>
+                                    
+                                    {runs.length > 0 && (
+                                        <div className="max-h-60 overflow-y-auto space-y-2 border rounded-md p-2 bg-muted/20">
+                                            {runs.map((run) => (
+                                                <div key={run.id} className="flex items-center justify-between p-2 border rounded bg-background text-xs">
+                                                    <div className="flex-1 min-w-0 pr-2">
+                                                        <div className="font-medium text-foreground truncate">{run.workflow_name || "Agent"}</div>
+                                                        <div className="text-[10px] text-muted-foreground">
+                                                            {new Date(run.created_at).toLocaleString()} • {run.duration_seconds}s
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleDeleteRun(run.id)}
+                                                        className="text-red-500 hover:text-red-600 h-7 w-7 p-0 flex-shrink-0"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {runs.length === 0 && hasFetchedRuns && (
+                                        <p className="text-xs text-center text-muted-foreground py-2">No runs found for this period.</p>
+                                    )}
                                 </div>
                             </div>
                         </div>

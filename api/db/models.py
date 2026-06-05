@@ -131,6 +131,10 @@ class OrganizationModel(Base):
     billing_rate = Column(Float, nullable=False, default=0.0, server_default=text("0.0"))
     billing_pulse = Column(Integer, nullable=False, default=60, server_default=text("60"))
     monthly_minutes_limit = Column(Float, nullable=False, default=0.0, server_default=text("0.0"))
+    monthly_minutes_start_year = Column(Integer, nullable=True)
+    monthly_minutes_start_month = Column(Integer, nullable=True)
+    monthly_minutes_end_year = Column(Integer, nullable=True)
+    monthly_minutes_end_month = Column(Integer, nullable=True)
 
 
     # Relationships

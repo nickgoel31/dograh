@@ -186,6 +186,10 @@ class CreateOrganizationRequest(BaseModel):
     billing_rate: Optional[float] = 0.0
     billing_pulse: Optional[int] = 60
     monthly_minutes_limit: Optional[float] = 0.0
+    monthly_minutes_start_year: Optional[int] = None
+    monthly_minutes_start_month: Optional[int] = None
+    monthly_minutes_end_year: Optional[int] = None
+    monthly_minutes_end_month: Optional[int] = None
 
 class UpdateOrganizationRequest(BaseModel):
     name: Optional[str] = None
@@ -194,6 +198,10 @@ class UpdateOrganizationRequest(BaseModel):
     billing_rate: Optional[float] = None
     billing_pulse: Optional[int] = None
     monthly_minutes_limit: Optional[float] = None
+    monthly_minutes_start_year: Optional[int] = None
+    monthly_minutes_start_month: Optional[int] = None
+    monthly_minutes_end_year: Optional[int] = None
+    monthly_minutes_end_month: Optional[int] = None
     cycle_year: Optional[int] = None
     cycle_month: Optional[int] = None
     custom_minutes_used: Optional[float] = None
@@ -234,7 +242,11 @@ async def create_organization(request: CreateOrganizationRequest, user: UserMode
             balance=request.balance if request.balance is not None else 0.0,
             billing_rate=request.billing_rate if request.billing_rate is not None else 0.0,
             billing_pulse=request.billing_pulse if request.billing_pulse is not None else 60,
-            monthly_minutes_limit=request.monthly_minutes_limit if request.monthly_minutes_limit is not None else 0.0
+            monthly_minutes_limit=request.monthly_minutes_limit if request.monthly_minutes_limit is not None else 0.0,
+            monthly_minutes_start_year=request.monthly_minutes_start_year,
+            monthly_minutes_start_month=request.monthly_minutes_start_month,
+            monthly_minutes_end_year=request.monthly_minutes_end_year,
+            monthly_minutes_end_month=request.monthly_minutes_end_month,
         )
         session.add(new_org)
         await session.commit()
@@ -249,7 +261,11 @@ async def create_organization(request: CreateOrganizationRequest, user: UserMode
             "balance": new_org.balance,
             "billing_rate": new_org.billing_rate,
             "billing_pulse": new_org.billing_pulse,
-            "monthly_minutes_limit": new_org.monthly_minutes_limit
+            "monthly_minutes_limit": new_org.monthly_minutes_limit,
+            "monthly_minutes_start_year": new_org.monthly_minutes_start_year,
+            "monthly_minutes_start_month": new_org.monthly_minutes_start_month,
+            "monthly_minutes_end_year": new_org.monthly_minutes_end_year,
+            "monthly_minutes_end_month": new_org.monthly_minutes_end_month,
         }
 
 @router.get("/organizations")
@@ -295,7 +311,11 @@ async def list_all_organizations(user: UserModel = Depends(get_superuser)):
                 "balance": o.balance,
                 "billing_rate": o.billing_rate,
                 "billing_pulse": o.billing_pulse,
-                "monthly_minutes_limit": getattr(o, "monthly_minutes_limit", 0.0) or 0.0
+                "monthly_minutes_limit": getattr(o, "monthly_minutes_limit", 0.0) or 0.0,
+                "monthly_minutes_start_year": getattr(o, "monthly_minutes_start_year", None),
+                "monthly_minutes_start_month": getattr(o, "monthly_minutes_start_month", None),
+                "monthly_minutes_end_year": getattr(o, "monthly_minutes_end_year", None),
+                "monthly_minutes_end_month": getattr(o, "monthly_minutes_end_month", None),
             })
             
     return result
@@ -332,6 +352,19 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
 
         if request.monthly_minutes_limit is not None:
             org.monthly_minutes_limit = request.monthly_minutes_limit
+
+        # Handle updating start/end contract periods, including explicit setting to None (nullification)
+        fields_to_check = [
+            "monthly_minutes_start_year",
+            "monthly_minutes_start_month",
+            "monthly_minutes_end_year",
+            "monthly_minutes_end_month"
+        ]
+        for f in fields_to_check:
+            val = getattr(request, f)
+            is_set = f in request.model_fields_set or (hasattr(request, "__fields_set__") and f in request.__fields_set__)
+            if is_set:
+                setattr(org, f, val)
 
         if request.cycle_year is not None and request.cycle_month is not None:
             if request.custom_minutes_used is not None:
@@ -376,7 +409,11 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
             "balance": org.balance,
             "billing_rate": org.billing_rate,
             "billing_pulse": org.billing_pulse,
-            "monthly_minutes_limit": getattr(org, "monthly_minutes_limit", 0.0) or 0.0
+            "monthly_minutes_limit": getattr(org, "monthly_minutes_limit", 0.0) or 0.0,
+            "monthly_minutes_start_year": getattr(org, "monthly_minutes_start_year", None),
+            "monthly_minutes_start_month": getattr(org, "monthly_minutes_start_month", None),
+            "monthly_minutes_end_year": getattr(org, "monthly_minutes_end_year", None),
+            "monthly_minutes_end_month": getattr(org, "monthly_minutes_end_month", None),
         }
 
 @router.delete("/organizations/{org_id}")
@@ -601,3 +638,133 @@ async def update_user_role(
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+class AuditedWorkflowRunResponse(BaseModel):
+    id: int
+    name: str
+    workflow_name: Optional[str]
+    created_at: datetime
+    duration_seconds: float
+    is_completed: bool
+
+
+@router.get("/organizations/{org_id}/runs", response_model=List[AuditedWorkflowRunResponse])
+async def list_organization_runs_for_audit(
+    org_id: int,
+    year: int = Query(..., description="Target year"),
+    month: int = Query(..., description="Target month"),
+    user: UserModel = Depends(get_superuser),
+):
+    """List all workflow runs for a specific organization in a billing cycle for superadmin audit."""
+    from datetime import datetime, timezone
+    from dateutil.relativedelta import relativedelta
+    from sqlalchemy.orm import joinedload
+    from api.db.models import OrganizationModel, OrganizationUsageCycleModel, WorkflowModel, WorkflowRunModel
+    
+    async with db_client.async_session() as session:
+        org = await session.get(OrganizationModel, org_id)
+        if not org:
+            raise HTTPException(status_code=404, detail="Organization not found")
+            
+        reset_day = getattr(org, "quota_reset_day", 1) or 1
+        try:
+            period_start = datetime(year, month, reset_day, 0, 0, 0, tzinfo=timezone.utc)
+        except ValueError:
+            period_start = datetime(year, month, 1, 0, 0, 0, tzinfo=timezone.utc)
+            
+        period_end = period_start + relativedelta(months=1) - relativedelta(seconds=1)
+        
+        stmt = (
+            select(WorkflowRunModel)
+            .join(WorkflowModel, WorkflowRunModel.workflow_id == WorkflowModel.id)
+            .options(joinedload(WorkflowRunModel.workflow))
+            .where(
+                WorkflowModel.organization_id == org_id,
+                WorkflowRunModel.created_at >= period_start,
+                WorkflowRunModel.created_at <= period_end
+            )
+            .order_by(WorkflowRunModel.created_at.desc())
+        )
+        runs_result = await session.execute(stmt)
+        runs = list(runs_result.scalars().all())
+        
+        return [
+            AuditedWorkflowRunResponse(
+                id=r.id,
+                name=r.name,
+                workflow_name=r.workflow.name if r.workflow else "Unknown",
+                created_at=r.created_at,
+                duration_seconds=float(r.cost_info.get("call_duration_seconds", 0) or 0),
+                is_completed=r.is_completed
+            )
+            for r in runs
+        ]
+
+
+@router.delete("/runs/{run_id}")
+async def delete_workflow_run_for_audit(
+    run_id: int,
+    user: UserModel = Depends(get_superuser),
+):
+    """Delete a workflow run and recalculate the corresponding usage cycle duration."""
+    from sqlalchemy.orm import joinedload
+    from api.db.models import WorkflowRunModel, WorkflowModel, OrganizationUsageCycleModel
+    
+    async with db_client.async_session() as session:
+        stmt = (
+            select(WorkflowRunModel)
+            .options(joinedload(WorkflowRunModel.workflow))
+            .where(WorkflowRunModel.id == run_id)
+        )
+        run_result = await session.execute(stmt)
+        run = run_result.scalar_one_or_none()
+        if not run:
+            raise HTTPException(status_code=404, detail="Workflow run not found")
+            
+        workflow = run.workflow
+        if not workflow or not workflow.organization_id:
+            await session.delete(run)
+            await session.commit()
+            return {"detail": "Workflow run deleted successfully"}
+            
+        org_id = workflow.organization_id
+        run_created_at = run.created_at
+        
+        await session.delete(run)
+        await session.commit()
+        
+        stmt_cycle = (
+            select(OrganizationUsageCycleModel)
+            .where(
+                OrganizationUsageCycleModel.organization_id == org_id,
+                OrganizationUsageCycleModel.period_start <= run_created_at,
+                OrganizationUsageCycleModel.period_end >= run_created_at
+            )
+        )
+        cycle_result = await session.execute(stmt_cycle)
+        cycle = cycle_result.scalar_one_or_none()
+        
+        if cycle:
+            stmt_runs = (
+                select(WorkflowRunModel)
+                .join(WorkflowModel, WorkflowRunModel.workflow_id == WorkflowModel.id)
+                .where(
+                    WorkflowModel.organization_id == org_id,
+                    WorkflowRunModel.created_at >= cycle.period_start,
+                    WorkflowRunModel.created_at <= cycle.period_end
+                )
+            )
+            remaining_runs_result = await session.execute(stmt_runs)
+            remaining_runs = remaining_runs_result.scalars().all()
+            
+            total_seconds = 0
+            for r in remaining_runs:
+                cost_info = r.cost_info or {}
+                duration = cost_info.get("call_duration_seconds", 0) or 0
+                total_seconds += int(round(duration))
+                
+            cycle.total_duration_seconds = total_seconds
+            await session.commit()
+            
+        return {"detail": "Workflow run deleted and cycle minutes recalculated successfully"}

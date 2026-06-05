@@ -1226,34 +1226,66 @@ async def get_wallet(
                     target_cycle = c
                     break
 
+        # Helper to check if a cycle is within the contract period
+        def is_cycle_within_contract_period(period_start) -> bool:
+            limit = getattr(org, "monthly_minutes_limit", 0.0) or 0.0
+            if limit <= 0.0:
+                return False
+            
+            start_year = getattr(org, "monthly_minutes_start_year", None)
+            start_month = getattr(org, "monthly_minutes_start_month", None)
+            end_year = getattr(org, "monthly_minutes_end_year", None)
+            end_month = getattr(org, "monthly_minutes_end_month", None)
+            
+            if start_year is not None and start_month is not None:
+                if (period_start.year < start_year) or (period_start.year == start_year and period_start.month < start_month):
+                    return False
+            if end_year is not None and end_month is not None:
+                if (period_start.year > end_year) or (period_start.year == end_year and period_start.month > end_month):
+                    return False
+            return True
+
         # 3. Chronologically compute the carry-forward minutes for each cycle in the list
         carry_forward_to_next = 0.0
         cycle_details = {}
 
         for c in cycles:
-            c_carry_forward = carry_forward_to_next
+            is_active = is_cycle_within_contract_period(c.period_start)
             
-            # Calculate used minutes
-            if c.custom_minutes_used is not None:
-                c_used = c.custom_minutes_used
+            if not is_active:
+                # Outside contract period: reset carry forward, limit is 0, balance is standard org.balance
+                cycle_details[c.id] = {
+                    "carry_forward_minutes": 0.0,
+                    "minutes_used": (c.total_duration_seconds or 0) / 60.0,
+                    "minutes_remaining": 0.0,
+                    "balance": getattr(org, "balance", 0.0) or 0.0,
+                }
+                carry_forward_to_next = 0.0
             else:
-                c_used = (c.total_duration_seconds or 0) / 60.0
+                # Inside contract period
+                c_carry_forward = carry_forward_to_next
                 
-            # Unused minutes: total allowed - used
-            c_limit = getattr(org, "monthly_minutes_limit", 0.0) or 0.0
-            c_total_allowed = c_limit + c_carry_forward
-            c_remaining = max(0.0, c_total_allowed - c_used)
-            
-            # Next carry forward is only the unused base minutes
-            remaining_base = max(0.0, c_limit - max(0.0, c_used - c_carry_forward))
-            carry_forward_to_next = remaining_base
-            
-            cycle_details[c.id] = {
-                "carry_forward_minutes": c_carry_forward,
-                "minutes_used": c_used,
-                "minutes_remaining": c_remaining,
-                "balance": c_remaining * (getattr(org, "billing_rate", 0.0) or 0.0),
-            }
+                # Calculate used minutes
+                if c.custom_minutes_used is not None:
+                    c_used = c.custom_minutes_used
+                else:
+                    c_used = (c.total_duration_seconds or 0) / 60.0
+                    
+                # Unused minutes: total allowed - used
+                c_limit = getattr(org, "monthly_minutes_limit", 0.0) or 0.0
+                c_total_allowed = c_limit + c_carry_forward
+                c_remaining = max(0.0, c_total_allowed - c_used)
+                
+                # Next carry forward is only the unused base minutes
+                remaining_base = max(0.0, c_limit - max(0.0, c_used - c_carry_forward))
+                carry_forward_to_next = remaining_base
+                
+                cycle_details[c.id] = {
+                    "carry_forward_minutes": c_carry_forward,
+                    "minutes_used": c_used,
+                    "minutes_remaining": c_remaining,
+                    "balance": c_remaining * (getattr(org, "billing_rate", 0.0) or 0.0),
+                }
 
         details = cycle_details.get(target_cycle.id)
         if not details:
@@ -1261,14 +1293,16 @@ async def get_wallet(
                 "carry_forward_minutes": 0.0,
                 "minutes_used": 0.0,
                 "minutes_remaining": 0.0,
-                "balance": 0.0,
+                "balance": getattr(org, "balance", 0.0) or 0.0,
             }
+
+        target_is_active = is_cycle_within_contract_period(target_cycle.period_start)
 
         return WalletResponse(
             balance=details["balance"],
             billing_rate=getattr(org, "billing_rate", 0.0) or 0.0,
             billing_pulse=getattr(org, "billing_pulse", 60) or 60,
-            monthly_minutes_limit=getattr(org, "monthly_minutes_limit", 0.0) or 0.0,
+            monthly_minutes_limit=(getattr(org, "monthly_minutes_limit", 0.0) or 0.0) if target_is_active else 0.0,
             carry_forward_minutes=details["carry_forward_minutes"],
             minutes_used=details["minutes_used"],
             minutes_remaining=details["minutes_remaining"],
