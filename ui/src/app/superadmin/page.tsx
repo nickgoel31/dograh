@@ -58,6 +58,7 @@ interface Organization {
   balance?: number;
   billing_rate?: number;
   billing_pulse?: number;
+  monthly_minutes_limit?: number;
 }
 
 export default function SuperadminPage() {
@@ -87,6 +88,10 @@ export default function SuperadminPage() {
     const [editBalance, setEditBalance] = useState<number>(0);
     const [editBillingRate, setEditBillingRate] = useState<number>(0);
     const [editBillingPulse, setEditBillingPulse] = useState<number>(60);
+    const [editMonthlyMinutesLimit, setEditMonthlyMinutesLimit] = useState<number>(0);
+    const [editCycleYear, setEditCycleYear] = useState<number>(new Date().getFullYear());
+    const [editCycleMonth, setEditCycleMonth] = useState<number>(new Date().getMonth() + 1);
+    const [editCustomMinutesUsed, setEditCustomMinutesUsed] = useState<string>("");
     const [isSavingBilling, setIsSavingBilling] = useState(false);
 
     useEffect(() => {
@@ -218,7 +223,11 @@ export default function SuperadminPage() {
                 body: {
                     balance: editBalance,
                     billing_rate: editBillingRate,
-                    billing_pulse: editBillingPulse
+                    billing_pulse: editBillingPulse,
+                    monthly_minutes_limit: editMonthlyMinutesLimit,
+                    cycle_year: editCycleYear,
+                    cycle_month: editCycleMonth,
+                    custom_minutes_used: editCustomMinutesUsed !== "" ? parseFloat(editCustomMinutesUsed) : null
                 }
             });
             toast.success("Wallet & Billing configuration updated");
@@ -361,6 +370,7 @@ export default function SuperadminPage() {
                                         <TableHead>Members</TableHead>
                                         <TableHead>Agents</TableHead>
                                         <TableHead>Wallet (₹)</TableHead>
+                                        <TableHead>Monthly Limit</TableHead>
                                         <TableHead>Billing Rate</TableHead>
                                         <TableHead>Pulse</TableHead>
                                         <TableHead>Status</TableHead>
@@ -371,7 +381,7 @@ export default function SuperadminPage() {
                                 <TableBody>
                                     {filteredOrgs.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                                            <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                                                 No organizations found
                                             </TableCell>
                                         </TableRow>
@@ -398,6 +408,9 @@ export default function SuperadminPage() {
                                                 <TableCell>{org.agent_count}</TableCell>
                                                 <TableCell className="font-medium text-emerald-600 dark:text-emerald-400">
                                                     ₹{(org.balance ?? 0).toFixed(2)}
+                                                </TableCell>
+                                                <TableCell className="font-mono text-xs">
+                                                    {org.monthly_minutes_limit ? `${org.monthly_minutes_limit} min` : "No limit"}
                                                 </TableCell>
                                                 <TableCell>
                                                     ₹{(org.billing_rate ?? 0).toFixed(2)}/min
@@ -438,6 +451,10 @@ export default function SuperadminPage() {
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem onClick={() => {
                                                                 setEditingOrg(org);
+                                                                 setEditMonthlyMinutesLimit(org.monthly_minutes_limit ?? 0);
+                                                                 setEditCycleYear(new Date().getFullYear());
+                                                                 setEditCycleMonth(new Date().getMonth() + 1);
+                                                                 setEditCustomMinutesUsed("");
                                                                 setEditBalance(org.balance ?? 0);
                                                                 setEditBillingRate(org.billing_rate ?? 0);
                                                                 setEditBillingPulse(org.billing_pulse ?? 60);
@@ -573,6 +590,68 @@ export default function SuperadminPage() {
                                 <p className="text-xs text-muted-foreground">
                                     Calls will be rounded up and charged in increments of this pulse duration.
                                 </p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="monthlyMinutesLimit">Monthly Minutes Limit</Label>
+                                <Input
+                                    id="monthlyMinutesLimit"
+                                    type="number"
+                                    min="0"
+                                    value={editMonthlyMinutesLimit}
+                                    onChange={(e) => setEditMonthlyMinutesLimit(parseInt(e.target.value) || 0)}
+                                    required
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Set monthly committed minutes. Set to 0 to disable minutes-based billing.
+                                </p>
+                            </div>
+                            <div className="border-t pt-4 space-y-4">
+                                <h4 className="text-sm font-semibold text-foreground">Adjust Custom Usage Cycle Minutes</h4>
+                                <p className="text-xs text-muted-foreground">
+                                    Override or manually set minutes used for a specific cycle.
+                                </p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="cycleYear" className="text-xs">Cycle Year</Label>
+                                        <Input
+                                            id="cycleYear"
+                                            type="number"
+                                            min="2020"
+                                            max="2100"
+                                            value={editCycleYear}
+                                            onChange={(e) => setEditCycleYear(parseInt(e.target.value) || new Date().getFullYear())}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="cycleMonth" className="text-xs">Cycle Month</Label>
+                                        <select
+                                            id="cycleMonth"
+                                            value={editCycleMonth}
+                                            onChange={(e) => setEditCycleMonth(parseInt(e.target.value) || new Date().getMonth() + 1)}
+                                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        >
+                                            {Array.from({ length: 12 }, (_, i) => (
+                                                <option key={i + 1} value={i + 1}>
+                                                    {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="customMinutesUsed" className="text-xs">Custom Minutes Used</Label>
+                                    <Input
+                                        id="customMinutesUsed"
+                                        type="number"
+                                        step="0.1"
+                                        placeholder="No override"
+                                        value={editCustomMinutesUsed}
+                                        onChange={(e) => setEditCustomMinutesUsed(e.target.value)}
+                                    />
+                                    <p className="text-[10px] text-muted-foreground">
+                                        Leave empty to keep default system-calculated minutes.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                         <DialogFooter>

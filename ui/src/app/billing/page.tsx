@@ -116,9 +116,11 @@ export default function BillingPage() {
     async function fetchWallet() {
       if (!auth.isAuthenticated) return;
       try {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth() + 1; // 1-indexed for backend
         const res = await client.request({
           method: "GET",
-          url: "/api/v1/organizations/wallet",
+          url: `/api/v1/organizations/wallet?year=${year}&month=${month}`,
         });
         if (res.data) {
           setWallet(res.data);
@@ -128,7 +130,7 @@ export default function BillingPage() {
       }
     }
     fetchWallet();
-  }, [auth.isAuthenticated]);
+  }, [auth.isAuthenticated, currentDate]);
 
   // Fetch all runs for the month (to calculate tier)
   // We need to fetch *all* runs for the month, but API is paginated.
@@ -475,57 +477,117 @@ export default function BillingPage() {
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Accumulated Minutes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalMinutes.toFixed(1)}</div>
-            <p className="text-xs text-muted-foreground pt-1">
-              Raw sum of durations
-            </p>
-          </CardContent>
-        </Card>
+      {wallet && wallet.monthly_minutes_limit > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="border-emerald-500/20 bg-emerald-500/5 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Rupees Remaining</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                ₹{(wallet.balance ?? 0).toFixed(2)}
+              </div>
+              <p className="text-xs text-muted-foreground pt-1">
+                Value of unused remaining minutes
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Billable Units</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalBillableUnits.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground pt-1">
-              {wallet && wallet.billing_rate > 0
-                ? `Total billable ${getPulseUnitShortLabel()} units`
-                : (billingMode === 'per_minute' ? 'Total billable minutes' : 'Total 30s pulses')}
-            </p>
-          </CardContent>
-        </Card>
+          <Card className="border-border/60 bg-card/50 backdrop-blur-md">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-semibold text-foreground">Minutes Remaining</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-extrabold text-foreground">
+                {(wallet.minutes_remaining ?? 0).toFixed(1)} min
+              </div>
+              <p className="text-xs text-muted-foreground pt-1">
+                Out of {((wallet.monthly_minutes_limit ?? 0) + (wallet.carry_forward_minutes ?? 0)).toFixed(0)} min total allowance
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Billed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground pt-1">
-              Total revenue for selected filters
-            </p>
-          </CardContent>
-        </Card>
+          <Card className="border-border/60 bg-card/50 backdrop-blur-md">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-semibold text-foreground">Minutes Used</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">
+                {(wallet.minutes_used ?? 0).toFixed(1)} min
+              </div>
+              <p className="text-xs text-muted-foreground pt-1">
+                This cycle's total usage
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Cost Per Call</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(avgRevenuePerCall)}</div>
-            <p className="text-xs text-muted-foreground pt-1">
-              Revenue / call count
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="border-border/60 bg-card/50 backdrop-blur-md">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-semibold text-foreground">Carry Forward</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">
+                {(wallet.carry_forward_minutes ?? 0).toFixed(1)} min
+              </div>
+              <p className="text-xs text-muted-foreground pt-1">
+                From previous cycle (2-month limit)
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Accumulated Minutes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalMinutes.toFixed(1)}</div>
+              <p className="text-xs text-muted-foreground pt-1">
+                Raw sum of durations
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Billable Units</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalBillableUnits.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground pt-1">
+                {wallet && wallet.billing_rate > 0
+                  ? `Total billable ${getPulseUnitShortLabel()} units`
+                  : (billingMode === 'per_minute' ? 'Total billable minutes' : 'Total 30s pulses')}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Billed</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+              <p className="text-xs text-muted-foreground pt-1">
+                Total revenue for selected filters
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg Cost Per Call</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(avgRevenuePerCall)}</div>
+              <p className="text-xs text-muted-foreground pt-1">
+                Revenue / call count
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Breakdown Table */}
       <Card>

@@ -130,6 +130,7 @@ class OrganizationModel(Base):
     balance = Column(Float, nullable=False, default=0.0, server_default=text("0.0"))
     billing_rate = Column(Float, nullable=False, default=0.0, server_default=text("0.0"))
     billing_pulse = Column(Integer, nullable=False, default=60, server_default=text("60"))
+    monthly_minutes_limit = Column(Float, nullable=False, default=0.0, server_default=text("0.0"))
 
 
     # Relationships
@@ -626,6 +627,7 @@ class OrganizationUsageCycleModel(Base):
     # New USD tracking fields
     used_amount_usd = Column(Float, nullable=True, default=0)
     quota_amount_usd = Column(Float, nullable=True)
+    custom_minutes_used = Column(Float, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at = Column(
         DateTime(timezone=True),

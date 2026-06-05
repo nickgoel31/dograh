@@ -1140,22 +1140,136 @@ class WalletResponse(BaseModel):
     balance: float
     billing_rate: float
     billing_pulse: int
+    monthly_minutes_limit: float
+    carry_forward_minutes: float
+    minutes_used: float
+    minutes_remaining: float
 
 
 @router.get("/wallet", response_model=WalletResponse)
 async def get_wallet(
+    year: Optional[int] = None,
+    month: Optional[int] = None,
     user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT])),
 ):
     """Get the wallet balance and billing settings of the user's selected organization."""
+    from datetime import datetime, timezone
+    from dateutil.relativedelta import relativedelta
+    from sqlalchemy import select
+    from api.db.models import OrganizationUsageCycleModel, OrganizationModel
+
     if not user.selected_organization_id:
         raise HTTPException(status_code=400, detail="User has no selected organization")
 
-    org = await db_client.get_organization_by_id(user.selected_organization_id)
-    if not org:
-        raise HTTPException(status_code=404, detail="Organization not found")
+    # If year/month not provided, use current year/month
+    now = datetime.now(timezone.utc)
+    if year is None:
+        year = now.year
+    if month is None:
+        month = now.month
 
-    return WalletResponse(
-        balance=getattr(org, "balance", 0.0),
-        billing_rate=getattr(org, "billing_rate", 0.0),
-        billing_pulse=getattr(org, "billing_pulse", 60),
-    )
+    async with db_client.async_session() as session:
+        # Get organization
+        org = await session.get(OrganizationModel, user.selected_organization_id)
+        if not org:
+            raise HTTPException(status_code=404, detail="Organization not found")
+
+        # 1. Fetch all usage cycles for this org, sorted by period_start ASC
+        stmt = (
+            select(OrganizationUsageCycleModel)
+            .where(OrganizationUsageCycleModel.organization_id == org.id)
+            .order_by(OrganizationUsageCycleModel.period_start.asc())
+        )
+        result = await session.execute(stmt)
+        cycles = list(result.scalars().all())
+
+        # 2. Check if a cycle for target year/month exists. If not, create it!
+        target_cycle = None
+        for c in cycles:
+            # Check if cycle period_start matches target year and month
+            if c.period_start.year == year and c.period_start.month == month:
+                target_cycle = c
+                break
+
+        if not target_cycle:
+            # We need to calculate the period start and end for this specific year/month
+            reset_day = getattr(org, "quota_reset_day", 1) or 1
+            # Make sure reset_day is valid for the target month
+            try:
+                period_start = datetime(year, month, reset_day, 0, 0, 0, tzinfo=timezone.utc)
+            except ValueError:
+                period_start = datetime(year, month, 1, 0, 0, 0, tzinfo=timezone.utc)
+                
+            period_end = period_start + relativedelta(months=1) - relativedelta(seconds=1)
+
+            # Create cycle
+            target_cycle = OrganizationUsageCycleModel(
+                organization_id=org.id,
+                period_start=period_start,
+                period_end=period_end,
+                quota_dograh_tokens=getattr(org, "quota_dograh_tokens", 0) or 0,
+            )
+            session.add(target_cycle)
+            await session.commit()
+            
+            # Refetch cycles list in correct chronological order
+            stmt = (
+                select(OrganizationUsageCycleModel)
+                .where(OrganizationUsageCycleModel.organization_id == org.id)
+                .order_by(OrganizationUsageCycleModel.period_start.asc())
+            )
+            result = await session.execute(stmt)
+            cycles = list(result.scalars().all())
+            # Find it again
+            for c in cycles:
+                if c.period_start.year == year and c.period_start.month == month:
+                    target_cycle = c
+                    break
+
+        # 3. Chronologically compute the carry-forward minutes for each cycle in the list
+        carry_forward_to_next = 0.0
+        cycle_details = {}
+
+        for c in cycles:
+            c_carry_forward = carry_forward_to_next
+            
+            # Calculate used minutes
+            if c.custom_minutes_used is not None:
+                c_used = c.custom_minutes_used
+            else:
+                c_used = (c.total_duration_seconds or 0) / 60.0
+                
+            # Unused minutes: total allowed - used
+            c_limit = getattr(org, "monthly_minutes_limit", 0.0) or 0.0
+            c_total_allowed = c_limit + c_carry_forward
+            c_remaining = max(0.0, c_total_allowed - c_used)
+            
+            # Next carry forward is only the unused base minutes
+            remaining_base = max(0.0, c_limit - max(0.0, c_used - c_carry_forward))
+            carry_forward_to_next = remaining_base
+            
+            cycle_details[c.id] = {
+                "carry_forward_minutes": c_carry_forward,
+                "minutes_used": c_used,
+                "minutes_remaining": c_remaining,
+                "balance": c_remaining * (getattr(org, "billing_rate", 0.0) or 0.0),
+            }
+
+        details = cycle_details.get(target_cycle.id)
+        if not details:
+            details = {
+                "carry_forward_minutes": 0.0,
+                "minutes_used": 0.0,
+                "minutes_remaining": 0.0,
+                "balance": 0.0,
+            }
+
+        return WalletResponse(
+            balance=details["balance"],
+            billing_rate=getattr(org, "billing_rate", 0.0) or 0.0,
+            billing_pulse=getattr(org, "billing_pulse", 60) or 60,
+            monthly_minutes_limit=getattr(org, "monthly_minutes_limit", 0.0) or 0.0,
+            carry_forward_minutes=details["carry_forward_minutes"],
+            minutes_used=details["minutes_used"],
+            minutes_remaining=details["minutes_remaining"],
+        )

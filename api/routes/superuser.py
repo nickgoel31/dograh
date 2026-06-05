@@ -185,6 +185,7 @@ class CreateOrganizationRequest(BaseModel):
     balance: Optional[float] = 0.0
     billing_rate: Optional[float] = 0.0
     billing_pulse: Optional[int] = 60
+    monthly_minutes_limit: Optional[float] = 0.0
 
 class UpdateOrganizationRequest(BaseModel):
     name: Optional[str] = None
@@ -192,6 +193,10 @@ class UpdateOrganizationRequest(BaseModel):
     balance: Optional[float] = None
     billing_rate: Optional[float] = None
     billing_pulse: Optional[int] = None
+    monthly_minutes_limit: Optional[float] = None
+    cycle_year: Optional[int] = None
+    cycle_month: Optional[int] = None
+    custom_minutes_used: Optional[float] = None
 
 class AssignUserRequest(BaseModel):
     user_id: int
@@ -228,7 +233,8 @@ async def create_organization(request: CreateOrganizationRequest, user: UserMode
             is_active=True,
             balance=request.balance if request.balance is not None else 0.0,
             billing_rate=request.billing_rate if request.billing_rate is not None else 0.0,
-            billing_pulse=request.billing_pulse if request.billing_pulse is not None else 60
+            billing_pulse=request.billing_pulse if request.billing_pulse is not None else 60,
+            monthly_minutes_limit=request.monthly_minutes_limit if request.monthly_minutes_limit is not None else 0.0
         )
         session.add(new_org)
         await session.commit()
@@ -242,7 +248,8 @@ async def create_organization(request: CreateOrganizationRequest, user: UserMode
             "created_at": new_org.created_at,
             "balance": new_org.balance,
             "billing_rate": new_org.billing_rate,
-            "billing_pulse": new_org.billing_pulse
+            "billing_pulse": new_org.billing_pulse,
+            "monthly_minutes_limit": new_org.monthly_minutes_limit
         }
 
 @router.get("/organizations")
@@ -287,7 +294,8 @@ async def list_all_organizations(user: UserModel = Depends(get_superuser)):
                 "agent_count": agent_count,
                 "balance": o.balance,
                 "billing_rate": o.billing_rate,
-                "billing_pulse": o.billing_pulse
+                "billing_pulse": o.billing_pulse,
+                "monthly_minutes_limit": getattr(o, "monthly_minutes_limit", 0.0) or 0.0
             })
             
     return result
@@ -321,6 +329,43 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
             if request.billing_pulse not in [1, 15, 30, 60]:
                 raise HTTPException(status_code=400, detail="billing_pulse must be 1, 15, 30 or 60 seconds")
             org.billing_pulse = request.billing_pulse
+
+        if request.monthly_minutes_limit is not None:
+            org.monthly_minutes_limit = request.monthly_minutes_limit
+
+        if request.cycle_year is not None and request.cycle_month is not None:
+            if request.custom_minutes_used is not None:
+                from datetime import datetime, timezone
+                from dateutil.relativedelta import relativedelta
+                from api.db.models import OrganizationUsageCycleModel
+                
+                reset_day = getattr(org, "quota_reset_day", 1) or 1
+                try:
+                    period_start = datetime(request.cycle_year, request.cycle_month, reset_day, 0, 0, 0, tzinfo=timezone.utc)
+                except ValueError:
+                    period_start = datetime(request.cycle_year, request.cycle_month, 1, 0, 0, 0, tzinfo=timezone.utc)
+                    
+                period_end = period_start + relativedelta(months=1) - relativedelta(seconds=1)
+                
+                # Check if cycle exists
+                cycle_result = await session.execute(
+                    select(OrganizationUsageCycleModel).where(
+                        (OrganizationUsageCycleModel.organization_id == org_id) &
+                        (OrganizationUsageCycleModel.period_start == period_start)
+                    )
+                )
+                cycle = cycle_result.scalar_one_or_none()
+                if not cycle:
+                    cycle = OrganizationUsageCycleModel(
+                        organization_id=org_id,
+                        period_start=period_start,
+                        period_end=period_end,
+                        quota_dograh_tokens=getattr(org, "quota_dograh_tokens", 0) or 0,
+                        custom_minutes_used=request.custom_minutes_used
+                    )
+                    session.add(cycle)
+                else:
+                    cycle.custom_minutes_used = request.custom_minutes_used
             
         await session.commit()
         await session.refresh(org)
@@ -330,7 +375,8 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
             "is_active": org.is_active,
             "balance": org.balance,
             "billing_rate": org.billing_rate,
-            "billing_pulse": org.billing_pulse
+            "billing_pulse": org.billing_pulse,
+            "monthly_minutes_limit": getattr(org, "monthly_minutes_limit", 0.0) or 0.0
         }
 
 @router.delete("/organizations/{org_id}")
