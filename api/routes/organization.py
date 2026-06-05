@@ -1134,3 +1134,28 @@ async def create_invite(
     invite_url = f"{UI_APP_URL}/signup?invite_token={token}"
 
     return InviteResponse(invite_url=invite_url, token=token)
+
+
+class WalletResponse(BaseModel):
+    balance: float
+    billing_rate: float
+    billing_pulse: int
+
+
+@router.get("/wallet", response_model=WalletResponse)
+async def get_wallet(
+    user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT])),
+):
+    """Get the wallet balance and billing settings of the user's selected organization."""
+    if not user.selected_organization_id:
+        raise HTTPException(status_code=400, detail="User has no selected organization")
+
+    org = await db_client.get_organization_by_id(user.selected_organization_id)
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    return WalletResponse(
+        balance=getattr(org, "balance", 0.0),
+        billing_rate=getattr(org, "billing_rate", 0.0),
+        billing_pulse=getattr(org, "billing_pulse", 60),
+    )

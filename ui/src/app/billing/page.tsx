@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, IndianRupee } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import { client } from '@/client/client.gen';
 import {
   getUsageHistoryApiV1OrganizationsUsageRunsGet,
   getWorkflowsSummaryApiV1WorkflowSummaryGet
@@ -38,6 +39,9 @@ export default function BillingPage() {
   // Billing mode (per_minute | per_30s)
   const [billingMode, setBillingMode] = useState<BillingMode>('per_minute');
   const [isModeLoaded, setIsModeLoaded] = useState(false);
+
+  // Custom wallet billing settings
+  const [wallet, setWallet] = useState<any | null>(null);
 
   // Billing Config
   const [billingConfig, setBillingConfig] = useState<BillingConfiguration>({
@@ -105,6 +109,25 @@ export default function BillingPage() {
       }
     }
     fetchConfig();
+  }, [auth.isAuthenticated]);
+
+  // Fetch organization wallet details
+  useEffect(() => {
+    async function fetchWallet() {
+      if (!auth.isAuthenticated) return;
+      try {
+        const res = await client.request({
+          method: "GET",
+          url: "/api/v1/organizations/wallet",
+        });
+        if (res.data) {
+          setWallet(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch wallet info", err);
+      }
+    }
+    fetchWallet();
   }, [auth.isAuthenticated]);
 
   // Fetch all runs for the month (to calculate tier)
@@ -218,16 +241,58 @@ export default function BillingPage() {
     return currentDate.getMonth() === now.getMonth() && currentDate.getFullYear() === now.getFullYear();
   };
 
+  const getPulseUnitLabel = () => {
+    if (wallet && wallet.billing_rate > 0) {
+      const pulse = wallet.billing_pulse || 60;
+      if (pulse === 1) return "sec";
+      if (pulse === 15) return "15s pulse";
+      if (pulse === 30) return "30s pulse";
+      return "min";
+    }
+    return billingMode === 'per_minute' ? 'min' : '30s pulse';
+  };
+
+  const getPulseUnitShortLabel = () => {
+    if (wallet && wallet.billing_rate > 0) {
+      const pulse = wallet.billing_pulse || 60;
+      if (pulse === 1) return "sec";
+      if (pulse === 15) return "15s";
+      if (pulse === 30) return "30s";
+      return "min";
+    }
+    return billingMode === 'per_minute' ? 'min' : '30s';
+  };
+
+  const getRunBillableUnits = (durationSeconds: number) => {
+    if (wallet && wallet.billing_rate > 0) {
+      const pulse = wallet.billing_pulse || 60;
+      return Math.ceil(durationSeconds / pulse);
+    }
+    return getBillableUnits(durationSeconds, billingMode);
+  };
+
+  const calculateRunCharge = (durationSeconds: number) => {
+    if (wallet && wallet.billing_rate > 0) {
+      const pulse = wallet.billing_pulse || 60;
+      const rate = wallet.billing_rate; // per minute
+      const pulses = Math.ceil(durationSeconds / pulse);
+      return pulses * ((rate / 60) * pulse);
+    }
+    return calculateCallCharge(durationSeconds, tier, billingMode, billingConfig.prices);
+  };
+
   // Computations
   const orgTotalCalls = allMonthRuns.length;
   const tier = getTier(orgTotalCalls, billingConfig.tiers);
   const nextTier = getNextTier(orgTotalCalls, billingConfig.tiers);
-  const currentRate = getPricePerUnit(tier, billingMode, billingConfig.prices);
+  const currentRate = wallet && wallet.billing_rate > 0
+    ? (wallet.billing_rate / 60) * (wallet.billing_pulse || 60)
+    : getPricePerUnit(tier, billingMode, billingConfig.prices);
 
   // Summary Card computations based on filtered runs
   const totalMinutes = filteredRuns.reduce((acc, run) => acc + (run.call_duration_seconds / 60), 0);
-  const totalBillableUnits = filteredRuns.reduce((acc, run) => acc + getBillableUnits(run.call_duration_seconds, billingMode), 0);
-  const totalRevenue = filteredRuns.reduce((acc, run) => acc + calculateCallCharge(run.call_duration_seconds, tier, billingMode, billingConfig.prices), 0);
+  const totalBillableUnits = filteredRuns.reduce((acc, run) => acc + getRunBillableUnits(run.call_duration_seconds), 0);
+  const totalRevenue = filteredRuns.reduce((acc, run) => acc + calculateRunCharge(run.call_duration_seconds), 0);
   const avgRevenuePerCall = filteredRuns.length > 0 ? totalRevenue / filteredRuns.length : 0;
 
   // Per-Agent breakdown computation
@@ -246,8 +311,8 @@ export default function BillingPage() {
 
     existing.calls += 1;
     existing.minutes += (run.call_duration_seconds / 60);
-    existing.billableUnits += getBillableUnits(run.call_duration_seconds, billingMode);
-    existing.revenue += calculateCallCharge(run.call_duration_seconds, tier, billingMode, billingConfig.prices);
+    existing.billableUnits += getRunBillableUnits(run.call_duration_seconds);
+    existing.revenue += calculateRunCharge(run.call_duration_seconds);
 
     breakdownByAgent.set(key, existing);
   });
@@ -355,13 +420,23 @@ export default function BillingPage() {
 
           {/* Billing Mode Toggle */}
           <div className="border-l pl-4 flex items-center">
-            <Select value={billingMode} onValueChange={handleBillingModeChange}>
+            <Select
+              value={wallet && wallet.billing_rate > 0 ? "custom" : billingMode}
+              onValueChange={handleBillingModeChange}
+              disabled={wallet && wallet.billing_rate > 0}
+            >
               <SelectTrigger className="w-[160px] h-9">
                 <SelectValue placeholder="Billing Mode" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="per_minute">Per Minute</SelectItem>
-                <SelectItem value="per_30s">Per 30s Pulse</SelectItem>
+                {wallet && wallet.billing_rate > 0 ? (
+                  <SelectItem value="custom">Custom ({getPulseUnitShortLabel()})</SelectItem>
+                ) : (
+                  <>
+                    <SelectItem value="per_minute">Per Minute</SelectItem>
+                    <SelectItem value="per_30s">Per 30s Pulse</SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -378,12 +453,17 @@ export default function BillingPage() {
             </span>
             <span className="text-muted-foreground hidden sm:inline">|</span>
             <span className="font-medium text-primary">
-              Rate: {formatCurrency(currentRate)}/{billingMode === 'per_minute' ? 'min' : '30s pulse'}
+              Rate: {formatCurrency(currentRate)}/{getPulseUnitLabel()}
             </span>
           </div>
-          {nextTier && (
+          {nextTier && !(wallet && wallet.billing_rate > 0) && (
             <div className="text-sm text-muted-foreground flex items-center">
               {Math.max(0, nextTier.maxCalls - orgTotalCalls + 1).toLocaleString()} more calls to reach {nextTier.label} ({formatCurrency(getPricePerUnit(nextTier.label, billingMode))}/{billingMode === 'per_minute' ? 'min' : '30s'})
+            </div>
+          )}
+          {wallet && wallet.billing_rate > 0 && (
+            <div className="text-sm text-muted-foreground flex items-center">
+              Custom Organization Pricing Active
             </div>
           )}
           {selectedAgentIds.length > 0 && (
@@ -415,7 +495,9 @@ export default function BillingPage() {
           <CardContent>
             <div className="text-2xl font-bold">{totalBillableUnits.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground pt-1">
-              {billingMode === 'per_minute' ? 'Total billable minutes' : 'Total 30s pulses'}
+              {wallet && wallet.billing_rate > 0
+                ? `Total billable ${getPulseUnitShortLabel()} units`
+                : (billingMode === 'per_minute' ? 'Total billable minutes' : 'Total 30s pulses')}
             </p>
           </CardContent>
         </Card>
@@ -532,8 +614,8 @@ export default function BillingPage() {
                   </TableRow>
                 ) : paginatedRuns.length > 0 ? (
                   paginatedRuns.map(run => {
-                    const units = getBillableUnits(run.call_duration_seconds, billingMode);
-                    const charge = calculateCallCharge(run.call_duration_seconds, tier, billingMode, billingConfig.prices);
+                    const units = getRunBillableUnits(run.call_duration_seconds);
+                    const charge = calculateRunCharge(run.call_duration_seconds);
                     return (
                       <TableRow key={run.id}>
                         <TableCell className="text-sm whitespace-nowrap">{formatDate(run.created_at)}</TableCell>
@@ -546,10 +628,10 @@ export default function BillingPage() {
                         <TableCell className="capitalize text-sm">{run.call_type || '-'}</TableCell>
                         <TableCell className="text-right whitespace-nowrap">{formatDuration(run.call_duration_seconds)}</TableCell>
                         <TableCell className="text-right text-sm">
-                          {units} {billingMode === 'per_minute' ? 'min' : '× 30s'}
+                          {units} {getPulseUnitShortLabel()}
                         </TableCell>
                         <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
-                          {formatCurrency(currentRate)}/{billingMode === 'per_minute' ? 'min' : '30s'}
+                          {formatCurrency(currentRate)}/{getPulseUnitShortLabel()}
                         </TableCell>
                         <TableCell className="text-right font-medium">{formatCurrency(charge)}</TableCell>
                       </TableRow>

@@ -214,7 +214,7 @@ export function AppSidebar() {
   React.useEffect(() => {
     if (!roleLoading) {
       if (role === "client") {
-        const restrictedPaths = ["/billing", "/telephony-configurations", "/model-configurations", "/settings", "/tools", "/api-keys", "/reports", "/usage", "/superadmin"];
+        const restrictedPaths = ["/telephony-configurations", "/model-configurations", "/settings", "/tools", "/api-keys", "/reports", "/usage", "/superadmin"];
         if (restrictedPaths.some(p => pathname.startsWith(p))) {
           toast.error("You don't have permission to access this page.");
           router.push("/overview");
@@ -425,7 +425,7 @@ export function AppSidebar() {
           return sections.map((section, index) => {
             const filteredItems = section.items.filter(item => {
               if (role === "client") {
-                return ["Voice Agents", "Recordings", "Campaigns"].includes(item.title);
+                return ["Voice Agents", "Recordings", "Campaigns", "Billing"].includes(item.title);
               }
               return true;
             });

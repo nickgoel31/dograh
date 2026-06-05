@@ -55,6 +55,9 @@ interface Organization {
   admin_count: number;
   client_count: number;
   agent_count: number;
+  balance?: number;
+  billing_rate?: number;
+  billing_pulse?: number;
 }
 
 export default function SuperadminPage() {
@@ -77,6 +80,14 @@ export default function SuperadminPage() {
     const [selectedOrgForMembers, setSelectedOrgForMembers] = useState<number | null>(null);
     const [orgMembers, setOrgMembers] = useState<any[]>([]);
     const [loadingMembers, setLoadingMembers] = useState(false);
+
+    // Edit Wallet/Billing State
+    const [isEditBillingOpen, setIsEditBillingOpen] = useState(false);
+    const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
+    const [editBalance, setEditBalance] = useState<number>(0);
+    const [editBillingRate, setEditBillingRate] = useState<number>(0);
+    const [editBillingPulse, setEditBillingPulse] = useState<number>(60);
+    const [isSavingBilling, setIsSavingBilling] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -193,6 +204,30 @@ export default function SuperadminPage() {
             toast.error(error.response?.data?.detail || "Failed to switch organization");
         } finally {
             setIsSwitching(false);
+        }
+    };
+
+    const handleSaveBilling = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingOrg) return;
+        setIsSavingBilling(true);
+        try {
+            await client.request({
+                method: "PATCH",
+                url: `/api/v1/superuser/organizations/${editingOrg.id}`,
+                body: {
+                    balance: editBalance,
+                    billing_rate: editBillingRate,
+                    billing_pulse: editBillingPulse
+                }
+            });
+            toast.success("Wallet & Billing configuration updated");
+            setIsEditBillingOpen(false);
+            fetchOrganizations();
+        } catch (error: any) {
+            toast.error(error.response?.data?.detail || "Failed to update configuration");
+        } finally {
+            setIsSavingBilling(false);
         }
     };
 
@@ -325,6 +360,9 @@ export default function SuperadminPage() {
                                         <TableHead>Name</TableHead>
                                         <TableHead>Members</TableHead>
                                         <TableHead>Agents</TableHead>
+                                        <TableHead>Wallet (₹)</TableHead>
+                                        <TableHead>Billing Rate</TableHead>
+                                        <TableHead>Pulse</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Created</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
@@ -333,7 +371,7 @@ export default function SuperadminPage() {
                                 <TableBody>
                                     {filteredOrgs.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                            <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                                                 No organizations found
                                             </TableCell>
                                         </TableRow>
@@ -358,6 +396,20 @@ export default function SuperadminPage() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>{org.agent_count}</TableCell>
+                                                <TableCell className="font-medium text-emerald-600 dark:text-emerald-400">
+                                                    ₹{(org.balance ?? 0).toFixed(2)}
+                                                </TableCell>
+                                                <TableCell>
+                                                    ₹{(org.billing_rate ?? 0).toFixed(2)}/min
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline">
+                                                        {org.billing_pulse === 1 ? '1 sec' :
+                                                         org.billing_pulse === 15 ? '15 sec' :
+                                                         org.billing_pulse === 30 ? '30 sec' :
+                                                         '60 sec'}
+                                                    </Badge>
+                                                </TableCell>
                                                 <TableCell>
                                                     <Badge variant={org.is_active ? "default" : "destructive"}>
                                                         {org.is_active ? 'Active' : 'Disabled'}
@@ -383,6 +435,16 @@ export default function SuperadminPage() {
                                                             <DropdownMenuItem onClick={() => handleManageMembers(org.id)}>
                                                                 <Users className="mr-2 h-4 w-4" />
                                                                 Manage Members
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => {
+                                                                setEditingOrg(org);
+                                                                setEditBalance(org.balance ?? 0);
+                                                                setEditBillingRate(org.billing_rate ?? 0);
+                                                                setEditBillingPulse(org.billing_pulse ?? 60);
+                                                                setIsEditBillingOpen(true);
+                                                            }}>
+                                                                <Settings2 className="mr-2 h-4 w-4" />
+                                                                Wallet & Billing
                                                             </DropdownMenuItem>
                                                             <DropdownMenuSeparator />
                                                             <DropdownMenuItem onClick={() => handleToggleActive(org.id, org.is_active)}>
@@ -453,6 +515,77 @@ export default function SuperadminPage() {
                     </div>
                 </SheetContent>
             </Sheet>
+
+            {/* Edit Wallet & Billing Dialog */}
+            <Dialog open={isEditBillingOpen} onOpenChange={setIsEditBillingOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <form onSubmit={handleSaveBilling}>
+                        <DialogHeader>
+                            <DialogTitle>Wallet & Billing Settings</DialogTitle>
+                            <DialogDescription>
+                                Configure wallet balance and billing parameters for {editingOrg?.name}.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4 space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="balance">Wallet Balance (₹)</Label>
+                                <Input
+                                    id="balance"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={editBalance}
+                                    onChange={(e) => setEditBalance(parseFloat(e.target.value) || 0)}
+                                    required
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Current balance: ₹{(editingOrg?.balance ?? 0).toFixed(2)}
+                                </p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="billingRate">Billing Rate (₹ per minute)</Label>
+                                <Input
+                                    id="billingRate"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={editBillingRate}
+                                    onChange={(e) => setEditBillingRate(parseFloat(e.target.value) || 0)}
+                                    required
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Rate used to calculate call costs for this organization.
+                                </p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="billingPulse">Billing Pulse</Label>
+                                <select
+                                    id="billingPulse"
+                                    value={editBillingPulse}
+                                    onChange={(e) => setEditBillingPulse(parseInt(e.target.value) || 60)}
+                                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <option value={1}>1 Second</option>
+                                    <option value={15}>15 Seconds</option>
+                                    <option value={30}>30 Seconds</option>
+                                    <option value={60}>60 Seconds (1 Minute)</option>
+                                </select>
+                                <p className="text-xs text-muted-foreground">
+                                    Calls will be rounded up and charged in increments of this pulse duration.
+                                </p>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" type="button" onClick={() => setIsEditBillingOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button type="submit" disabled={isSavingBilling}>
+                                {isSavingBilling ? 'Saving...' : 'Save Changes'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </main>
     );
 }

@@ -182,10 +182,16 @@ def generate_slug(name: str) -> str:
 class CreateOrganizationRequest(BaseModel):
     name: str
     slug: Optional[str] = None
+    balance: Optional[float] = 0.0
+    billing_rate: Optional[float] = 0.0
+    billing_pulse: Optional[int] = 60
 
 class UpdateOrganizationRequest(BaseModel):
     name: Optional[str] = None
     is_active: Optional[bool] = None
+    balance: Optional[float] = None
+    billing_rate: Optional[float] = None
+    billing_pulse: Optional[int] = None
 
 class AssignUserRequest(BaseModel):
     user_id: int
@@ -219,7 +225,10 @@ async def create_organization(request: CreateOrganizationRequest, user: UserMode
             name=name,
             slug=slug,
             provider_id=f"org_{uuid.uuid4().hex[:12]}",
-            is_active=True
+            is_active=True,
+            balance=request.balance if request.balance is not None else 0.0,
+            billing_rate=request.billing_rate if request.billing_rate is not None else 0.0,
+            billing_pulse=request.billing_pulse if request.billing_pulse is not None else 60
         )
         session.add(new_org)
         await session.commit()
@@ -230,7 +239,10 @@ async def create_organization(request: CreateOrganizationRequest, user: UserMode
             "name": new_org.name,
             "slug": new_org.slug,
             "provider_id": new_org.provider_id,
-            "created_at": new_org.created_at
+            "created_at": new_org.created_at,
+            "balance": new_org.balance,
+            "billing_rate": new_org.billing_rate,
+            "billing_pulse": new_org.billing_pulse
         }
 
 @router.get("/organizations")
@@ -272,7 +284,10 @@ async def list_all_organizations(user: UserModel = Depends(get_superuser)):
                 "member_count": member_count,
                 "admin_count": admin_count,
                 "client_count": client_count,
-                "agent_count": agent_count
+                "agent_count": agent_count,
+                "balance": o.balance,
+                "billing_rate": o.billing_rate,
+                "billing_pulse": o.billing_pulse
             })
             
     return result
@@ -296,9 +311,27 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
         if request.is_active is not None:
             org.is_active = request.is_active
             
+        if request.balance is not None:
+            org.balance = request.balance
+            
+        if request.billing_rate is not None:
+            org.billing_rate = request.billing_rate
+            
+        if request.billing_pulse is not None:
+            if request.billing_pulse not in [1, 15, 30, 60]:
+                raise HTTPException(status_code=400, detail="billing_pulse must be 1, 15, 30 or 60 seconds")
+            org.billing_pulse = request.billing_pulse
+            
         await session.commit()
         await session.refresh(org)
-        return {"id": org.id, "name": org.name, "is_active": org.is_active}
+        return {
+            "id": org.id,
+            "name": org.name,
+            "is_active": org.is_active,
+            "balance": org.balance,
+            "billing_rate": org.billing_rate,
+            "billing_pulse": org.billing_pulse
+        }
 
 @router.delete("/organizations/{org_id}")
 async def delete_organization(org_id: int, user: UserModel = Depends(get_superuser)):

@@ -127,6 +127,11 @@ class OrganizationModel(Base):
 
     price_per_second_usd = Column(Float, nullable=True)
 
+    balance = Column(Float, nullable=False, default=0.0, server_default=text("0.0"))
+    billing_rate = Column(Float, nullable=False, default=0.0, server_default=text("0.0"))
+    billing_pulse = Column(Integer, nullable=False, default=60, server_default=text("60"))
+
+
     # Relationships
     users = relationship(
         "UserModel",

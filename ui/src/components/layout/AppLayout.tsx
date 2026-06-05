@@ -14,6 +14,7 @@ import { useAppConfig } from "@/context/AppConfigContext";
 
 import { AppSidebar } from "./AppSidebar";
 import { GitHubStarBadge } from "./GitHubStarBadge";
+import { WalletBalance } from "./WalletBalance";
 
 function AppHeader() {
   const { toggleSidebar } = useSidebar();
@@ -37,6 +38,7 @@ function AppHeader() {
         </Link>
       </div>
       <div className="flex items-center gap-3">
+        <WalletBalance />
         <Button variant="ghost" size="sm" asChild>
           <a
             href="https://join.slack.com/t/dograh-community/shared_invite/zt-3zjb5vwvl-j7hRz3_F1SOn5cH~jm5f5g"
