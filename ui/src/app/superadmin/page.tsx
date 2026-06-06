@@ -63,7 +63,13 @@ interface Organization {
   monthly_minutes_start_month?: number;
   monthly_minutes_end_year?: number;
   monthly_minutes_end_month?: number;
+  whatsapp_enabled?: boolean;
+  whatsapp_phone_number_id?: string;
+  whatsapp_business_account_id?: string;
+  whatsapp_webhook_verify_token?: string;
+  whatsapp_has_access_token?: boolean;
 }
+
 
 export default function SuperadminPage() {
     const { user, getAccessToken } = useAuth();
@@ -100,6 +106,13 @@ export default function SuperadminPage() {
     const [editStartMonth, setEditStartMonth] = useState<number | "">("");
     const [editEndYear, setEditEndYear] = useState<number | "">("");
     const [editEndMonth, setEditEndMonth] = useState<number | "">("");
+    const [editWhatsAppEnabled, setEditWhatsAppEnabled] = useState<boolean>(false);
+    const [editWhatsAppPhoneNumberId, setEditWhatsAppPhoneNumberId] = useState<string>("");
+    const [editWhatsAppAccessToken, setEditWhatsAppAccessToken] = useState<string>("");
+    const [editWhatsAppBusinessAccountId, setEditWhatsAppBusinessAccountId] = useState<string>("");
+    const [whatsappWebhookVerifyToken, setWhatsappWebhookVerifyToken] = useState<string>("");
+    const [whatsappHasAccessToken, setWhatsappHasAccessToken] = useState<boolean>(false);
+
 
     const [runs, setRuns] = useState<any[]>([]);
     const [loadingRuns, setLoadingRuns] = useState(false);
@@ -288,7 +301,11 @@ export default function SuperadminPage() {
                     monthly_minutes_end_month: editEndMonth !== "" ? Number(editEndMonth) : null,
                     cycle_year: editCycleYear,
                     cycle_month: editCycleMonth,
-                    custom_minutes_used: editCustomMinutesUsed !== "" ? parseFloat(editCustomMinutesUsed) : null
+                    custom_minutes_used: editCustomMinutesUsed !== "" ? parseFloat(editCustomMinutesUsed) : null,
+                    whatsapp_enabled: editWhatsAppEnabled,
+                    whatsapp_phone_number_id: editWhatsAppPhoneNumberId || null,
+                    whatsapp_access_token: editWhatsAppAccessToken || undefined,
+                    whatsapp_business_account_id: editWhatsAppBusinessAccountId || null,
                 }
             });
             toast.success("Wallet & Billing configuration updated");
@@ -523,7 +540,14 @@ export default function SuperadminPage() {
                                                                 setEditStartMonth(org.monthly_minutes_start_month ?? "");
                                                                 setEditEndYear(org.monthly_minutes_end_year ?? "");
                                                                 setEditEndMonth(org.monthly_minutes_end_month ?? "");
+                                                                setEditWhatsAppEnabled(org.whatsapp_enabled ?? false);
+                                                                setEditWhatsAppPhoneNumberId(org.whatsapp_phone_number_id ?? "");
+                                                                setEditWhatsAppAccessToken("");
+                                                                setEditWhatsAppBusinessAccountId(org.whatsapp_business_account_id ?? "");
+                                                                setWhatsappWebhookVerifyToken(org.whatsapp_webhook_verify_token ?? "");
+                                                                setWhatsappHasAccessToken(org.whatsapp_has_access_token ?? false);
                                                                 setIsEditBillingOpen(true);
+
                                                             }}>
                                                                 <Settings2 className="mr-2 h-4 w-4" />
                                                                 Wallet & Billing
@@ -800,6 +824,74 @@ export default function SuperadminPage() {
                                         You cannot manually edit minutes used. You can reset to 0 or use the default system calculation.
                                     </p>
                                 </div>
+                                <div className="border-t pt-4 space-y-4">
+                                    <h4 className="text-sm font-semibold text-foreground flex items-center justify-between">
+                                        <span>WhatsApp Follow-Up Integration</span>
+                                        <span className="text-[10px] text-muted-foreground font-normal">SuperAdmin Only</span>
+                                    </h4>
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            id="whatsappEnabled"
+                                            type="checkbox"
+                                            checked={editWhatsAppEnabled}
+                                            onChange={(e) => setEditWhatsAppEnabled(e.target.checked)}
+                                            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                        />
+                                        <Label htmlFor="whatsappEnabled" className="text-xs">Enable WhatsApp Follow-Up Feature</Label>
+                                    </div>
+                                    {editWhatsAppEnabled && (
+                                        <div className="space-y-3 pl-6 border-l-2 border-indigo-100">
+                                            <div className="space-y-1">
+                                                <Label htmlFor="whatsappPhoneId" className="text-xs">Phone Number ID</Label>
+                                                <Input
+                                                    id="whatsappPhoneId"
+                                                    placeholder="e.g. 106482619080753"
+                                                    value={editWhatsAppPhoneNumberId}
+                                                    onChange={(e) => setEditWhatsAppPhoneNumberId(e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label htmlFor="whatsappBusinessId" className="text-xs">Business Account ID</Label>
+                                                <Input
+                                                    id="whatsappBusinessId"
+                                                    placeholder="e.g. 102482319081234"
+                                                    value={editWhatsAppBusinessAccountId}
+                                                    onChange={(e) => setEditWhatsAppBusinessAccountId(e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label htmlFor="whatsappToken" className="text-xs flex justify-between">
+                                                    <span>Permanent Access Token</span>
+                                                    {whatsappHasAccessToken && (
+                                                        <span className="text-[10px] text-green-600 font-medium">✓ Token Configured</span>
+                                                    )}
+                                                </Label>
+                                                <Input
+                                                    id="whatsappToken"
+                                                    type="password"
+                                                    placeholder={whatsappHasAccessToken ? "••••••••••••••••" : "Enter Graph API Token"}
+                                                    value={editWhatsAppAccessToken}
+                                                    onChange={(e) => setEditWhatsAppAccessToken(e.target.value)}
+                                                />
+                                                <p className="text-[10px] text-muted-foreground">
+                                                    Token is stored encrypted. Enter a new token to overwrite.
+                                                </p>
+                                            </div>
+                                            {whatsappWebhookVerifyToken && (
+                                                <div className="bg-muted p-2 rounded text-xs space-y-1">
+                                                    <div className="font-semibold text-muted-foreground">Webhook Verification Config:</div>
+                                                    <div className="font-mono text-[10px] select-all bg-background p-1.5 rounded border break-all">
+                                                        URL: {typeof window !== 'undefined' ? window.location.origin : ''}/api/v1/whatsapp/webhook/{editingOrg?.id}
+                                                    </div>
+                                                    <div className="font-mono text-[10px] select-all bg-background p-1.5 rounded border break-all">
+                                                        Verify Token: {whatsappWebhookVerifyToken}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="border-t pt-4 space-y-4">
                                     <h4 className="text-sm font-semibold text-foreground">Audit Agent Runs (Call Logs)</h4>
                                     <p className="text-xs text-muted-foreground">

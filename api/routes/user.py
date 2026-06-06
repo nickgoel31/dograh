@@ -89,6 +89,7 @@ class UserConfigurationRequestResponseSchema(BaseModel):
     test_phone_number: str | None = None
     timezone: str | None = None
     organization_pricing: dict[str, Union[float, str, bool]] | None = None
+    whatsapp_enabled: bool | None = None
 
 
 @router.get("/configurations/user")
@@ -101,14 +102,17 @@ async def get_user_configurations(
     # Add organization pricing info if available
     if user.selected_organization_id:
         org = await db_client.get_organization_by_id(user.selected_organization_id)
-        if org and org.price_per_second_usd is not None:
-            masked_config["organization_pricing"] = {
-                "price_per_second_usd": org.price_per_second_usd,
-                "currency": "USD",
-                "billing_enabled": True,
-            }
+        if org:
+            masked_config["whatsapp_enabled"] = getattr(org, "whatsapp_enabled", False)
+            if org.price_per_second_usd is not None:
+                masked_config["organization_pricing"] = {
+                    "price_per_second_usd": org.price_per_second_usd,
+                    "currency": "USD",
+                    "billing_enabled": True,
+                }
 
     return masked_config
+
 
 
 @router.put("/configurations/user")

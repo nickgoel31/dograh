@@ -136,6 +136,11 @@ class OrganizationModel(Base):
     monthly_minutes_end_year = Column(Integer, nullable=True)
     monthly_minutes_end_month = Column(Integer, nullable=True)
 
+    whatsapp_enabled = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    whatsapp_phone_number_id = Column(String, nullable=True)
+    whatsapp_access_token = Column(String, nullable=True)
+    whatsapp_business_account_id = Column(String, nullable=True)
+    whatsapp_webhook_verify_token = Column(String, nullable=True)
 
     # Relationships
     users = relationship(
@@ -1362,3 +1367,47 @@ class KnowledgeBaseChunkModel(Base):
             postgresql_ops={"embedding": "vector_cosine_ops"},
         ),
     )
+
+
+class WhatsAppMessageModel(Base):
+    __tablename__ = "whatsapp_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(
+        Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    workflow_run_id = Column(
+        Integer, ForeignKey("workflow_runs.id", ondelete="SET NULL"), nullable=True
+    )
+
+    direction = Column(String(32), nullable=False)  # "outbound" | "inbound"
+    message_type = Column(String(64), nullable=True)  # "call_summary" | "booking_confirmation" | "custom" | "user_reply"
+
+    # Meta fields
+    whatsapp_message_id = Column(String(256), nullable=True, unique=True, index=True)
+
+    # Contact info
+    recipient_phone = Column(String(64), nullable=False)
+
+    # Message content
+    template_name = Column(String(256), nullable=True)
+    template_language = Column(String(32), nullable=True)
+    message_body = Column(Text, nullable=True)
+
+    # Lifecycle states: "pending" | "sent" | "delivered" | "read" | "failed"
+    status = Column(
+        String(64), nullable=False, default="pending", server_default=text("'pending'")
+    )
+    error_message = Column(Text, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    # Relationships
+    organization = relationship("OrganizationModel")
+    workflow_run = relationship("WorkflowRunModel")
+

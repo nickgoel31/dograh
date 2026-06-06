@@ -175,4 +175,14 @@ async def process_workflow_completion(
     except Exception as e:
         logger.error(f"Error calculating cost for workflow {workflow_run_id}: {e}")
 
+    # Step 5: Trigger WhatsApp follow-up if configured
+    try:
+        workflow_run, organization_id = await db_client.get_workflow_run_with_context(workflow_run_id)
+        if workflow_run and organization_id:
+            from api.services.whatsapp.handler import trigger_post_call_whatsapp
+            await trigger_post_call_whatsapp(workflow_run_id, organization_id)
+    except Exception as e:
+        logger.error(f"Error triggering WhatsApp follow-up for workflow {workflow_run_id}: {e}")
+
     logger.info(f"Completed workflow completion processing for run {workflow_run_id}")
+

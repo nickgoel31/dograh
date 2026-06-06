@@ -4403,6 +4403,22 @@ export type UpdateOrganizationRequest = {
      * Custom Minutes Used
      */
     custom_minutes_used?: number | null;
+    /**
+     * Whatsapp Enabled
+     */
+    whatsapp_enabled?: boolean | null;
+    /**
+     * Whatsapp Phone Number Id
+     */
+    whatsapp_phone_number_id?: string | null;
+    /**
+     * Whatsapp Access Token
+     */
+    whatsapp_access_token?: string | null;
+    /**
+     * Whatsapp Business Account Id
+     */
+    whatsapp_business_account_id?: string | null;
 };
 
 /**
@@ -4585,6 +4601,10 @@ export type UserConfigurationRequestResponseSchema = {
     organization_pricing?: {
         [key: string]: number | string | boolean;
     } | null;
+    /**
+     * Whatsapp Enabled
+     */
+    whatsapp_enabled?: boolean | null;
 };
 
 /**
@@ -12847,6 +12867,181 @@ export type GetNodeTypeApiV1NodeTypesNameGetResponses = {
 };
 
 export type GetNodeTypeApiV1NodeTypesNameGetResponse = GetNodeTypeApiV1NodeTypesNameGetResponses[keyof GetNodeTypeApiV1NodeTypesNameGetResponses];
+
+export type VerifyWebhookApiV1WhatsappWebhookOrgIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: number;
+    };
+    query?: {
+        /**
+         * Hub.Mode
+         */
+        'hub.mode'?: string;
+        /**
+         * Hub.Challenge
+         */
+        'hub.challenge'?: string;
+        /**
+         * Hub.Verify Token
+         */
+        'hub.verify_token'?: string;
+    };
+    url: '/api/v1/whatsapp/webhook/{org_id}';
+};
+
+export type VerifyWebhookApiV1WhatsappWebhookOrgIdGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type VerifyWebhookApiV1WhatsappWebhookOrgIdGetError = VerifyWebhookApiV1WhatsappWebhookOrgIdGetErrors[keyof VerifyWebhookApiV1WhatsappWebhookOrgIdGetErrors];
+
+export type VerifyWebhookApiV1WhatsappWebhookOrgIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: string;
+};
+
+export type VerifyWebhookApiV1WhatsappWebhookOrgIdGetResponse = VerifyWebhookApiV1WhatsappWebhookOrgIdGetResponses[keyof VerifyWebhookApiV1WhatsappWebhookOrgIdGetResponses];
+
+export type HandleWebhookCallbackApiV1WhatsappWebhookOrgIdPostData = {
+    body?: never;
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: number;
+    };
+    query?: never;
+    url: '/api/v1/whatsapp/webhook/{org_id}';
+};
+
+export type HandleWebhookCallbackApiV1WhatsappWebhookOrgIdPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type HandleWebhookCallbackApiV1WhatsappWebhookOrgIdPostError = HandleWebhookCallbackApiV1WhatsappWebhookOrgIdPostErrors[keyof HandleWebhookCallbackApiV1WhatsappWebhookOrgIdPostErrors];
+
+export type HandleWebhookCallbackApiV1WhatsappWebhookOrgIdPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type ListWhatsappLogsApiV1WhatsappLogsGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Status
+         */
+        status?: string | null;
+        /**
+         * Recipient Phone
+         */
+        recipient_phone?: string | null;
+    };
+    url: '/api/v1/whatsapp/logs';
+};
+
+export type ListWhatsappLogsApiV1WhatsappLogsGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListWhatsappLogsApiV1WhatsappLogsGetError = ListWhatsappLogsApiV1WhatsappLogsGetErrors[keyof ListWhatsappLogsApiV1WhatsappLogsGetErrors];
+
+export type ListWhatsappLogsApiV1WhatsappLogsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type RetryWhatsappMessageApiV1WhatsappLogsMessageIdRetryPostData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Message Id
+         */
+        message_id: number;
+    };
+    query?: never;
+    url: '/api/v1/whatsapp/logs/{message_id}/retry';
+};
+
+export type RetryWhatsappMessageApiV1WhatsappLogsMessageIdRetryPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RetryWhatsappMessageApiV1WhatsappLogsMessageIdRetryPostError = RetryWhatsappMessageApiV1WhatsappLogsMessageIdRetryPostErrors[keyof RetryWhatsappMessageApiV1WhatsappLogsMessageIdRetryPostErrors];
+
+export type RetryWhatsappMessageApiV1WhatsappLogsMessageIdRetryPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
 
 export type HealthApiV1HealthGetData = {
     body?: never;

@@ -205,6 +205,11 @@ class UpdateOrganizationRequest(BaseModel):
     cycle_year: Optional[int] = None
     cycle_month: Optional[int] = None
     custom_minutes_used: Optional[float] = None
+    whatsapp_enabled: Optional[bool] = None
+    whatsapp_phone_number_id: Optional[str] = None
+    whatsapp_access_token: Optional[str] = None
+    whatsapp_business_account_id: Optional[str] = None
+
 
 class AssignUserRequest(BaseModel):
     user_id: int
@@ -316,6 +321,11 @@ async def list_all_organizations(user: UserModel = Depends(get_superuser)):
                 "monthly_minutes_start_month": getattr(o, "monthly_minutes_start_month", None),
                 "monthly_minutes_end_year": getattr(o, "monthly_minutes_end_year", None),
                 "monthly_minutes_end_month": getattr(o, "monthly_minutes_end_month", None),
+                "whatsapp_enabled": getattr(o, "whatsapp_enabled", False),
+                "whatsapp_phone_number_id": getattr(o, "whatsapp_phone_number_id", None),
+                "whatsapp_business_account_id": getattr(o, "whatsapp_business_account_id", None),
+                "whatsapp_webhook_verify_token": getattr(o, "whatsapp_webhook_verify_token", None),
+                "whatsapp_has_access_token": bool(getattr(o, "whatsapp_access_token", None)),
             })
             
     return result
@@ -405,6 +415,25 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
                 else:
                     cycle.custom_minutes_used = request.custom_minutes_used
             
+        if request.whatsapp_enabled is not None:
+            org.whatsapp_enabled = request.whatsapp_enabled
+            if request.whatsapp_enabled and not org.whatsapp_webhook_verify_token:
+                import secrets
+                org.whatsapp_webhook_verify_token = secrets.token_urlsafe(32)
+
+        if request.whatsapp_phone_number_id is not None:
+            org.whatsapp_phone_number_id = request.whatsapp_phone_number_id
+
+        if request.whatsapp_access_token is not None:
+            if request.whatsapp_access_token == "":
+                org.whatsapp_access_token = None
+            else:
+                from api.utils.encryption import encrypt_data
+                org.whatsapp_access_token = encrypt_data(request.whatsapp_access_token)
+
+        if request.whatsapp_business_account_id is not None:
+            org.whatsapp_business_account_id = request.whatsapp_business_account_id
+
         await session.commit()
         await session.refresh(org)
         return {
@@ -419,6 +448,11 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
             "monthly_minutes_start_month": getattr(org, "monthly_minutes_start_month", None),
             "monthly_minutes_end_year": getattr(org, "monthly_minutes_end_year", None),
             "monthly_minutes_end_month": getattr(org, "monthly_minutes_end_month", None),
+            "whatsapp_enabled": getattr(org, "whatsapp_enabled", False),
+            "whatsapp_phone_number_id": getattr(org, "whatsapp_phone_number_id", None),
+            "whatsapp_business_account_id": getattr(org, "whatsapp_business_account_id", None),
+            "whatsapp_webhook_verify_token": getattr(org, "whatsapp_webhook_verify_token", None),
+            "whatsapp_has_access_token": bool(getattr(org, "whatsapp_access_token", None)),
         }
 
 @router.delete("/organizations/{org_id}")

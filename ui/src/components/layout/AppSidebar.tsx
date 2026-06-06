@@ -17,6 +17,7 @@ import {
   LogOut,
   type LucideIcon,
   Megaphone,
+  MessageSquare,
   Phone,
   Settings,
   Shield,
@@ -25,6 +26,7 @@ import {
   Workflow,
   Wrench,
 } from "lucide-react";
+
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -62,7 +64,9 @@ import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
 import { useLatestReleaseVersion } from "@/hooks/useLatestReleaseVersion";
 import type { LocalUser } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
+import { useUserConfig } from "@/context/UserConfigContext";
 import { cn } from "@/lib/utils";
+
 
 type SidebarNavItem = {
   title: string;
@@ -170,9 +174,11 @@ export function AppSidebar() {
   const { provider, getSelectedTeam, logout, user } = useAuth();
   const { config } = useAppConfig();
   const { role, isSuperadmin, loading: roleLoading } = useCurrentUserRole();
+  const { userConfig } = useUserConfig();
   const { telnyxMissingWebhookPublicKeyCount } = useTelephonyConfigWarnings();
   const hasTelephonyWarning = telnyxMissingWebhookPublicKeyCount > 0;
   const isCollapsed = !isMobile && state === "collapsed";
+
 
   const [isImpersonating, setIsImpersonating] = React.useState(false);
 
@@ -402,7 +408,28 @@ export function AppSidebar() {
       <SidebarContent className={cn("notranslate", isCollapsed && "px-0")} translate="no">
         {!roleLoading && (() => {
           let sections = [...NAV_SECTIONS];
+          
+          if (userConfig?.whatsapp_enabled) {
+            sections = sections.map(sec => {
+              if (sec.label === "OBSERVE") {
+                return {
+                  ...sec,
+                  items: [
+                    ...sec.items,
+                    {
+                      title: "WhatsApp Logs",
+                      url: "/whatsapp",
+                      icon: MessageSquare,
+                    }
+                  ]
+                };
+              }
+              return sec;
+            });
+          }
+
           if (role === "super_admin" || isSuperadmin) {
+
             sections = [
               ...sections,
               {
