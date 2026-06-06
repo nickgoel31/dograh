@@ -363,8 +363,10 @@ async def create_campaign(
 
     # Validate source data (phone_number column and format)
     sync_service = get_sync_service(request.source_type)
+    # Inject source_type into config so live_source.py can route to the correct fetcher
+    source_config_with_type = {**(request.source_config or {}), "source_type": request.source_type}
     validation_result = await sync_service.validate_source(
-        request.source_id, user.selected_organization_id, config=request.source_config
+        request.source_id, user.selected_organization_id, config=source_config_with_type
     )
     if not validation_result.is_valid:
         raise HTTPException(status_code=400, detail=validation_result.error.message)
@@ -1030,8 +1032,10 @@ async def validate_source_config(
     """Validate a source config connection and retrieve headers & record count preview."""
     try:
         sync_service = get_sync_service(request.source_type)
+        # Inject source_type into config so live_source.py can route to the correct fetcher
+        source_config_with_type = {**(request.source_config or {}), "source_type": request.source_type}
         res = await sync_service.validate_source(
-            request.source_id, user.selected_organization_id, config=request.source_config
+            request.source_id, user.selected_organization_id, config=source_config_with_type
         )
         if not res.is_valid:
             return ValidateSourceConfigResponse(

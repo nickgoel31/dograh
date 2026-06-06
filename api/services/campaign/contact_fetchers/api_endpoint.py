@@ -41,41 +41,43 @@ class APIEndpointContactFetcher(BaseContactFetcher):
         body = config.get("body")
 
         # Handle authentication
+        # Support both nested auth_config sub-dict AND flat keys (what the UI form sends)
         auth_type = config.get("auth_type", "none")
         auth_config = config.get("auth_config", {})
         if auth_type == "bearer":
-            token = auth_config.get("token")
+            token = auth_config.get("token") or config.get("token")
             if token:
                 headers["Authorization"] = f"Bearer {token}"
         elif auth_type == "basic":
-            username = auth_config.get("username", "")
-            password = auth_config.get("password", "")
+            username = auth_config.get("username", "") or config.get("username", "")
+            password = auth_config.get("password", "") or config.get("password", "")
             encoded = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("utf-8")
             headers["Authorization"] = f"Basic {encoded}"
         elif auth_type == "api_key":
-            header_name = auth_config.get("header_name")
-            api_key = auth_config.get("api_key")
+            header_name = auth_config.get("header_name") or config.get("header_name")
+            api_key = auth_config.get("api_key") or config.get("api_key")
             if header_name and api_key:
                 headers[header_name] = api_key
 
         # Handle pagination parameters
+        # Support both nested pagination_config sub-dict AND flat keys (what the UI form sends)
         pagination_type = config.get("pagination_type", "none")
         pagination_config = config.get("pagination_config", {})
-        
+
         if pagination_type != "none" and page_val is not None:
             if pagination_type == "page":
-                page_param = pagination_config.get("page_param", "page")
+                page_param = pagination_config.get("page_param") or config.get("page_param", "page")
                 params[page_param] = page_val
             elif pagination_type == "offset":
-                offset_param = pagination_config.get("offset_param", "offset")
+                offset_param = pagination_config.get("offset_param") or config.get("offset_param", "offset")
                 params[offset_param] = page_val
             elif pagination_type == "cursor":
-                cursor_param = pagination_config.get("cursor_param", "cursor")
+                cursor_param = pagination_config.get("cursor_param") or config.get("cursor_param", "cursor")
                 params[cursor_param] = page_val
 
             # Inject limit if specified
-            limit_param = pagination_config.get("limit_param")
-            limit_val = pagination_config.get("limit")
+            limit_param = pagination_config.get("limit_param") or config.get("limit_param")
+            limit_val = pagination_config.get("limit") or config.get("limit")
             if limit_param and limit_val:
                 params[limit_param] = limit_val
 
@@ -196,6 +198,7 @@ class APIEndpointContactFetcher(BaseContactFetcher):
 
     async def fetch_contacts(self, config: Dict[str, Any], org_id: int) -> List[Dict[str, Any]]:
         pagination_type = config.get("pagination_type", "none")
+        # Support both nested pagination_config dict AND flat keys
         pagination_config = config.get("pagination_config", {})
         json_path = config.get("json_path", "")
         phone_property = config.get("phone_property", "phone_number")
@@ -217,8 +220,8 @@ class APIEndpointContactFetcher(BaseContactFetcher):
                     all_contacts.extend(self._parse_items(items, phone_property))
 
             elif pagination_type == "page":
-                current_page = pagination_config.get("start_page", 1)
-                limit_val = pagination_config.get("limit", 50)
+                current_page = pagination_config.get("start_page") or config.get("start_page", 1)
+                limit_val = pagination_config.get("limit") or config.get("limit", 50)
                 
                 while True:
                     req_opts = self._prepare_request(config, page_val=current_page)
@@ -242,8 +245,8 @@ class APIEndpointContactFetcher(BaseContactFetcher):
                     current_page += 1
 
             elif pagination_type == "offset":
-                current_offset = pagination_config.get("start_offset", 0)
-                limit_val = pagination_config.get("limit", 50)
+                current_offset = pagination_config.get("start_offset") or config.get("start_offset", 0)
+                limit_val = pagination_config.get("limit") or config.get("limit", 50)
                 
                 while True:
                     req_opts = self._prepare_request(config, page_val=current_offset)
@@ -268,8 +271,8 @@ class APIEndpointContactFetcher(BaseContactFetcher):
 
             elif pagination_type == "cursor":
                 next_cursor = None
-                cursor_path = pagination_config.get("cursor_path", "next_cursor")
-                limit_val = pagination_config.get("limit", 50)
+                cursor_path = pagination_config.get("cursor_path") or config.get("cursor_path", "next_cursor")
+                limit_val = pagination_config.get("limit") or config.get("limit", 50)
 
                 first_run = True
                 while first_run or next_cursor:
