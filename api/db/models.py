@@ -696,6 +696,15 @@ class CampaignModel(Base):
     source_last_synced_at = Column(DateTime(timezone=True), nullable=True)
     source_sync_error = Column(String, nullable=True)
 
+    # Extended source sync options
+    source_config = Column(JSON, nullable=False, default=dict, server_default=text("'{}'::json"))
+    source_total_fetched = Column(Integer, nullable=False, default=0, server_default="0")
+    source_sync_errors = Column(JSON, nullable=False, default=list, server_default=text("'[]'::json"))
+    auto_sync_enabled = Column(Boolean, nullable=False, default=False, server_default="false")
+    auto_sync_interval_minutes = Column(Integer, nullable=False, default=60, server_default="60")
+    auto_sync_only_new = Column(Boolean, nullable=False, default=True, server_default="true")
+
+
     # Retry configuration for call failures
     retry_config = Column(
         JSON,
@@ -993,6 +1002,32 @@ class ExternalCredentialModel(Base):
         Index("ix_webhook_credentials_uuid", "credential_uuid"),
         UniqueConstraint("organization_id", "name", name="unique_org_credential_name"),
     )
+
+
+class CRMCredentialModel(Base):
+    """Model for storing encrypted CRM API tokens, refresh tokens, and credentials."""
+
+    __tablename__ = "crm_credentials"
+
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(
+        Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    provider = Column(String, nullable=False)  # "hubspot" | "zoho_crm" | "salesforce"
+    name = Column(String, nullable=False)      # friendly name e.g. "Main HubSpot Account"
+    credentials = Column(String, nullable=False)  # encrypted JSON string with tokens
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Relationships
+    organization = relationship("OrganizationModel")
+
+    __table_args__ = (
+        Index("ix_crm_credentials_organization_id", "organization_id"),
+        UniqueConstraint("organization_id", "name", "provider", name="unique_org_crm_credential_name_provider"),
+    )
+
 
 
 class ToolModel(Base):

@@ -143,8 +143,8 @@ class CircuitBreakerConfigResponse(BaseModel):
 class CreateCampaignRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     workflow_id: int
-    source_type: str = Field(..., pattern="^csv$")
-    source_id: str  # CSV file key
+    source_type: str = Field(..., pattern="^(csv|google_sheets|api_endpoint|hubspot|zoho_crm|salesforce)$")
+    source_id: str  # CSV file key or general source ID
     # Optional during the legacy → multi-config migration window. Required in
     # a follow-up. When omitted, the dispatcher falls back to the org's
     # default config.
@@ -153,6 +153,10 @@ class CreateCampaignRequest(BaseModel):
     max_concurrency: Optional[int] = Field(default=None, ge=1)
     schedule_config: Optional[ScheduleConfigRequest] = None
     circuit_breaker: Optional[CircuitBreakerConfigRequest] = None
+    source_config: Optional[Dict[str, Any]] = None
+    auto_sync_enabled: Optional[bool] = False
+    auto_sync_interval_minutes: Optional[int] = 60
+    auto_sync_only_new: Optional[bool] = True
 
 
 class UpdateCampaignRequest(BaseModel):
@@ -161,6 +165,10 @@ class UpdateCampaignRequest(BaseModel):
     max_concurrency: Optional[int] = Field(default=None, ge=1)
     schedule_config: Optional[ScheduleConfigRequest] = None
     circuit_breaker: Optional[CircuitBreakerConfigRequest] = None
+    source_config: Optional[Dict[str, Any]] = None
+    auto_sync_enabled: Optional[bool] = None
+    auto_sync_interval_minutes: Optional[int] = None
+    auto_sync_only_new: Optional[bool] = None
 
 
 class CampaignLogEntryResponse(BaseModel):
@@ -202,7 +210,10 @@ class CampaignResponse(BaseModel):
     telephony_configuration_id: Optional[int] = None
     telephony_configuration_name: Optional[str] = None
     logs: List[CampaignLogEntryResponse] = Field(default_factory=list)
-
+    source_config: Optional[Dict[str, Any]] = None
+    auto_sync_enabled: bool = False
+    auto_sync_interval_minutes: int = 60
+    auto_sync_only_new: bool = True
 
 class CampaignsResponse(BaseModel):
     campaigns: List[CampaignResponse]
@@ -309,6 +320,10 @@ def _build_campaign_response(
             for entry in (campaign.logs or [])
             if isinstance(entry, dict)
         ],
+        source_config=campaign.source_config,
+        auto_sync_enabled=campaign.auto_sync_enabled or False,
+        auto_sync_interval_minutes=campaign.auto_sync_interval_minutes or 60,
+        auto_sync_only_new=campaign.auto_sync_only_new if campaign.auto_sync_only_new is not None else True,
     )
 
 
@@ -349,7 +364,7 @@ async def create_campaign(
     # Validate source data (phone_number column and format)
     sync_service = get_sync_service(request.source_type)
     validation_result = await sync_service.validate_source(
-        request.source_id, user.selected_organization_id
+        request.source_id, user.selected_organization_id, config=request.source_config
     )
     if not validation_result.is_valid:
         raise HTTPException(status_code=400, detail=validation_result.error.message)
@@ -442,6 +457,10 @@ async def create_campaign(
         schedule_config=schedule_config,
         circuit_breaker=circuit_breaker_config,
         telephony_configuration_id=telephony_configuration_id,
+        source_config=request.source_config,
+        auto_sync_enabled=request.auto_sync_enabled or False,
+        auto_sync_interval_minutes=request.auto_sync_interval_minutes or 60,
+        auto_sync_only_new=request.auto_sync_only_new if request.auto_sync_only_new is not None else True,
     )
 
     cfg_name = await _get_telephony_configuration_name(
@@ -988,3 +1007,45 @@ async def download_campaign_report(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+class ValidateSourceConfigRequest(BaseModel):
+    source_type: str
+    source_id: str
+    source_config: Dict[str, Any]
+
+
+class ValidateSourceConfigResponse(BaseModel):
+    is_valid: bool
+    headers: List[str] = Field(default_factory=list)
+    rows_count: int = 0
+    error_message: Optional[str] = None
+
+
+@router.post("/validate-source", response_model=ValidateSourceConfigResponse)
+async def validate_source_config(
+    request: ValidateSourceConfigRequest,
+    user: UserModel = Depends(get_user),
+) -> ValidateSourceConfigResponse:
+    """Validate a source config connection and retrieve headers & record count preview."""
+    try:
+        sync_service = get_sync_service(request.source_type)
+        res = await sync_service.validate_source(
+            request.source_id, user.selected_organization_id, config=request.source_config
+        )
+        if not res.is_valid:
+            return ValidateSourceConfigResponse(
+                is_valid=False,
+                error_message=res.error.message if res.error else "Invalid configuration"
+            )
+        return ValidateSourceConfigResponse(
+            is_valid=True,
+            headers=res.headers or [],
+            rows_count=len(res.rows) if res.rows else 0
+        )
+    except Exception as e:
+        return ValidateSourceConfigResponse(
+            is_valid=False,
+            error_message=str(e)
+        )
+

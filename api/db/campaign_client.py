@@ -25,6 +25,10 @@ class CampaignClient(BaseDBClient):
         schedule_config: Optional[dict] = None,
         circuit_breaker: Optional[dict] = None,
         telephony_configuration_id: Optional[int] = None,
+        source_config: Optional[dict] = None,
+        auto_sync_enabled: bool = False,
+        auto_sync_interval_minutes: int = 60,
+        auto_sync_only_new: bool = True,
     ) -> CampaignModel:
         """Create a new campaign"""
         async with self.async_session() as session:
@@ -49,6 +53,10 @@ class CampaignClient(BaseDBClient):
                 else CampaignModel.retry_config.default.arg,
                 orchestrator_metadata=orchestrator_metadata,
                 telephony_configuration_id=telephony_configuration_id,
+                source_config=source_config or {},
+                auto_sync_enabled=auto_sync_enabled,
+                auto_sync_interval_minutes=auto_sync_interval_minutes,
+                auto_sync_only_new=auto_sync_only_new,
             )
             session.add(campaign)
             try:
@@ -398,6 +406,14 @@ class CampaignClient(BaseDBClient):
             query = select(CampaignModel).where(CampaignModel.id == campaign_id)
             result = await session.execute(query)
             return result.scalar_one_or_none()
+
+    async def get_queued_runs_for_campaign(self, campaign_id: int) -> list[QueuedRunModel]:
+        """Get all queued runs for a campaign (used for live sync deduplication)"""
+        async with self.async_session() as session:
+            query = select(QueuedRunModel).where(QueuedRunModel.campaign_id == campaign_id)
+            result = await session.execute(query)
+            return list(result.scalars().all())
+
 
     async def update_campaign(self, campaign_id: int, **kwargs) -> CampaignModel:
         """Update campaign with arbitrary fields"""

@@ -217,6 +217,36 @@ export type AssignUserRequest = {
 };
 
 /**
+ * AuditedWorkflowRunResponse
+ */
+export type AuditedWorkflowRunResponse = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Workflow Name
+     */
+    workflow_name: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Duration Seconds
+     */
+    duration_seconds: number;
+    /**
+     * Is Completed
+     */
+    is_completed: boolean;
+};
+
+/**
  * AuthResponse
  */
 export type AuthResponse = {
@@ -363,6 +393,36 @@ export type BodyTranscribeAudioApiV1WorkflowRecordingsTranscribePost = {
      * Language
      */
     language?: string;
+};
+
+/**
+ * CRMCredentialResponse
+ */
+export type CrmCredentialResponse = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Provider
+     */
+    provider: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Is Active
+     */
+    is_active: boolean;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Last Used At
+     */
+    last_used_at?: string | null;
 };
 
 /**
@@ -588,6 +648,24 @@ export type CampaignResponse = {
      * Logs
      */
     logs?: Array<CampaignLogEntryResponse>;
+    /**
+     * Source Config
+     */
+    source_config?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Auto Sync Enabled
+     */
+    auto_sync_enabled?: boolean;
+    /**
+     * Auto Sync Interval Minutes
+     */
+    auto_sync_interval_minutes?: number;
+    /**
+     * Auto Sync Only New
+     */
+    auto_sync_only_new?: boolean;
 };
 
 /**
@@ -917,6 +995,24 @@ export type CreateCampaignRequest = {
     max_concurrency?: number | null;
     schedule_config?: ScheduleConfigRequest | null;
     circuit_breaker?: CircuitBreakerConfigRequest | null;
+    /**
+     * Source Config
+     */
+    source_config?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Auto Sync Enabled
+     */
+    auto_sync_enabled?: boolean | null;
+    /**
+     * Auto Sync Interval Minutes
+     */
+    auto_sync_interval_minutes?: number | null;
+    /**
+     * Auto Sync Only New
+     */
+    auto_sync_only_new?: boolean | null;
 };
 
 /**
@@ -976,6 +1072,26 @@ export type CreateOrganizationRequest = {
      * Billing Pulse
      */
     billing_pulse?: number | null;
+    /**
+     * Monthly Minutes Limit
+     */
+    monthly_minutes_limit?: number | null;
+    /**
+     * Monthly Minutes Start Year
+     */
+    monthly_minutes_start_year?: number | null;
+    /**
+     * Monthly Minutes Start Month
+     */
+    monthly_minutes_start_month?: number | null;
+    /**
+     * Monthly Minutes End Year
+     */
+    monthly_minutes_end_year?: number | null;
+    /**
+     * Monthly Minutes End Month
+     */
+    monthly_minutes_end_month?: number | null;
 };
 
 /**
@@ -3213,6 +3329,26 @@ export type S3SignedUrlResponse = {
 };
 
 /**
+ * SaveCRMCredentialRequest
+ */
+export type SaveCrmCredentialRequest = {
+    /**
+     * Provider
+     */
+    provider: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Credentials Data
+     */
+    credentials_data: {
+        [key: string]: unknown;
+    };
+};
+
+/**
  * ScheduleConfigRequest
  */
 export type ScheduleConfigRequest = {
@@ -4148,6 +4284,24 @@ export type UpdateCampaignRequest = {
     max_concurrency?: number | null;
     schedule_config?: ScheduleConfigRequest | null;
     circuit_breaker?: CircuitBreakerConfigRequest | null;
+    /**
+     * Source Config
+     */
+    source_config?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Auto Sync Enabled
+     */
+    auto_sync_enabled?: boolean | null;
+    /**
+     * Auto Sync Interval Minutes
+     */
+    auto_sync_interval_minutes?: number | null;
+    /**
+     * Auto Sync Only New
+     */
+    auto_sync_only_new?: boolean | null;
 };
 
 /**
@@ -4217,6 +4371,38 @@ export type UpdateOrganizationRequest = {
      * Billing Pulse
      */
     billing_pulse?: number | null;
+    /**
+     * Monthly Minutes Limit
+     */
+    monthly_minutes_limit?: number | null;
+    /**
+     * Monthly Minutes Start Year
+     */
+    monthly_minutes_start_year?: number | null;
+    /**
+     * Monthly Minutes Start Month
+     */
+    monthly_minutes_start_month?: number | null;
+    /**
+     * Monthly Minutes End Year
+     */
+    monthly_minutes_end_year?: number | null;
+    /**
+     * Monthly Minutes End Month
+     */
+    monthly_minutes_end_month?: number | null;
+    /**
+     * Cycle Year
+     */
+    cycle_year?: number | null;
+    /**
+     * Cycle Month
+     */
+    cycle_month?: number | null;
+    /**
+     * Custom Minutes Used
+     */
+    custom_minutes_used?: number | null;
 };
 
 /**
@@ -4425,6 +4611,48 @@ export type UserResponse = {
      * Provider Id
      */
     provider_id?: string | null;
+};
+
+/**
+ * ValidateSourceConfigRequest
+ */
+export type ValidateSourceConfigRequest = {
+    /**
+     * Source Type
+     */
+    source_type: string;
+    /**
+     * Source Id
+     */
+    source_id: string;
+    /**
+     * Source Config
+     */
+    source_config: {
+        [key: string]: unknown;
+    };
+};
+
+/**
+ * ValidateSourceConfigResponse
+ */
+export type ValidateSourceConfigResponse = {
+    /**
+     * Is Valid
+     */
+    is_valid: boolean;
+    /**
+     * Headers
+     */
+    headers?: Array<string>;
+    /**
+     * Rows Count
+     */
+    rows_count?: number;
+    /**
+     * Error Message
+     */
+    error_message?: string | null;
 };
 
 /**
@@ -4671,6 +4899,22 @@ export type WalletResponse = {
      * Billing Pulse
      */
     billing_pulse: number;
+    /**
+     * Monthly Minutes Limit
+     */
+    monthly_minutes_limit: number;
+    /**
+     * Carry Forward Minutes
+     */
+    carry_forward_minutes: number;
+    /**
+     * Minutes Used
+     */
+    minutes_used: number;
+    /**
+     * Minutes Remaining
+     */
+    minutes_remaining: number;
 };
 
 /**
@@ -6282,6 +6526,107 @@ export type UpdateUserRoleApiV1SuperuserUsersUserIdRolePatchResponses = {
 };
 
 export type UpdateUserRoleApiV1SuperuserUsersUserIdRolePatchResponse = UpdateUserRoleApiV1SuperuserUsersUserIdRolePatchResponses[keyof UpdateUserRoleApiV1SuperuserUsersUserIdRolePatchResponses];
+
+export type ListOrganizationRunsForAuditApiV1SuperuserOrganizationsOrgIdRunsGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Org Id
+         */
+        org_id: number;
+    };
+    query: {
+        /**
+         * Year
+         *
+         * Target year
+         */
+        year: number;
+        /**
+         * Month
+         *
+         * Target month
+         */
+        month: number;
+    };
+    url: '/api/v1/superuser/organizations/{org_id}/runs';
+};
+
+export type ListOrganizationRunsForAuditApiV1SuperuserOrganizationsOrgIdRunsGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListOrganizationRunsForAuditApiV1SuperuserOrganizationsOrgIdRunsGetError = ListOrganizationRunsForAuditApiV1SuperuserOrganizationsOrgIdRunsGetErrors[keyof ListOrganizationRunsForAuditApiV1SuperuserOrganizationsOrgIdRunsGetErrors];
+
+export type ListOrganizationRunsForAuditApiV1SuperuserOrganizationsOrgIdRunsGetResponses = {
+    /**
+     * Response List Organization Runs For Audit Api V1 Superuser Organizations  Org Id  Runs Get
+     *
+     * Successful Response
+     */
+    200: Array<AuditedWorkflowRunResponse>;
+};
+
+export type ListOrganizationRunsForAuditApiV1SuperuserOrganizationsOrgIdRunsGetResponse = ListOrganizationRunsForAuditApiV1SuperuserOrganizationsOrgIdRunsGetResponses[keyof ListOrganizationRunsForAuditApiV1SuperuserOrganizationsOrgIdRunsGetResponses];
+
+export type DeleteWorkflowRunForAuditApiV1SuperuserRunsRunIdDeleteData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Run Id
+         */
+        run_id: number;
+    };
+    query?: never;
+    url: '/api/v1/superuser/runs/{run_id}';
+};
+
+export type DeleteWorkflowRunForAuditApiV1SuperuserRunsRunIdDeleteErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteWorkflowRunForAuditApiV1SuperuserRunsRunIdDeleteError = DeleteWorkflowRunForAuditApiV1SuperuserRunsRunIdDeleteErrors[keyof DeleteWorkflowRunForAuditApiV1SuperuserRunsRunIdDeleteErrors];
+
+export type DeleteWorkflowRunForAuditApiV1SuperuserRunsRunIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
 
 export type ValidateWorkflowApiV1WorkflowWorkflowIdValidatePostData = {
     body?: never;
@@ -8384,6 +8729,45 @@ export type DownloadCampaignReportApiV1CampaignCampaignIdReportGetResponses = {
     200: unknown;
 };
 
+export type ValidateSourceConfigApiV1CampaignValidateSourcePostData = {
+    body: ValidateSourceConfigRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/campaign/validate-source';
+};
+
+export type ValidateSourceConfigApiV1CampaignValidateSourcePostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ValidateSourceConfigApiV1CampaignValidateSourcePostError = ValidateSourceConfigApiV1CampaignValidateSourcePostErrors[keyof ValidateSourceConfigApiV1CampaignValidateSourcePostErrors];
+
+export type ValidateSourceConfigApiV1CampaignValidateSourcePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ValidateSourceConfigResponse;
+};
+
+export type ValidateSourceConfigApiV1CampaignValidateSourcePostResponse = ValidateSourceConfigApiV1CampaignValidateSourcePostResponses[keyof ValidateSourceConfigApiV1CampaignValidateSourcePostResponses];
+
 export type ListCredentialsApiV1CredentialsGetData = {
     body?: never;
     headers?: {
@@ -8599,6 +8983,178 @@ export type UpdateCredentialApiV1CredentialsCredentialUuidPutResponses = {
 };
 
 export type UpdateCredentialApiV1CredentialsCredentialUuidPutResponse = UpdateCredentialApiV1CredentialsCredentialUuidPutResponses[keyof UpdateCredentialApiV1CredentialsCredentialUuidPutResponses];
+
+export type ListCrmCredentialsApiV1CrmCredentialsGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/crm-credentials';
+};
+
+export type ListCrmCredentialsApiV1CrmCredentialsGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListCrmCredentialsApiV1CrmCredentialsGetError = ListCrmCredentialsApiV1CrmCredentialsGetErrors[keyof ListCrmCredentialsApiV1CrmCredentialsGetErrors];
+
+export type ListCrmCredentialsApiV1CrmCredentialsGetResponses = {
+    /**
+     * Response List Crm Credentials Api V1 Crm Credentials Get
+     *
+     * Successful Response
+     */
+    200: Array<CrmCredentialResponse>;
+};
+
+export type ListCrmCredentialsApiV1CrmCredentialsGetResponse = ListCrmCredentialsApiV1CrmCredentialsGetResponses[keyof ListCrmCredentialsApiV1CrmCredentialsGetResponses];
+
+export type SaveCrmCredentialApiV1CrmCredentialsPostData = {
+    body: SaveCrmCredentialRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/crm-credentials';
+};
+
+export type SaveCrmCredentialApiV1CrmCredentialsPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SaveCrmCredentialApiV1CrmCredentialsPostError = SaveCrmCredentialApiV1CrmCredentialsPostErrors[keyof SaveCrmCredentialApiV1CrmCredentialsPostErrors];
+
+export type SaveCrmCredentialApiV1CrmCredentialsPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: CrmCredentialResponse;
+};
+
+export type SaveCrmCredentialApiV1CrmCredentialsPostResponse = SaveCrmCredentialApiV1CrmCredentialsPostResponses[keyof SaveCrmCredentialApiV1CrmCredentialsPostResponses];
+
+export type DeleteCrmCredentialApiV1CrmCredentialsProviderDeleteData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Provider
+         */
+        provider: string;
+    };
+    query?: never;
+    url: '/api/v1/crm-credentials/{provider}';
+};
+
+export type DeleteCrmCredentialApiV1CrmCredentialsProviderDeleteErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteCrmCredentialApiV1CrmCredentialsProviderDeleteError = DeleteCrmCredentialApiV1CrmCredentialsProviderDeleteErrors[keyof DeleteCrmCredentialApiV1CrmCredentialsProviderDeleteErrors];
+
+export type DeleteCrmCredentialApiV1CrmCredentialsProviderDeleteResponses = {
+    /**
+     * Response Delete Crm Credential Api V1 Crm Credentials  Provider  Delete
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type DeleteCrmCredentialApiV1CrmCredentialsProviderDeleteResponse = DeleteCrmCredentialApiV1CrmCredentialsProviderDeleteResponses[keyof DeleteCrmCredentialApiV1CrmCredentialsProviderDeleteResponses];
+
+export type GetCrmCredentialApiV1CrmCredentialsProviderGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Provider
+         */
+        provider: string;
+    };
+    query?: never;
+    url: '/api/v1/crm-credentials/{provider}';
+};
+
+export type GetCrmCredentialApiV1CrmCredentialsProviderGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetCrmCredentialApiV1CrmCredentialsProviderGetError = GetCrmCredentialApiV1CrmCredentialsProviderGetErrors[keyof GetCrmCredentialApiV1CrmCredentialsProviderGetErrors];
+
+export type GetCrmCredentialApiV1CrmCredentialsProviderGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: CrmCredentialResponse;
+};
+
+export type GetCrmCredentialApiV1CrmCredentialsProviderGetResponse = GetCrmCredentialApiV1CrmCredentialsProviderGetResponses[keyof GetCrmCredentialApiV1CrmCredentialsProviderGetResponses];
 
 export type ListToolsApiV1ToolsGetData = {
     body?: never;
@@ -10023,7 +10579,16 @@ export type GetWalletApiV1OrganizationsWalletGetData = {
         'X-API-Key'?: string | null;
     };
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Year
+         */
+        year?: number | null;
+        /**
+         * Month
+         */
+        month?: number | null;
+    };
     url: '/api/v1/organizations/wallet';
 };
 

@@ -39,9 +39,11 @@ REDIS_SETTINGS = RedisSettings(
     ssl_check_hostname=False if use_ssl else None,
 )
 
+from arq import cron
 from api.tasks.campaign_tasks import (
     process_campaign_batch,
     sync_campaign_source,
+    check_auto_sync,
 )
 from api.tasks.knowledge_base_processing import process_knowledge_base_document
 from api.tasks.run_integrations import run_integrations_post_workflow_run
@@ -59,10 +61,14 @@ class WorkerSettings:
         sync_campaign_source,
         process_campaign_batch,
         process_knowledge_base_document,
+        check_auto_sync,
     ]
-    cron_jobs = []
+    cron_jobs = [
+        cron(check_auto_sync, minute=None)
+    ]
     redis_settings = REDIS_SETTINGS
     max_jobs = 10
+
 
 
 LOG_CONFIG = {

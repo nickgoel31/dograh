@@ -29,7 +29,7 @@ import {
 import { useAuth } from '@/lib/auth';
 
 import CampaignAdvancedSettings, { getTimezoneValue, type TimeSlot } from '../CampaignAdvancedSettings';
-import CsvUploadSelector from '../CsvUploadSelector';
+import ContactSourceSelector from '../ContactSourceSelector';
 
 export default function NewCampaignPage() {
     const { user, getAccessToken, redirectToLogin, loading } = useAuth();
@@ -38,9 +38,12 @@ export default function NewCampaignPage() {
     // Form state
     const [campaignName, setCampaignName] = useState('');
     const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>('');
-    const [sourceType, setSourceType] = useState<'csv'>('csv');
+    const [sourceType, setSourceType] = useState<string>('csv');
     const [sourceId, setSourceId] = useState('');
-    const [selectedFileName, setSelectedFileName] = useState('');
+    const [sourceConfig, setSourceConfig] = useState<Record<string, any>>({});
+    const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
+    const [autoSyncIntervalMinutes, setAutoSyncIntervalMinutes] = useState(60);
+    const [autoSyncOnlyNew, setAutoSyncOnlyNew] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
 
@@ -295,6 +298,10 @@ export default function NewCampaignPage() {
                     max_concurrency: maxConcurrencyValue,
                     schedule_config: scheduleConfig,
                     circuit_breaker: circuitBreakerConfig,
+                    source_config: sourceConfig,
+                    auto_sync_enabled: autoSyncEnabled,
+                    auto_sync_interval_minutes: autoSyncIntervalMinutes,
+                    auto_sync_only_new: autoSyncOnlyNew,
                 },
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -327,13 +334,6 @@ export default function NewCampaignPage() {
     // Handle back navigation
     const handleBack = () => {
         router.push('/campaigns');
-    };
-
-    // Handle CSV file upload
-    const handleFileUploaded = (fileKey: string, fileName: string) => {
-        setSourceId(fileKey);
-        setSelectedFileName(fileName);
-        setCreateError(null);
     };
 
     return (
@@ -457,32 +457,20 @@ export default function NewCampaignPage() {
                                 </p>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="source-type">Data Source Type</Label>
-                                <Select
-                                    value={sourceType}
-                                    onValueChange={(value) => {
-                                        setSourceType(value as 'csv');
-                                        setSourceId('');
-                                        setSelectedFileName('');
-                                    }}
-                                    required
-                                >
-                                    <SelectTrigger id="source-type">
-                                        <SelectValue placeholder="Select source type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="csv">CSV File</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <p className="text-sm text-muted-foreground">
-                                    Choose where your contact data is stored
-                                </p>
-                            </div>
-
-                            <CsvUploadSelector
-                                onFileUploaded={handleFileUploaded}
-                                selectedFileName={selectedFileName}
+                            <ContactSourceSelector
+                                sourceType={sourceType}
+                                onSourceTypeChange={setSourceType}
+                                sourceId={sourceId}
+                                onSourceIdChange={setSourceId}
+                                sourceConfig={sourceConfig}
+                                onSourceConfigChange={setSourceConfig}
+                                autoSyncEnabled={autoSyncEnabled}
+                                onAutoSyncEnabledChange={setAutoSyncEnabled}
+                                autoSyncIntervalMinutes={autoSyncIntervalMinutes}
+                                onAutoSyncIntervalMinutesChange={setAutoSyncIntervalMinutes}
+                                autoSyncOnlyNew={autoSyncOnlyNew}
+                                onAutoSyncOnlyNewChange={setAutoSyncOnlyNew}
+                                getAccessToken={getAccessToken}
                             />
 
                             {/* Advanced Settings */}

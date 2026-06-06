@@ -249,3 +249,50 @@ async def process_campaign_batch(
             details={"error": str(e)},
         )
         raise
+
+
+async def check_auto_sync(ctx: Dict) -> None:
+    """
+    Cron job task that runs periodically to check for campaigns requiring auto-sync.
+    For each due campaign, enqueues a SYNC_CAMPAIGN_SOURCE job.
+    """
+    logger.info("Running auto-sync check for active campaigns")
+
+    from sqlalchemy.future import select
+    from api.db.models import CampaignModel
+    from api.tasks.arq import enqueue_job
+
+    async with db_client.session_factory() as session:
+        stmt = select(CampaignModel).where(
+            CampaignModel.state == "running",
+            CampaignModel.auto_sync_enabled == True,
+            CampaignModel.source_sync_status != "in_progress"
+        )
+        res = await session.execute(stmt)
+        campaigns = res.scalars().all()
+
+        now = datetime.now(UTC)
+
+        for campaign in campaigns:
+            last_sync = campaign.source_last_synced_at or campaign.started_at or campaign.created_at
+            if not last_sync:
+                continue
+
+            if last_sync.tzinfo is None:
+                last_sync = last_sync.replace(tzinfo=UTC)
+
+            diff = now - last_sync
+            interval_minutes = campaign.auto_sync_interval_minutes or 60
+
+            if diff.total_seconds() / 60 >= interval_minutes:
+                logger.info(f"Campaign {campaign.id} is due for auto-sync. Scheduling sync.")
+                campaign.source_sync_status = "in_progress"
+                session.add(campaign)
+                await enqueue_job(FunctionNames.SYNC_CAMPAIGN_SOURCE, campaign.id)
+
+        try:
+            await session.commit()
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to commit auto-sync update: {e}")
+
