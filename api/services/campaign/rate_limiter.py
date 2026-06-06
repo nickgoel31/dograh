@@ -287,48 +287,22 @@ class RateLimiter:
         self, organization_id: int, telephony_configuration_id: int | None
     ) -> Optional[str]:
         """
-        Atomically acquire an available from_number from the pool for the given
-        (organization_id, telephony_configuration_id).
-        Cleans stale entries (score > 0 and older than 30 min) before acquiring.
-
-        Returns the phone number if available, None if all numbers are in use.
+        Acquire a from_number from the pool.
+        Since phone numbers can support multiple concurrent calls, we select a random
+        number from the pool of configured numbers.
         """
         redis_client = await self._get_redis()
         key = self._from_number_pool_key(organization_id, telephony_configuration_id)
-        now = time.time()
-        stale_cutoff = now - self.stale_call_timeout
-
-        lua_script = """
-        local key = KEYS[1]
-        local now = tonumber(ARGV[1])
-        local stale_cutoff = tonumber(ARGV[2])
-
-        -- Clean stale entries: members with score > 0 and score < stale_cutoff
-        local stale = redis.call('ZRANGEBYSCORE', key, 1, stale_cutoff)
-        for i, member in ipairs(stale) do
-            redis.call('ZADD', key, 0, member)
-        end
-
-        -- Find all available numbers (score == 0)
-        local available = redis.call('ZRANGEBYSCORE', key, 0, 0)
-        if #available == 0 then
-            return nil
-        end
-
-        -- Pick a random number from the available pool for uniform distribution
-        local idx = math.random(#available)
-        local chosen = available[idx]
-
-        -- Mark as in-use with current timestamp
-        redis.call('ZADD', key, now, chosen)
-        return chosen
-        """
 
         try:
-            result = await redis_client.eval(lua_script, 1, key, now, stale_cutoff)
-            if result:
-                logger.debug(f"Acquired from_number {result} for org {organization_id}")
-            return result
+            # Retrieve all configured phone numbers from the sorted set
+            available = await redis_client.zrange(key, 0, -1)
+            if not available:
+                return None
+            import random
+            chosen = random.choice(available)
+            logger.debug(f"Acquired from_number {chosen} for org {organization_id} (non-exclusive)")
+            return chosen
         except Exception as e:
             logger.error(f"Error acquiring from_number: {e}")
             return None

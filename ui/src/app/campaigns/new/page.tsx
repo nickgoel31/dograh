@@ -229,10 +229,8 @@ export default function NewCampaignPage() {
     );
     const availableFromNumbersCount = selectedTelephonyConfig?.phone_number_count ?? fromNumbersCount;
 
-    // Effective concurrency limit considering both org limit and available CLIs
-    const effectiveLimit = availableFromNumbersCount > 0
-        ? Math.min(orgConcurrentLimit, availableFromNumbersCount)
-        : orgConcurrentLimit;
+    // Effective concurrency limit is now the org limit itself
+    const effectiveLimit = orgConcurrentLimit;
 
     // Handle form submission
     const handleSubmit = async (e: React.FormEvent) => {
@@ -247,16 +245,8 @@ export default function NewCampaignPage() {
         // Validate max_concurrency if provided
         const maxConcurrencyValue = maxConcurrency ? parseInt(maxConcurrency) : null;
         if (maxConcurrencyValue !== null) {
-            if (isNaN(maxConcurrencyValue) || maxConcurrencyValue < 1 || maxConcurrencyValue > 100) {
-                toast.error('Max concurrent calls must be between 1 and 100');
-                return;
-            }
-            if (maxConcurrencyValue > effectiveLimit) {
-                if (availableFromNumbersCount > 0 && availableFromNumbersCount < orgConcurrentLimit) {
-                    toast.error(`Max concurrent calls cannot exceed ${effectiveLimit}. The selected configuration has ${availableFromNumbersCount} phone number(s) — add more CLIs to increase concurrency.`);
-                } else {
-                    toast.error(`Max concurrent calls cannot exceed organization limit (${effectiveLimit})`);
-                }
+            if (isNaN(maxConcurrencyValue) || maxConcurrencyValue < 1 || maxConcurrencyValue > orgConcurrentLimit) {
+                toast.error(`Max concurrent calls must be between 1 and ${orgConcurrentLimit}`);
                 return;
             }
         }

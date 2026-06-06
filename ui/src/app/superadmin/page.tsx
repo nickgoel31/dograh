@@ -765,18 +765,39 @@ export default function SuperadminPage() {
                                         </select>
                                     </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="customMinutesUsed" className="text-xs">Custom Minutes Used</Label>
-                                    <Input
-                                        id="customMinutesUsed"
-                                        type="number"
-                                        step="0.1"
-                                        placeholder="No override"
-                                        value={editCustomMinutesUsed}
-                                        onChange={(e) => setEditCustomMinutesUsed(e.target.value)}
-                                    />
+                                <div className="space-y-2">
+                                    <Label className="text-xs">Custom Minutes Used</Label>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id="customMinutesUsed"
+                                            type="text"
+                                            className="bg-muted"
+                                            readOnly
+                                            value={editCustomMinutesUsed === "0" ? "0 (Reset)" : "System Calculated"}
+                                            placeholder="System Calculated"
+                                        />
+                                        {editCustomMinutesUsed === "0" ? (
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                size="sm"
+                                                onClick={() => setEditCustomMinutesUsed("")}
+                                            >
+                                                Undo Reset
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setEditCustomMinutesUsed("0")}
+                                            >
+                                                Reset to 0
+                                            </Button>
+                                        )}
+                                    </div>
                                     <p className="text-[10px] text-muted-foreground">
-                                        Leave empty to keep default system-calculated minutes.
+                                        You cannot manually edit minutes used. You can reset to 0 or use the default system calculation.
                                     </p>
                                 </div>
                                 <div className="border-t pt-4 space-y-4">

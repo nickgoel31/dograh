@@ -57,24 +57,15 @@ async def _get_from_numbers_count(organization_id: int) -> int:
 
 
 async def _validate_max_concurrency(max_concurrency: int, organization_id: int) -> None:
-    """Validate max_concurrency against org limit and configured phone numbers.
+    """Validate max_concurrency against organization concurrent call limit.
 
-    Raises HTTPException(400) if the value exceeds the effective limit.
+    Raises HTTPException(400) if the value exceeds the org limit.
     """
     org_limit = await _get_org_concurrent_limit(organization_id)
-    from_numbers_count = await _get_from_numbers_count(organization_id)
-    effective_limit = (
-        min(org_limit, from_numbers_count) if from_numbers_count > 0 else org_limit
-    )
-    if max_concurrency > effective_limit:
-        if from_numbers_count > 0 and from_numbers_count < org_limit:
-            raise HTTPException(
-                status_code=400,
-                detail=f"max_concurrency ({max_concurrency}) cannot exceed {effective_limit}. You have {from_numbers_count} phone number(s) configured. Add more CLIs in telephony configuration to increase concurrency.",
-            )
+    if max_concurrency > org_limit:
         raise HTTPException(
             status_code=400,
-            detail=f"max_concurrency ({max_concurrency}) cannot exceed organization limit ({effective_limit})",
+            detail=f"max_concurrency ({max_concurrency}) cannot exceed organization limit ({org_limit})",
         )
 
 
@@ -159,7 +150,7 @@ class CreateCampaignRequest(BaseModel):
     # default config.
     telephony_configuration_id: Optional[int] = None
     retry_config: Optional[RetryConfigRequest] = None
-    max_concurrency: Optional[int] = Field(default=None, ge=1, le=100)
+    max_concurrency: Optional[int] = Field(default=None, ge=1)
     schedule_config: Optional[ScheduleConfigRequest] = None
     circuit_breaker: Optional[CircuitBreakerConfigRequest] = None
 
@@ -167,7 +158,7 @@ class CreateCampaignRequest(BaseModel):
 class UpdateCampaignRequest(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     retry_config: Optional[RetryConfigRequest] = None
-    max_concurrency: Optional[int] = Field(default=None, ge=1, le=100)
+    max_concurrency: Optional[int] = Field(default=None, ge=1)
     schedule_config: Optional[ScheduleConfigRequest] = None
     circuit_breaker: Optional[CircuitBreakerConfigRequest] = None
 

@@ -368,6 +368,11 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
 
         if request.cycle_year is not None and request.cycle_month is not None:
             if request.custom_minutes_used is not None:
+                if request.custom_minutes_used != 0 and request.custom_minutes_used != 0.0:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Superadmin can only reset minutes used to 0"
+                    )
                 from datetime import datetime, timezone
                 from dateutil.relativedelta import relativedelta
                 from api.db.models import OrganizationUsageCycleModel

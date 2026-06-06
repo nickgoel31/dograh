@@ -126,21 +126,16 @@ export default function CampaignAdvancedSettings({
                 <Input
                     id="max-concurrency"
                     type="number"
-                    placeholder={`Default: ${effectiveLimit}`}
+                    placeholder={`Default: ${orgConcurrentLimit}`}
                     value={maxConcurrency}
                     onChange={(e) => onMaxConcurrencyChange(e.target.value)}
                     min={1}
-                    max={effectiveLimit}
+                    max={orgConcurrentLimit}
                 />
                 <p className="text-sm text-muted-foreground">
-                    Maximum number of simultaneous calls. Leave empty to use {effectiveLimit}.
-                    {fromNumbersCount > 0 && ` You have ${fromNumbersCount} CLI${fromNumbersCount !== 1 ? 's' : ''} and an org limit of ${orgConcurrentLimit}.`}
+                    Maximum number of simultaneous calls. Leave empty to use {orgConcurrentLimit}.
+                    Your organization limit is {orgConcurrentLimit}.
                 </p>
-                {fromNumbersCount > 0 && fromNumbersCount < orgConcurrentLimit && (
-                    <p className="text-sm text-amber-600 dark:text-amber-400">
-                        Concurrency is limited to {fromNumbersCount} by your configured phone numbers. To use the full org limit of {orgConcurrentLimit}, add more CLIs in <Link href="/telephony-configurations" className="underline font-medium">Telephony Configuration</Link>.
-                    </p>
-                )}
                 {fromNumbersCount === 0 && (
                     <p className="text-sm text-amber-600 dark:text-amber-400">
                         No phone numbers configured. Add CLIs in <Link href="/telephony-configurations" className="underline font-medium">Telephony Configuration</Link> before running the campaign.
