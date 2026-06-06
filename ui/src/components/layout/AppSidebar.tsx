@@ -272,7 +272,7 @@ export function AppSidebar() {
         tooltip={tooltip}
         className={cn(
           "transition-all duration-300 hover:bg-accent/70 hover:text-accent-foreground hover:translate-x-1",
-          isItemActive && "bg-primary/10 text-primary font-semibold border-r-2 border-primary rounded-r-none"
+          isItemActive && "bg-gradient-to-r from-primary/15 to-transparent text-primary font-semibold border-l-2 border-primary rounded-l-none"
         )}
       >
         <Link
@@ -333,7 +333,7 @@ export function AppSidebar() {
                 alt="Parrot AI Logo"
                 width={32}
                 height={32}
-                className="rounded-lg object-cover"
+                className="rounded-lg object-cover ring-1 ring-border/50 shadow-sm"
                 unoptimized
               />
               <span className="tracking-tight">Parrot AI</span>
@@ -467,7 +467,7 @@ export function AppSidebar() {
                 {section.label && (
                   <SidebarGroupLabel
                     className={cn(
-                      "notranslate text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+                      "notranslate text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 before:content-[''] before:block before:w-1 before:h-1 before:rounded-full before:bg-primary/50",
                       isCollapsed && "hidden"
                     )}
                     translate="no"
@@ -497,7 +497,7 @@ export function AppSidebar() {
             <div className={cn("flex", isCollapsed ? "justify-center" : "justify-start")}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer rounded-full">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer rounded-full ring-2 ring-primary/20 ring-offset-1 ring-offset-background hover:ring-primary/40 transition-all">
                     <span className="text-xs font-medium">
                       {(user?.displayName || (user as LocalUser | undefined)?.email || "")
                         .split(/[\s@]/)
@@ -541,7 +541,7 @@ export function AppSidebar() {
             <div className={cn("flex", isCollapsed ? "justify-center" : "justify-start")}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer rounded-full">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer rounded-full ring-2 ring-primary/20 ring-offset-1 ring-offset-background hover:ring-primary/40 transition-all">
                     <span className="text-xs font-medium">
                       {(user?.displayName || (user as { primaryEmail?: string })?.primaryEmail || "")
                         .split(/[\s@]/)

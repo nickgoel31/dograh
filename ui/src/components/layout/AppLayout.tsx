@@ -17,21 +17,23 @@ function AppHeader() {
   const { toggleSidebar } = useSidebar();
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between border-b bg-background px-4 py-2">
+    <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border/40 bg-background/70 backdrop-blur-md px-4 py-3 shadow-sm transition-all duration-300">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={toggleSidebar} aria-label="Open menu" className="md:hidden">
+        <Button variant="ghost" size="icon" onClick={toggleSidebar} aria-label="Open menu" className="md:hidden hover:bg-primary/10 hover:text-primary transition-colors">
           <Menu className="h-5 w-5" />
         </Button>
-        <Link href="/" className="flex items-center gap-2 text-lg font-bold md:hidden">
-          <Image
-            src="/logo.png"
-            alt="Parrot AI Logo"
-            width={24}
-            height={24}
-            className="rounded-md object-cover"
-            unoptimized
-          />
-          <span>Parrot AI</span>
+        <Link href="/" className="flex items-center gap-2 text-lg font-bold md:hidden group">
+          <div className="relative overflow-hidden rounded-md group-hover:shadow-[0_0_15px_color-mix(in_oklch,var(--primary)_50%,transparent)] transition-all">
+            <Image
+              src="/logo.png"
+              alt="Parrot AI Logo"
+              width={24}
+              height={24}
+              className="object-cover transform group-hover:scale-110 transition-transform duration-300"
+              unoptimized
+            />
+          </div>
+          <span className="text-gradient font-extrabold tracking-tight">Parrot AI</span>
         </Link>
       </div>
       <div className="flex items-center gap-3">
@@ -108,8 +110,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({
       {shouldShowSidebar ? (
         <div className="flex min-h-screen w-full bg-background relative overflow-hidden transition-colors duration-300">
           {/* Space background glows */}
-          <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/8 blur-[100px] pointer-events-none opacity-45 dark:opacity-80" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-500/8 blur-[120px] pointer-events-none opacity-45 dark:opacity-80" />
+          <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/15 blur-[120px] pointer-events-none opacity-60 dark:opacity-30 dark:bg-primary/20" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-500/10 blur-[140px] pointer-events-none opacity-50 dark:opacity-20" />
 
           <AppSidebar />
           <SidebarInset className="flex-1 flex flex-col min-w-0 bg-transparent border-l border-border/50">
@@ -145,8 +147,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({
         </div>
       ) : (
         <div className="flex-1 w-full bg-background relative overflow-hidden transition-colors duration-300">
-          <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/8 blur-[100px] pointer-events-none opacity-45 dark:opacity-80" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-500/8 blur-[120px] pointer-events-none opacity-45 dark:opacity-80" />
+          <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/15 blur-[120px] pointer-events-none opacity-60 dark:opacity-30 dark:bg-primary/20" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-500/10 blur-[140px] pointer-events-none opacity-50 dark:opacity-20" />
           <BackendStatusBanner />
           {children}
         </div>

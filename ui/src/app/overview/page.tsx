@@ -6,6 +6,7 @@ import { GitHubStarBadge } from '@/components/layout/GitHubStarBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth';
+import { Bot, Settings2, BookOpen, Bug } from 'lucide-react';
 
 export default function OverviewPage() {
     const { user, provider } = useAuth();
@@ -15,7 +16,7 @@ export default function OverviewPage() {
         <div className="container mx-auto px-4 py-8 relative">
             <div className="max-w-4xl mx-auto">
                 {/* Welcome Card */}
-                <Card className="mb-8 glass-card border-primary/20 bg-card/60 backdrop-blur-md relative overflow-hidden">
+                <Card className="mb-8 glass-card border-primary/20 bg-card/60 backdrop-blur-md relative overflow-hidden fade-in-up">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
                     <CardHeader>
                         <CardTitle className="text-3xl font-extrabold tracking-tight">
@@ -47,10 +48,15 @@ export default function OverviewPage() {
                 </Card>
 
                 {/* Quick Actions */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-children">
                     <Card className="glass-card hover-glow bg-card/60 backdrop-blur-md">
                         <CardHeader>
-                            <CardTitle className="text-xl font-bold">Create and Manage your Voice Agents</CardTitle>
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="icon-container">
+                                    <Bot className="h-5 w-5" />
+                                </div>
+                                <CardTitle className="text-xl font-bold">Manage Voice Agents</CardTitle>
+                            </div>
                             <CardDescription className="text-muted-foreground/80 mt-1">
                                 Build powerful AI Voice Agents with our visual editor
                             </CardDescription>
@@ -66,7 +72,12 @@ export default function OverviewPage() {
 
                     <Card className="glass-card hover-glow bg-card/60 backdrop-blur-md">
                         <CardHeader>
-                            <CardTitle className="text-xl font-bold">Configure Services</CardTitle>
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="icon-container">
+                                    <Settings2 className="h-5 w-5" />
+                                </div>
+                                <CardTitle className="text-xl font-bold">Configure Services</CardTitle>
+                            </div>
                             <CardDescription className="text-muted-foreground/80 mt-1">
                                 Set up your AI services like LLM, TTS, and STT providers
                             </CardDescription>
@@ -82,7 +93,7 @@ export default function OverviewPage() {
                 </div>
 
                 {/* Resources Section */}
-                <Card className="mt-8 glass-card bg-card/60 backdrop-blur-md">
+                <Card className="mt-8 glass-card bg-card/60 backdrop-blur-md fade-in-up" style={{ animationDelay: '0.4s' }}>
                     <CardHeader>
                         <CardTitle className="text-xl font-bold">Resources</CardTitle>
                         <CardDescription className="text-muted-foreground/80 mt-1">
@@ -97,6 +108,7 @@ export default function OverviewPage() {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >
+                                    <BookOpen className="h-4 w-4 mr-2" />
                                     Documentation
                                 </a>
                             </Button>
@@ -106,6 +118,7 @@ export default function OverviewPage() {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >
+                                    <Bug className="h-4 w-4 mr-2" />
                                     Report an Issue
                                 </a>
                             </Button>

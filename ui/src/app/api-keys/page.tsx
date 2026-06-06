@@ -320,11 +320,18 @@ export default function APIKeysPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <div className="container mx-auto px-4 py-8">
+            <div className="container mx-auto px-4 py-8 fade-in-up">
                 <div className="max-w-6xl mx-auto">
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold mb-2">Developer Portal</h1>
-                        <p className="text-muted-foreground">Manage your API keys to access Dograh services programmatically</p>
+                    <div className="flex justify-between items-end mb-8 page-header">
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight mb-1 flex items-center gap-3">
+                                <div className="icon-container">
+                                    <Key className="h-6 w-6" />
+                                </div>
+                                Developer Portal
+                            </h1>
+                            <p className="text-muted-foreground mt-2">Manage your API keys to access Dograh services programmatically</p>
+                        </div>
                     </div>
 
                     {error && (
@@ -333,7 +340,7 @@ export default function APIKeysPage() {
                         </div>
                     )}
 
-                    <Card className="mb-6">
+                    <Card className="mb-6 glass-card fade-in-up" style={{ animationDelay: '0.1s' }}>
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <div>
@@ -442,7 +449,7 @@ export default function APIKeysPage() {
                     </Card>
 
                     {/* Dograh Service Keys Section */}
-                    <Card className="mb-6">
+                    <Card className="mb-6 glass-card fade-in-up" style={{ animationDelay: '0.2s' }}>
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <div>

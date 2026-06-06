@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
+import { ExternalLink, Plus, RotateCcw, Search, Trash2, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -294,16 +294,23 @@ export default function ToolsPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <div className="container mx-auto px-4 py-8">
+            <div className="container mx-auto px-4 py-8 fade-in-up">
                 <div className="max-w-6xl mx-auto">
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold mb-2">Tools</h1>
-                        <p className="text-muted-foreground">
-                            Manage reusable tools that can be used across your workflows.{" "}
-                            <a href="https://docs.dograh.com/voice-agent/tools/introduction" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">
-                                Learn more <ExternalLink className="h-3 w-3" />
-                            </a>
-                        </p>
+                    <div className="flex justify-between items-end mb-8 page-header">
+                        <div>
+                            <h1 className="text-3xl font-extrabold tracking-tight mb-1 flex items-center gap-3">
+                                <div className="icon-container">
+                                    <Wrench className="h-6 w-6" />
+                                </div>
+                                Tools
+                            </h1>
+                            <p className="text-muted-foreground mt-2">
+                                Manage reusable tools that can be used across your workflows.{" "}
+                                <a href="https://docs.dograh.com/voice-agent/tools/introduction" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline text-primary hover:text-primary/80 transition-colors">
+                                    Learn more <ExternalLink className="h-3 w-3" />
+                                </a>
+                            </p>
+                        </div>
                     </div>
 
                     {error && (
@@ -312,7 +319,7 @@ export default function ToolsPage() {
                         </div>
                     )}
 
-                    <Card className="mb-6">
+                    <Card className="mb-6 glass-card fade-in-up" style={{ animationDelay: '0.1s' }}>
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <div>
@@ -321,7 +328,7 @@ export default function ToolsPage() {
                                         Create and manage tools for your organization
                                     </CardDescription>
                                 </div>
-                                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                                <Button onClick={() => setIsCreateDialogOpen(true)} className="hover-glow bg-primary hover:bg-primary/90">
                                     <Plus className="w-4 h-4 mr-2" />
                                     Create Tool
                                 </Button>

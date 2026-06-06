@@ -10,6 +10,8 @@ import { UploadWorkflowButton } from '@/components/workflow/UploadWorkflowButton
 import { getServerAccessToken, getServerAuthProvider } from '@/lib/auth/server';
 import logger from '@/lib/logger';
 
+import { Bot } from 'lucide-react';
+
 import WorkflowLayout from "./WorkflowLayout";
 
 export const dynamic = 'force-dynamic';
@@ -78,8 +80,15 @@ async function WorkflowList() {
                     {activeWorkflows.length > 0 || folders.length > 0 ? (
                         <AgentFolderView workflows={activeWorkflows} folders={folders} />
                     ) : (
-                        <div className="text-muted-foreground bg-muted rounded-lg p-8 text-center">
-                            No active workflows found. Create your first workflow to get started.
+                        <div className="glass-card rounded-xl p-12 text-center fade-in-up mt-6">
+                            <div className="icon-container mx-auto h-12 w-12 rounded-full mb-4">
+                                <Bot className="h-6 w-6" />
+                            </div>
+                            <h3 className="text-lg font-semibold mb-2">No active agents found</h3>
+                            <p className="text-muted-foreground mb-6">Create your first agent to get started.</p>
+                            <div className="inline-block">
+                                <CreateWorkflowButton />
+                            </div>
                         </div>
                     )}
                 </div>
@@ -107,12 +116,15 @@ async function PageContent() {
     const workflowList = await WorkflowList();
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8 fade-in-up">
             {/* Your Workflows Section */}
             <div className="mb-6">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold">Your Agents</h1>
-                    <div className="flex gap-2">
+                <div className="flex justify-between items-end page-header">
+                    <div>
+                        <h1 className="text-3xl font-extrabold tracking-tight">Your Agents</h1>
+                        <p className="text-muted-foreground mt-1">Manage and organize your AI voice agents</p>
+                    </div>
+                    <div className="flex gap-2 mb-1">
                         <UploadWorkflowButton />
                         <CreateFolderButton />
                         <CreateWorkflowButton />

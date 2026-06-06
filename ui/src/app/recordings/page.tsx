@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Upload } from "lucide-react";
+import { AudioLines, ExternalLink, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -34,20 +34,27 @@ export default function RecordingsPage() {
     }
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-2">Recordings</h1>
-                <p className="text-muted-foreground">
-                    Manage audio recordings for your organization. Use{" "}
-                    <code className="rounded bg-muted px-1 text-xs">@</code> in prompt fields to insert them,
-                    or as transition messages in tool calls.{" "}
-                    <a href="https://docs.dograh.com/voice-agent/pre-recorded-audio" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">
-                        Learn more <ExternalLink className="h-3 w-3" />
-                    </a>
-                </p>
+        <div className="container mx-auto px-4 py-8 fade-in-up">
+            <div className="flex justify-between items-end mb-8 page-header">
+                <div>
+                    <h1 className="text-3xl font-extrabold tracking-tight mb-1 flex items-center gap-3">
+                        <div className="icon-container">
+                            <AudioLines className="h-6 w-6" />
+                        </div>
+                        Recordings
+                    </h1>
+                    <p className="text-muted-foreground mt-2">
+                        Manage audio recordings for your organization. Use{" "}
+                        <code className="rounded bg-muted px-1 text-xs">@</code> in prompt fields to insert them,
+                        or as transition messages in tool calls.{" "}
+                        <a href="https://docs.dograh.com/voice-agent/pre-recorded-audio" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline text-primary hover:text-primary/80 transition-colors">
+                            Learn more <ExternalLink className="h-3 w-3" />
+                        </a>
+                    </p>
+                </div>
             </div>
 
-            <Card>
+            <Card className="glass-card fade-in-up" style={{ animationDelay: '0.1s' }}>
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <div>
@@ -56,7 +63,7 @@ export default function RecordingsPage() {
                                 Audio recordings shared across all agents in your organization
                             </CardDescription>
                         </div>
-                        <Button onClick={() => setIsUploadOpen(true)}>
+                        <Button onClick={() => setIsUploadOpen(true)} className="hover-glow bg-primary hover:bg-primary/90">
                             <Upload className="w-4 h-4 mr-2" />
                             Upload Recording
                         </Button>

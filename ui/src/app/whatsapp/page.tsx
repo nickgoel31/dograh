@@ -327,13 +327,16 @@ export default function WhatsAppLogsPage() {
 
   // 3. Enabled view - Logs Dashboard
   return (
-    <div className="container mx-auto p-6 space-y-6 relative">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="container mx-auto p-6 space-y-6 relative fade-in-up">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 page-header mb-6">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground/95 to-muted-foreground bg-clip-text">
+          <h1 className="text-3xl font-extrabold tracking-tight mb-1 flex items-center gap-3">
+            <div className="icon-container">
+              <MessageSquare className="h-6 w-6" />
+            </div>
             WhatsApp Follow-Up Logs
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="text-muted-foreground mt-2 text-sm">
             Monitor and retry automated templates triggered post-call.
           </p>
         </div>
@@ -350,8 +353,8 @@ export default function WhatsAppLogsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-background/40 border-border/50 shadow-sm">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
+        <Card className="glass-card fade-in-up shadow-sm">
           <CardHeader className="py-4 flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Processed</CardTitle>
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
@@ -362,7 +365,7 @@ export default function WhatsAppLogsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-background/40 border-border/50 shadow-sm">
+        <Card className="glass-card fade-in-up shadow-sm">
           <CardHeader className="py-4 flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">Success Rate</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -375,7 +378,7 @@ export default function WhatsAppLogsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-background/40 border-border/50 shadow-sm">
+        <Card className="glass-card fade-in-up shadow-sm">
           <CardHeader className="py-4 flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">Active Failures</CardTitle>
             <AlertCircle className="h-4 w-4 text-rose-500" />
@@ -386,7 +389,7 @@ export default function WhatsAppLogsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-background/40 border-border/50 shadow-sm">
+        <Card className="glass-card fade-in-up shadow-sm">
           <CardHeader className="py-4 flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">Meta Integrations</CardTitle>
             <Settings className="h-4 w-4 text-primary" />
@@ -448,7 +451,7 @@ export default function WhatsAppLogsPage() {
       </div>
 
       {/* Table Card */}
-      <Card className="border-border/50 bg-background/40">
+      <Card className="glass-card fade-in-up" style={{ animationDelay: '0.3s' }}>
         <CardContent className="p-0">
           {loading ? (
             <div className="py-20 space-y-4 flex flex-col items-center justify-center text-muted-foreground">

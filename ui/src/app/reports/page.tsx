@@ -1,7 +1,7 @@
 'use client';
 
 import { addDays, format, subDays } from 'date-fns';
-import { Calendar, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { BarChart3, Calendar, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { useEffect,useState } from 'react';
 
 import {
@@ -184,10 +184,17 @@ export default function ReportsPage() {
   const isToday = format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-6 space-y-6 fade-in-up">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">Daily Reports</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 page-header mb-6">
+        <div>
+            <h1 className="text-3xl font-extrabold tracking-tight mb-1 flex items-center gap-3">
+                <div className="icon-container">
+                    <BarChart3 className="h-6 w-6" />
+                </div>
+                Daily Reports
+            </h1>
+        </div>
 
         {/* Date Navigation & Workflow Selector */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -284,7 +291,7 @@ export default function ReportsPage() {
 
       {/* Error State */}
       {error && !loading && (
-        <Card className="p-6">
+        <Card className="p-6 glass-card fade-in-up">
           <p className="text-center text-red-500">{error}</p>
         </Card>
       )}
@@ -303,7 +310,7 @@ export default function ReportsPage() {
 
           {/* No Data Message */}
           {report.metrics.total_runs === 0 && (
-            <Card className="p-6">
+            <Card className="p-6 glass-card fade-in-up">
               <p className="text-center text-muted-foreground">
                 No workflow runs found for {format(selectedDate, 'MMMM dd, yyyy')}
                 {selectedWorkflow !== 'all' && ' for the selected workflow'}

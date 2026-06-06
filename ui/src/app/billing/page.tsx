@@ -354,16 +354,18 @@ export default function BillingPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header & Settings Bar */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 page-header fade-in-up">
         <div>
-          <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-            <IndianRupee className="h-8 w-8" />
+          <h1 className="text-3xl font-extrabold mb-1 flex items-center gap-3">
+            <div className="icon-container">
+              <IndianRupee className="h-6 w-6" />
+            </div>
             Billing & Usage
           </h1>
           <p className="text-muted-foreground">Manage client billing and pricing tiers.</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 bg-muted/30 p-2 rounded-lg border">
+        <div className="flex flex-wrap items-center gap-3 bg-muted/30 p-2 rounded-lg border mb-1">
           {/* Month Navigator */}
           <div className="flex items-center gap-2 px-2 border-r pr-4">
             <Button variant="ghost" size="icon" onClick={goToPrevMonth} disabled={isFetchingAll}>
@@ -446,7 +448,7 @@ export default function BillingPage() {
       </div>
 
       {/* Tier Badge */}
-      <Card className="bg-primary/5 border-primary/20">
+      <Card className="bg-primary/5 border-primary/20 glass-card fade-in-up" style={{ animationDelay: '0.1s' }}>
         <CardContent className="py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Badge variant="default" className="text-sm px-3 py-1">📊 {tier}</Badge>
@@ -478,8 +480,8 @@ export default function BillingPage() {
 
       {/* Summary Cards */}
       {wallet && wallet.monthly_minutes_limit > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="border-emerald-500/20 bg-emerald-500/5 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 stagger-children">
+          <Card className="border-emerald-500/20 bg-emerald-500/5 dark:border-emerald-500/30 dark:bg-emerald-500/10 glass-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Rupees Remaining</CardTitle>
             </CardHeader>
@@ -493,7 +495,7 @@ export default function BillingPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/60 bg-card/50 backdrop-blur-md">
+          <Card className="border-border/60 bg-card/50 backdrop-blur-md glass-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-semibold text-foreground">Minutes Remaining</CardTitle>
             </CardHeader>
@@ -507,7 +509,7 @@ export default function BillingPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/60 bg-card/50 backdrop-blur-md">
+          <Card className="border-border/60 bg-card/50 backdrop-blur-md glass-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-semibold text-foreground">Minutes Used</CardTitle>
             </CardHeader>
@@ -521,7 +523,7 @@ export default function BillingPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/60 bg-card/50 backdrop-blur-md">
+          <Card className="border-border/60 bg-card/50 backdrop-blur-md glass-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-semibold text-foreground">Carry Forward</CardTitle>
             </CardHeader>
@@ -536,8 +538,8 @@ export default function BillingPage() {
           </Card>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 stagger-children">
+          <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Accumulated Minutes</CardTitle>
             </CardHeader>
@@ -549,7 +551,7 @@ export default function BillingPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Billable Units</CardTitle>
             </CardHeader>
@@ -563,7 +565,7 @@ export default function BillingPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Billed</CardTitle>
             </CardHeader>
@@ -575,7 +577,7 @@ export default function BillingPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="glass-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Avg Cost Per Call</CardTitle>
             </CardHeader>
@@ -590,14 +592,14 @@ export default function BillingPage() {
       )}
 
       {/* Breakdown Table */}
-      <Card>
+      <Card className="glass-card fade-in-up" style={{ animationDelay: '0.3s' }}>
         <CardHeader>
           <CardTitle>Per-Agent Breakdown</CardTitle>
           <CardDescription>Revenue and usage separated by voice agent</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-md">
-            <Table>
+          <div className="rounded-md border border-border/50 overflow-hidden shadow-sm">
+            <Table className="premium-table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Agent Name</TableHead>

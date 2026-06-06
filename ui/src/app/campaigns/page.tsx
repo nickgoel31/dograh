@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from 'lucide-react';
+import { Megaphone, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
@@ -94,19 +94,24 @@ export default function CampaignsPage() {
     };
 
     return (
-        <div className="container mx-auto p-6 space-y-6">
-            <div className="flex justify-between items-center">
+        <div className="container mx-auto p-6 space-y-6 fade-in-up">
+            <div className="flex justify-between items-end mb-6 page-header">
                 <div>
-                    <h1 className="text-3xl font-bold mb-2">Campaigns</h1>
-                    <p>Manage your bulk workflow execution campaigns</p>
+                    <h1 className="text-3xl font-extrabold tracking-tight mb-1 flex items-center gap-3">
+                        <div className="icon-container">
+                            <Megaphone className="h-6 w-6" />
+                        </div>
+                        Campaigns
+                    </h1>
+                    <p className="text-muted-foreground mt-2">Manage your bulk workflow execution campaigns</p>
                 </div>
-                    <Button onClick={handleCreateCampaign}>
+                    <Button onClick={handleCreateCampaign} className="hover-glow bg-primary hover:bg-primary/90">
                         <Plus className="h-4 w-4 mr-2" />
                         Create Campaign
                     </Button>
                 </div>
 
-                <Card>
+                <Card className="glass-card fade-in-up" style={{ animationDelay: '0.1s' }}>
                     <CardHeader>
                         <CardTitle>All Campaigns</CardTitle>
                         <CardDescription>

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Download, Globe } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Database, Download, Globe } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useId, useState } from 'react';
 import TimezoneSelect, { type ITimezoneOption } from 'react-timezone-select';
@@ -327,11 +327,11 @@ export default function UsagePage() {
 
     return (
         <div className="container mx-auto p-6 space-y-6">
-            <div>
-                <div className="flex justify-between items-start">
+            <div className="fade-in-up">
+                <div className="flex justify-between items-start page-header">
                     <div>
-                        <h1 className="text-3xl font-bold mb-2">Agent Runs</h1>
-                        <p className="text-muted-foreground">See all your Agent Runs across all Voice Agents. You can use filters to filter out required Agent Runs.</p>
+                        <h1 className="text-3xl font-extrabold tracking-tight mb-1">Agent Runs</h1>
+                        <p className="text-muted-foreground">See all your Agent Runs across all Voice Agents. You can use filters to find specific runs.</p>
                     </div>
                         <div className="flex items-center gap-2">
                             <Globe className="h-4 w-4 text-muted-foreground" />
@@ -410,12 +410,19 @@ export default function UsagePage() {
                 </div>
 
                 {/* MPS Credits Card */}
-                <Card className="mb-6">
+                <Card className="mb-6 glass-card fade-in-up" style={{ animationDelay: '0.1s' }}>
                     <CardHeader>
-                        <CardTitle>Dograh Model Credits</CardTitle>
-                        <CardDescription>
-                            These track usage of Dograh models using Dograh Service Keys.
-                        </CardDescription>
+                        <div className="flex items-center gap-3">
+                            <div className="icon-container">
+                                <Database className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-xl">Dograh Model Credits</CardTitle>
+                                <CardDescription className="mt-1">
+                                    These track usage of Dograh models using Dograh Service Keys.
+                                </CardDescription>
+                            </div>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         {isLoadingCredits ? (
@@ -451,7 +458,7 @@ export default function UsagePage() {
 
                 {/* Daily Usage Table - Only for paid organizations */}
                 {organizationPricing?.price_per_second_usd && (
-                    <div className="mb-6">
+                    <div className="mb-6 fade-in-up" style={{ animationDelay: '0.2s' }}>
                         <DailyUsageTable
                             data={dailyUsage}
                             isLoading={isLoadingDaily}
@@ -460,7 +467,7 @@ export default function UsagePage() {
                 )}
 
                 {/* Filter Builder */}
-                <div className="mb-6 space-y-3">
+                <div className="mb-6 space-y-3 fade-in-up" style={{ animationDelay: '0.3s' }}>
                     <FilterBuilder
                         availableAttributes={usageFilterAttributes}
                         activeFilters={activeFilters}
@@ -485,7 +492,7 @@ export default function UsagePage() {
                 </div>
 
                 {/* Usage History */}
-                <Card>
+                <Card className="glass-card fade-in-up" style={{ animationDelay: '0.4s' }}>
                     <CardHeader>
                         <div className="flex justify-between items-start">
                             <div className="space-y-1.5">
@@ -505,8 +512,8 @@ export default function UsagePage() {
                             </div>
                         ) : usageHistory && usageHistory.runs.length > 0 ? (
                             <>
-                                <div className="bg-card border rounded-lg overflow-hidden shadow-sm">
-                                    <Table>
+                                <div className="rounded-md border border-border/50 overflow-hidden shadow-sm">
+                                    <Table className="premium-table">
                                         <TableHeader>
                                             <TableRow className="bg-muted/50">
                                                 <TableHead className="font-semibold">Run ID</TableHead>

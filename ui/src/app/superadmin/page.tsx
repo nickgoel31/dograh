@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ArrowRight, Bot, Building2, MoreHorizontal, Plus, Search, Settings2, Trash2, UserMinus,Users } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Bot, Building2, MoreHorizontal, Plus, Search, Settings2, Trash2, UserMinus,Users, Shield } from 'lucide-react';
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -329,11 +329,16 @@ export default function SuperadminPage() {
     const totalMembers = organizations.reduce((sum, org) => sum + org.member_count, 0);
 
     return (
-        <main className="container mx-auto p-6 space-y-6 max-w-7xl">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <main className="container mx-auto p-6 space-y-6 max-w-7xl fade-in-up">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 page-header">
                 <div>
-                    <h1 className="text-3xl font-bold mb-2">Platform Overview</h1>
-                    <p className="text-sm text-muted-foreground">Manage organizations and system-wide data</p>
+                    <h1 className="text-3xl font-extrabold tracking-tight mb-1 flex items-center gap-3">
+                        <div className="icon-container">
+                            <Shield className="h-6 w-6" />
+                        </div>
+                        Platform Overview
+                    </h1>
+                    <p className="text-muted-foreground mt-2">Manage organizations and system-wide data</p>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -382,8 +387,8 @@ export default function SuperadminPage() {
             </div>
 
             {/* Quick Stats */}
-            <div className="grid gap-4 md:grid-cols-3">
-                <Card>
+            <div className="grid gap-4 md:grid-cols-3 stagger-children">
+                <Card className="glass-card fade-in-up">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Organizations</CardTitle>
                         <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -392,7 +397,7 @@ export default function SuperadminPage() {
                         <div className="text-2xl font-bold">{loading ? '-' : totalOrgs}</div>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="glass-card fade-in-up">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Workflows (Agents)</CardTitle>
                         <Bot className="h-4 w-4 text-muted-foreground" />
@@ -401,7 +406,7 @@ export default function SuperadminPage() {
                         <div className="text-2xl font-bold">{loading ? '-' : totalAgents}</div>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="glass-card fade-in-up">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Members</CardTitle>
                         <Users className="h-4 w-4 text-muted-foreground" />
@@ -413,7 +418,7 @@ export default function SuperadminPage() {
             </div>
 
             {/* Organizations Table */}
-            <Card>
+            <Card className="glass-card fade-in-up" style={{ animationDelay: '0.3s' }}>
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Upload } from "lucide-react";
+import { ExternalLink, Files, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -47,18 +47,25 @@ export default function FilesPage() {
     }
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-2">Knowledge Base Files</h1>
-                <p className="text-muted-foreground">
-                    Upload and manage documents for your voice agents to reference.{" "}
-                    <a href="https://docs.dograh.com/voice-agent/knowledge-base" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">
-                        Learn more <ExternalLink className="h-3 w-3" />
-                    </a>
-                </p>
+        <div className="container mx-auto px-4 py-8 fade-in-up">
+            <div className="flex justify-between items-end mb-8 page-header">
+                <div>
+                    <h1 className="text-3xl font-extrabold tracking-tight mb-1 flex items-center gap-3">
+                        <div className="icon-container">
+                            <Files className="h-6 w-6" />
+                        </div>
+                        Knowledge Base Files
+                    </h1>
+                    <p className="text-muted-foreground mt-2">
+                        Upload and manage documents for your voice agents to reference.{" "}
+                        <a href="https://docs.dograh.com/voice-agent/knowledge-base" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline text-primary hover:text-primary/80 transition-colors">
+                            Learn more <ExternalLink className="h-3 w-3" />
+                        </a>
+                    </p>
+                </div>
             </div>
 
-            <Card>
+            <Card className="glass-card fade-in-up" style={{ animationDelay: '0.1s' }}>
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <div>
@@ -67,7 +74,7 @@ export default function FilesPage() {
                                 Documents shared across all agents in your organization
                             </CardDescription>
                         </div>
-                        <Button onClick={() => setIsUploadOpen(true)}>
+                        <Button onClick={() => setIsUploadOpen(true)} className="hover-glow bg-primary hover:bg-primary/90">
                             <Upload className="w-4 h-4 mr-2" />
                             Upload Document
                         </Button>
