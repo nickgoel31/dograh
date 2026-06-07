@@ -158,14 +158,34 @@ class OrganizationUsageClient(BaseDBClient):
         """Update usage after a workflow run completes with actual token count and duration.
 
         This method is fully atomic and safe for concurrent access from multiple processes.
+        It uses the organization's billing_pulse to calculate billable units (billed seconds).
         """
+        import math
         async with self.async_session() as session:
-            # Get or create current cycle within the same session/transaction
+            # 1. Lock org first to get billing_pulse and prepare balance deduction
+            org_result = await session.execute(
+                select(OrganizationModel)
+                .where(OrganizationModel.id == organization_id)
+                .with_for_update(skip_locked=False)
+            )
+            org_locked = org_result.scalar_one_or_none()
+            if not org_locked:
+                return
+
+            # Calculate billed_seconds based on pulse (default to 60s pulse if not set)
+            billing_pulse = getattr(org_locked, "billing_pulse", 60) or 60
+            if duration_seconds > 0:
+                pulses = math.ceil(duration_seconds / billing_pulse)
+                billed_seconds = pulses * billing_pulse
+            else:
+                billed_seconds = 0
+
+            # 2. Get or create current cycle within the same session/transaction
             cycle = await self._get_or_create_current_cycle_impl(
                 organization_id, session, commit=False
             )
 
-            # Acquire a row-level lock for atomic update
+            # Acquire a row-level lock for atomic cycle update
             result = await session.execute(
                 select(OrganizationUsageCycleModel)
                 .where(OrganizationUsageCycleModel.id == cycle.id)
@@ -173,9 +193,9 @@ class OrganizationUsageClient(BaseDBClient):
             )
             cycle_locked = result.scalar_one()
 
-            # Update usage atomically
+            # Update usage atomically using billed_seconds (billable units)
             cycle_locked.used_dograh_tokens += actual_tokens
-            cycle_locked.total_duration_seconds += int(round(duration_seconds))
+            cycle_locked.total_duration_seconds += int(round(billed_seconds))
 
             # Update USD amount if provided
             if charge_usd is not None:
@@ -183,20 +203,11 @@ class OrganizationUsageClient(BaseDBClient):
                     cycle_locked.used_amount_usd = 0
                 cycle_locked.used_amount_usd += charge_usd
 
-            # Deduct the INR cost of this call from org.balance using billing_rate.
-            # This keeps the wallet balance live — it reflects what has actually been
-            # consumed, not just the static top-up amount set by the superadmin.
-            if duration_seconds > 0:
-                org_result = await session.execute(
-                    select(OrganizationModel)
-                    .where(OrganizationModel.id == organization_id)
-                    .with_for_update(skip_locked=False)
-                )
-                org_locked = org_result.scalar_one_or_none()
-                if org_locked is not None and (org_locked.billing_rate or 0) > 0:
-                    duration_minutes = duration_seconds / 60.0
-                    cost_inr = duration_minutes * org_locked.billing_rate
-                    org_locked.balance = max(0.0, (org_locked.balance or 0.0) - cost_inr)
+            # Deduct the INR cost of this call from org.balance using billed_seconds and billing_rate.
+            if billed_seconds > 0 and (org_locked.billing_rate or 0) > 0:
+                billed_minutes = billed_seconds / 60.0
+                cost_inr = billed_minutes * org_locked.billing_rate
+                org_locked.balance = max(0.0, (org_locked.balance or 0.0) - cost_inr)
 
             await session.commit()
 
