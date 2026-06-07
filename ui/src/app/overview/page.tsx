@@ -21,7 +21,7 @@ export default function OverviewPage() {
                     <CardHeader>
                         <CardTitle className="text-3xl font-extrabold tracking-tight">
                             {isOSSMode ? (
-                                <span className="text-gradient">Welcome to Dograh</span>
+                                <span className="text-gradient">Welcome</span>
                             ) : (
                                 <>
                                     Welcome, <span className="text-gradient">{user?.displayName ? user.displayName.split(' ')[0] : 'User'}</span>!
@@ -97,7 +97,7 @@ export default function OverviewPage() {
                     <CardHeader>
                         <CardTitle className="text-xl font-bold">Resources</CardTitle>
                         <CardDescription className="text-muted-foreground/80 mt-1">
-                            Get help and learn more about Dograh
+                            Get help and learn more about our platform
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

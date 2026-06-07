@@ -1183,29 +1183,42 @@ async def get_wallet(
         result = await session.execute(stmt)
         cycles = list(result.scalars().all())
 
-        # 2. Check if a cycle for target year/month exists. If not, create it!
+        # 2. Find or create the cycle for the target year/month
+        reset_day = getattr(org, "quota_reset_day", 1) or 1
+        
+        # Determine the target date to calculate the period.
+        # If the requested year/month is current, use 'now' to match the active cycle.
+        # Otherwise, use the middle of the requested month.
+        if year == now.year and month == now.month:
+            target_date = now
+        else:
+            target_date = datetime(year, month, 15, 0, 0, 0, tzinfo=timezone.utc)
+            
+        if target_date.day >= reset_day:
+            try:
+                expected_period_start = target_date.replace(day=reset_day, hour=0, minute=0, second=0, microsecond=0)
+            except ValueError:
+                expected_period_start = target_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        else:
+            try:
+                expected_period_start = (target_date - relativedelta(months=1)).replace(day=reset_day, hour=0, minute=0, second=0, microsecond=0)
+            except ValueError:
+                expected_period_start = (target_date - relativedelta(months=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
         target_cycle = None
         for c in cycles:
-            # Check if cycle period_start matches target year and month
-            if c.period_start.year == year and c.period_start.month == month:
+            if c.period_start == expected_period_start:
                 target_cycle = c
                 break
 
         if not target_cycle:
-            # We need to calculate the period start and end for this specific year/month
-            reset_day = getattr(org, "quota_reset_day", 1) or 1
-            # Make sure reset_day is valid for the target month
-            try:
-                period_start = datetime(year, month, reset_day, 0, 0, 0, tzinfo=timezone.utc)
-            except ValueError:
-                period_start = datetime(year, month, 1, 0, 0, 0, tzinfo=timezone.utc)
-                
-            period_end = period_start + relativedelta(months=1) - relativedelta(seconds=1)
+            # We need to calculate the period end
+            period_end = expected_period_start + relativedelta(months=1) - relativedelta(seconds=1)
 
             # Create cycle
             target_cycle = OrganizationUsageCycleModel(
                 organization_id=org.id,
-                period_start=period_start,
+                period_start=expected_period_start,
                 period_end=period_end,
                 quota_dograh_tokens=getattr(org, "quota_dograh_tokens", 0) or 0,
             )

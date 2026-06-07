@@ -347,19 +347,27 @@ async def list_all_organizations(user: UserModel = Depends(get_superuser)):
                 year = now.year
                 month = now.month
                 
+                reset_day = getattr(o, "quota_reset_day", 1) or 1
+                
+                if now.day >= reset_day:
+                    try:
+                        expected_period_start = now.replace(day=reset_day, hour=0, minute=0, second=0, microsecond=0)
+                    except ValueError:
+                        expected_period_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                else:
+                    try:
+                        expected_period_start = (now - relativedelta(months=1)).replace(day=reset_day, hour=0, minute=0, second=0, microsecond=0)
+                    except ValueError:
+                        expected_period_start = (now - relativedelta(months=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
                 target_cycle = None
                 for c in cycles:
-                    if c.period_start.year == year and c.period_start.month == month:
+                    if c.period_start == expected_period_start:
                         target_cycle = c
                         break
 
                 if not target_cycle:
-                    reset_day = getattr(o, "quota_reset_day", 1) or 1
-                    try:
-                        period_start = datetime(year, month, reset_day, 0, 0, 0, tzinfo=timezone.utc)
-                    except ValueError:
-                        period_start = datetime(year, month, 1, 0, 0, 0, tzinfo=timezone.utc)
-                    is_active = is_cycle_within_contract_period(period_start)
+                    is_active = is_cycle_within_contract_period(expected_period_start)
                     if is_active:
                         balance_val = limit * billing_rate
                 else:
