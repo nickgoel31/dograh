@@ -277,6 +277,22 @@ async def create_organization(request: CreateOrganizationRequest, user: UserMode
 async def list_all_organizations(user: UserModel = Depends(get_superuser)):
     """List all organizations with stats."""
     async with db_client.async_session() as session:
+        # Pre-fetch all cycles to calculate dynamic balance
+        from datetime import datetime, timezone
+        from dateutil.relativedelta import relativedelta
+        from api.db.models import OrganizationUsageCycleModel
+        
+        now = datetime.now(timezone.utc)
+        all_cycles_result = await session.execute(
+            select(OrganizationUsageCycleModel)
+            .order_by(OrganizationUsageCycleModel.organization_id, OrganizationUsageCycleModel.period_start.asc())
+        )
+        all_cycles = all_cycles_result.scalars().all()
+        
+        org_cycles = defaultdict(list)
+        for c in all_cycles:
+            org_cycles[c.organization_id].append(c)
+
         # Using separate queries for stats to avoid complex group bys that might break
         orgs = await session.execute(select(OrganizationModel))
         orgs = orgs.scalars().all()
@@ -301,7 +317,77 @@ async def list_all_organizations(user: UserModel = Depends(get_superuser)):
                 .where(WorkflowModel.organization_id == o.id)
             )
             agent_count = agents_result.scalar() or 0
-            
+
+            # Calculate dynamic balance
+            base_balance = getattr(o, "balance", 0.0) or 0.0
+            billing_rate = getattr(o, "billing_rate", 0.0) or 0.0
+            limit = getattr(o, "monthly_minutes_limit", 0.0) or 0.0
+            balance_val = base_balance
+
+            # Helper to check if a cycle is within the contract period
+            def is_cycle_within_contract_period(period_start) -> bool:
+                if limit <= 0.0:
+                    return False
+                
+                start_year = getattr(o, "monthly_minutes_start_year", None)
+                start_month = getattr(o, "monthly_minutes_start_month", None)
+                end_year = getattr(o, "monthly_minutes_end_year", None)
+                end_month = getattr(o, "monthly_minutes_end_month", None)
+                
+                if start_year is not None and start_month is not None:
+                    if (period_start.year < start_year) or (period_start.year == start_year and period_start.month < start_month):
+                        return False
+                if end_year is not None and end_month is not None:
+                    if (period_start.year > end_year) or (period_start.year == end_year and period_start.month > end_month):
+                        return False
+                return True
+
+            if base_balance == 0.0 and billing_rate > 0.0:
+                cycles = org_cycles.get(o.id, [])
+                year = now.year
+                month = now.month
+                
+                target_cycle = None
+                for c in cycles:
+                    if c.period_start.year == year and c.period_start.month == month:
+                        target_cycle = c
+                        break
+
+                if not target_cycle:
+                    reset_day = getattr(o, "quota_reset_day", 1) or 1
+                    try:
+                        period_start = datetime(year, month, reset_day, 0, 0, 0, tzinfo=timezone.utc)
+                    except ValueError:
+                        period_start = datetime(year, month, 1, 0, 0, 0, tzinfo=timezone.utc)
+                    is_active = is_cycle_within_contract_period(period_start)
+                    if is_active:
+                        balance_val = limit * billing_rate
+                else:
+                    carry_forward_to_next = 0.0
+                    c_remaining = 0.0
+                    is_active = False
+
+                    for c in cycles:
+                        is_active = is_cycle_within_contract_period(c.period_start)
+                        if not is_active:
+                            carry_forward_to_next = 0.0
+                            if c.id == target_cycle.id:
+                                c_remaining = 0.0
+                        else:
+                            c_carry_forward = carry_forward_to_next
+                            if c.custom_minutes_used is not None:
+                                c_used = c.custom_minutes_used
+                            else:
+                                c_used = (c.total_duration_seconds or 0) / 60.0
+                            
+                            c_total_allowed = limit + c_carry_forward
+                            c_remaining = max(0.0, c_total_allowed - c_used)
+                            remaining_base = max(0.0, limit - max(0.0, c_used - c_carry_forward))
+                            carry_forward_to_next = remaining_base
+
+                    if is_active:
+                        balance_val = c_remaining * billing_rate
+
             result.append({
                 "id": o.id,
                 "name": o.name,
@@ -313,10 +399,11 @@ async def list_all_organizations(user: UserModel = Depends(get_superuser)):
                 "admin_count": admin_count,
                 "client_count": client_count,
                 "agent_count": agent_count,
-                "balance": o.balance,
+                "balance": balance_val,
+                "base_balance": base_balance,
                 "billing_rate": o.billing_rate,
                 "billing_pulse": o.billing_pulse,
-                "monthly_minutes_limit": getattr(o, "monthly_minutes_limit", 0.0) or 0.0,
+                "monthly_minutes_limit": limit,
                 "monthly_minutes_start_year": getattr(o, "monthly_minutes_start_year", None),
                 "monthly_minutes_start_month": getattr(o, "monthly_minutes_start_month", None),
                 "monthly_minutes_end_year": getattr(o, "monthly_minutes_end_year", None),

@@ -1281,23 +1281,40 @@ async def get_wallet(
                 remaining_base = max(0.0, c_limit - max(0.0, c_used - c_carry_forward))
                 carry_forward_to_next = remaining_base
                 
+                # Use org.balance as the single source of truth for the live ₹ balance.
+                # It is decremented by update_usage_after_run on every call completion.
+                base_balance = getattr(org, "balance", 0.0) or 0.0
+                billing_rate = getattr(org, "billing_rate", 0.0) or 0.0
+                if base_balance == 0.0 and billing_rate > 0.0:
+                    balance_val = c_remaining * billing_rate
+                else:
+                    balance_val = base_balance
+                
                 cycle_details[c.id] = {
                     "carry_forward_minutes": c_carry_forward,
                     "minutes_used": c_used,
                     "minutes_remaining": c_remaining,
-                    # Use org.balance as the single source of truth for the live ₹ balance.
-                    # It is decremented by update_usage_after_run on every call completion.
-                    "balance": getattr(org, "balance", 0.0) or 0.0,
+                    "balance": balance_val,
                 }
 
         details = cycle_details.get(target_cycle.id)
         if not details:
+            base_balance = getattr(org, "balance", 0.0) or 0.0
+            billing_rate = getattr(org, "billing_rate", 0.0) or 0.0
+            limit = getattr(org, "monthly_minutes_limit", 0.0) or 0.0
+            is_active = is_cycle_within_contract_period(target_cycle.period_start)
+            if base_balance == 0.0 and billing_rate > 0.0 and is_active:
+                balance_val = limit * billing_rate
+            else:
+                balance_val = base_balance
+                
             details = {
                 "carry_forward_minutes": 0.0,
                 "minutes_used": 0.0,
-                "minutes_remaining": 0.0,
-                "balance": getattr(org, "balance", 0.0) or 0.0,
+                "minutes_remaining": limit if is_active else 0.0,
+                "balance": balance_val,
             }
+
 
         target_is_active = is_cycle_within_contract_period(target_cycle.period_start)
 

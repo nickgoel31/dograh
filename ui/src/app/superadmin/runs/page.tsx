@@ -309,14 +309,24 @@ export default function RunsPage() {
         setIsDeletingAll(true);
         try {
             const token = await auth.getAccessToken();
-            const res = await fetch('/api/v1/superuser/runs', {
+            
+            // Check if there is an organization filter applied
+            const orgFilter = appliedFilters.find(f => f.attribute.id === 'organization_id');
+            const orgId = orgFilter ? orgFilter.value : null;
+            
+            const url = orgId ? `/api/v1/superuser/runs?org_id=${orgId}` : '/api/v1/superuser/runs';
+            
+            const res = await fetch(url, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!res.ok) throw new Error(await res.text());
             const data = await res.json();
-            setRuns([]);
-            setTotalCount(0);
+            
+            // Re-fetch runs to reflect the updated state correctly with filters
+            await fetchRuns(1, appliedFilters, false, sortBy, sortOrder);
+            setCurrentPage(1);
+            
             alert(data.detail || 'All runs deleted successfully.');
         } catch (err) {
             console.error(err);
@@ -371,7 +381,7 @@ export default function RunsPage() {
                                 <h2 className="text-lg font-semibold">Delete All Runs?</h2>
                             </div>
                             <p className="text-sm text-muted-foreground">
-                                This will permanently delete <strong>all {totalCount} workflow runs</strong> from the system and recalculate all usage cycle totals. This action <strong>cannot be undone</strong>.
+                                This will permanently delete <strong>all {totalCount} workflow runs</strong> {appliedFilters.some(f => f.attribute.id === 'organization_id') ? 'for the selected organization' : 'from the system'} and recalculate all usage cycle totals. This action <strong>cannot be undone</strong>.
                             </p>
                             <div className="flex justify-end gap-2 pt-2">
                                 <Button variant="outline" onClick={() => setConfirmDeleteAll(false)}>Cancel</Button>

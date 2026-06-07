@@ -56,6 +56,7 @@ interface Organization {
   client_count: number;
   agent_count: number;
   balance?: number;
+  base_balance?: number;
   billing_rate?: number;
   billing_pulse?: number;
   monthly_minutes_limit?: number;
@@ -538,7 +539,7 @@ export default function SuperadminPage() {
                                                                 setEditCycleYear(new Date().getFullYear());
                                                                 setEditCycleMonth(new Date().getMonth() + 1);
                                                                 setEditCustomMinutesUsed("");
-                                                                setEditBalance(org.balance ?? 0);
+                                                                setEditBalance(org.base_balance ?? org.balance ?? 0);
                                                                 setEditBillingRate(org.billing_rate ?? 0);
                                                                 setEditBillingPulse(org.billing_pulse ?? 60);
                                                                 setEditStartYear(org.monthly_minutes_start_year ?? "");
@@ -649,9 +650,16 @@ export default function SuperadminPage() {
                                     onChange={(e) => setEditBalance(parseFloat(e.target.value) || 0)}
                                     required
                                 />
-                                <p className="text-xs text-muted-foreground">
-                                    Current balance: ₹{(editingOrg?.balance ?? 0).toFixed(2)}
-                                </p>
+                                <div className="space-y-1">
+                                    <p className="text-xs text-muted-foreground">
+                                        Base balance in DB: ₹{(editingOrg?.base_balance ?? editingOrg?.balance ?? 0).toFixed(2)}
+                                    </p>
+                                    {(editingOrg?.base_balance === 0 || editingOrg?.base_balance == null) && editingOrg?.balance !== 0 && (
+                                        <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                            Dynamically calculated balance: ₹{(editingOrg?.balance ?? 0).toFixed(2)}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="billingRate">Billing Rate (₹ per minute)</Label>
