@@ -1258,6 +1258,7 @@ async def get_wallet(
                     "carry_forward_minutes": 0.0,
                     "minutes_used": (c.total_duration_seconds or 0) / 60.0,
                     "minutes_remaining": 0.0,
+                    # org.balance is decremented by update_usage_after_run after each call
                     "balance": getattr(org, "balance", 0.0) or 0.0,
                 }
                 carry_forward_to_next = 0.0
@@ -1284,7 +1285,9 @@ async def get_wallet(
                     "carry_forward_minutes": c_carry_forward,
                     "minutes_used": c_used,
                     "minutes_remaining": c_remaining,
-                    "balance": c_remaining * (getattr(org, "billing_rate", 0.0) or 0.0),
+                    # Use org.balance as the single source of truth for the live ₹ balance.
+                    # It is decremented by update_usage_after_run on every call completion.
+                    "balance": getattr(org, "balance", 0.0) or 0.0,
                 }
 
         details = cycle_details.get(target_cycle.id)

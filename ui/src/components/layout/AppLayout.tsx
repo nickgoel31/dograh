@@ -17,26 +17,39 @@ function AppHeader() {
   const { toggleSidebar } = useSidebar();
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border/40 bg-background/70 backdrop-blur-md px-4 py-3 shadow-sm transition-all duration-300">
+    <header className="header-glass sticky top-0 z-50 flex items-center justify-between px-5 py-3 transition-all duration-500">
+      {/* Subtle gradient shimmer strip at the bottom of the header */}
+      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={toggleSidebar} aria-label="Open menu" className="md:hidden hover:bg-primary/10 hover:text-primary transition-colors">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleSidebar}
+          aria-label="Open menu"
+          className="md:hidden rounded-xl hover:bg-primary/10 hover:text-primary transition-all duration-200 border border-transparent hover:border-primary/20"
+        >
           <Menu className="h-5 w-5" />
         </Button>
-        <Link href="/" className="flex items-center gap-2 text-lg font-bold md:hidden group">
-          <div className="relative overflow-hidden rounded-md group-hover:shadow-[0_0_15px_color-mix(in_oklch,var(--primary)_50%,transparent)] transition-all">
+        <Link href="/" className="flex items-center gap-2.5 text-lg font-bold md:hidden group">
+          <div className="logo-glow relative overflow-hidden rounded-xl p-0.5">
             <Image
               src="/logo.png"
               alt="Parrot AI Logo"
-              width={24}
-              height={24}
-              className="object-cover transform group-hover:scale-110 transition-transform duration-300"
+              width={28}
+              height={28}
+              className="object-cover rounded-lg transform group-hover:scale-110 transition-transform duration-300"
               unoptimized
             />
           </div>
           <span className="text-gradient font-extrabold tracking-tight">Parrot AI</span>
         </Link>
       </div>
+
+      {/* Right side: breadcrumb-style page title area + wallet */}
       <div className="flex items-center gap-3">
+        {/* Premium separator */}
+        <div className="hidden md:block h-5 w-px bg-border/50" />
         <WalletBalance />
       </div>
     </header>
@@ -108,18 +121,19 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   return (
     <SidebarProvider defaultOpen>
       {shouldShowSidebar ? (
-        <div className="flex min-h-screen w-full bg-background relative overflow-hidden transition-colors duration-300">
-          {/* Space background glows */}
-          <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/15 blur-[120px] pointer-events-none opacity-60 dark:opacity-30 dark:bg-primary/20" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-500/10 blur-[140px] pointer-events-none opacity-50 dark:opacity-20" />
+        <div className="ambient-bg flex min-h-screen w-full bg-background transition-colors duration-500">
+          {/* Floating sidebar wrapper — gives it a raised z-layer above the content plane */}
+          <div className="relative z-20 flex-shrink-0">
+            <AppSidebar />
+          </div>
 
-          <AppSidebar />
-          <SidebarInset className="flex-1 flex flex-col min-w-0 bg-transparent border-l border-border/50">
+          <SidebarInset className="relative z-10 flex-1 flex flex-col min-w-0 bg-transparent border-l border-border/30">
             <BackendStatusBanner />
             {!isWorkflowEditor && <AppHeader />}
+
             {/* Optional header area for specific pages */}
             {headerActions && (
-              <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
+              <header className="header-glass sticky top-0 z-50 w-full">
                 <div className="container mx-auto px-4 py-4">
                   <div className="flex items-center justify-center">
                     {headerActions}
@@ -130,7 +144,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
 
             {/* Optional sticky tabs */}
             {stickyTabs && (
-              <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/80">
+              <div className="header-glass sticky top-0 z-40">
                 <div className="container mx-auto px-4">
                   <div className="flex items-center justify-center py-2">
                     {stickyTabs}
@@ -139,18 +153,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({
               </div>
             )}
 
-            {/* Main content area */}
-            <main className="flex-1">
+            {/* Main content area — sits above ambient orbs via z-index */}
+            <main className="relative z-10 flex-1">
               {children}
             </main>
           </SidebarInset>
         </div>
       ) : (
-        <div className="flex-1 w-full bg-background relative overflow-hidden transition-colors duration-300">
-          <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/15 blur-[120px] pointer-events-none opacity-60 dark:opacity-30 dark:bg-primary/20" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-500/10 blur-[140px] pointer-events-none opacity-50 dark:opacity-20" />
-          <BackendStatusBanner />
-          {children}
+        <div className="ambient-bg flex-1 w-full bg-background transition-colors duration-500">
+          <div className="relative z-10">
+            <BackendStatusBanner />
+            {children}
+          </div>
         </div>
       )}
     </SidebarProvider>

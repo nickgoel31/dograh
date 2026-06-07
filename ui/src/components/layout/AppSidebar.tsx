@@ -271,8 +271,8 @@ export function AppSidebar() {
         asChild
         tooltip={tooltip}
         className={cn(
-          "transition-all duration-300 hover:bg-accent/70 hover:text-accent-foreground hover:translate-x-1",
-          isItemActive && "bg-gradient-to-r from-primary/15 to-transparent text-primary font-semibold border-l-2 border-primary rounded-l-none"
+          "rounded-lg transition-all duration-200 hover:bg-primary/8 hover:text-primary hover:translate-x-0.5",
+          isItemActive && "bg-gradient-to-r from-primary/18 via-primary/10 to-transparent text-primary font-semibold shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--primary)_20%,transparent)] border-l-2 border-primary rounded-l-none"
         )}
       >
         <Link
@@ -308,8 +308,10 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r">
-      <SidebarHeader className="border-b px-2 py-3 notranslate" translate="no">
+    <Sidebar collapsible="icon" className="sidebar-glass border-r-0">
+      <SidebarHeader className="relative border-b border-border/40 px-2 py-3 notranslate" translate="no">
+        {/* Premium gradient top accent strip */}
+        <div className="pointer-events-none absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
         {isImpersonating && (
           <div className={cn("mb-3 mt-1 rounded-md bg-amber-500 px-3 py-2 text-xs font-medium text-white shadow-sm flex flex-col gap-2", isCollapsed && "hidden")}>
             <div className="flex items-center gap-1.5">
@@ -323,20 +325,22 @@ export function AppSidebar() {
         )}
         <div className="flex items-center justify-between">
           <div className={cn("flex items-center gap-2", isCollapsed && "hidden")}>
-            <Link
+              <Link
               href="/"
               className="notranslate flex items-center gap-2.5 px-2 text-xl font-bold hover:opacity-90 transition-opacity"
               translate="no"
             >
-              <Image
-                src="/logo.png"
-                alt="Parrot AI Logo"
-                width={32}
-                height={32}
-                className="rounded-lg object-cover ring-1 ring-border/50 shadow-sm"
-                unoptimized
-              />
-              <span className="tracking-tight">Parrot AI</span>
+              <div className="logo-glow">
+                <Image
+                  src="/logo.png"
+                  alt="Parrot AI Logo"
+                  width={32}
+                  height={32}
+                  className="rounded-lg object-cover ring-1 ring-primary/30 shadow-sm"
+                  unoptimized
+                />
+              </div>
+              <span className="text-gradient tracking-tight font-extrabold">Parrot AI</span>
               {versionInfo && (
                 <span
                   className="notranslate text-xs font-normal text-muted-foreground self-end mb-0.5"
@@ -489,7 +493,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter
-        className={cn("border-t p-4 notranslate", isCollapsed && "p-2")}
+        className={cn("border-t border-border/40 p-4 notranslate", isCollapsed && "p-2")}
         translate="no"
       >
         <div className="space-y-2">

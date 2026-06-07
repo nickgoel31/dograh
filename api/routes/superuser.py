@@ -9,7 +9,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete as sa_delete
 
 from api.db import db_client
 from api.db.models import OrganizationModel, UserModel, WorkflowModel, WorkflowRunModel, organization_users_association
@@ -807,3 +807,100 @@ async def delete_workflow_run_for_audit(
             await session.commit()
             
         return {"detail": "Workflow run deleted and cycle minutes recalculated successfully"}
+
+
+@router.delete("/runs")
+async def delete_all_workflow_runs(
+    org_id: Optional[int] = Query(None, description="If provided, only delete runs for this organization"),
+    user: UserModel = Depends(get_superuser),
+):
+    """
+    Bulk-delete all workflow runs (optionally scoped to one organization).
+
+    After deletion, every affected usage cycle's ``total_duration_seconds`` is
+    recalculated from the surviving runs so that the billing wallet stays
+    accurate.
+
+    Query params:
+        org_id – when supplied only runs whose workflow belongs to that org
+                 are removed; when omitted **all** runs in the system are deleted.
+    """
+    from sqlalchemy.orm import joinedload
+    from api.db.models import WorkflowRunModel, WorkflowModel, OrganizationUsageCycleModel
+
+    async with db_client.async_session() as session:
+        # ── 1. Collect the IDs and org associations of runs to delete ─────────
+        if org_id is not None:
+            # Validate org exists
+            org = await session.get(OrganizationModel, org_id)
+            if not org:
+                raise HTTPException(status_code=404, detail="Organization not found")
+
+            stmt = (
+                select(WorkflowRunModel)
+                .join(WorkflowModel, WorkflowRunModel.workflow_id == WorkflowModel.id)
+                .where(WorkflowModel.organization_id == org_id)
+                .options(joinedload(WorkflowRunModel.workflow))
+            )
+        else:
+            stmt = (
+                select(WorkflowRunModel)
+                .options(joinedload(WorkflowRunModel.workflow))
+            )
+
+        result = await session.execute(stmt)
+        runs_to_delete = result.scalars().all()
+
+        if not runs_to_delete:
+            return {"detail": "No workflow runs found to delete", "deleted_count": 0}
+
+        # ── 2. Collect affected (org_id, created_at) pairs for cycle recalc ──
+        affected_org_ids: set[int] = set()
+        for r in runs_to_delete:
+            if r.workflow and r.workflow.organization_id:
+                affected_org_ids.add(r.workflow.organization_id)
+
+        # ── 3. Delete the runs ─────────────────────────────────────────────────
+        run_ids = [r.id for r in runs_to_delete]
+        deleted_count = len(run_ids)
+
+        await session.execute(
+            sa_delete(WorkflowRunModel).where(WorkflowRunModel.id.in_(run_ids))
+        )
+        await session.commit()
+
+        # ── 4. Recalculate total_duration_seconds for every affected cycle ────
+        for affected_org_id in affected_org_ids:
+            # Fetch all cycles for this org
+            cycles_result = await session.execute(
+                select(OrganizationUsageCycleModel).where(
+                    OrganizationUsageCycleModel.organization_id == affected_org_id
+                )
+            )
+            cycles = cycles_result.scalars().all()
+
+            for cycle in cycles:
+                # Sum duration of surviving runs in this cycle window
+                surviving_result = await session.execute(
+                    select(WorkflowRunModel)
+                    .join(WorkflowModel, WorkflowRunModel.workflow_id == WorkflowModel.id)
+                    .where(
+                        WorkflowModel.organization_id == affected_org_id,
+                        WorkflowRunModel.created_at >= cycle.period_start,
+                        WorkflowRunModel.created_at <= cycle.period_end,
+                    )
+                )
+                surviving_runs = surviving_result.scalars().all()
+                total_seconds = sum(
+                    int(round(r.cost_info.get("call_duration_seconds", 0) or 0))
+                    for r in surviving_runs
+                    if r.cost_info
+                )
+                cycle.total_duration_seconds = total_seconds
+
+        await session.commit()
+
+        return {
+            "detail": f"Deleted {deleted_count} workflow run(s) and recalculated usage cycles successfully",
+            "deleted_count": deleted_count,
+        }

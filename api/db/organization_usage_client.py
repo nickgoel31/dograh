@@ -183,6 +183,21 @@ class OrganizationUsageClient(BaseDBClient):
                     cycle_locked.used_amount_usd = 0
                 cycle_locked.used_amount_usd += charge_usd
 
+            # Deduct the INR cost of this call from org.balance using billing_rate.
+            # This keeps the wallet balance live — it reflects what has actually been
+            # consumed, not just the static top-up amount set by the superadmin.
+            if duration_seconds > 0:
+                org_result = await session.execute(
+                    select(OrganizationModel)
+                    .where(OrganizationModel.id == organization_id)
+                    .with_for_update(skip_locked=False)
+                )
+                org_locked = org_result.scalar_one_or_none()
+                if org_locked is not None and (org_locked.billing_rate or 0) > 0:
+                    duration_minutes = duration_seconds / 60.0
+                    cost_inr = duration_minutes * org_locked.billing_rate
+                    org_locked.balance = max(0.0, (org_locked.balance or 0.0) - cost_inr)
+
             await session.commit()
 
     async def get_current_usage(self, organization_id: int) -> dict:

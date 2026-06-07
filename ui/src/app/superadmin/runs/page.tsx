@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, CheckCircle, ChevronLeft, ChevronRight, ExternalLink, Info, Loader2, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, CheckCircle, ChevronLeft, ChevronRight, ExternalLink, Info, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from "react";
@@ -91,6 +91,9 @@ export default function RunsPage() {
     });
 
     const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
+    const [deletingRunId, setDeletingRunId] = useState<number | null>(null);
+    const [isDeletingAll, setIsDeletingAll] = useState(false);
+    const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
 
     const auth = useAuth();
 
@@ -281,6 +284,48 @@ export default function RunsPage() {
         [auth],
     );
 
+    const handleDeleteRun = async (runId: number) => {
+        if (!confirm(`Delete run #${runId}? This cannot be undone.`)) return;
+        setDeletingRunId(runId);
+        try {
+            const token = await auth.getAccessToken();
+            const res = await fetch(`/api/v1/superuser/runs/${runId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error(await res.text());
+            setRuns(prev => prev.filter(r => r.id !== runId));
+            setTotalCount(prev => prev - 1);
+        } catch (err) {
+            console.error(err);
+            alert('Failed to delete run. Please try again.');
+        } finally {
+            setDeletingRunId(null);
+        }
+    };
+
+    const handleDeleteAll = async () => {
+        setConfirmDeleteAll(false);
+        setIsDeletingAll(true);
+        try {
+            const token = await auth.getAccessToken();
+            const res = await fetch('/api/v1/superuser/runs', {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error(await res.text());
+            const data = await res.json();
+            setRuns([]);
+            setTotalCount(0);
+            alert(data.detail || 'All runs deleted successfully.');
+        } catch (err) {
+            console.error(err);
+            alert('Failed to delete all runs. Please try again.');
+        } finally {
+            setIsDeletingAll(false);
+        }
+    };
+
     if (isLoading && runs.length === 0) {
         return (
             <div className="container mx-auto p-6 flex items-center justify-center min-h-[400px]">
@@ -317,6 +362,27 @@ export default function RunsPage() {
                     hasAppliedFilters={appliedFilters.length > 0}
                 />
 
+                {/* Delete All confirmation dialog */}
+                {confirmDeleteAll && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="bg-background border rounded-xl shadow-xl p-6 max-w-md w-full mx-4 space-y-4">
+                            <div className="flex items-center gap-3 text-destructive">
+                                <Trash2 className="h-6 w-6" />
+                                <h2 className="text-lg font-semibold">Delete All Runs?</h2>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                                This will permanently delete <strong>all {totalCount} workflow runs</strong> from the system and recalculate all usage cycle totals. This action <strong>cannot be undone</strong>.
+                            </p>
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button variant="outline" onClick={() => setConfirmDeleteAll(false)}>Cancel</Button>
+                                <Button variant="destructive" onClick={handleDeleteAll} disabled={isDeletingAll}>
+                                    {isDeletingAll ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Deleting...</> : 'Yes, Delete All'}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <Card>
                     <CardHeader>
                         <div className="flex items-center justify-between">
@@ -326,12 +392,26 @@ export default function RunsPage() {
                                     Showing {runs.length} of {totalCount} total runs
                                 </CardDescription>
                             </div>
-                            {isAutoRefreshing && (
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <RefreshCw className="h-4 w-4 animate-spin" />
-                                    <span>Refreshing...</span>
-                                </div>
-                            )}
+                            <div className="flex items-center gap-3">
+                                {isAutoRefreshing && (
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                        <span>Refreshing...</span>
+                                    </div>
+                                )}
+                                {totalCount > 0 && (
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => setConfirmDeleteAll(true)}
+                                        disabled={isDeletingAll}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                        Delete All Runs
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -562,6 +642,18 @@ export default function RunsPage() {
                                                                 <ExternalLink className="h-4 w-4" />
                                                             </Button>
 
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                title="Delete run"
+                                                                disabled={deletingRunId === run.id}
+                                                                onClick={() => handleDeleteRun(run.id)}
+                                                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                            >
+                                                                {deletingRunId === run.id
+                                                                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                                                                    : <Trash2 className="h-4 w-4" />}
+                                                            </Button>
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>

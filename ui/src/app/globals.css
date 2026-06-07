@@ -129,6 +129,101 @@
   box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.6), 0 1px 3px -1px oklch(1 0 0 / 12%) inset;
 }
 
+/* ── Premium Sidebar Glassmorphism ── */
+.sidebar-glass {
+  background: color-mix(in oklch, var(--background) 70%, transparent) !important;
+  backdrop-filter: blur(24px) saturate(1.6) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.6) !important;
+  border-right: 1px solid color-mix(in oklch, var(--border) 50%, transparent) !important;
+  box-shadow: 4px 0 32px -4px rgba(0, 0, 0, 0.12), 1px 0 0 0 color-mix(in oklch, var(--primary) 8%, transparent) !important;
+}
+
+.dark .sidebar-glass {
+  background: color-mix(in oklch, oklch(0.10 0.02 260) 75%, transparent) !important;
+  border-right: 1px solid oklch(1 0 0 / 7%) !important;
+  box-shadow: 4px 0 40px -4px rgba(0, 0, 0, 0.5), 1px 0 0 0 oklch(1 0 0 / 5%) !important;
+}
+
+/* ── Premium Header ── */
+.header-glass {
+  background: color-mix(in oklch, var(--background) 65%, transparent);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 45%, transparent);
+  box-shadow: 0 1px 0 0 color-mix(in oklch, var(--primary) 6%, transparent), 0 4px 20px -4px rgba(0, 0, 0, 0.06);
+}
+
+.dark .header-glass {
+  background: color-mix(in oklch, oklch(0.10 0.02 260) 70%, transparent);
+  border-bottom: 1px solid oklch(1 0 0 / 8%);
+  box-shadow: 0 1px 0 0 oklch(1 0 0 / 6%), 0 4px 20px -4px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Ambient Mesh Gradient Background ── */
+.ambient-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.ambient-bg::before {
+  content: '';
+  position: fixed;
+  top: -30%;
+  left: -10%;
+  width: 60vw;
+  height: 60vw;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, color-mix(in oklch, var(--primary) 12%, transparent), transparent 70%);
+  animation: ambientDrift1 18s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient-bg::after {
+  content: '';
+  position: fixed;
+  bottom: -20%;
+  right: -10%;
+  width: 55vw;
+  height: 55vw;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, color-mix(in oklch, oklch(0.6 0.2 310) 9%, transparent), transparent 70%);
+  animation: ambientDrift2 22s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes ambientDrift1 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(5%, 8%) scale(1.08); }
+  100% { transform: translate(-3%, 12%) scale(0.95); }
+}
+
+@keyframes ambientDrift2 {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(-6%, -5%) scale(1.1); }
+  100% { transform: translate(4%, -10%) scale(0.92); }
+}
+
+/* ── Floating Sidebar Shadow ── */
+@keyframes sidebarFloat {
+  0%, 100% { box-shadow: 4px 0 32px -4px rgba(0,0,0,0.12), 1px 0 0 0 color-mix(in oklch, var(--primary) 8%, transparent); }
+  50%       { box-shadow: 6px 0 48px -6px rgba(0,0,0,0.18), 1px 0 0 0 color-mix(in oklch, var(--primary) 12%, transparent); }
+}
+
+.sidebar-glass {
+  animation: sidebarFloat 6s ease-in-out infinite;
+}
+
+/* ── Premium Header Logo Glow ── */
+.logo-glow {
+  filter: drop-shadow(0 0 8px color-mix(in oklch, var(--primary) 50%, transparent));
+  transition: filter 0.3s ease;
+}
+.logo-glow:hover {
+  filter: drop-shadow(0 0 14px color-mix(in oklch, var(--primary) 70%, transparent));
+}
+
 .text-gradient {
   background: linear-gradient(135deg, oklch(0.65 0.22 285) 0%, oklch(0.7 0.18 340) 50%, oklch(0.6 0.25 240) 100%);
   -webkit-background-clip: text;
