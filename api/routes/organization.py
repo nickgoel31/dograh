@@ -1167,7 +1167,7 @@ async def get_wallet(
         year = now.year
     if month is None:
         month = now.month
-
+    
     async with db_client.async_session() as session:
         # Get organization
         org = await session.get(OrganizationModel, user.selected_organization_id)
@@ -1183,12 +1183,10 @@ async def get_wallet(
         result = await session.execute(stmt)
         cycles = list(result.scalars().all())
 
-        # 2. Find or create the cycle for the target year/month
+        # 2. Calculate the expected period_start for the requested year/month
         reset_day = getattr(org, "quota_reset_day", 1) or 1
         
-        # Determine the target date to calculate the period.
-        # If the requested year/month is current, use 'now' to match the active cycle.
-        # Otherwise, use the middle of the requested month.
+        # Determine the target date
         if year == now.year and month == now.month:
             target_date = now
         else:
@@ -1205,17 +1203,36 @@ async def get_wallet(
             except ValueError:
                 expected_period_start = (target_date - relativedelta(months=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
+        logger.info(f"get_wallet: org={org.id} year={year} month={month} reset_day={reset_day} expected_period_start={expected_period_start}")
+        logger.info(f"get_wallet: found {len(cycles)} cycles: {[str(c.period_start) for c in cycles]}")
+
+        # 3. Find the target cycle — try exact match first, then fuzzy fallback
         target_cycle = None
+        
+        # Pass 1: exact period_start match
         for c in cycles:
-            if c.period_start == expected_period_start:
+            c_start = c.period_start
+            if c_start.tzinfo is None:
+                c_start = c_start.replace(tzinfo=timezone.utc)
+            if c_start == expected_period_start:
                 target_cycle = c
+                logger.info(f"get_wallet: matched cycle by exact period_start id={c.id}")
                 break
-
+        
+        # Pass 2: fallback — same calendar month as expected_period_start
         if not target_cycle:
-            # We need to calculate the period end
-            period_end = expected_period_start + relativedelta(months=1) - relativedelta(seconds=1)
+            for c in cycles:
+                c_start = c.period_start
+                if c_start.tzinfo is None:
+                    c_start = c_start.replace(tzinfo=timezone.utc)
+                if c_start.year == expected_period_start.year and c_start.month == expected_period_start.month:
+                    target_cycle = c
+                    logger.info(f"get_wallet: matched cycle by year/month fallback id={c.id} period_start={c_start}")
+                    break
 
-            # Create cycle
+        # Pass 3: create a new cycle if none found
+        if not target_cycle:
+            period_end = expected_period_start + relativedelta(months=1) - relativedelta(seconds=1)
             target_cycle = OrganizationUsageCycleModel(
                 organization_id=org.id,
                 period_start=expected_period_start,
@@ -1225,7 +1242,7 @@ async def get_wallet(
             session.add(target_cycle)
             await session.commit()
             
-            # Refetch cycles list in correct chronological order
+            # Refetch cycles list
             stmt = (
                 select(OrganizationUsageCycleModel)
                 .where(OrganizationUsageCycleModel.organization_id == org.id)
@@ -1233,9 +1250,12 @@ async def get_wallet(
             )
             result = await session.execute(stmt)
             cycles = list(result.scalars().all())
-            # Find it again
+            # Find it again by exact period_start
             for c in cycles:
-                if c.period_start.year == year and c.period_start.month == month:
+                c_start = c.period_start
+                if c_start.tzinfo is None:
+                    c_start = c_start.replace(tzinfo=timezone.utc)
+                if c_start == expected_period_start:
                     target_cycle = c
                     break
 
@@ -1250,52 +1270,49 @@ async def get_wallet(
             end_year = getattr(org, "monthly_minutes_end_year", None)
             end_month = getattr(org, "monthly_minutes_end_month", None)
             
+            ps_year = period_start.year
+            ps_month = period_start.month
+            
             if start_year is not None and start_month is not None:
-                if (period_start.year < start_year) or (period_start.year == start_year and period_start.month < start_month):
+                if (ps_year < start_year) or (ps_year == start_year and ps_month < start_month):
                     return False
             if end_year is not None and end_month is not None:
-                if (period_start.year > end_year) or (period_start.year == end_year and period_start.month > end_month):
+                if (ps_year > end_year) or (ps_year == end_year and ps_month > end_month):
                     return False
             return True
 
-        # 3. Chronologically compute the carry-forward minutes for each cycle in the list
+        # 4. Chronologically compute carry-forward and used minutes
         carry_forward_to_next = 0.0
         cycle_details = {}
 
         for c in cycles:
-            is_active = is_cycle_within_contract_period(c.period_start)
-            
+            c_start = c.period_start
+            if c_start.tzinfo is None:
+                c_start = c_start.replace(tzinfo=timezone.utc)
+            is_active = is_cycle_within_contract_period(c_start)
+
+            # Always use custom_minutes_used if set, regardless of contract status
+            if c.custom_minutes_used is not None:
+                c_used = c.custom_minutes_used
+            else:
+                c_used = (c.total_duration_seconds or 0) / 60.0
+
             if not is_active:
-                # Outside contract period: reset carry forward, limit is 0, balance is standard org.balance
                 cycle_details[c.id] = {
                     "carry_forward_minutes": 0.0,
-                    "minutes_used": (c.total_duration_seconds or 0) / 60.0,
+                    "minutes_used": c_used,
                     "minutes_remaining": 0.0,
-                    # org.balance is decremented by update_usage_after_run after each call
                     "balance": getattr(org, "balance", 0.0) or 0.0,
                 }
                 carry_forward_to_next = 0.0
             else:
-                # Inside contract period
                 c_carry_forward = carry_forward_to_next
-                
-                # Calculate used minutes
-                if c.custom_minutes_used is not None:
-                    c_used = c.custom_minutes_used
-                else:
-                    c_used = (c.total_duration_seconds or 0) / 60.0
-                    
-                # Unused minutes: total allowed - used
                 c_limit = getattr(org, "monthly_minutes_limit", 0.0) or 0.0
                 c_total_allowed = c_limit + c_carry_forward
                 c_remaining = max(0.0, c_total_allowed - c_used)
-                
-                # Next carry forward is only the unused base minutes
                 remaining_base = max(0.0, c_limit - max(0.0, c_used - c_carry_forward))
                 carry_forward_to_next = remaining_base
                 
-                # Use org.balance as the single source of truth for the live ₹ balance.
-                # It is decremented by update_usage_after_run on every call completion.
                 base_balance = getattr(org, "balance", 0.0) or 0.0
                 billing_rate = getattr(org, "billing_rate", 0.0) or 0.0
                 if base_balance == 0.0 and billing_rate > 0.0:
@@ -1310,32 +1327,37 @@ async def get_wallet(
                     "balance": balance_val,
                 }
 
+        logger.info(f"get_wallet: target_cycle id={target_cycle.id} period_start={target_cycle.period_start} custom_minutes_used={target_cycle.custom_minutes_used} total_duration_seconds={target_cycle.total_duration_seconds}")
+
         details = cycle_details.get(target_cycle.id)
         if not details:
             base_balance = getattr(org, "balance", 0.0) or 0.0
             billing_rate = getattr(org, "billing_rate", 0.0) or 0.0
             limit = getattr(org, "monthly_minutes_limit", 0.0) or 0.0
-            is_active = is_cycle_within_contract_period(target_cycle.period_start)
+            is_active = is_cycle_within_contract_period(
+                target_cycle.period_start if target_cycle.period_start.tzinfo else target_cycle.period_start.replace(tzinfo=timezone.utc)
+            )
+            if target_cycle.custom_minutes_used is not None:
+                minutes_used = target_cycle.custom_minutes_used
+            else:
+                minutes_used = (target_cycle.total_duration_seconds or 0) / 60.0
+            
             if base_balance == 0.0 and billing_rate > 0.0 and is_active:
-                balance_val = limit * billing_rate
+                balance_val = max(0.0, limit - minutes_used) * billing_rate
             else:
                 balance_val = base_balance
-                
             details = {
                 "carry_forward_minutes": 0.0,
-                "minutes_used": 0.0,
-                "minutes_remaining": limit if is_active else 0.0,
+                "minutes_used": minutes_used,
+                "minutes_remaining": max(0.0, limit - minutes_used),
                 "balance": balance_val,
             }
-
-
-        target_is_active = is_cycle_within_contract_period(target_cycle.period_start)
 
         return WalletResponse(
             balance=details["balance"],
             billing_rate=getattr(org, "billing_rate", 0.0) or 0.0,
             billing_pulse=getattr(org, "billing_pulse", 60) or 60,
-            monthly_minutes_limit=(getattr(org, "monthly_minutes_limit", 0.0) or 0.0) if target_is_active else 0.0,
+            monthly_minutes_limit=getattr(org, "monthly_minutes_limit", 0.0) or 0.0,
             carry_forward_minutes=details["carry_forward_minutes"],
             minutes_used=details["minutes_used"],
             minutes_remaining=details["minutes_remaining"],

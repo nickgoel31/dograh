@@ -472,11 +472,12 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
                 setattr(org, f, val)
 
         if request.cycle_year is not None and request.cycle_month is not None:
-            if request.custom_minutes_used is not None:
-                if request.custom_minutes_used != 0 and request.custom_minutes_used != 0.0:
+            is_custom_minutes_set = "custom_minutes_used" in request.model_fields_set or (hasattr(request, "__fields_set__") and "custom_minutes_used" in request.__fields_set__)
+            if is_custom_minutes_set:
+                if request.custom_minutes_used is not None and request.custom_minutes_used < 0:
                     raise HTTPException(
                         status_code=400,
-                        detail="Superadmin can only reset minutes used to 0"
+                        detail="custom_minutes_used cannot be negative"
                     )
                 from datetime import datetime, timezone
                 from dateutil.relativedelta import relativedelta
@@ -490,7 +491,7 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
                     
                 period_end = period_start + relativedelta(months=1) - relativedelta(seconds=1)
                 
-                # Check if cycle exists
+                # Check if cycle exists — match on exact period_start timestamp
                 cycle_result = await session.execute(
                     select(OrganizationUsageCycleModel).where(
                         (OrganizationUsageCycleModel.organization_id == org_id) &
