@@ -302,7 +302,7 @@ export default function SuperadminPage() {
                     monthly_minutes_end_month: editEndMonth !== "" ? Number(editEndMonth) : null,
                     cycle_year: editCycleYear,
                     cycle_month: editCycleMonth,
-                    custom_minutes_used: editCustomMinutesUsed !== "" ? parseFloat(editCustomMinutesUsed) : null,
+                    custom_minutes_used: editCustomMinutesUsed === "" ? null : parseFloat(editCustomMinutesUsed),
                     whatsapp_enabled: editWhatsAppEnabled,
                     whatsapp_phone_number_id: editWhatsAppPhoneNumberId || null,
                     whatsapp_access_token: editWhatsAppAccessToken || undefined,
@@ -807,34 +807,24 @@ export default function SuperadminPage() {
                                     <div className="flex gap-2">
                                         <Input
                                             id="customMinutesUsed"
-                                            type="text"
-                                            className="bg-muted"
-                                            readOnly
-                                            value={editCustomMinutesUsed === "0" ? "0 (Reset)" : "System Calculated"}
+                                            type="number"
+                                            step="0.1"
+                                            min="0"
+                                            value={editCustomMinutesUsed}
+                                            onChange={(e) => setEditCustomMinutesUsed(e.target.value)}
                                             placeholder="System Calculated"
                                         />
-                                        {editCustomMinutesUsed === "0" ? (
-                                            <Button
-                                                type="button"
-                                                variant="secondary"
-                                                size="sm"
-                                                onClick={() => setEditCustomMinutesUsed("")}
-                                            >
-                                                Undo Reset
-                                            </Button>
-                                        ) : (
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setEditCustomMinutesUsed("0")}
-                                            >
-                                                Reset to 0
-                                            </Button>
-                                        )}
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="sm"
+                                            onClick={() => setEditCustomMinutesUsed("")}
+                                        >
+                                            Use System
+                                        </Button>
                                     </div>
                                     <p className="text-[10px] text-muted-foreground">
-                                        You cannot manually edit minutes used. You can reset to 0 or use the default system calculation.
+                                        Override system calculated minutes. Leave empty to use system calculation.
                                     </p>
                                 </div>
                                 <div className="border-t pt-4 space-y-4">
