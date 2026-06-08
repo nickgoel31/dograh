@@ -254,6 +254,19 @@ class VobizProvider(TelephonyProvider):
 
         is_valid = hmac.compare_digest(expected_signature, signature)
 
+        logger.debug(
+            f"[Vobiz Signature Verification Debug]\n"
+            f"URL passed: {url}\n"
+            f"Parsed base URL: {base_url}\n"
+            f"Nonce: {nonce}\n"
+            f"Signature version: {version}\n"
+            f"Signed Payload: {signed_payload}\n"
+            f"Signing Algorithm: HMAC-SHA256\n"
+            f"Expected Signature (Base64): {expected_signature}\n"
+            f"Received Signature (Header): {signature}\n"
+            f"Is Valid: {is_valid}"
+        )
+
         if not is_valid:
             logger.warning(
                 f"Vobiz webhook signature mismatch. Expected: {expected_signature[:8]}..., Got: {signature[:8]}..."
@@ -480,6 +493,17 @@ class VobizProvider(TelephonyProvider):
         """
         normalized_headers = {key.lower(): value for key, value in headers.items()}
 
+        logger.debug(
+            f"[Vobiz Inbound Headers Debug]\n"
+            f"Header keys received: {list(headers.keys())}\n"
+            f"x-vobiz-signature-v3: {normalized_headers.get('x-vobiz-signature-v3')}\n"
+            f"x-vobiz-signature-ma-v3: {normalized_headers.get('x-vobiz-signature-ma-v3')}\n"
+            f"x-vobiz-signature-v2: {normalized_headers.get('x-vobiz-signature-v2')}\n"
+            f"x-vobiz-signature-ma-v2: {normalized_headers.get('x-vobiz-signature-ma-v2')}\n"
+            f"x-vobiz-signature-v3-nonce: {normalized_headers.get('x-vobiz-signature-v3-nonce')}\n"
+            f"x-vobiz-signature-v2-nonce: {normalized_headers.get('x-vobiz-signature-v2-nonce')}"
+        )
+
         signature = normalized_headers.get(
             "x-vobiz-signature-v3"
         ) or normalized_headers.get("x-vobiz-signature-ma-v3", "")
@@ -499,6 +523,24 @@ class VobizProvider(TelephonyProvider):
                 "skipping signature validation"
             )
             return True
+
+        # Reconstruct the URL scheme and netloc (host/port) using proxy headers if present.
+        # Otherwise, keep the original url unchanged.
+        parsed_url = urlparse(url)
+        proto = normalized_headers.get("x-forwarded-proto")
+        host = normalized_headers.get("x-forwarded-host")
+
+        if proto or host:
+            scheme = proto or parsed_url.scheme
+            netloc = host or parsed_url.netloc
+            url = urlunparse((
+                scheme,
+                netloc,
+                parsed_url.path,
+                parsed_url.params,
+                parsed_url.query,
+                parsed_url.fragment
+            ))
 
         return await self.verify_webhook_signature(
             url,
