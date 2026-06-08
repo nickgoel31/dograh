@@ -158,7 +158,7 @@ export default function CampaignsPage() {
                                                     {campaign.executed_count} / {campaign.total_queued_count}
                                                 </TableCell>
                                                 <TableCell>{formatDate(campaign.created_at)}</TableCell>
-                                                <TableCell className="text-right">
+                                                <TableCell className="text-right space-x-2">
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
@@ -168,6 +168,37 @@ export default function CampaignsPage() {
                                                         }}
                                                     >
                                                         View
+                                                    </Button>
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            if (window.confirm('Are you sure you want to delete this campaign? This action cannot be undone.')) {
+                                                                try {
+                                                                    const accessToken = await getAccessToken();
+                                                                    const res = await fetch(`/api/v1/campaign/${campaign.id}`, {
+                                                                        method: 'DELETE',
+                                                                        headers: {
+                                                                            'Authorization': `Bearer ${accessToken}`,
+                                                                        }
+                                                                    });
+                                                                    if (res.ok) {
+                                                                        setCampaignsData(prev => prev ? {
+                                                                            ...prev,
+                                                                            campaigns: prev.campaigns.filter(c => c.id !== campaign.id)
+                                                                        } : prev);
+                                                                    } else {
+                                                                        alert('Failed to delete campaign');
+                                                                    }
+                                                                } catch (error) {
+                                                                    console.error(error);
+                                                                    alert('Error deleting campaign');
+                                                                }
+                                                            }
+                                                        }}
+                                                    >
+                                                        Delete
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>

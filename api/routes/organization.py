@@ -235,7 +235,7 @@ async def _sync_inbound_for_phone_number(
 
 
 @router.get("/telephony-configs", response_model=TelephonyConfigurationListResponse)
-async def list_telephony_configurations(user: UserModel = Depends(require_role([UserRole.ADMIN]))):
+async def list_telephony_configurations(user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT]))):
     """List the org's telephony configurations with phone-number counts."""
     if not user.selected_organization_id:
         raise HTTPException(status_code=400, detail="No organization selected")
@@ -437,7 +437,7 @@ async def _ensure_workflow_belongs_to_org(workflow_id: int, organization_id: int
     "/telephony-configs/{config_id}/phone-numbers",
     response_model=PhoneNumberListResponse,
 )
-async def list_phone_numbers(config_id: int, user: UserModel = Depends(require_role([UserRole.ADMIN]))):
+async def list_phone_numbers(config_id: int, user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT]))):
     if not user.selected_organization_id:
         raise HTTPException(status_code=400, detail="No organization selected")
     await _ensure_config_belongs_to_org(config_id, user.selected_organization_id)
@@ -641,7 +641,7 @@ async def delete_phone_number(
 
 
 @router.get("/telephony-config", response_model=TelephonyConfigurationResponse)
-async def get_telephony_configuration(user: UserModel = Depends(require_role([UserRole.ADMIN]))):
+async def get_telephony_configuration(user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT]))):
     """Legacy: returns the org's default config in the original per-provider
     response shape so the existing single-form UI keeps working. Prefer the
     multi-config endpoints (``/telephony-configs``) for new clients.

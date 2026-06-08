@@ -78,7 +78,7 @@ def _get_execution_user_id(workflow) -> int:
     ),
 )
 async def initiate_call(
-    request: InitiateCallRequest, user: UserModel = Depends(require_role([UserRole.ADMIN]))
+    request: InitiateCallRequest, user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT]))
 ):
     """Initiate a call using the configured telephony provider from web browser. This is
     supposed to be a test call method for the draft version of the agent."""

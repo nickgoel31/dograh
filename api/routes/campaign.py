@@ -623,6 +623,23 @@ async def pause_campaign(
     )
 
 
+@router.delete("/{campaign_id}")
+async def delete_campaign(
+    campaign_id: int,
+    user: UserModel = Depends(get_user),
+) -> dict:
+    """Delete a campaign and its associated records"""
+    campaign = await db_client.get_campaign(campaign_id, user.selected_organization_id)
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    deleted = await db_client.delete_campaign(campaign_id, user.selected_organization_id)
+    if not deleted:
+        raise HTTPException(status_code=400, detail="Failed to delete campaign")
+        
+    return {"status": "success"}
+
+
 @router.patch("/{campaign_id}")
 async def update_campaign(
     campaign_id: int,

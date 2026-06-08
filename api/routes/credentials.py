@@ -117,7 +117,7 @@ def build_credential_response(credential) -> CredentialResponse:
     ),
 )
 async def list_credentials(
-    user: UserModel = Depends(require_role([UserRole.ADMIN])),
+    user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT])),
 ) -> List[CredentialResponse]:
     """
     List all webhook credentials for the user's organization.
