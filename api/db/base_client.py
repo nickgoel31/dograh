@@ -11,6 +11,9 @@ class BaseDBClient:
         self.engine = create_async_engine(DATABASE_URL)
         self.async_session = async_sessionmaker(bind=self.engine)
 
+    def session_factory(self):
+        return self.async_session()
+
     async def execute_raw_query(
         self, query: str, params: Dict[str, Any] = None
     ) -> List[Dict[str, Any]]:
