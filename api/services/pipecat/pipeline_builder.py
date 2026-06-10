@@ -37,6 +37,8 @@ def build_pipeline(
     pipeline_metrics_aggregator,
     voicemail_detector=None,
     recording_router=None,
+    interim_handler=None,
+    filler_processor=None,
 ):
     """Build the main pipeline with all components.
 
@@ -66,6 +68,9 @@ def build_pipeline(
         logger.info("Adding native voicemail detector to pipeline")
         processors.append(voicemail_detector.detector())
 
+    if interim_handler:
+        processors.append(interim_handler)
+
     # Continue with the rest of the pipeline
     post_llm = [pipeline_engine_callback_processor]
     if recording_router:
@@ -78,6 +83,9 @@ def build_pipeline(
     # determines whether a human or voicemail answered the call.
     if voicemail_detector:
         processors.append(voicemail_detector.llm_gate())
+
+    if filler_processor:
+        processors.append(filler_processor)
 
     processors.extend(
         [

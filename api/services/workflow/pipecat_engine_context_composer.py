@@ -45,6 +45,16 @@ RULES:
 - Use ▸ when you need to generate a dynamic, contextual response.
 - *NEVER* mix modes in a single response, since we rely on the markers to decide whether to play using TTS or Pre-recorded audio."""
 
+# ---------------------------------------------------------------------------
+# Language & TTS Quality Instructions
+# ---------------------------------------------------------------------------
+
+HINDI_HINGLISH_INSTRUCTIONS = """\
+LANGUAGE & FORMATTING RULES:
+- If the user speaks or the prompt is in Hindi/Hinglish, ALWAYS reply in Romanized Hindi/Hinglish (e.g., "Aap kaise hain?"). Never use Devanagari script.
+- Keep sentences extremely short and conversational to minimize TTS latency.
+- Spell out numbers, acronyms, and currency phonetically in words (e.g., "bees rupaye" instead of "20 Rs", "ek sau" instead of "100", "ay tee em" instead of "ATM") so the TTS engine pronounces them correctly."""
+
 
 def compose_system_prompt_for_node(
     *,
@@ -79,6 +89,9 @@ def compose_system_prompt_for_node(
 
     if has_recordings and "RECORDING_ID:" in formatted_node_prompt:
         parts.append(RECORDING_RESPONSE_MODE_INSTRUCTIONS)
+
+    # Always append the quality and formatting rules for optimal TTS
+    parts.append(HINDI_HINGLISH_INSTRUCTIONS)
 
     return "\n\n".join(parts)
 

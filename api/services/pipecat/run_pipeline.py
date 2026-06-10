@@ -40,6 +40,12 @@ from api.services.pipecat.recording_audio_cache import (
     warm_recording_cache,
 )
 from api.services.pipecat.recording_router_processor import RecordingRouterProcessor
+from api.services.pipecat.interim_handler import InterimTranscriptionHandler
+from api.services.pipecat.filler_processor import FillerAudioProcessor
+from pipecat.utils.context.llm_context_summarization import (
+    LLMAutoContextSummarizationConfig,
+    LLMContextSummaryConfig,
+)
 from api.services.pipecat.service_factory import (
     create_llm_service,
     create_llm_service_from_provider,
@@ -564,8 +570,18 @@ async def _run_pipeline(
     engine.set_context(context)
     engine.set_audio_config(audio_config)
 
+    auto_summarization_config = LLMAutoContextSummarizationConfig(
+        max_unsummarized_messages=6,
+        summary_config=LLMContextSummaryConfig(
+            min_messages_after_summary=2,
+            target_context_tokens=1000,
+        )
+    )
+
     assistant_params = LLMAssistantAggregatorParams(
         correct_aggregation_callback=engine.create_aggregation_correction_callback(),
+        enable_auto_context_summarization=True,
+        auto_context_summarization_config=auto_summarization_config
     )
 
     user_mute_strategies = [
@@ -722,6 +738,9 @@ async def _run_pipeline(
             )
         )
 
+    interim_handler = InterimTranscriptionHandler()
+    filler_processor = FillerAudioProcessor(tts_service=tts, delay_ms=500) if tts else None
+
     # Build the pipeline
     if is_realtime:
         pipeline = build_realtime_pipeline(
@@ -747,6 +766,8 @@ async def _run_pipeline(
             pipeline_metrics_aggregator,
             voicemail_detector=voicemail_detector,
             recording_router=recording_router,
+            interim_handler=interim_handler,
+            filler_processor=filler_processor,
         )
 
     # Create pipeline task with audio configuration
