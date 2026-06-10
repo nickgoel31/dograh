@@ -5,6 +5,7 @@ from pipecat.frames.frames import (
     Frame,
     LLMMessagesAppendFrame,
     LLMRunFrame,
+    LLMContextFrame,
     LLMTextFrame,
     LLMFullResponseStartFrame,
     TextFrame
@@ -24,7 +25,7 @@ class FillerAudioProcessor(FrameProcessor):
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
 
-        if isinstance(frame, (LLMMessagesAppendFrame, LLMRunFrame)):
+        if isinstance(frame, (LLMMessagesAppendFrame, LLMRunFrame, LLMContextFrame)):
             # Aggregator has pushed messages to the LLM, expect response soon
             self._waiting_for_llm = True
             

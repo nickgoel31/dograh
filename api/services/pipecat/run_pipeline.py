@@ -91,6 +91,7 @@ from pipecat.turns.user_stop import (
     SpeechTimeoutUserTurnStopStrategy,
     TurnAnalyzerUserTurnStopStrategy,
 )
+from pipecat.turns.user_stop.external_user_turn_stop_strategy import ExternalUserTurnStopStrategy
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
 from pipecat.utils.enums import EndTaskReason, RealtimeFeedbackType
 from pipecat.utils.run_context import set_current_org_id, set_current_run_id
@@ -635,7 +636,10 @@ async def _run_pipeline(
                     VADUserTurnStartStrategy(),
                     TranscriptionUserTurnStartStrategy(),
                 ],
-                stop=[SpeechTimeoutUserTurnStopStrategy()],
+                stop=[
+                    SpeechTimeoutUserTurnStopStrategy(),
+                    ExternalUserTurnStopStrategy(),
+                ],
             )
 
     user_params = LLMUserAggregatorParams(
