@@ -2,7 +2,7 @@ import json
 from datetime import UTC, datetime
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import func, text, update
+from sqlalchemy import delete, func, text, update
 from sqlalchemy.future import select
 
 from api.db.base_client import BaseDBClient
@@ -454,6 +454,11 @@ class CampaignClient(BaseDBClient):
                 return False
 
             try:
+                await session.execute(
+                    delete(WorkflowRunModel).where(
+                        WorkflowRunModel.campaign_id == campaign_id
+                    )
+                )
                 await session.delete(campaign)
                 await session.commit()
                 return True
