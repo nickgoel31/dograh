@@ -3,10 +3,8 @@ import time
 from loguru import logger
 from pipecat.frames.frames import (
     Frame,
-    LLMMessagesFrame,
     LLMMessagesAppendFrame,
     LLMRunFrame,
-    TTSMessagesFrame,
     LLMTextFrame,
     LLMFullResponseStartFrame,
     TextFrame
@@ -24,7 +22,7 @@ class FillerAudioProcessor(FrameProcessor):
         self._filler_task = None
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
-        if isinstance(frame, (LLMMessagesFrame, LLMMessagesAppendFrame, LLMRunFrame)):
+        if isinstance(frame, (LLMMessagesAppendFrame, LLMRunFrame)):
             # Aggregator has pushed messages to the LLM, expect response soon
             self._waiting_for_llm = True
             
