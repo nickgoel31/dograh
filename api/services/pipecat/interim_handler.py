@@ -26,6 +26,8 @@ class InterimTranscriptionHandler(FrameProcessor):
         ]
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
+        await super().process_frame(frame, direction)
+
         if isinstance(frame, TranscriptionFrame):
             self._early_triggered = False
             self._interruption_triggered = False

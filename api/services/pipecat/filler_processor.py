@@ -22,6 +22,8 @@ class FillerAudioProcessor(FrameProcessor):
         self._filler_task = None
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
+        await super().process_frame(frame, direction)
+
         if isinstance(frame, (LLMMessagesAppendFrame, LLMRunFrame)):
             # Aggregator has pushed messages to the LLM, expect response soon
             self._waiting_for_llm = True
