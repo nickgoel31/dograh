@@ -6,8 +6,7 @@ from pipecat.frames.frames import (
     InterimTranscriptionFrame,
     TranscriptionFrame,
     UserStoppedSpeakingFrame,
-    UserStartedSpeakingFrame,
-    InterruptionFrame,
+    UserStartedSpeakingFrame
 )
 from pipecat.processors.frame_processor import FrameProcessor, FrameDirection
 
@@ -51,7 +50,7 @@ class InterimTranscriptionHandler(FrameProcessor):
             # Phase 5: Barge-in support. Trigger bot interruption immediately when user speaks.
             if not self._interruption_triggered:
                 self._interruption_triggered = True
-                await self.push_frame(InterruptionFrame(), direction)
+                await self.push_frame(UserStartedSpeakingFrame(), direction)
 
             # Check fast keywords
             matched_intent = any(re.search(p, text.lower()) for p in self._intent_patterns)
