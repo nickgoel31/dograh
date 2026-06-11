@@ -114,7 +114,7 @@ def create_stt_service(
             settings=DeepgramSTTSettings(
                 language=language,
                 profanity_filter=False,
-                endpointing=100,
+                endpointing=150,
                 model=user_config.stt.model,
                 keyterm=keyterms or [],
             ),

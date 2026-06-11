@@ -112,7 +112,7 @@ def _create_realtime_user_turn_config(provider: str):
                 start=[VADUserTurnStartStrategy(enable_interruptions=False)],
                 stop=[SpeechTimeoutUserTurnStopStrategy()],
             ),
-            SileroVADAnalyzer(params=VADParams(stop_secs=0.2)),
+            SileroVADAnalyzer(params=VADParams(stop_secs=0.4, min_volume=0.6)),
         )
 
     if provider == ServiceProviders.OPENAI_REALTIME.value:
@@ -142,7 +142,7 @@ def _create_realtime_user_turn_config(provider: str):
             start=[VADUserTurnStartStrategy()],
             stop=[SpeechTimeoutUserTurnStopStrategy()],
         ),
-        SileroVADAnalyzer(params=VADParams(stop_secs=0.2)),
+        SileroVADAnalyzer(params=VADParams(stop_secs=0.4, min_volume=0.6)),
     )
 
 
@@ -580,7 +580,7 @@ async def _run_pipeline(
 
     assistant_params = LLMAssistantAggregatorParams(
         correct_aggregation_callback=engine.create_aggregation_correction_callback(),
-        enable_auto_context_summarization=True,
+        enable_auto_context_summarization=not is_realtime,
         auto_context_summarization_config=auto_summarization_config
     )
 
@@ -589,7 +589,7 @@ async def _run_pipeline(
         FunctionCallUserMuteStrategy(),
         CallbackUserMuteStrategy(should_mute_callback=engine.should_mute_user),
     ]
-    user_vad_analyzer = SileroVADAnalyzer(params=VADParams(stop_secs=0.2))
+    user_vad_analyzer = SileroVADAnalyzer(params=VADParams(stop_secs=0.4, min_volume=0.6))
 
     # Configure turn strategies based on STT provider, model, and workflow configuration
     if is_realtime:
