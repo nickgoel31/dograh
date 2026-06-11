@@ -180,6 +180,10 @@ class CostCalculator:
         ):
             return ServiceProviders.DEEPGRAM
 
+        # Smallest AI Pulse models
+        if "pulse" in model_lower:
+            return ServiceProviders.SMALLEST_PULSE
+
         # Default to first available provider for the service type
         service_providers = self.pricing_registry.get(service_type, {})
         if service_providers:

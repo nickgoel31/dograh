@@ -32,6 +32,8 @@ CORS_ALLOWED_ORIGINS = [
 AUTH_PROVIDER = os.getenv("AUTH_PROVIDER", "local")
 DOGRAH_MPS_SECRET_KEY = os.getenv("DOGRAH_MPS_SECRET_KEY", None)
 MPS_API_URL = os.getenv("MPS_API_URL", "https://services.dograh.com")
+SMALLEST_AI_API_KEY = os.getenv("SMALLEST_AI_API_KEY", None)
+
 
 # Storage Configuration
 ENABLE_AWS_S3 = os.getenv("ENABLE_AWS_S3", "false").lower() == "true"

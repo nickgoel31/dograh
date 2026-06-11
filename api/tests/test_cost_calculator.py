@@ -14,14 +14,17 @@ def test_cost_calculator():
             }
         },
         "tts": {"ElevenLabsTTSService#0|||eleven_flash_v2_5": 2399},
-        "stt": {"DeepgramSTTService#0|||nova-3-general": 177.21536946296692},
+        "stt": {
+            "DeepgramSTTService#0|||nova-3-general": 177.21536946296692,
+            "SmallestPulseTranscriber#0|||pulse": 100.0,
+        },
         "call_duration_seconds": 179,
     }
 
     result = cost_calculator.calculate_total_cost(sample_usage)
     assert result["llm_cost"] == 45380 * 0.40 / 1_000_000 + 496 * 1.60 / 1_000_000
     assert result["tts_cost"] == 2399 * 0.0256 / 1_000
-    assert result["stt_cost"] == 177.21536946296692 / 60 * 0.0077
+    assert result["stt_cost"] == (177.21536946296692 / 60 * 0.0077) + (100.0 / 60 * 0.008)
     assert (
         abs(
             result["total"]

@@ -5,9 +5,10 @@ import aiohttp
 from fastapi import HTTPException
 from loguru import logger
 
-from api.constants import MPS_API_URL
+from api.constants import MPS_API_URL, SMALLEST_AI_API_KEY
 from api.services.configuration.registry import ServiceProviders
 from api.services.pipecat.minimax_tts import MiniMaxOwnedSessionTTSService
+from api.services.pipecat.smallest_pulse import SmallestPulseTranscriber
 from api.utils.url_security import validate_user_configured_service_url
 from pipecat.services.assemblyai.stt import AssemblyAISTTService, AssemblyAISTTSettings
 from pipecat.services.aws.llm import AWSBedrockLLMService, AWSBedrockLLMSettings
@@ -279,6 +280,30 @@ def create_stt_service(
             region=region,
             settings=AzureSTTSettings(language=pipecat_language),
             sample_rate=audio_config.transport_in_sample_rate,
+        )
+    elif user_config.stt.provider == ServiceProviders.SMALLEST_PULSE.value:
+        api_key = user_config.stt.api_key or SMALLEST_AI_API_KEY
+        if not api_key:
+            raise HTTPException(
+                status_code=400,
+                detail="Smallest AI Pulse API key is required. Configure it or set the SMALLEST_AI_API_KEY environment variable.",
+            )
+        language = getattr(user_config.stt, "language", None) or "en"
+        eou_timeout_ms = getattr(user_config.stt, "eou_timeout_ms", None) or 800
+
+        if audio_config.transport_in_sample_rate == 8000:
+            sample_rate = 8000
+            encoding = "mulaw"
+        else:
+            sample_rate = 16000
+            encoding = "linear16"
+
+        return SmallestPulseTranscriber(
+            api_key=api_key,
+            language=language,
+            sample_rate=sample_rate,
+            encoding=encoding,
+            eou_timeout_ms=eou_timeout_ms,
         )
     else:
         raise HTTPException(

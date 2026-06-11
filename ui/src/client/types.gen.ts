@@ -6648,6 +6648,50 @@ export type DeleteWorkflowRunForAuditApiV1SuperuserRunsRunIdDeleteResponses = {
     200: unknown;
 };
 
+export type DeleteAllWorkflowRunsApiV1SuperuserRunsDeleteData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Org Id
+         *
+         * If provided, only delete runs for this organization
+         */
+        org_id?: number | null;
+    };
+    url: '/api/v1/superuser/runs';
+};
+
+export type DeleteAllWorkflowRunsApiV1SuperuserRunsDeleteErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteAllWorkflowRunsApiV1SuperuserRunsDeleteError = DeleteAllWorkflowRunsApiV1SuperuserRunsDeleteErrors[keyof DeleteAllWorkflowRunsApiV1SuperuserRunsDeleteErrors];
+
+export type DeleteAllWorkflowRunsApiV1SuperuserRunsDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
 export type ValidateWorkflowApiV1WorkflowWorkflowIdValidatePostData = {
     body?: never;
     headers?: {
@@ -8270,6 +8314,54 @@ export type GetCampaignsApiV1CampaignGetResponses = {
 };
 
 export type GetCampaignsApiV1CampaignGetResponse = GetCampaignsApiV1CampaignGetResponses[keyof GetCampaignsApiV1CampaignGetResponses];
+
+export type DeleteCampaignApiV1CampaignCampaignIdDeleteData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Campaign Id
+         */
+        campaign_id: number;
+    };
+    query?: never;
+    url: '/api/v1/campaign/{campaign_id}';
+};
+
+export type DeleteCampaignApiV1CampaignCampaignIdDeleteErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteCampaignApiV1CampaignCampaignIdDeleteError = DeleteCampaignApiV1CampaignCampaignIdDeleteErrors[keyof DeleteCampaignApiV1CampaignCampaignIdDeleteErrors];
+
+export type DeleteCampaignApiV1CampaignCampaignIdDeleteResponses = {
+    /**
+     * Response Delete Campaign Api V1 Campaign  Campaign Id  Delete
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: unknown;
+    };
+};
+
+export type DeleteCampaignApiV1CampaignCampaignIdDeleteResponse = DeleteCampaignApiV1CampaignCampaignIdDeleteResponses[keyof DeleteCampaignApiV1CampaignCampaignIdDeleteResponses];
 
 export type GetCampaignApiV1CampaignCampaignIdGetData = {
     body?: never;

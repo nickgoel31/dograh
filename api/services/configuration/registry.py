@@ -39,6 +39,8 @@ from api.services.configuration.options import (
     SARVAM_V2_VOICES,
     SARVAM_V3_VOICES,
     SPEECHMATICS_STT_LANGUAGES,
+    SMALLEST_PULSE_LANGUAGES,
+    SMALLEST_PULSE_MODELS,
 )
 from api.services.configuration.options.google import GOOGLE_VERTEX_MODELS
 
@@ -65,6 +67,7 @@ class ServiceProviders(str, Enum):
     DOGRAH = "dograh"
     SARVAM = "sarvam"
     SMALLEST = "smallest"
+    SMALLEST_PULSE = "smallest_pulse"
     SPEECHMATICS = "speechmatics"
     CAMB = "camb"
     AWS_BEDROCK = "aws_bedrock"
@@ -107,6 +110,7 @@ class BaseServiceConfiguration(BaseModel):
         ServiceProviders.GOOGLE_VERTEX_REALTIME,
         ServiceProviders.AZURE_REALTIME,
         ServiceProviders.SARVAM,
+        ServiceProviders.SMALLEST_PULSE,
     ]
     api_key: str | list[str]
 
@@ -266,6 +270,8 @@ AZURE_REALTIME_PROVIDER_MODEL_CONFIG = provider_model_config(
     description="Azure OpenAI Realtime API — low-latency speech-to-speech conversations.",
     provider_docs_url="https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/realtime-audio-quickstart",
 )
+SMALLEST_PULSE_PROVIDER_MODEL_CONFIG = provider_model_config("Smallest AI Pulse")
+
 
 OPENAI_MODELS = [
     "gpt-4.1",
@@ -1442,6 +1448,29 @@ class AzureSpeechSTTConfiguration(BaseSTTConfiguration):
     )
 
 
+@register_stt
+class SmallestPulseSTTConfiguration(BaseSTTConfiguration):
+    model_config = SMALLEST_PULSE_PROVIDER_MODEL_CONFIG
+    provider: Literal[ServiceProviders.SMALLEST_PULSE] = ServiceProviders.SMALLEST_PULSE
+    model: str = Field(
+        default="pulse",
+        description="Smallest AI Pulse STT model.",
+        json_schema_extra={"examples": SMALLEST_PULSE_MODELS},
+    )
+    language: str = Field(
+        default="en",
+        description="ISO 639-1 language code.",
+        json_schema_extra={
+            "examples": SMALLEST_PULSE_LANGUAGES,
+            "allow_custom_input": True,
+        },
+    )
+    eou_timeout_ms: int = Field(
+        default=800,
+        description="EOU Timeout (ms). Milliseconds to wait after speech ends before finalizing. Lower = faster agent response.",
+    )
+
+
 STTConfig = Annotated[
     Union[
         DeepgramSTTConfiguration,
@@ -1455,6 +1484,7 @@ STTConfig = Annotated[
         AssemblyAISTTConfiguration,
         GladiaSTTConfiguration,
         AzureSpeechSTTConfiguration,
+        SmallestPulseSTTConfiguration,
     ],
     Field(discriminator="provider"),
 ]

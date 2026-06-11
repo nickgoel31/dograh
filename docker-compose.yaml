@@ -180,7 +180,11 @@ services:
       POSTHOG_API_KEY: "phc_ItizB1dP6yv7ZYobbcqrpxTdbomDA8hJFSEmAMdYvIr"
       POSTHOG_HOST: "https://us.i.posthog.com"
 
+      SMALLEST_AI_API_KEY: "${SMALLEST_AI_API_KEY:-}"
+
+
     ports:
+
       - "8000:8000"
     depends_on:
       postgres:

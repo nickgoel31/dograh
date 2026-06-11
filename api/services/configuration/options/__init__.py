@@ -36,8 +36,10 @@ from .sarvam import (
     SARVAM_V3_VOICES,
 )
 from .speechmatics import SPEECHMATICS_STT_LANGUAGES
+from .smallest_pulse import SMALLEST_PULSE_LANGUAGES, SMALLEST_PULSE_MODELS
 
 __all__ = [
+
     "AZURE_EMBEDDING_MODELS",
     "AZURE_MODELS",
     "AZURE_REALTIME_API_VERSIONS",
@@ -72,4 +74,6 @@ __all__ = [
     "SARVAM_V2_VOICES",
     "SARVAM_V3_VOICES",
     "SPEECHMATICS_STT_LANGUAGES",
+    "SMALLEST_PULSE_LANGUAGES",
+    "SMALLEST_PULSE_MODELS",
 ]
