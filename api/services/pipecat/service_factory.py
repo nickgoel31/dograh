@@ -772,12 +772,24 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
         from api.services.pipecat.realtime.gemini_live import (
             DograhGeminiLiveLLMService,
         )
+        from pipecat.services.google.gemini_live.llm import (
+            ContextWindowCompressionParams,
+            GeminiVADParams,
+        )
 
         # Gemini Live enables input/output audio transcription by default
         # in its _connect() method — no need to configure it explicitly.
         settings_kwargs = {
             "model": model,
             "voice": voice or "Puck",
+            "context_window_compression": ContextWindowCompressionParams(
+                enabled=True,
+                trigger_tokens=40000,
+            ),
+            "vad": GeminiVADParams(
+                disabled=False,
+                silence_duration_ms=2000,
+            ),
         }
         if language:
             settings_kwargs["language"] = language
@@ -789,6 +801,10 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
         from api.services.pipecat.realtime.gemini_live_vertex import (
             DograhGeminiLiveVertexLLMService,
         )
+        from pipecat.services.google.gemini_live.llm import (
+            ContextWindowCompressionParams,
+            GeminiVADParams,
+        )
 
         project_id = getattr(realtime_config, "project_id", None)
         location = getattr(realtime_config, "location", None) or "us-east4"
@@ -797,6 +813,14 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
         settings_kwargs = {
             "model": model,
             "voice": voice or "Charon",
+            "context_window_compression": ContextWindowCompressionParams(
+                enabled=True,
+                trigger_tokens=40000,
+            ),
+            "vad": GeminiVADParams(
+                disabled=False,
+                silence_duration_ms=2000,
+            ),
         }
         if language:
             settings_kwargs["language"] = language
