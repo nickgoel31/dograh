@@ -56,6 +56,7 @@ from pipecat.services.sarvam.tts import SarvamTTSService, SarvamTTSSettings
 from pipecat.services.speaches.llm import SpeachesLLMService, SpeachesLLMSettings
 from pipecat.services.speaches.stt import SpeachesSTTService, SpeachesSTTSettings
 from pipecat.services.speaches.tts import SpeachesTTSService, SpeachesTTSSettings
+from pipecat.services.smallest.stt import SmallestSTTService, SmallestSTTSettings, SmallestSTTModel
 from pipecat.services.speechmatics.stt import (
     SpeechmaticsSTTService,
     SpeechmaticsSTTSettings,
@@ -153,6 +154,26 @@ def create_stt_service(
         return CartesiaSTTService(
             api_key=user_config.stt.api_key,
             sample_rate=audio_config.transport_in_sample_rate,
+        )
+    elif user_config.stt.provider == ServiceProviders.SMALLEST_PULSE.value:
+        language = getattr(user_config.stt, "language", None) or "en"
+        try:
+            lang_enum = Language(language)
+        except ValueError:
+            lang_enum = Language.EN
+            
+        encoding = "mulaw" if audio_config.transport_in_sample_rate == 8000 else "linear16"
+        eou_timeout_ms = getattr(user_config.stt, "eou_timeout_ms", 800)
+        
+        return SmallestSTTService(
+            api_key=user_config.stt.api_key,
+            encoding=encoding,
+            sample_rate=audio_config.transport_in_sample_rate,
+            settings=SmallestSTTSettings(
+                model=SmallestSTTModel.PULSE,
+                language=lang_enum,
+                eou_timeout_ms=eou_timeout_ms,
+            )
         )
     elif user_config.stt.provider == ServiceProviders.DOGRAH.value:
         base_url = MPS_API_URL.replace("http://", "ws://").replace("https://", "wss://")

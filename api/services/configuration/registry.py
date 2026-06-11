@@ -65,6 +65,7 @@ class ServiceProviders(str, Enum):
     DOGRAH = "dograh"
     SARVAM = "sarvam"
     SMALLEST = "smallest"
+    SMALLEST_PULSE = "smallest_pulse"
     SPEECHMATICS = "speechmatics"
     CAMB = "camb"
     AWS_BEDROCK = "aws_bedrock"
@@ -107,6 +108,7 @@ class BaseServiceConfiguration(BaseModel):
         ServiceProviders.GOOGLE_VERTEX_REALTIME,
         ServiceProviders.AZURE_REALTIME,
         ServiceProviders.SARVAM,
+        ServiceProviders.SMALLEST_PULSE,
     ]
     api_key: str | list[str]
 
@@ -242,6 +244,7 @@ DEEPGRAM_PROVIDER_MODEL_CONFIG = provider_model_config("Deepgram")
 ELEVENLABS_PROVIDER_MODEL_CONFIG = provider_model_config("ElevenLabs")
 CARTESIA_PROVIDER_MODEL_CONFIG = provider_model_config("Cartesia")
 SARVAM_PROVIDER_MODEL_CONFIG = provider_model_config("Sarvam")
+SMALLEST_PULSE_PROVIDER_MODEL_CONFIG = provider_model_config("Smallest AI Pulse")
 CAMB_PROVIDER_MODEL_CONFIG = provider_model_config("Camb.ai")
 RIME_PROVIDER_MODEL_CONFIG = provider_model_config("Rime")
 GOOGLE_CLOUD_PROVIDER_MODEL_CONFIG = provider_model_config("Google Cloud")
@@ -1442,8 +1445,23 @@ class AzureSpeechSTTConfiguration(BaseSTTConfiguration):
     )
 
 
+@register_stt
+class SmallestPulseSTTConfiguration(BaseSTTConfiguration):
+    provider: Literal[ServiceProviders.SMALLEST_PULSE] = ServiceProviders.SMALLEST_PULSE
+    model: Literal["pulse"] = Field(
+        default="pulse",
+        json_schema_extra=SMALLEST_PULSE_PROVIDER_MODEL_CONFIG,
+    )
+    language: Literal["en", "hi"] = Field(
+        default="en",
+        json_schema_extra={"allow_custom_input": True},
+    )
+    eou_timeout_ms: int = Field(default=800, ge=0)
+
+
 STTConfig = Annotated[
     Union[
+        SmallestPulseSTTConfiguration,
         DeepgramSTTConfiguration,
         CartesiaSTTConfiguration,
         OpenAISTTConfiguration,
