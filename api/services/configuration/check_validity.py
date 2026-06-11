@@ -62,7 +62,6 @@ class UserConfigurationValidator:
             ServiceProviders.GLADIA.value: self._check_gladia_api_key,
             ServiceProviders.RIME.value: self._check_rime_api_key,
             ServiceProviders.MINIMAX.value: self._check_minimax_api_key,
-            ServiceProviders.SMALLEST_PULSE.value: self._check_smallest_pulse_api_key,
         }
 
     async def validate(
@@ -397,7 +396,4 @@ class UserConfigurationValidator:
     def _check_minimax_api_key(self, model: str, api_key: str) -> bool:
         # MiniMax doesn't publish a cheap key-validation endpoint; trust the key
         # at save time and surface auth errors at first call (same as Rime/Sarvam).
-        return True
-
-    def _check_smallest_pulse_api_key(self, model: str, api_key: str) -> bool:
         return True

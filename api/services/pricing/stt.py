@@ -22,9 +22,5 @@ STT_PRICING: Dict[str, Dict[str, TimePricingModel]] = {
         "gpt-4o-transcribe": TimePricingModel(Decimal("0.015") / 60),
         "default": TimePricingModel(Decimal("0.015") / 60),
     },
-    ServiceProviders.SMALLEST_PULSE: {
-        "pulse": TimePricingModel(Decimal("0.008") / 60),
-        "default": TimePricingModel(Decimal("0.008") / 60),
-    },
     "default": {"default": TimePricingModel(Decimal("0.0077") / 60)},
 }
