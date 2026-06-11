@@ -87,14 +87,10 @@ def build_pipeline(
     if filler_processor:
         processors.append(filler_processor)
 
-    from api.processors.sentence_aggregator import SentenceAggregator
-    sentence_aggregator = SentenceAggregator(max_tokens=20)
-
     processors.extend(
         [
             llm,  # LLM
             *post_llm,
-            sentence_aggregator,  # Aggregates tokens and streams sentences to TTS
             tts,  # TTS
             transport.output(),  # Transport bot output
             audio_buffer,  # AudioBufferProcessor - records both input and output audio
