@@ -164,7 +164,8 @@ def create_stt_service(
             lang_val = language
             
         encoding = "mulaw" if audio_config.transport_in_sample_rate == 8000 else "linear16"
-        eou_timeout_ms = getattr(user_config.stt, "eou_timeout_ms", 300)
+        # Force 250ms EOU timeout to override any old 800ms values saved in the database
+        eou_timeout_ms = 250
         
         return SmallestSTTService(
             api_key=user_config.stt.api_key,
