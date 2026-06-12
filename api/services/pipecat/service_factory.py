@@ -290,8 +290,7 @@ def create_stt_service(
             sample_rate=audio_config.transport_in_sample_rate,
         )
     elif user_config.stt.provider == ServiceProviders.AZURE_SPEECH.value:
-        from pipecat.services.tts_service import TextAggregationMode
-from pipecat.transcriptions.language import Language as PipecatLanguage
+        from pipecat.transcriptions.language import Language as PipecatLanguage
 
         language_code = getattr(user_config.stt, "language", None) or "en-US"
         region = getattr(user_config.stt, "region", None) or "eastus"
