@@ -654,8 +654,6 @@ async def _run_pipeline(
             )
 
     user_params = LLMUserAggregatorParams(
-        aggregation_timeout=0.0,
-        turn_emulated_vad_timeout=0.3,
         user_turn_strategies=user_turn_strategies,
         user_mute_strategies=user_mute_strategies,
         user_idle_timeout=max_user_idle_timeout,
