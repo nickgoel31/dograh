@@ -113,7 +113,7 @@ def _create_realtime_user_turn_config(provider: str):
                 stop=[SpeechTimeoutUserTurnStopStrategy()],
             ),
             SileroVADAnalyzer(params=VADParams(
-                stop_secs=0.3,
+                stop_secs=0.2,
                 start_secs=0.2,
                 confidence=0.7,
                 min_volume=0.4,
@@ -148,7 +148,7 @@ def _create_realtime_user_turn_config(provider: str):
             stop=[SpeechTimeoutUserTurnStopStrategy()],
         ),
         SileroVADAnalyzer(params=VADParams(
-            stop_secs=0.3,
+            stop_secs=0.2,
             start_secs=0.2,
             confidence=0.7,
             min_volume=0.4,
@@ -600,7 +600,7 @@ async def _run_pipeline(
         CallbackUserMuteStrategy(should_mute_callback=engine.should_mute_user),
     ]
     user_vad_analyzer = SileroVADAnalyzer(params=VADParams(
-        stop_secs=0.3,
+        stop_secs=0.2,
         start_secs=0.2,
         confidence=0.7,
         min_volume=0.4,

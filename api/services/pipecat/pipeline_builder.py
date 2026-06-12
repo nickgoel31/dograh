@@ -2,6 +2,7 @@ import os
 
 from loguru import logger
 
+from api.services.pipecat.aggregators import FastSentenceAggregator
 from api.services.pipecat.audio_config import AudioConfig
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
@@ -87,10 +88,13 @@ def build_pipeline(
     if filler_processor:
         processors.append(filler_processor)
 
+    fast_sentence_aggregator = FastSentenceAggregator()
+
     processors.extend(
         [
             llm,  # LLM
             *post_llm,
+            fast_sentence_aggregator, # Custom fast sentence aggregator
             tts,  # TTS
             transport.output(),  # Transport bot output
             audio_buffer,  # AudioBufferProcessor - records both input and output audio
