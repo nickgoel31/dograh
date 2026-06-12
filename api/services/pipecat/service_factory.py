@@ -61,7 +61,6 @@ from pipecat.services.speechmatics.stt import (
     SpeechmaticsSTTService,
     SpeechmaticsSTTSettings,
 )
-from pipecat.services.tts_service import TextAggregationMode
 from pipecat.transcriptions.language import Language
 from pipecat.utils.text.xml_function_tag_filter import XMLFunctionTagFilter
 
@@ -324,7 +323,6 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
     xml_function_tag_filter = XMLFunctionTagFilter()
     if user_config.tts.provider == ServiceProviders.DEEPGRAM.value:
         return DeepgramTTSService(
-            text_aggregation_mode=TextAggregationMode.TOKEN,
             api_key=user_config.tts.api_key,
             settings=DeepgramTTSSettings(voice=user_config.tts.voice),
             text_filters=[xml_function_tag_filter],
@@ -338,7 +336,6 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             _validate_runtime_service_url(base_url, "base_url")
             kwargs["base_url"] = base_url
         return OpenAITTSService(
-            text_aggregation_mode=TextAggregationMode.TOKEN,
             api_key=user_config.tts.api_key,
             settings=OpenAITTSSettings(model=user_config.tts.model),
             text_filters=[xml_function_tag_filter],
@@ -363,7 +360,6 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             settings_kwargs["speaking_rate"] = speed
 
         return GoogleTTSService(
-            text_aggregation_mode=TextAggregationMode.TOKEN,
             credentials=credentials,
             location=location,
             settings=GoogleTTSSettings(**settings_kwargs),
@@ -385,7 +381,6 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             "http://", "ws://"
         )
         return ElevenLabsTTSService(
-            text_aggregation_mode=TextAggregationMode.TOKEN,
             reconnect_on_error=False,
             api_key=user_config.tts.api_key,
             url=elevenlabs_url,
@@ -412,7 +407,6 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             GenerationConfig(**gen_config_kwargs) if gen_config_kwargs else None
         )
         return CartesiaTTSService(
-            text_aggregation_mode=TextAggregationMode.TOKEN,
             api_key=user_config.tts.api_key,
             settings=CartesiaTTSSettings(
                 voice=user_config.tts.voice,
@@ -431,7 +425,6 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
         # Convert HTTP URL to WebSocket URL for TTS
         base_url = MPS_API_URL.replace("http://", "ws://").replace("https://", "wss://")
         return DograhTTSService(
-            text_aggregation_mode=TextAggregationMode.TOKEN,
             base_url=base_url,
             api_key=user_config.tts.api_key,
             settings=DograhTTSSettings(
@@ -449,7 +442,6 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
         voice_id = int(getattr(user_config.tts, "voice", None) or "147320")
         language = getattr(user_config.tts, "language", None) or "en-us"
         tts = CambTTSService(
-            text_aggregation_mode=TextAggregationMode.TOKEN,
             api_key=user_config.tts.api_key,
             voice_id=voice_id,
             model=user_config.tts.model,
@@ -462,7 +454,6 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
     elif user_config.tts.provider == ServiceProviders.SPEACHES.value:
         _validate_runtime_service_url(user_config.tts.base_url, "base_url")
         return SpeachesTTSService(
-            text_aggregation_mode=TextAggregationMode.TOKEN,
             base_url=user_config.tts.base_url,
             api_key=user_config.tts.api_key or "none",
             settings=SpeachesTTSSettings(
@@ -493,7 +484,6 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
         if speed and speed != 1.0:
             settings_kwargs["speedAlpha"] = speed
         return RimeTTSService(
-            text_aggregation_mode=TextAggregationMode.TOKEN,
             api_key=user_config.tts.api_key,
             settings=RimeTTSSettings(**settings_kwargs),
             text_filters=[xml_function_tag_filter],
@@ -520,7 +510,6 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
 
         voice = getattr(user_config.tts, "voice", None) or "anushka"
         return SarvamTTSService(
-            text_aggregation_mode=TextAggregationMode.TOKEN,
             api_key=user_config.tts.api_key,
             settings=SarvamTTSSettings(
                 model=user_config.tts.model,
@@ -536,7 +525,6 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
 
         voice = getattr(user_config.tts, "voice", None) or "sophia"
         return SmallestTTSService(
-            text_aggregation_mode=TextAggregationMode.TOKEN,
             api_key=user_config.tts.api_key,
             settings=SmallestTTSService.Settings(
                 voice=voice,
@@ -567,7 +555,6 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
 
         session = aiohttp.ClientSession()
         return MiniMaxOwnedSessionTTSService(
-            text_aggregation_mode=TextAggregationMode.TOKEN,
             api_key=user_config.tts.api_key,
             group_id=group_id,
             base_url=base_url,
@@ -595,7 +582,6 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
         if rate:
             settings_kwargs["rate"] = rate
         return AzureTTSService(
-            text_aggregation_mode=TextAggregationMode.TOKEN,
             api_key=user_config.tts.api_key,
             region=region,
             settings=AzureTTSSettings(**settings_kwargs),
