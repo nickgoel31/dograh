@@ -32,6 +32,8 @@ if TYPE_CHECKING:
     LLMService = Union[OpenAILLMService, AnthropicLLMService, GoogleLLMService]
 
 import asyncio
+import hashlib
+import json
 
 from loguru import logger
 
@@ -152,6 +154,7 @@ class PipecatEngine:
         self._context_summarization_manager: Optional[ContextSummarizationManager] = (
             None
         )
+        self._last_node_context_hash: str = ""
 
     async def _get_organization_id(self) -> Optional[int]:
         """Get and cache the organization ID from workflow run."""
@@ -202,6 +205,22 @@ class PipecatEngine:
             logger.error(f"Error initializing {self.__class__.__name__}: {e}")
             raise
 
+    MAX_HISTORY_TURNS = 6  # 6 user + 6 assistant = 12 messages max
+
+    def _trim_context_history(self, messages: list) -> list:
+        """Keep system message + last N turns. Never trim system message (index 0)."""
+        if not messages:
+            return messages
+        
+        system_msgs = [m for m in messages if m.get("role") == "system"]
+        non_system = [m for m in messages if m.get("role") != "system"]
+        
+        # Keep only last MAX_HISTORY_TURNS * 2 messages (user + assistant pairs)
+        if len(non_system) > self.MAX_HISTORY_TURNS * 2:
+            non_system = non_system[-(self.MAX_HISTORY_TURNS * 2):]
+        
+        return system_msgs + non_system
+
     async def _update_llm_context(self, system_prompt: str, functions: list[dict]):
         """Update LLM settings with the composed system prompt and tool list."""
 
@@ -213,6 +232,15 @@ class PipecatEngine:
         # _connect (triggered by reconnect) can read tools from it.
         if hasattr(self.llm, "_context") and not self.llm._context and self.context:
             self.llm._context = self.context
+
+        # Trim conversation history to prevent ballooning TTFT on long calls
+        if self.context:
+            try:
+                messages = self.context.get_messages()
+                if messages:
+                    self.context.set_messages(self._trim_context_history(messages))
+            except Exception as e:
+                logger.warning(f"Failed to trim context history: {e}")
 
         await self.llm._update_settings(LLMSettings(system_instruction=system_prompt))
 
@@ -239,7 +267,15 @@ class PipecatEngine:
 
             try:
                 # Perform variable extraction before transitioning to new node
-                await self._perform_variable_extraction_if_needed(self._current_node)
+                if (
+                    self._current_node
+                    and not self._current_node.is_end
+                    and self._current_node.extraction_enabled
+                ):
+                    # Fire extraction as a background task — do NOT await
+                    asyncio.create_task(
+                        self._perform_variable_extraction_if_needed(self._current_node)
+                    )
 
                 # Queue transition speech/audio before switching nodes
                 speech_type = transition_speech_type or "text"
@@ -298,6 +334,8 @@ class PipecatEngine:
 
                     # Queue EndFrame if we just transitioned to EndNode
                     if self._current_node.is_end:
+                        # Keep this one as await — call data must be complete before webhook
+                        await self._perform_variable_extraction_if_needed(self._current_node)
                         await self.end_call_with_reason(
                             EndTaskReason.USER_QUALIFIED.value
                         )
@@ -500,6 +538,15 @@ class PipecatEngine:
                 f"Incomplete: {incomplete}"
             )
 
+    def _node_context_hash(self, node: Node) -> str:
+        """Hash the parts of a node that require full context rebuild."""
+        key = json.dumps({
+            "tool_uuids": sorted(node.tool_uuids or []),
+            "document_uuids": sorted(node.document_uuids or []),
+            "out_edges": sorted([f"{e.get_function_name()}:{e.target}" for e in (node.out_edges or [])]),
+        }, sort_keys=True)
+        return hashlib.md5(key.encode()).hexdigest()
+
     async def _setup_llm_context(self, node: Node) -> None:
         """Common method to set up LLM context"""
         # Set OTel span name for tracing
@@ -507,6 +554,23 @@ class PipecatEngine:
             self.context.set_otel_span_name(f"llm-{node.name}")
         except AttributeError:
             logger.warning(f"context has no set_otel_span_name method")
+
+        new_hash = self._node_context_hash(node)
+        
+        if new_hash == self._last_node_context_hash:
+            # Only the prompt text changed — update system message only, skip function re-registration
+            logger.debug(f"Context hash matched for node {node.name}, skipping tool registration")
+            system_prompt = compose_system_prompt_for_node(
+                node=node,
+                workflow=self.workflow,
+                format_prompt=self._format_prompt,
+                has_recordings=self._has_recordings,
+            )
+            # update_llm_context with empty functions list to skip resetting tools
+            await self._update_llm_context(system_prompt, [])
+            return
+        
+        self._last_node_context_hash = new_hash
 
         # Register transition functions if not an end node
         if not node.is_end:
@@ -889,7 +953,12 @@ class PipecatEngine:
 
     async def handle_llm_text_frame(self, text: str):
         """Accumulate LLM text frames to build reference text."""
+        if not self._current_llm_generation_reference_text:  # empty = first token
+            from api.services.pipecat.event_handlers import _active_turns
+            if str(self._workflow_run_id) in _active_turns:
+                _active_turns[str(self._workflow_run_id)].log_stage("llm_first_token")
         self._current_llm_generation_reference_text += text
+
 
     def is_call_disposed(self):
         """Check whether a call has been disposed by the engine"""

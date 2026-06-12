@@ -1,4 +1,7 @@
 import asyncio
+import time
+import logging
+from dataclasses import dataclass, field
 
 from loguru import logger
 
@@ -20,10 +23,52 @@ from api.tasks.arq import enqueue_job
 from api.tasks.function_names import FunctionNames
 from pipecat.frames.frames import (
     Frame,
+    UserStoppedSpeakingFrame,
+    TranscriptionFrame,
 )
 from pipecat.pipeline.worker import PipelineWorker
 from pipecat.processors.audio.audio_buffer_processor import AudioBufferProcessor
 from pipecat.utils.enums import EndTaskReason
+from pipecat.observers.base_observer import BaseObserver, FramePushed
+
+_latency_log = logging.getLogger("dograh.latency")
+
+@dataclass
+class TurnLatency:
+    turn_id: str
+    vad_endpoint_at: float = 0.0
+    stt_final_at: float = 0.0
+    llm_first_token_at: float = 0.0
+    tts_first_chunk_at: float = 0.0
+
+    def log_stage(self, stage: str):
+        now = time.monotonic()
+        setattr(self, f"{stage}_at", now)
+        if self.vad_endpoint_at > 0:
+            elapsed = (now - self.vad_endpoint_at) * 1000
+            _latency_log.info(f"[LATENCY] turn={self.turn_id} stage={stage} since_vad={elapsed:.0f}ms")
+
+# Module-level store: one entry per active call
+_active_turns: dict[str, TurnLatency] = {}
+
+
+class LatencyObserver(BaseObserver):
+    """Observer to track VAD endpoint and STT final latencies."""
+
+    def __init__(self, workflow_run_id: int):
+        super().__init__()
+        self._workflow_run_id = workflow_run_id
+
+    async def on_push_frame(self, data: FramePushed):
+        frame = data.frame
+        if isinstance(frame, UserStoppedSpeakingFrame):
+            t = TurnLatency(turn_id=str(self._workflow_run_id))
+            t.vad_endpoint_at = time.monotonic()
+            _active_turns[str(self._workflow_run_id)] = t
+        elif isinstance(frame, TranscriptionFrame):
+            if str(self._workflow_run_id) in _active_turns:
+                _active_turns[str(self._workflow_run_id)].log_stage("stt_final")
+
 
 
 async def _capture_call_event(
@@ -76,6 +121,7 @@ def register_event_handlers(
         in_memory_audio_buffer for use by other handlers.
     """
     # Initialize in-memory buffers with proper audio configuration
+    task.add_observer(LatencyObserver(workflow_run_id))
     sample_rate = audio_config.pipeline_sample_rate if audio_config else 16000
     num_channels = 1  # Pipeline audio is always mono
 
