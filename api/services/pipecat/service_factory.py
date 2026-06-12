@@ -158,12 +158,13 @@ def create_stt_service(
     elif user_config.stt.provider == ServiceProviders.SMALLEST_PULSE.value:
         language = getattr(user_config.stt, "language", None) or "en"
         try:
-            lang_enum = Language(language)
+            lang_val = Language(language)
         except ValueError:
-            lang_enum = Language.EN
+            # Fall back to raw string for provider-specific codes like "multi" or "multi-eu"
+            lang_val = language
             
         encoding = "mulaw" if audio_config.transport_in_sample_rate == 8000 else "linear16"
-        eou_timeout_ms = getattr(user_config.stt, "eou_timeout_ms", 800)
+        eou_timeout_ms = getattr(user_config.stt, "eou_timeout_ms", 300)
         
         return SmallestSTTService(
             api_key=user_config.stt.api_key,
@@ -171,7 +172,7 @@ def create_stt_service(
             sample_rate=audio_config.transport_in_sample_rate,
             settings=SmallestSTTSettings(
                 model=SmallestSTTModel.PULSE,
-                language=lang_enum,
+                language=lang_val,
                 eou_timeout_ms=eou_timeout_ms,
             )
         )

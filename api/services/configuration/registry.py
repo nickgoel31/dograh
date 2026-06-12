@@ -1452,11 +1452,14 @@ class SmallestPulseSTTConfiguration(BaseSTTConfiguration):
         default="pulse",
         json_schema_extra=SMALLEST_PULSE_PROVIDER_MODEL_CONFIG,
     )
-    language: Literal["en", "hi"] = Field(
+    language: str = Field(
         default="en",
-        json_schema_extra={"allow_custom_input": True},
+        json_schema_extra={
+            "examples": ["en", "hi", "multi", "multi-eu"],
+            "allow_custom_input": True
+        },
     )
-    eou_timeout_ms: int = Field(default=800, ge=0)
+    eou_timeout_ms: int = Field(default=300, ge=0)
 
 
 STTConfig = Annotated[
