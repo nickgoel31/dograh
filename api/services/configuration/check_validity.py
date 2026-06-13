@@ -311,16 +311,10 @@ class UserConfigurationValidator:
             )
 
     def _check_together_api_key(self, model: str, api_key: str) -> bool:
-        client = openai.OpenAI(api_key=api_key, base_url="https://api.together.xyz/v1")
-        try:
-            client.models.list()
-            return True
-        except Exception:
-            raise ValueError(
-                "Invalid Together AI API key. The key was rejected by the Together API. "
-                "Please check that your API key is correct and active. "
-                "You can verify your keys at https://api.together.ai/settings/api-keys."
-            )
+        # Together AI sometimes rejects model.list() calls with 403 or has transient errors
+        # To prevent blocking users with valid keys, we bypass strict validation here.
+        # If the key is truly invalid, it will fail during the actual call.
+        return True
 
     def _validate_elevenlabs_api_key(self, model: str, api_key: str) -> bool:
         return True
