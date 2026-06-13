@@ -33,12 +33,8 @@ class AudioVolumeProcessor(FrameProcessor):
             # Multiply by volume and clip to prevent integer overflow/distortion
             scaled_np = np.clip(audio_np * self._volume, -32768, 32767).astype(np.int16)
             
-            # Create a new AudioRawFrame with the scaled audio bytes
-            scaled_frame = AudioRawFrame(
-                audio=scaled_np.tobytes(),
-                sample_rate=frame.sample_rate,
-                num_channels=frame.num_channels
-            )
+            import dataclasses
+            scaled_frame = dataclasses.replace(frame, audio=scaled_np.tobytes())
             
             await self.push_frame(scaled_frame, direction)
         else:
