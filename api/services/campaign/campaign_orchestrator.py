@@ -530,6 +530,14 @@ class CampaignOrchestrator:
         """Check if campaign has no activity for 1 hour."""
         campaign_id = campaign.id
 
+        # Don't mark complete if source is still syncing or auto-sync is enabled
+        if campaign.auto_sync_enabled or campaign.source_sync_status != "completed":
+            logger.debug(
+                f"campaign_id: {campaign_id} - Source sync not completed or auto-sync enabled, "
+                f"not marking complete"
+            )
+            return False
+
         # Don't mark complete if batch is in progress
         if campaign_id in self._batch_in_progress:
             logger.debug(
