@@ -40,7 +40,6 @@ def build_pipeline(
     recording_router=None,
     interim_handler=None,
     filler_processor=None,
-    volume_processor=None,
 ):
     """Build the main pipeline with all components.
 
@@ -97,14 +96,6 @@ def build_pipeline(
             *post_llm,
             fast_sentence_aggregator, # Custom fast sentence aggregator
             tts,  # TTS
-        ]
-    )
-
-    if volume_processor:
-        processors.append(volume_processor)
-
-    processors.extend(
-        [
             transport.output(),  # Transport bot output
             audio_buffer,  # AudioBufferProcessor - records both input and output audio
             assistant_context_aggregator,  # Assistant spoken responses
