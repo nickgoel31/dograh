@@ -915,7 +915,7 @@ class DograhTTSService(BaseTTSConfiguration):
     speed: float = Field(default=1.0, ge=0.5, le=2.0, description="Speed of the voice.")
 
 
-CARTESIA_TTS_MODELS = ["sonic-3"]
+CARTESIA_TTS_MODELS = ["sonic-3", "sonic-3.5"]
 
 
 @register_tts
