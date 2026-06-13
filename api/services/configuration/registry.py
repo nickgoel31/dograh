@@ -1009,6 +1009,9 @@ class SmallestTTSConfiguration(BaseTTSConfiguration):
     speed: float = Field(
         default=1.0, ge=0.5, le=2.0, description="Speech speed multiplier."
     )
+    volume: float = Field(
+        default=1.0, ge=0.1, le=5.0, description="Volume multiplier for generated speech.", json_schema_extra={"format": "slider"}
+    )
 
 
 CAMB_TTS_MODELS = ["mars-flash", "mars-pro", "mars-instruct"]

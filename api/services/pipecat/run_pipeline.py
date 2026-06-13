@@ -12,6 +12,7 @@ from api.services.integrations import (
     create_runtime_sessions,
 )
 from api.services.pipecat.audio_config import AudioConfig, create_audio_config
+from api.services.pipecat.audio_volume_processor import AudioVolumeProcessor
 from api.services.pipecat.event_handlers import (
     register_audio_data_handler,
     register_event_handlers,
@@ -756,6 +757,12 @@ async def _run_pipeline(
     interim_handler = InterimTranscriptionHandler()
     filler_processor = FillerAudioProcessor(tts_service=tts, delay_ms=500) if tts else None
 
+    volume_processor = None
+    if not is_realtime and user_config.tts.provider == ServiceProviders.SMALLEST.value:
+        volume = getattr(user_config.tts, "volume", 1.0)
+        if volume != 1.0:
+            volume_processor = AudioVolumeProcessor(volume=volume)
+
     # Build the pipeline
     if is_realtime:
         pipeline = build_realtime_pipeline(
@@ -783,6 +790,7 @@ async def _run_pipeline(
             recording_router=recording_router,
             interim_handler=interim_handler,
             filler_processor=filler_processor,
+            volume_processor=volume_processor,
         )
 
     # Create pipeline task with audio configuration

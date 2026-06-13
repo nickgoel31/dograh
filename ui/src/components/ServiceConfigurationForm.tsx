@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -783,6 +784,38 @@ export function ServiceConfigurationForm({
                         required: service !== "embeddings" && providerSchema.required?.includes(field),
                     })}
                 />
+            );
+        }
+
+        if (actualSchema?.format === "slider" || field === "volume") {
+            const value = watch(`${service}_${field}`) as number || 1.0;
+            return (
+                <div className="flex items-center space-x-4">
+                    <Slider
+                        min={0.1}
+                        max={5.0}
+                        step={0.1}
+                        value={[value]}
+                        onValueChange={(vals) => {
+                            setValue(`${service}_${field}`, vals[0], { shouldDirty: true });
+                        }}
+                        className="flex-1"
+                    />
+                    <Input
+                        type="number"
+                        min={0.1}
+                        max={5.0}
+                        step={0.1}
+                        className="w-20"
+                        value={value}
+                        onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val)) {
+                                setValue(`${service}_${field}`, val, { shouldDirty: true });
+                            }
+                        }}
+                    />
+                </div>
             );
         }
 
