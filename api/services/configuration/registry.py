@@ -81,6 +81,7 @@ class ServiceProviders(str, Enum):
     GOOGLE_REALTIME = "google_realtime"
     GOOGLE_VERTEX_REALTIME = "google_vertex_realtime"
     AZURE_REALTIME = "azure_realtime"
+    TOGETHER = "together"
 
 
 class BaseServiceConfiguration(BaseModel):
@@ -100,6 +101,8 @@ class BaseServiceConfiguration(BaseModel):
         ServiceProviders.GLADIA,
         ServiceProviders.RIME,
         ServiceProviders.MINIMAX,
+        ServiceProviders.SARVAM,
+        ServiceProviders.TOGETHER,
         ServiceProviders.GOOGLE_VERTEX,
         ServiceProviders.OPENAI_REALTIME,
         ServiceProviders.GROK_REALTIME,
@@ -251,6 +254,7 @@ GOOGLE_CLOUD_PROVIDER_MODEL_CONFIG = provider_model_config("Google Cloud")
 SPEECHMATICS_PROVIDER_MODEL_CONFIG = provider_model_config("Speechmatics")
 ASSEMBLYAI_PROVIDER_MODEL_CONFIG = provider_model_config("AssemblyAI")
 GLADIA_PROVIDER_MODEL_CONFIG = provider_model_config("Gladia")
+TOGETHER_PROVIDER_MODEL_CONFIG = provider_model_config("Together AI")
 SPEACHES_PROVIDER_MODEL_CONFIG = provider_model_config(
     "Local Models (Speaches)",
     description=(
@@ -289,6 +293,12 @@ GROQ_MODELS = [
     "gemma2-9b-it",
     "llama-3.1-8b-instant",
     "openai/gpt-oss-120b",
+]
+TOGETHER_MODELS = [
+    "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+    "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+    "mistralai/Mixtral-8x7B-Instruct-v0.1",
+    "deepseek-ai/DeepSeek-V3",
 ]
 OPENROUTER_MODELS = [
     "openai/gpt-4.1",
@@ -378,6 +388,17 @@ class GroqLLMService(BaseLLMConfiguration):
         default="llama-3.3-70b-versatile",
         description="Groq-hosted model identifier.",
         json_schema_extra={"examples": GROQ_MODELS, "allow_custom_input": True},
+    )
+
+
+@register_llm
+class TogetherLLMService(BaseLLMConfiguration):
+    model_config = TOGETHER_PROVIDER_MODEL_CONFIG
+    provider: Literal[ServiceProviders.TOGETHER] = ServiceProviders.TOGETHER
+    model: str = Field(
+        default="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+        description="Together AI chat model to use.",
+        json_schema_extra={"examples": TOGETHER_MODELS, "allow_custom_input": True},
     )
 
 
@@ -747,6 +768,7 @@ LLMConfig = Annotated[
         SpeachesLLMConfiguration,
         MiniMaxLLMConfiguration,
         SarvamLLMConfiguration,
+        TogetherLLMService,
     ],
     Field(discriminator="provider"),
 ]

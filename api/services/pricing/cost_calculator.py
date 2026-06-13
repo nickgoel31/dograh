@@ -169,6 +169,10 @@ class CostCalculator:
         if any(keyword in model_lower for keyword in ["groq"]):
             return ServiceProviders.GROQ
 
+        # Together models
+        if any(keyword in model_lower for keyword in ["together"]):
+            return ServiceProviders.TOGETHER
+
         # Elevenlabs models
         if any(keyword in model_lower for keyword in ["eleven"]):
             return ServiceProviders.ELEVENLABS
@@ -201,6 +205,10 @@ class CostCalculator:
         # Groq processors
         if any(keyword in processor_lower for keyword in ["groq"]):
             return ServiceProviders.GROQ
+
+        # Together processors
+        if any(keyword in processor_lower for keyword in ["together"]):
+            return ServiceProviders.TOGETHER
 
         # Deepgram processors
         if any(keyword in processor_lower for keyword in ["deepgram"]):

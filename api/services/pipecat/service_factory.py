@@ -56,6 +56,7 @@ from pipecat.services.sarvam.tts import SarvamTTSService, SarvamTTSSettings
 from pipecat.services.speaches.llm import SpeachesLLMService, SpeachesLLMSettings
 from pipecat.services.speaches.stt import SpeachesSTTService, SpeachesSTTSettings
 from pipecat.services.speaches.tts import SpeachesTTSService, SpeachesTTSSettings
+from pipecat.services.together.llm import TogetherLLMService, TogetherLLMSettings
 from pipecat.services.smallest.stt import SmallestSTTService, SmallestSTTSettings, SmallestSTTModel
 from pipecat.services.speechmatics.stt import (
     SpeechmaticsSTTService,
@@ -705,6 +706,14 @@ def create_llm_service_from_provider(
         return SarvamLLMService(
             api_key=api_key,
             settings=SarvamLLMSettings(
+                model=model,
+                temperature=temperature if temperature is not None else 0.5,
+            ),
+        )
+    elif provider == ServiceProviders.TOGETHER.value:
+        return TogetherLLMService(
+            api_key=api_key,
+            settings=TogetherLLMSettings(
                 model=model,
                 temperature=temperature if temperature is not None else 0.5,
             ),

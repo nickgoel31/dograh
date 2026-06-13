@@ -133,6 +133,16 @@ LLM_PRICING: Dict[str, Dict[str, TokenPricingModel]] = {
             completion_token_price=Decimal("0.00079") / 1000,
         ),
     },
+    ServiceProviders.TOGETHER: {
+        "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo": TokenPricingModel(
+            prompt_token_price=Decimal("0.18") / 1000000,
+            completion_token_price=Decimal("0.18") / 1000000,
+        ),
+        "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo": TokenPricingModel(
+            prompt_token_price=Decimal("0.88") / 1000000,
+            completion_token_price=Decimal("0.88") / 1000000,
+        ),
+    },
     ServiceProviders.AZURE: {
         "gpt-4.1-mini": TokenPricingModel(
             prompt_token_price=Decimal("0.44") / 1000000,  # $0.40 per 1M tokens

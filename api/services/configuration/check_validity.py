@@ -49,6 +49,7 @@ class UserConfigurationValidator:
             ServiceProviders.SMALLEST.value: self._check_smallest_api_key,
             ServiceProviders.SMALLEST_PULSE.value: self._check_smallest_api_key,
             ServiceProviders.SPEECHMATICS.value: self._check_speechmatics_api_key,
+            ServiceProviders.TOGETHER.value: self._check_together_api_key,
             ServiceProviders.CAMB.value: self._check_camb_api_key,
             ServiceProviders.AWS_BEDROCK.value: self._check_aws_bedrock_api_key,
             ServiceProviders.SPEACHES.value: self._check_speaches_api_key,
@@ -307,6 +308,18 @@ class UserConfigurationValidator:
                 "Invalid Groq API key. The key was rejected by the Groq API. "
                 "Please check that your API key is correct and active. "
                 "You can verify your keys at https://console.groq.com/keys."
+            )
+
+    def _check_together_api_key(self, model: str, api_key: str) -> bool:
+        client = openai.OpenAI(api_key=api_key, base_url="https://api.together.xyz/v1")
+        try:
+            client.models.list()
+            return True
+        except Exception:
+            raise ValueError(
+                "Invalid Together AI API key. The key was rejected by the Together API. "
+                "Please check that your API key is correct and active. "
+                "You can verify your keys at https://api.together.ai/settings/api-keys."
             )
 
     def _validate_elevenlabs_api_key(self, model: str, api_key: str) -> bool:
