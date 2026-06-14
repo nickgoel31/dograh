@@ -873,7 +873,7 @@ class CampaignClient(BaseDBClient):
                         QueuedRunModel.state == "queued",
                         QueuedRunModel.scheduled_for.is_(None),
                     )
-                    .order_by(func.random())
+                    .order_by(QueuedRunModel.id.asc())
                     .limit(remaining_slots)
                     .with_for_update(skip_locked=True)
                 )
