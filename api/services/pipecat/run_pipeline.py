@@ -581,7 +581,7 @@ async def _run_pipeline(
     engine.set_audio_config(audio_config)
 
     auto_summarization_config = LLMAutoContextSummarizationConfig(
-        max_unsummarized_messages=6,
+        max_unsummarized_messages=30,
         summary_config=LLMContextSummaryConfig(
             min_messages_after_summary=2,
             target_context_tokens=1000,
