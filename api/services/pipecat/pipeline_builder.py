@@ -3,8 +3,8 @@ import os
 from loguru import logger
 
 from api.services.pipecat.aggregators import FastSentenceAggregator
-from api.services.pipecat.audio_gain_processor import AudioGainProcessor
 from api.services.pipecat.audio_config import AudioConfig
+from api.services.pipecat.human_volume_processor import HumanVolumeProcessor
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
 from pipecat.processors.aggregators.llm_context import LLMContext
@@ -56,7 +56,7 @@ def build_pipeline(
     # Build processors list with optional voicemail detection
     processors = [
         transport.input(),  # Transport user input
-        AudioGainProcessor(),  # Apply volume boost to incoming human caller audio
+        HumanVolumeProcessor(volume_multiplier=1.45),
         stt,
     ]
 
@@ -145,7 +145,7 @@ def build_realtime_pipeline(
     """
     processors = [
         transport.input(),
-        AudioGainProcessor(),  # Apply volume boost to incoming human caller audio
+        HumanVolumeProcessor(volume_multiplier=1.45),
         user_context_aggregator,
         realtime_llm,
     ]
