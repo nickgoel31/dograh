@@ -6,7 +6,7 @@ import { getServerBackendUrl } from '@/lib/apiClient';
 const OSS_TOKEN_COOKIE = 'dograh_auth_token';
 
 // Paths that don't require authentication in OSS mode
-const PUBLIC_PATHS = ['/auth/login', '/auth/signup'];
+const PUBLIC_PATHS = ['/auth/login', '/auth/signup', '/embed'];
 
 let cachedAuthProvider: string | null = null;
 
@@ -62,11 +62,12 @@ export const config = {
     /*
      * Match all request paths except:
      * - api routes
+     * - embed routes (public widgets/files)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public files (public folder)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
+    '/((?!api|embed|_next/static|_next/image|favicon.ico|public).*)',
   ],
 };
