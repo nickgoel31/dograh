@@ -592,10 +592,13 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
         )
     elif user_config.tts.provider == ServiceProviders.INWORLD_TTS.value:
         from pipecat.services.inworld.tts import InworldHttpTTSService, InworldTTSSettings
+        import aiohttp
 
         voice = getattr(user_config.tts, "voice", None) or "Sarah"
+        session = aiohttp.ClientSession()
         return InworldHttpTTSService(
             api_key=user_config.tts.api_key,
+            aiohttp_session=session,
             settings=InworldTTSSettings(
                 model=user_config.tts.model,
                 voice=voice,

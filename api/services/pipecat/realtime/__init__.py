@@ -9,7 +9,7 @@ here.
 """
 from .azure_realtime import DograhAzureRealtimeLLMService
 from .gemini_live import DograhGeminiLiveLLMService
-from .gemini_live_vertex import DograhGoogleVertexRealtimeLLMService
+from .gemini_live_vertex import DograhGeminiLiveVertexLLMService
 from .grok_realtime import DograhGrokRealtimeLLMService
 from .openai_realtime import DograhOpenAIRealtimeLLMService
 from .ultravox_realtime import DograhUltravoxRealtimeLLMService
@@ -18,7 +18,7 @@ from .inworld_realtime import DograhInworldRealtimeLLMService
 __all__ = [
     "DograhAzureRealtimeLLMService",
     "DograhGeminiLiveLLMService",
-    "DograhGoogleVertexRealtimeLLMService",
+    "DograhGeminiLiveVertexLLMService",
     "DograhGrokRealtimeLLMService",
     "DograhOpenAIRealtimeLLMService",
     "DograhUltravoxRealtimeLLMService",
