@@ -39,6 +39,10 @@ from api.services.configuration.options import (
     SARVAM_V2_VOICES,
     SARVAM_V3_VOICES,
     SPEECHMATICS_STT_LANGUAGES,
+    INWORLD_REALTIME_MODELS,
+    INWORLD_REALTIME_VOICES,
+    INWORLD_REALTIME_STT_MODELS,
+    INWORLD_REALTIME_TTS_MODELS,
 )
 from api.services.configuration.options.google import GOOGLE_VERTEX_MODELS
 
@@ -82,6 +86,7 @@ class ServiceProviders(str, Enum):
     GOOGLE_VERTEX_REALTIME = "google_vertex_realtime"
     AZURE_REALTIME = "azure_realtime"
     TOGETHER = "together"
+    INWORLD_REALTIME = "inworld_realtime"
 
 
 class BaseServiceConfiguration(BaseModel):
@@ -112,6 +117,7 @@ class BaseServiceConfiguration(BaseModel):
         ServiceProviders.AZURE_REALTIME,
         ServiceProviders.SARVAM,
         ServiceProviders.SMALLEST_PULSE,
+        ServiceProviders.INWORLD_REALTIME,
     ]
     api_key: str | list[str]
 
@@ -272,6 +278,11 @@ AZURE_REALTIME_PROVIDER_MODEL_CONFIG = provider_model_config(
     "Azure OpenAI Realtime",
     description="Azure OpenAI Realtime API — low-latency speech-to-speech conversations.",
     provider_docs_url="https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/realtime-audio-quickstart",
+)
+INWORLD_REALTIME_PROVIDER_MODEL_CONFIG = provider_model_config(
+    "Inworld Realtime",
+    description="Inworld Realtime API — low-latency speech-to-speech conversations.",
+    provider_docs_url="https://docs.inworld.ai/realtime/overview",
 )
 
 OPENAI_MODELS = [
@@ -745,6 +756,44 @@ class AzureRealtimeLLMConfiguration(BaseLLMConfiguration):
     )
 
 
+@register_service(ServiceType.REALTIME)
+class InworldRealtimeLLMConfiguration(BaseLLMConfiguration):
+    model_config = INWORLD_REALTIME_PROVIDER_MODEL_CONFIG
+    provider: Literal[ServiceProviders.INWORLD_REALTIME] = ServiceProviders.INWORLD_REALTIME
+    model: str = Field(
+        default="google-ai-studio/gemini-2.5-flash-lite",
+        description="Inworld Realtime API LLM model.",
+        json_schema_extra={
+            "examples": INWORLD_REALTIME_MODELS,
+            "allow_custom_input": True,
+        },
+    )
+    voice: str = Field(
+        default="Riya",
+        description="Voice the model speaks in.",
+        json_schema_extra={
+            "examples": INWORLD_REALTIME_VOICES,
+            "allow_custom_input": True,
+        },
+    )
+    stt_model: str = Field(
+        default="assemblyai/u3-rt-pro",
+        description="STT model for input transcription.",
+        json_schema_extra={
+            "examples": INWORLD_REALTIME_STT_MODELS,
+            "allow_custom_input": True,
+        },
+    )
+    tts_model: str = Field(
+        default="inworld-tts-1.5-mini",
+        description="TTS model for output.",
+        json_schema_extra={
+            "examples": INWORLD_REALTIME_TTS_MODELS,
+            "allow_custom_input": True,
+        },
+    )
+
+
 REALTIME_PROVIDERS = {
     ServiceProviders.OPENAI_REALTIME.value,
     ServiceProviders.GROK_REALTIME.value,
@@ -752,6 +801,7 @@ REALTIME_PROVIDERS = {
     ServiceProviders.GOOGLE_REALTIME.value,
     ServiceProviders.GOOGLE_VERTEX_REALTIME.value,
     ServiceProviders.AZURE_REALTIME.value,
+    ServiceProviders.INWORLD_REALTIME.value,
 }
 
 
@@ -781,6 +831,7 @@ RealtimeConfig = Annotated[
         GoogleRealtimeLLMConfiguration,
         GoogleVertexRealtimeLLMConfiguration,
         AzureRealtimeLLMConfiguration,
+        InworldRealtimeLLMConfiguration,
     ],
     Field(discriminator="provider"),
 ]

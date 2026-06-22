@@ -1,20 +1,29 @@
 import asyncio
-import os
-from dotenv import load_dotenv
-load_dotenv('api/.env')
-
-from sqlalchemy import select
-from api.db import db_client
-from api.db.models import OrganizationUsageCycleModel, OrganizationModel
+from api.db.client import db_client
+from api.db.models import CampaignModel, QueuedRunModel
+from sqlalchemy import select, func
 
 async def main():
     async with db_client.async_session() as session:
-        cycles = await session.execute(select(OrganizationUsageCycleModel))
-        orgs = await session.execute(select(OrganizationModel))
-        org_map = {o.id: o.name for o in orgs.scalars().all()}
+        # Get latest campaign
+        q = select(CampaignModel).order_by(CampaignModel.id.desc()).limit(1)
+        res = await session.execute(q)
+        camp = res.scalar_one_or_none()
+        if not camp:
+            print("No campaign found")
+            return
+            
+        print(f"Campaign {camp.id} - {camp.name}")
+        print(f"total_rows: {camp.total_rows}")
+        print(f"processed_rows: {camp.processed_rows}")
+        print(f"failed_rows: {camp.failed_rows}")
+        print(f"state: {camp.state}")
         
-        for c in cycles.scalars().all():
-            print(f"Cycle ID: {c.id}, Org: {org_map.get(c.organization_id)}, Period: {c.period_start} - {c.period_end}, Custom Minutes: {c.custom_minutes_used}, Total Duration: {c.total_duration_seconds}")
+        # Count queued runs by state
+        q2 = select(QueuedRunModel.state, func.count(QueuedRunModel.id)).where(QueuedRunModel.campaign_id == camp.id).group_by(QueuedRunModel.state)
+        res2 = await session.execute(q2)
+        print("Queued runs by state:")
+        for row in res2.all():
+            print(f"  {row[0]}: {row[1]}")
 
-if __name__ == "__main__":
-    asyncio.run(main())
+asyncio.run(main())

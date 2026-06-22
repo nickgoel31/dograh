@@ -914,6 +914,40 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
                 ),
             ),
         )
+    elif provider == ServiceProviders.INWORLD_REALTIME.value:
+        from api.services.pipecat.realtime.inworld_realtime import (
+            DograhInworldRealtimeLLMService,
+        )
+        from pipecat.services.inworld.realtime.events import (
+            AudioConfiguration,
+            AudioInput,
+            AudioOutput,
+            InputAudioTranscription,
+            SessionProperties,
+        )
+
+        stt_model = getattr(realtime_config, "stt_model", None) or "assemblyai/u3-rt-pro"
+        tts_model = getattr(realtime_config, "tts_model", None) or "inworld-tts-1.5-mini"
+
+        return DograhInworldRealtimeLLMService(
+            api_key=api_key,
+            settings=DograhInworldRealtimeLLMService.Settings(
+                model=model,
+                session_properties=SessionProperties(
+                    audio=AudioConfiguration(
+                        input=AudioInput(
+                            transcription=InputAudioTranscription(
+                                model=stt_model,
+                            ),
+                        ),
+                        output=AudioOutput(
+                            model=tts_model,
+                            voice=voice or "Riya",
+                        ),
+                    ),
+                ),
+            ),
+        )
     else:
         raise HTTPException(
             status_code=400, detail=f"Invalid realtime LLM provider {provider}"
