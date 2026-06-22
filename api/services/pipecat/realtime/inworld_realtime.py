@@ -69,6 +69,13 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
             # response and later tool-result turns share the same context
             # lifecycle even when Dograh has already pre-populated self._context.
             if not self._handled_initial_context:
+                # Google models behind Inworld fail if there is no non-system message
+                # before the first response.create.
+                model_name = getattr(self._settings, "model", "") or ""
+                if "google" in model_name.lower():
+                    has_non_system = any(m.get("role") not in ("system", "developer") for m in self._context.messages)
+                    if not has_non_system:
+                        self._context.add_message({"role": "user", "content": "Hello!"})
                 await self._handle_context(self._context)
             else:
                 logger.warning(
