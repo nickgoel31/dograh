@@ -65,6 +65,7 @@ class UserConfigurationValidator:
             ServiceProviders.RIME.value: self._check_rime_api_key,
             ServiceProviders.MINIMAX.value: self._check_minimax_api_key,
             ServiceProviders.INWORLD_REALTIME.value: self._check_inworld_realtime_api_key,
+            ServiceProviders.INWORLD_TTS.value: self._check_inworld_tts_api_key,
         }
 
     async def validate(
@@ -411,4 +412,7 @@ class UserConfigurationValidator:
 
     def _check_inworld_realtime_api_key(self, model: str, api_key: str) -> bool:
         # Trust key at save time, errors will be surface at connection time.
+        return True
+
+    def _check_inworld_tts_api_key(self, model: str, api_key: str) -> bool:
         return True

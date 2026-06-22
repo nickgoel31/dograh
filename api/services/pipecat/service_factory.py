@@ -590,6 +590,22 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
+    elif user_config.tts.provider == ServiceProviders.INWORLD_TTS.value:
+        from pipecat.services.inworld.tts import InworldHttpTTSService, InworldTTSSettings
+
+        voice = getattr(user_config.tts, "voice", None) or "Sarah"
+        return InworldHttpTTSService(
+            api_key=user_config.tts.api_key,
+            settings=InworldTTSSettings(
+                model=user_config.tts.model,
+                voice=voice,
+                delivery_mode="BALANCED",
+                speaking_rate=1.0,
+            ),
+            text_filters=[xml_function_tag_filter],
+            skip_aggregator_types=["recording_router", "recording"],
+            silence_time_s=1.0,
+        )
     else:
         raise HTTPException(
             status_code=400, detail=f"Invalid TTS provider {user_config.tts.provider}"
@@ -918,35 +934,16 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
         from api.services.pipecat.realtime.inworld_realtime import (
             DograhInworldRealtimeLLMService,
         )
-        from pipecat.services.inworld.realtime.events import (
-            AudioConfiguration,
-            AudioInput,
-            AudioOutput,
-            InputAudioTranscription,
-            SessionProperties,
-        )
 
         stt_model = getattr(realtime_config, "stt_model", None) or "assemblyai/u3-rt-pro"
         tts_model = getattr(realtime_config, "tts_model", None) or "inworld-tts-1.5-mini"
 
         return DograhInworldRealtimeLLMService(
             api_key=api_key,
-            settings=DograhInworldRealtimeLLMService.Settings(
-                model=model,
-                session_properties=SessionProperties(
-                    audio=AudioConfiguration(
-                        input=AudioInput(
-                            transcription=InputAudioTranscription(
-                                model=stt_model,
-                            ),
-                        ),
-                        output=AudioOutput(
-                            model=tts_model,
-                            voice=voice or "Riya",
-                        ),
-                    ),
-                ),
-            ),
+            llm_model=model,
+            voice=voice or "Riya",
+            tts_model=tts_model,
+            stt_model=stt_model,
         )
     else:
         raise HTTPException(

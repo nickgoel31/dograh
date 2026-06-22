@@ -43,6 +43,8 @@ from api.services.configuration.options import (
     INWORLD_REALTIME_VOICES,
     INWORLD_REALTIME_STT_MODELS,
     INWORLD_REALTIME_TTS_MODELS,
+    INWORLD_TTS_MODELS,
+    INWORLD_TTS_VOICES,
 )
 from api.services.configuration.options.google import GOOGLE_VERTEX_MODELS
 
@@ -87,6 +89,7 @@ class ServiceProviders(str, Enum):
     AZURE_REALTIME = "azure_realtime"
     TOGETHER = "together"
     INWORLD_REALTIME = "inworld_realtime"
+    INWORLD_TTS = "inworld_tts"
 
 
 class BaseServiceConfiguration(BaseModel):
@@ -115,9 +118,8 @@ class BaseServiceConfiguration(BaseModel):
         ServiceProviders.GOOGLE_REALTIME,
         ServiceProviders.GOOGLE_VERTEX_REALTIME,
         ServiceProviders.AZURE_REALTIME,
-        ServiceProviders.SARVAM,
-        ServiceProviders.SMALLEST_PULSE,
         ServiceProviders.INWORLD_REALTIME,
+        ServiceProviders.INWORLD_TTS,
     ]
     api_key: str | list[str]
 
@@ -283,6 +285,11 @@ INWORLD_REALTIME_PROVIDER_MODEL_CONFIG = provider_model_config(
     "Inworld Realtime",
     description="Inworld Realtime API — low-latency speech-to-speech conversations.",
     provider_docs_url="https://docs.inworld.ai/realtime/overview",
+)
+INWORLD_TTS_PROVIDER_MODEL_CONFIG = provider_model_config(
+    "Inworld TTS",
+    description="Inworld TTS API.",
+    provider_docs_url="https://docs.inworld.ai/tts/overview",
 )
 
 OPENAI_MODELS = [
@@ -1202,6 +1209,22 @@ class MiniMaxTTSConfiguration(BaseTTSConfiguration):
 
 
 @register_tts
+class InworldTTSConfiguration(BaseTTSConfiguration):
+    model_config = INWORLD_TTS_PROVIDER_MODEL_CONFIG
+    provider: Literal[ServiceProviders.INWORLD_TTS] = ServiceProviders.INWORLD_TTS
+    model: str = Field(
+        default="inworld-tts-2",
+        description="Inworld TTS model.",
+        json_schema_extra={"examples": INWORLD_TTS_MODELS, "allow_custom_input": True},
+    )
+    voice: str = Field(
+        default="Sarah",
+        description="Inworld voice ID.",
+        json_schema_extra={"examples": INWORLD_TTS_VOICES, "allow_custom_input": True},
+    )
+
+
+@register_tts
 class AzureSpeechTTSConfiguration(BaseTTSConfiguration):
     model_config = AZURE_SPEECH_PROVIDER_MODEL_CONFIG
     provider: Literal[ServiceProviders.AZURE_SPEECH] = ServiceProviders.AZURE_SPEECH
@@ -1255,6 +1278,7 @@ TTSConfig = Annotated[
         RimeTTSConfiguration,
         SpeachesTTSConfiguration,
         MiniMaxTTSConfiguration,
+        InworldTTSConfiguration,
         AzureSpeechTTSConfiguration,
     ],
     Field(discriminator="provider"),
