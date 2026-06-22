@@ -64,6 +64,7 @@ class UserConfigurationValidator:
             ServiceProviders.GLADIA.value: self._check_gladia_api_key,
             ServiceProviders.RIME.value: self._check_rime_api_key,
             ServiceProviders.MINIMAX.value: self._check_minimax_api_key,
+            ServiceProviders.INWORLD_REALTIME.value: self._check_inworld_realtime_api_key,
         }
 
     async def validate(
@@ -197,6 +198,7 @@ class UserConfigurationValidator:
                 ]
 
         api_key = service_config.api_key
+        provider_name = provider.value if hasattr(provider, "value") else str(provider)
 
         try:
             if not self._check_api_key(provider, api_key, service_config):
@@ -204,7 +206,7 @@ class UserConfigurationValidator:
                     {
                         "model": service_name,
                         "message": (
-                            f"Invalid {provider} API key. Please verify your API key is "
+                            f"Invalid {provider_name} API key. Please verify your API key is "
                             f"correct, has not expired, and has the required permissions."
                         ),
                     }
@@ -221,16 +223,17 @@ class UserConfigurationValidator:
         service_config: Optional[ServiceConfig] = None,
     ) -> bool:
         """Check if an API key for a provider is valid."""
-        validator = self._validator_map.get(provider)
+        provider_key = provider.value if hasattr(provider, "value") else str(provider)
+        validator = self._validator_map.get(provider_key)
         if not validator:
             return False
 
-        if provider in (
+        if provider_key in (
             ServiceProviders.OPENAI.value,
             ServiceProviders.OPENAI_REALTIME.value,
         ):
-            return validator(provider, api_key, service_config)
-        return validator(provider, api_key)
+            return validator(provider_key, api_key, service_config)
+        return validator(provider_key, api_key)
 
     def _check_openai_api_key(
         self, model: str, api_key: str, service_config: Optional[ServiceConfig] = None
@@ -404,4 +407,8 @@ class UserConfigurationValidator:
     def _check_minimax_api_key(self, model: str, api_key: str) -> bool:
         # MiniMax doesn't publish a cheap key-validation endpoint; trust the key
         # at save time and surface auth errors at first call (same as Rime/Sarvam).
+        return True
+
+    def _check_inworld_realtime_api_key(self, model: str, api_key: str) -> bool:
+        # Trust key at save time, errors will be surface at connection time.
         return True
