@@ -332,15 +332,15 @@ export function AppSidebar() {
             >
               <div className="logo-glow">
                 <Image
-                  src="/logo.png"
-                  alt="Parrot AI Logo"
+                  src="/logo.webp"
+                  alt="Swarvo AI Logo"
                   width={32}
                   height={32}
-                  className="rounded-lg object-cover ring-1 ring-primary/30 shadow-sm"
+                  className="rounded-lg object-cover ring-1 ring-primary/30 shadow-sm dark:invert"
                   unoptimized
                 />
               </div>
-              <span className="text-gradient tracking-tight font-extrabold">Parrot AI</span>
+              <span className="text-gradient tracking-tight font-extrabold">Swarvo AI</span>
               {versionInfo && (
                 <span
                   className="notranslate text-xs font-normal text-muted-foreground self-end mb-0.5"

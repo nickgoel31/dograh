@@ -27,7 +27,7 @@ const monoFont = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Parrot AI",
+  title: "Swarvo AI",
   description: "Open Source Voice Assistant Workflow Builder",
 };
 

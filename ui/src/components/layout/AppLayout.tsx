@@ -34,15 +34,15 @@ function AppHeader() {
         <Link href="/" className="flex items-center gap-2.5 text-lg font-bold md:hidden group">
           <div className="logo-glow relative overflow-hidden rounded-xl p-0.5">
             <Image
-              src="/logo.png"
-              alt="Parrot AI Logo"
+              src="/logo.webp"
+              alt="Swarvo AI Logo"
               width={28}
               height={28}
-              className="object-cover rounded-lg transform group-hover:scale-110 transition-transform duration-300"
+              className="object-cover rounded-lg transform group-hover:scale-110 transition-transform duration-300 dark:invert"
               unoptimized
             />
           </div>
-          <span className="text-gradient font-extrabold tracking-tight">Parrot AI</span>
+          <span className="text-gradient font-extrabold tracking-tight">Swarvo AI</span>
         </Link>
       </div>
 
