@@ -131,7 +131,7 @@ export default function CampaignsPage() {
                                         <StateBadge state={campaign.state} />
                                     </div>
                                     <div className="pr-4">
-                                        <ProgressBar done={campaign.executed_count} total={campaign.total_queued_count} />
+                                        <ProgressBar done={campaign.executed_count ?? 0} total={campaign.total_queued_count ?? 0} />
                                     </div>
                                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                         <Button
