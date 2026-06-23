@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Menu, RefreshCw } from "lucide-react";
+import { AlertTriangle, Menu, RefreshCw, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -13,43 +13,89 @@ import { useAppConfig } from "@/context/AppConfigContext";
 import { AppSidebar } from "./AppSidebar";
 import { WalletBalance } from "./WalletBalance";
 
-function AppHeader() {
+// Map pathnames to human-readable page names for breadcrumb display
+const PAGE_NAMES: Record<string, string> = {
+  "/overview": "Overview",
+  "/workflow": "Voice Agents",
+  "/campaigns": "Campaigns",
+  "/model-configurations": "Models",
+  "/telephony-configurations": "Telephony",
+  "/tools": "Tools",
+  "/files": "Files",
+  "/recordings": "Recordings",
+  "/api-keys": "Developers",
+  "/usage": "Agent Runs",
+  "/billing": "Billing",
+  "/reports": "Reports",
+  "/settings": "Settings",
+  "/whatsapp": "WhatsApp Logs",
+  "/superadmin": "Platform Orgs",
+};
+
+function getPageName(pathname: string): string {
+  // Exact match first
+  if (PAGE_NAMES[pathname]) return PAGE_NAMES[pathname];
+  // Prefix match for nested routes
+  for (const key of Object.keys(PAGE_NAMES).sort((a, b) => b.length - a.length)) {
+    if (pathname.startsWith(key)) return PAGE_NAMES[key];
+  }
+  return "";
+}
+
+function NeuralHeader() {
   const { toggleSidebar } = useSidebar();
+  const pathname = usePathname();
+  const pageName = getPageName(pathname);
 
   return (
-    <header className="header-glass sticky top-0 z-50 flex items-center justify-between px-5 py-3 transition-all duration-500">
-      {/* Subtle gradient shimmer strip at the bottom of the header */}
-      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-
+    <header className="neural-header sticky top-0 z-50 flex h-11 items-center justify-between px-4 transition-all duration-300">
+      {/* Left: mobile menu + page name */}
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
           aria-label="Open menu"
-          className="md:hidden rounded-xl hover:bg-primary/10 hover:text-primary transition-all duration-200 border border-transparent hover:border-primary/20"
+          className="md:hidden h-7 w-7 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-4 w-4" />
         </Button>
-        <Link href="/" className="flex items-center gap-2.5 text-lg font-bold md:hidden group">
-          <div className="logo-glow relative overflow-hidden rounded-xl p-0.5">
-            <Image
-              src="/logo.webp"
-              alt="Swarvo AI Logo"
-              width={28}
-              height={28}
-              className="object-cover rounded-lg transform group-hover:scale-110 transition-transform duration-300 dark:invert"
-              unoptimized
-            />
-          </div>
-          <span className="text-gradient font-extrabold tracking-tight">Swarvo AI</span>
+
+        {/* Mobile logo */}
+        <Link href="/" className="flex items-center gap-2 text-sm font-bold md:hidden">
+          <Image
+            src="/logo.webp"
+            alt="Swarvo AI"
+            width={22}
+            height={22}
+            className="rounded-md object-cover dark:invert"
+            unoptimized
+          />
+          <span className="font-bold tracking-tight">Swarvo AI</span>
         </Link>
+
+        {/* Page breadcrumb — desktop only */}
+        {pageName && (
+          <div className="hidden md:flex items-center gap-2">
+            <span className="text-sm font-semibold text-foreground tracking-tight">{pageName}</span>
+          </div>
+        )}
       </div>
 
-      {/* Right side: breadcrumb-style page title area + wallet */}
-      <div className="flex items-center gap-3">
-        {/* Premium separator */}
-        <div className="hidden md:block h-5 w-px bg-border/50" />
+      {/* Right: search hint + wallet + actions */}
+      <div className="flex items-center gap-2">
+        {/* Search hint button */}
+        <button
+          className="hidden md:flex items-center gap-2 rounded-md border border-border/60 bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
+          onClick={() => {/* future: open command palette */}}
+          aria-label="Search"
+        >
+          <Search className="h-3 w-3" />
+          <span>Search</span>
+          <kbd className="ml-1 rounded border border-border px-1 font-mono text-[10px] text-muted-foreground/60">⌘K</kbd>
+        </button>
+
+        <div className="h-4 w-px bg-border/50 hidden md:block" />
         <WalletBalance />
       </div>
     </header>
@@ -71,14 +117,14 @@ function BackendStatusBanner() {
   return (
     <div
       role="alert"
-      className="border-b border-amber-300 bg-amber-50 px-4 py-3 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100"
+      className="border-b border-amber-500/30 bg-amber-500/8 px-4 py-2.5 text-amber-700 dark:text-amber-300"
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
           <div className="min-w-0">
-            <p className="text-sm font-semibold">Backend connection failed</p>
-            <p className="break-words text-sm">{message}</p>
+            <span className="text-sm font-semibold">Backend unreachable — </span>
+            <span className="text-sm">{message}</span>
           </div>
         </div>
         <Button
@@ -86,9 +132,9 @@ function BackendStatusBanner() {
           size="sm"
           onClick={() => void refresh()}
           disabled={loading}
-          className="h-8 shrink-0 border-amber-400 bg-transparent text-amber-950 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-100 dark:hover:bg-amber-900/40"
+          className="h-7 shrink-0 border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 text-xs"
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className="h-3.5 w-3.5 mr-1" />
           Retry
         </Button>
       </div>
@@ -109,32 +155,24 @@ const AppLayout: React.FC<AppLayoutProps> = ({
 }) => {
   const pathname = usePathname();
 
-  // Check if current route should have sidebar
-  // Hide sidebar for root (/), /handler routes (Stack Auth routes), and /auth routes
   const shouldShowSidebar = pathname !== "/" && !pathname.startsWith("/handler") && !pathname.startsWith("/auth");
-
-  // Only match the exact editor page /workflow/<id>, not sub-routes like /workflow/<id>/runs
   const isWorkflowEditor = /^\/workflow\/\d+$/.test(pathname);
 
-  // Always render SidebarProvider to keep the component tree shape consistent
-  // across route changes (avoids React hooks ordering violations during navigation).
   return (
     <SidebarProvider defaultOpen>
       {shouldShowSidebar ? (
-        <div className="ambient-bg flex min-h-screen w-full bg-background transition-colors duration-500">
-          {/* Floating sidebar wrapper — gives it a raised z-layer above the content plane */}
+        <div className="flex min-h-screen w-full bg-background">
           <div className="relative z-20 flex-shrink-0">
             <AppSidebar />
           </div>
 
-          <SidebarInset className="relative z-10 flex-1 flex flex-col min-w-0 bg-transparent border-l border-border/30">
+          <SidebarInset className="relative z-10 flex-1 flex flex-col min-w-0 border-l border-border/30">
             <BackendStatusBanner />
-            {!isWorkflowEditor && <AppHeader />}
+            {!isWorkflowEditor && <NeuralHeader />}
 
-            {/* Optional header area for specific pages */}
             {headerActions && (
-              <header className="header-glass sticky top-0 z-50 w-full">
-                <div className="container mx-auto px-4 py-4">
+              <header className="neural-header sticky top-0 z-50 w-full">
+                <div className="container mx-auto px-4 py-3">
                   <div className="flex items-center justify-center">
                     {headerActions}
                   </div>
@@ -142,9 +180,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({
               </header>
             )}
 
-            {/* Optional sticky tabs */}
             {stickyTabs && (
-              <div className="header-glass sticky top-0 z-40">
+              <div className="neural-header sticky top-11 z-40">
                 <div className="container mx-auto px-4">
                   <div className="flex items-center justify-center py-2">
                     {stickyTabs}
@@ -153,18 +190,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({
               </div>
             )}
 
-            {/* Main content area — sits above ambient orbs via z-index */}
-            <main className="relative z-10 flex-1">
+            <main className="relative z-10 flex-1 page-enter">
               {children}
             </main>
           </SidebarInset>
         </div>
       ) : (
-        <div className="ambient-bg flex-1 w-full bg-background transition-colors duration-500">
-          <div className="relative z-10">
-            <BackendStatusBanner />
-            {children}
-          </div>
+        <div className="flex-1 w-full bg-background">
+          <BackendStatusBanner />
+          {children}
         </div>
       )}
     </SidebarProvider>

@@ -48,7 +48,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -79,8 +78,6 @@ type SidebarNavSection = {
   label?: string;
   items: SidebarNavItem[];
 };
-
-const TELEPHONY_WARNING_COPY = "Action required";
 
 const NAV_SECTIONS: SidebarNavSection[] = [
   {
@@ -160,7 +157,6 @@ const NAV_SECTIONS: SidebarNavSection[] = [
   },
 ];
 
-// Lazy load SelectedTeamSwitcher - we'll pass selectedTeam from our context
 const StackTeamSwitcher = React.lazy(() =>
   import("@stackframe/stack").then((mod) => ({
     default: mod.SelectedTeamSwitcher,
@@ -178,7 +174,6 @@ export function AppSidebar() {
   const { telnyxMissingWebhookPublicKeyCount } = useTelephonyConfigWarnings();
   const hasTelephonyWarning = telnyxMissingWebhookPublicKeyCount > 0;
   const isCollapsed = !isMobile && state === "collapsed";
-
 
   const [isImpersonating, setIsImpersonating] = React.useState(false);
 
@@ -198,9 +193,6 @@ export function AppSidebar() {
     }
   };
 
-  // Get selected team for Stack auth (cast to Team type from Stack)
-  // Stabilize the reference so SelectedTeamSwitcher only sees a change when the team ID changes,
-  // preventing unnecessary PATCH calls to Stack Auth on every route navigation.
   const selectedTeamRef = useRef<Team | null>(null);
   const rawSelectedTeam = provider === "stack" && getSelectedTeam ? getSelectedTeam() as Team | null : null;
   if (rawSelectedTeam?.id !== selectedTeamRef.current?.id) {
@@ -208,10 +200,8 @@ export function AppSidebar() {
   }
   const selectedTeam = selectedTeamRef.current;
 
-  // Version info from app config context
   const versionInfo = config ? { ui: config.uiVersion, api: config.apiVersion } : null;
 
-  // Check for updates only on self-hosted (OSS) deployments — cloud is managed for the user.
   const { latest: latestRelease, isBehind, isLatest } = useLatestReleaseVersion(
     versionInfo?.ui,
     { enabled: config?.deploymentMode === "oss" },
@@ -242,65 +232,51 @@ export function AppSidebar() {
     }
   };
 
+  // Build user initials
+  const getInitials = (nameOrEmail: string) =>
+    nameOrEmail
+      .split(/[\s@]/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((s: string) => s[0]?.toUpperCase())
+      .join("") || "U";
+
   const SidebarLink = ({ item }: { item: SidebarNavItem }) => {
     const isItemActive = isActive(item.url);
     const Icon = item.icon;
     const showWarningDot = item.showsTelephonyWarning && hasTelephonyWarning;
-    const tooltip = {
-      children: (
-        <div className="notranslate" translate="no">
-          <p>{item.title}</p>
-          {showWarningDot && (
-            <p className="text-amber-600 dark:text-amber-400">{TELEPHONY_WARNING_COPY}</p>
-          )}
-        </div>
-      ),
-    };
-    const warningIndicator = (
-      <AlertTriangle
-        aria-label="Action required on a telephony configuration"
-        className={cn(
-          "text-amber-500",
-          isCollapsed ? "absolute -right-0.5 -top-0.5 h-3 w-3" : "ml-auto h-3.5 w-3.5"
-        )}
-      />
-    );
 
     return (
       <SidebarMenuButton
         asChild
-        tooltip={tooltip}
+        tooltip={{ children: <span className="notranslate">{item.title}</span> }}
         className={cn(
-          "rounded-lg transition-all duration-200 hover:bg-primary/8 hover:text-primary hover:translate-x-0.5",
-          isItemActive && "bg-gradient-to-r from-primary/18 via-primary/10 to-transparent text-primary font-semibold shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--primary)_20%,transparent)] border-l-2 border-primary rounded-l-none"
+          "relative h-8 rounded-lg text-sm font-medium transition-all duration-150",
+          "text-muted-foreground hover:text-foreground hover:bg-accent",
+          isItemActive && "nav-pill-active text-primary bg-primary/8 hover:bg-primary/10 hover:text-primary"
         )}
       >
         <Link
           href={item.url}
           onClick={handleMobileNavClick}
-          className={cn("relative", isCollapsed && "justify-center")}
+          className={cn("flex items-center gap-2.5 px-2", isCollapsed && "justify-center px-0")}
           translate="no"
         >
-          <Icon className={cn("h-4 w-4 shrink-0 transition-transform duration-300", isItemActive && "text-primary scale-110")} />
-          <span
-            className={cn("notranslate min-w-0 flex-1 truncate", isCollapsed && "sr-only")}
-            translate="no"
-          >
+          <Icon className={cn(
+            "h-4 w-4 shrink-0 transition-colors duration-150",
+            isItemActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+          )} />
+          <span className={cn("notranslate truncate", isCollapsed && "sr-only")} translate="no">
             {item.title}
           </span>
           {showWarningDot && (
-            isCollapsed ? (
-              warningIndicator
-            ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  {warningIndicator}
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>{TELEPHONY_WARNING_COPY}</p>
-                </TooltipContent>
-              </Tooltip>
-            )
+            <AlertTriangle
+              aria-label="Action required"
+              className={cn(
+                "h-3 w-3 text-amber-500",
+                isCollapsed ? "absolute -right-0.5 -top-0.5" : "ml-auto shrink-0"
+              )}
+            />
           )}
         </Link>
       </SidebarMenuButton>
@@ -308,48 +284,49 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="sidebar-glass border-r-0">
-      <SidebarHeader className="relative border-b border-border/40 px-2 py-3 notranslate" translate="no">
-        {/* Premium gradient top accent strip */}
-        <div className="pointer-events-none absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+    <Sidebar collapsible="icon" className="neural-sidebar">
+      {/* ── Header ── */}
+      <SidebarHeader className={cn("px-3 py-3 notranslate", isCollapsed && "px-2")} translate="no">
+        {/* Impersonation banner */}
         {isImpersonating && (
-          <div className={cn("mb-3 mt-1 rounded-md bg-amber-500 px-3 py-2 text-xs font-medium text-white shadow-sm flex flex-col gap-2", isCollapsed && "hidden")}>
+          <div className={cn("mb-2 rounded-md bg-amber-500/15 border border-amber-500/30 px-2.5 py-2 text-xs font-medium text-amber-600 dark:text-amber-400 flex flex-col gap-1.5", isCollapsed && "hidden")}>
             <div className="flex items-center gap-1.5">
-              <Shield className="h-4 w-4 shrink-0" />
-              <span>Impersonating Workspace</span>
+              <Shield className="h-3.5 w-3.5 shrink-0" />
+              <span>Impersonating workspace</span>
             </div>
-            <Button size="sm" variant="secondary" className="w-full text-[10px] h-6 text-black" onClick={handleStopImpersonation}>
+            <Button size="sm" variant="secondary" className="w-full h-6 text-[10px]" onClick={handleStopImpersonation}>
               Exit Impersonation
             </Button>
           </div>
         )}
+
         <div className="flex items-center justify-between">
-          <div className={cn("flex items-center gap-2", isCollapsed && "hidden")}>
-              <Link
+          {/* Logo */}
+          <div className={cn("flex items-center gap-2 min-w-0", isCollapsed && "hidden")}>
+            <Link
               href="/"
-              className="notranslate flex items-center gap-2.5 px-2 text-xl font-bold hover:opacity-90 transition-opacity"
+              className="notranslate flex items-center gap-2 hover:opacity-80 transition-opacity"
               translate="no"
             >
-              <div className="logo-glow">
+              <div className="relative">
                 <Image
                   src="/logo.webp"
-                  alt="Swarvo AI Logo"
-                  width={32}
-                  height={32}
-                  className="rounded-lg object-cover ring-1 ring-primary/30 shadow-sm dark:invert"
+                  alt="Swarvo AI"
+                  width={28}
+                  height={28}
+                  className="rounded-lg object-cover ring-1 ring-primary/25 dark:invert"
                   unoptimized
                 />
               </div>
-              <span className="text-gradient tracking-tight font-extrabold">Swarvo AI</span>
-              {versionInfo && (
-                <span
-                  className="notranslate text-xs font-normal text-muted-foreground self-end mb-0.5"
-                  translate="no"
-                >
-                  v{versionInfo.ui}
-                </span>
-              )}
+              <span className="text-sm font-bold tracking-tight text-foreground">
+                Swarvo AI
+              </span>
             </Link>
+            {versionInfo && (
+              <span className="notranslate text-[10px] text-muted-foreground/60 font-mono" translate="no">
+                v{versionInfo.ui}
+              </span>
+            )}
             {isBehind && latestRelease && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -357,75 +334,71 @@ export function AppSidebar() {
                     href="https://docs.dograh.com/deployment/update"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-md border bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium leading-none text-amber-900 transition-opacity hover:opacity-80 dark:bg-amber-950 dark:text-amber-200"
+                    className="inline-flex items-center gap-1 rounded border border-amber-400/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400 hover:opacity-80 transition-opacity"
                   >
-                    <ArrowUpCircle className="h-3 w-3" />
+                    <ArrowUpCircle className="h-2.5 w-2.5" />
                     Update
                   </a>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <p>Latest: {latestRelease} — click to see the update guide</p>
+                  <p>Latest: {latestRelease}</p>
                 </TooltipContent>
               </Tooltip>
             )}
             {isLatest && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex items-center rounded-md border bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium leading-none text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
-                    Latest
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>You&apos;re running the latest release</p>
-                </TooltipContent>
-              </Tooltip>
+              <span className="inline-flex items-center rounded border border-emerald-400/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                Latest
+              </span>
             )}
           </div>
 
-          <SidebarTrigger className={cn("hover:bg-accent", isCollapsed && "mx-auto")}>
+          {/* Collapsed: just the logo icon */}
+          {isCollapsed && (
+            <div className="mx-auto">
+              <Image
+                src="/logo.webp"
+                alt="Swarvo AI"
+                width={24}
+                height={24}
+                className="rounded-md object-cover dark:invert"
+                unoptimized
+              />
+            </div>
+          )}
+
+          <SidebarTrigger className={cn("h-7 w-7 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors", isCollapsed && "mx-auto mt-1")}>
             {isCollapsed ? (
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3.5 w-3.5" />
             ) : (
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-3.5 w-3.5" />
             )}
           </SidebarTrigger>
         </div>
 
+        {/* Stack team switcher */}
         {provider === "stack" && isSuperadmin && (
-          <div className={cn("mt-3 notranslate", isCollapsed && "hidden")} translate="no">
-            <React.Suspense
-              fallback={
-                <div className="h-9 w-full animate-pulse rounded bg-muted" />
-              }
-            >
+          <div className={cn("mt-2 notranslate", isCollapsed && "hidden")} translate="no">
+            <React.Suspense fallback={<div className="h-8 rounded bg-muted animate-pulse" />}>
               <StackTeamSwitcher
                 selectedTeam={selectedTeam || undefined}
-                onChange={() => {
-                  router.refresh();
-                }}
+                onChange={() => { router.refresh(); }}
               />
             </React.Suspense>
           </div>
         )}
       </SidebarHeader>
 
-      <SidebarContent className={cn("notranslate", isCollapsed && "px-0")} translate="no">
+      {/* ── Nav content ── */}
+      <SidebarContent className={cn("notranslate px-2 py-1", isCollapsed && "px-1")} translate="no">
         {!roleLoading && (() => {
           let sections = [...NAV_SECTIONS];
-          
+
           if (userConfig?.whatsapp_enabled) {
             sections = sections.map(sec => {
               if (sec.label === "OBSERVE") {
                 return {
                   ...sec,
-                  items: [
-                    ...sec.items,
-                    {
-                      title: "WhatsApp Logs",
-                      url: "/whatsapp",
-                      icon: MessageSquare,
-                    }
-                  ]
+                  items: [...sec.items, { title: "WhatsApp Logs", url: "/whatsapp", icon: MessageSquare }],
                 };
               }
               return sec;
@@ -433,26 +406,18 @@ export function AppSidebar() {
           }
 
           if (role === "super_admin" || isSuperadmin) {
-
             sections = [
               ...sections,
               {
                 label: "ADMIN",
                 items: [
-                  {
-                    title: "Platform Orgs",
-                    url: "/superadmin",
-                    icon: Shield,
-                  },
-                  {
-                    title: "Users Directory",
-                    url: "/superadmin/users",
-                    icon: Users,
-                  },
+                  { title: "Platform Orgs", url: "/superadmin", icon: Shield },
+                  { title: "Users Directory", url: "/superadmin/users", icon: Users },
                 ],
               },
             ];
           }
+
           return sections.map((section, index) => {
             const filteredItems = section.items.filter(item => {
               if (role === "client") {
@@ -464,22 +429,21 @@ export function AppSidebar() {
             if (filteredItems.length === 0) return null;
 
             return (
-              <SidebarGroup
-                key={section.label ?? "overview"}
-                className={index === 0 ? "mt-2" : "mt-6"}
-              >
-                {section.label && (
-                  <SidebarGroupLabel
-                    className={cn(
-                      "notranslate text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 before:content-[''] before:block before:w-1 before:h-1 before:rounded-full before:bg-primary/50",
-                      isCollapsed && "hidden"
-                    )}
-                    translate="no"
-                  >
-                    {section.label}
-                  </SidebarGroupLabel>
+              <SidebarGroup key={section.label ?? "overview"} className={index === 0 ? "mt-1" : "mt-3"}>
+                {/* Section divider instead of label */}
+                {section.label && !isCollapsed && (
+                  <div className="mb-1 px-2 flex items-center gap-2">
+                    <div className="h-px flex-1 bg-border/60" />
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 notranslate" translate="no">
+                      {section.label}
+                    </span>
+                    <div className="h-px flex-1 bg-border/60" />
+                  </div>
                 )}
-                <SidebarMenu>
+                {section.label && isCollapsed && (
+                  <div className="mb-1 mx-auto w-4 h-px bg-border/60" />
+                )}
+                <SidebarMenu className="gap-0.5">
                   {filteredItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarLink item={item} />
@@ -492,135 +456,131 @@ export function AppSidebar() {
         })()}
       </SidebarContent>
 
+      {/* ── Footer ── */}
       <SidebarFooter
-        className={cn("border-t border-border/40 p-4 notranslate", isCollapsed && "p-2")}
+        className={cn("border-t border-border/40 p-2 notranslate")}
         translate="no"
       >
-        <div className="space-y-2">
-          {provider !== "stack" && (
-            <div className={cn("flex", isCollapsed ? "justify-center" : "justify-start")}>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer rounded-full ring-2 ring-primary/20 ring-offset-1 ring-offset-background hover:ring-primary/40 transition-all">
-                    <span className="text-xs font-medium">
-                      {(user?.displayName || (user as LocalUser | undefined)?.email || "")
-                        .split(/[\s@]/)
-                        .filter(Boolean)
-                        .slice(0, 2)
-                        .map((s: string) => s[0]?.toUpperCase())
-                        .join("")
-                        || "U"}
-                    </span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent side="top" align="start" className="w-56">
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      {(user as LocalUser | undefined)?.email && (
-                        <p className="text-xs text-muted-foreground">{(user as LocalUser).email}</p>
-                      )}
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {isImpersonating && (
-                    <DropdownMenuItem onClick={handleStopImpersonation} className="cursor-pointer text-amber-600 focus:text-amber-600">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Stop Impersonating
-                    </DropdownMenuItem>
+        {/* Non-Stack provider footer */}
+        {provider !== "stack" && (
+          <div className={cn("flex items-center", isCollapsed ? "justify-center flex-col gap-2" : "justify-between gap-2")}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-full bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all text-xs font-semibold shrink-0"
+                >
+                  {getInitials(
+                    (user?.displayName || (user as LocalUser | undefined)?.email || "")
                   )}
-                  <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Platform Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => logout()} className="cursor-pointer">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
-
-          {provider === "stack" && (
-            <div className={cn("flex", isCollapsed ? "justify-center" : "justify-start")}>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer rounded-full ring-2 ring-primary/20 ring-offset-1 ring-offset-background hover:ring-primary/40 transition-all">
-                    <span className="text-xs font-medium">
-                      {(user?.displayName || (user as { primaryEmail?: string })?.primaryEmail || "")
-                        .split(/[\s@]/)
-                        .filter(Boolean)
-                        .slice(0, 2)
-                        .map((s: string) => s[0]?.toUpperCase())
-                        .join("")
-                        || "U"}
-                    </span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent side="top" align="start" className="w-56">
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      {user?.displayName && (
-                        <p className="text-sm font-medium">{user.displayName}</p>
-                      )}
-                      {(user as { primaryEmail?: string })?.primaryEmail && (
-                        <p className="text-xs text-muted-foreground">{(user as { primaryEmail?: string }).primaryEmail}</p>
-                      )}
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {isImpersonating && (
-                    <DropdownMenuItem onClick={handleStopImpersonation} className="cursor-pointer text-amber-600 focus:text-amber-600">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Stop Impersonating
-                    </DropdownMenuItem>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-52">
+                <DropdownMenuLabel className="font-normal">
+                  {(user as LocalUser | undefined)?.email && (
+                    <p className="text-xs text-muted-foreground truncate">{(user as LocalUser).email}</p>
                   )}
-                  <DropdownMenuItem onClick={() => router.push("/handler/account-settings")} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Account settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Platform Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/usage")} className="cursor-pointer">
-                    <CircleDollarSign className="mr-2 h-4 w-4" />
-                    Usage
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => logout()} className="cursor-pointer">
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {isImpersonating && (
+                  <DropdownMenuItem onClick={handleStopImpersonation} className="cursor-pointer text-amber-600 focus:text-amber-600">
                     <LogOut className="mr-2 h-4 w-4" />
-                    Sign out
+                    Stop Impersonating
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
+                )}
+                <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Platform Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => logout()} className="cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          <div className={cn("mt-2 border-t pt-2", isCollapsed && "flex justify-center")}>
-            {isCollapsed ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="notranslate" translate="no">
-                    <ThemeToggle
-                      showLabel={false}
-                      className="hover:bg-accent hover:text-accent-foreground"
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>Toggle theme</p>
-                </TooltipContent>
-              </Tooltip>
-            ) : (
+            {!isCollapsed && (
               <div className="notranslate" translate="no">
-                <ThemeToggle
-                  showLabel={true}
-                  className="hover:bg-accent hover:text-accent-foreground"
-                />
+                <ThemeToggle showLabel={false} className="h-7 w-7 hover:bg-accent" />
               </div>
             )}
           </div>
-        </div>
+        )}
+
+        {/* Stack provider footer */}
+        {provider === "stack" && (
+          <div className={cn("flex items-center", isCollapsed ? "justify-center flex-col gap-2" : "justify-between gap-2")}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-full bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all text-xs font-semibold shrink-0"
+                >
+                  {getInitials(
+                    (user?.displayName || (user as { primaryEmail?: string })?.primaryEmail || "")
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-52">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col gap-0.5">
+                    {user?.displayName && (
+                      <p className="text-sm font-medium">{user.displayName}</p>
+                    )}
+                    {(user as { primaryEmail?: string })?.primaryEmail && (
+                      <p className="text-xs text-muted-foreground truncate">{(user as { primaryEmail?: string }).primaryEmail}</p>
+                    )}
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {isImpersonating && (
+                  <DropdownMenuItem onClick={handleStopImpersonation} className="cursor-pointer text-amber-600 focus:text-amber-600">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Stop Impersonating
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => router.push("/handler/account-settings")} className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Account settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Platform Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push("/usage")} className="cursor-pointer">
+                  <CircleDollarSign className="mr-2 h-4 w-4" />
+                  Usage
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => logout()} className="cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {!isCollapsed && (
+              <div className="notranslate" translate="no">
+                <ThemeToggle showLabel={false} className="h-7 w-7 hover:bg-accent" />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Collapsed theme toggle */}
+        {isCollapsed && (
+          <div className="mt-1 flex justify-center notranslate" translate="no">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <ThemeToggle showLabel={false} className="h-7 w-7 hover:bg-accent" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">Toggle theme</TooltipContent>
+            </Tooltip>
+          </div>
+        )}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

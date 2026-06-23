@@ -1,7 +1,7 @@
 import "./globals.css";
 
 import type { Metadata } from "next";
-import { JetBrains_Mono,Plus_Jakarta_Sans } from "next/font/google";
+import { Fira_Code, Inter } from "next/font/google";
 import { Suspense } from "react";
 
 import AppLayout from "@/components/layout/AppLayout";
@@ -16,14 +16,16 @@ import { UserConfigProvider } from "@/context/UserConfigContext";
 import { AuthProvider } from "@/lib/auth";
 
 
-const sansFont = Plus_Jakarta_Sans({
+const sansFont = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const monoFont = JetBrains_Mono({
+const monoFont = Fira_Code({
   variable: "--font-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {

@@ -12,6 +12,7 @@ from typing import Any, List, Optional
 
 from api.db import db_client
 from api.utils.artifacts import artifact_url
+from api.utils.telephony_helper import resolve_phone_number
 
 
 def _collect_extracted_variable_keys(runs: List[Any]) -> list[str]:
@@ -65,7 +66,7 @@ def build_run_report_csv(runs: List[Any]) -> io.StringIO:
             run.workflow_id,
             run.definition_id if run.definition_id is not None else "",
             run.created_at.isoformat() if run.created_at else "",
-            initial.get("phone_number", ""),
+            resolve_phone_number(initial, getattr(run, "call_type", None)),
             gathered.get("mapped_call_disposition", ""),
             cost.get("call_duration_seconds", ""),
         ]

@@ -48,14 +48,18 @@ async def handle_vobiz_xml_webhook(
     workflow_run = await db_client.get_workflow_run_by_id(workflow_run_id)
     provider = await get_telephony_provider_for_run(workflow_run, organization_id)
 
+    workflow = await db_client.get_workflow_by_id(workflow_run.workflow_id)
+    if workflow:
+        logger.info(f"[run {workflow_run_id}] Loaded workflow config: {workflow.config}")
+
     logger.debug(f"[run {workflow_run_id}] Using provider: {provider.PROVIDER_NAME}")
 
     response_content = await provider.get_webhook_response(
         workflow_id, user_id, workflow_run_id
     )
 
-    logger.debug(
-        f"[run {workflow_run_id}] Vobiz XML response generated:\n{response_content}"
+    logger.info(
+        f"[run {workflow_run_id}] Generated Vobiz XML:\n{response_content}"
     )
 
     return HTMLResponse(content=response_content, media_type="application/xml")

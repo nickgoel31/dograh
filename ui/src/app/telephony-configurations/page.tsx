@@ -6,6 +6,7 @@ import {
   Copy,
   ExternalLink,
   Pencil,
+  Phone,
   Plus,
   Star,
   Trash2,
@@ -37,17 +38,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useTelephonyConfigWarnings } from "@/context/TelephonyConfigWarningsContext";
 import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
+
+const PROVIDER_LABELS: Record<string, string> = {
+  twilio: "Twilio",
+  telnyx: "Telnyx",
+  vobiz: "Vobiz",
+  plivo: "Plivo",
+};
 
 export default function TelephonyConfigurationsPage() {
   const { user, getAccessToken, loading: authLoading } = useAuth();
@@ -58,12 +58,9 @@ export default function TelephonyConfigurationsPage() {
   const [items, setItems] = useState<TelephonyConfigurationListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<TelephonyConfigurationDetail | null>(
-    null,
-  );
+  const [editTarget, setEditTarget] = useState<TelephonyConfigurationDetail | null>(null);
   const [editOpen, setEditOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] =
-    useState<TelephonyConfigurationListItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TelephonyConfigurationListItem | null>(null);
 
   const fetchItems = useCallback(async () => {
     if (authLoading || !user) return;
@@ -82,26 +79,18 @@ export default function TelephonyConfigurationsPage() {
     }
   }, [authLoading, user, getAccessToken]);
 
-  // After a save (create/update), the backing config may have flipped between
-  // missing/present webhook_public_key — refresh the cached warning state so
-  // the page banner and nav badge update without a manual reload.
   const onSaved = useCallback(async () => {
     await fetchItems();
     await refreshWarnings();
   }, [fetchItems, refreshWarnings]);
 
-  useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
+  useEffect(() => { fetchItems(); }, [fetchItems]);
 
   const onEdit = async (item: TelephonyConfigurationListItem) => {
     try {
       const token = await getAccessToken();
       const res = await getTelephonyConfigurationByIdApiV1OrganizationsTelephonyConfigsConfigIdGet(
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          path: { config_id: item.id },
-        },
+        { headers: { Authorization: `Bearer ${token}` }, path: { config_id: item.id } },
       );
       if (res.error) throw new Error(detailFromError(res.error));
       setEditTarget(res.data ?? null);
@@ -115,10 +104,7 @@ export default function TelephonyConfigurationsPage() {
     try {
       const token = await getAccessToken();
       const res = await setDefaultOutboundApiV1OrganizationsTelephonyConfigsConfigIdSetDefaultOutboundPost(
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          path: { config_id: item.id },
-        },
+        { headers: { Authorization: `Bearer ${token}` }, path: { config_id: item.id } },
       );
       if (res.error) throw new Error(detailFromError(res.error));
       toast.success(`${item.name} is now the default outbound configuration`);
@@ -133,10 +119,7 @@ export default function TelephonyConfigurationsPage() {
     try {
       const token = await getAccessToken();
       const res = await deleteTelephonyConfigurationApiV1OrganizationsTelephonyConfigsConfigIdDelete(
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          path: { config_id: deleteTarget.id },
-        },
+        { headers: { Authorization: `Bearer ${token}` }, path: { config_id: deleteTarget.id } },
       );
       if (res.error) throw new Error(detailFromError(res.error));
       toast.success("Configuration deleted");
@@ -148,94 +131,99 @@ export default function TelephonyConfigurationsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-start justify-between gap-4 mb-6">
+    <div className="min-h-screen page-enter">
+      {/* Page header */}
+      <div className="px-6 py-6 border-b border-border/50">
+        <div className="flex items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Telephony configurations</h1>
-            <p className="text-muted-foreground">
-              Connect one or more telephony provider accounts. Each campaign uses one
-              configuration; inbound calls are routed to the right one by account ID.{" "}
+            <h1 className="text-2xl font-bold tracking-tight">Telephony</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Connect provider accounts to enable outbound calls and receive inbound calls.{" "}
               <a
                 href="https://docs.dograh.com/integrations/telephony/overview"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-0.5 underline"
+                className="inline-flex items-center gap-0.5 text-primary hover:underline"
               >
-                Learn more <ExternalLink className="h-3 w-3" />
+                Docs <ExternalLink className="h-3 w-3" />
               </a>
             </p>
           </div>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" /> Add configuration
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            Add Configuration
           </Button>
         </div>
+      </div>
 
+      <div className="px-6 py-6 space-y-4">
+        {/* Warning banner */}
         {telnyxMissingWebhookPublicKeyCount > 0 && (
-          <div className="mb-6 rounded-md border border-amber-300 bg-amber-50 p-4 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
-              <div className="space-y-1 text-sm">
-                <p className="font-medium">Webhook public key not configured</p>
-                <p>
-                  {telnyxMissingWebhookPublicKeyCount === 1
-                    ? "1 Telnyx configuration is"
-                    : `${telnyxMissingWebhookPublicKeyCount} Telnyx configurations are`}{" "}
-                  missing a webhook public key. Without it, Telnyx call status
-                  updates and inbound calls are being rejected. Copy your
-                  public key from{" "}
-                  <span className="whitespace-nowrap">
-                    Mission Control Portal → Keys &amp; Credentials → Public Key
-                  </span>{" "}
-                  and paste it into the affected Telnyx configuration below.
-                </p>
-              </div>
+          <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/8 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+            <div className="text-sm">
+              <p className="font-semibold text-amber-700 dark:text-amber-300">Webhook public key not configured</p>
+              <p className="text-amber-600 dark:text-amber-400 mt-0.5">
+                {telnyxMissingWebhookPublicKeyCount === 1
+                  ? "1 Telnyx configuration is"
+                  : `${telnyxMissingWebhookPublicKeyCount} Telnyx configurations are`}{" "}
+                missing a webhook public key. Copy your public key from Mission Control Portal → Keys &amp; Credentials → Public Key.
+              </p>
             </div>
           </div>
         )}
 
+        {/* Loading */}
         {loading ? (
-          <div className="grid gap-3">
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-20 rounded-xl bg-muted shimmer" style={{ animationDelay: `${i * 0.08}s` }} />
+            ))}
           </div>
         ) : items.length === 0 ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>No telephony configurations yet</CardTitle>
-              <CardDescription>
-                Add one to enable outbound calls and receive inbound calls.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={() => setCreateOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" /> Add configuration
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="neural-card rounded-xl p-12 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 border border-primary/20">
+              <Phone className="h-6 w-6 text-primary" />
+            </div>
+            <h3 className="text-base font-semibold mb-1">No telephony configurations</h3>
+            <p className="text-sm text-muted-foreground mb-5 max-w-xs mx-auto">
+              Add a provider account to enable outbound calls and receive inbound calls.
+            </p>
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Add Configuration
+            </Button>
+          </div>
         ) : (
-          <div className="grid gap-3">
+          <div className="space-y-2">
             {items.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="flex items-center gap-4 py-4">
+              <div key={item.id} className="neural-card rounded-xl">
+                <div className="flex items-center gap-4 px-4 py-3.5">
+                  {/* Provider icon area */}
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
+                    <Phone className="h-4.5 w-4.5 text-primary" />
+                  </div>
+
+                  {/* Info */}
                   <Link
                     href={`/telephony-configurations/${item.id}`}
-                    className="flex flex-1 items-center gap-4 min-w-0"
+                    className="flex-1 min-w-0"
                   >
-                    <div className="flex flex-col gap-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium truncate">{item.name}</span>
-                        <Badge variant="secondary">{item.provider}</Badge>
-                        {item.is_default_outbound && (
-                          <Badge className="gap-1">
-                            <Star className="h-3 w-3 fill-current" />
-                            Default
-                          </Badge>
-                        )}
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {item.phone_number_count} phone{" "}
-                        {item.phone_number_count === 1 ? "number" : "numbers"}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold truncate">{item.name}</span>
+                      <span className="inline-flex items-center rounded-full bg-muted border border-border/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {PROVIDER_LABELS[item.provider] ?? item.provider}
+                      </span>
+                      {item.is_default_outbound && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/25 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          <Star className="h-2.5 w-2.5 fill-current" />
+                          Default
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-xs text-muted-foreground">
+                        {item.phone_number_count} {item.phone_number_count === 1 ? "number" : "numbers"}
                       </span>
                       <button
                         type="button"
@@ -247,80 +235,69 @@ export default function TelephonyConfigurationsPage() {
                             .then(() => toast.success("Configuration ID copied"))
                             .catch(() => toast.error("Failed to copy ID"));
                         }}
-                        title="Click to copy"
-                        className="inline-flex items-center gap-1 self-start rounded font-mono text-xs text-muted-foreground hover:text-foreground"
+                        className="inline-flex items-center gap-1 rounded font-mono text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
                       >
-                        <span className="truncate">Configuration ID: {item.id}</span>
-                        <Copy className="h-3 w-3 shrink-0" />
+                        ID: {item.id}
+                        <Copy className="h-2.5 w-2.5" />
                       </button>
                     </div>
                   </Link>
-                  <div className="flex items-center gap-1">
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 shrink-0">
                     {!item.is_default_outbound && (
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
                         onClick={() => onSetDefault(item)}
                         title="Set as default outbound"
                       >
-                        <Star className="h-4 w-4" />
+                        <Star className="h-3.5 w-3.5" />
                       </Button>
                     )}
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
                       onClick={() => onEdit(item)}
                       title="Edit"
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
                       onClick={() => setDeleteTarget(item)}
                       title="Delete"
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                     <Link
                       href={`/telephony-configurations/${item.id}`}
-                      className="text-muted-foreground"
-                      aria-label="View phone numbers"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                     >
-                      <ChevronRight className="h-5 w-5" />
+                      <ChevronRight className="h-4 w-4" />
                     </Link>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         )}
       </div>
 
-      <ConfigFormDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        existing={null}
-        onSaved={onSaved}
-      />
-      <ConfigFormDialog
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        existing={editTarget}
-        onSaved={onSaved}
-      />
+      <ConfigFormDialog open={createOpen} onOpenChange={setCreateOpen} existing={null} onSaved={onSaved} />
+      <ConfigFormDialog open={editOpen} onOpenChange={setEditOpen} existing={editTarget} onSaved={onSaved} />
 
-      <AlertDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => !o && setDeleteTarget(null)}
-      >
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete configuration?</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteTarget?.name} and all of its phone numbers will be removed. Any
-              campaigns that reference this configuration will block the deletion until
-              they are reassigned.
+              <strong>{deleteTarget?.name}</strong> and all of its phone numbers will be removed.
+              Any campaigns referencing this configuration must be reassigned first.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

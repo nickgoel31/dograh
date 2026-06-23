@@ -182,3 +182,28 @@ def get_countries_for_code(dialing_code: str) -> list[str]:
         return []
 
     return [country for country, code in COUNTRY_CODES.items() if code == dialing_code]
+
+
+def resolve_phone_number(initial_context: dict | None, call_type: str | None) -> str:
+    """
+    Resolve phone number consistently for inbound and outbound calls.
+
+    For inbound calls, the customer is the caller (caller_number).
+    For outbound calls, the dispatcher writes phone_number.
+    Falls back through available keys so it's never blank if any exist.
+    """
+    if not initial_context:
+        return ""
+        
+    caller_number = initial_context.get("caller_number")
+    called_number = initial_context.get("called_number")
+    phone = initial_context.get("phone_number")
+    
+    if call_type == "inbound":
+        primary = caller_number
+    else:
+        primary = phone
+        
+    resolved = primary or phone or called_number or caller_number or ""
+    return str(resolved) if resolved else ""
+

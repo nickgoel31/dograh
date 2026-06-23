@@ -18,6 +18,7 @@ from api.db.models import (
     WorkflowRunModel,
 )
 from api.schemas.user_configuration import UserConfiguration
+from api.utils.telephony_helper import resolve_phone_number
 
 
 class OrganizationUsageClient(BaseDBClient):
@@ -352,14 +353,8 @@ class OrganizationUsageClient(BaseDBClient):
                 ic = run.initial_context or {}
                 caller_number = ic.get("caller_number")
                 called_number = ic.get("called_number") or ic.get("phone_number")
-                # DEPRECATED: phone_number — use caller_number/called_number.
-                # Inbound runs only have caller_number/called_number; the
-                # caller_number is the customer. Outbound runs use the
-                # phone_number key written by the dispatchers.
-                if run.call_type == "inbound":
-                    phone_number = caller_number
-                else:
-                    phone_number = ic.get("phone_number")
+                
+                phone_number = resolve_phone_number(ic, run.call_type)
 
                 # Extract disposition from gathered_context
                 disposition = None
@@ -420,6 +415,7 @@ class OrganizationUsageClient(BaseDBClient):
                     WorkflowRunModel.gathered_context,
                     WorkflowRunModel.cost_info,
                     WorkflowRunModel.public_access_token,
+                    WorkflowRunModel.call_type,
                 )
                 .join(WorkflowModel, WorkflowRunModel.workflow_id == WorkflowModel.id)
                 .join(UserModel, WorkflowModel.user_id == UserModel.id)
