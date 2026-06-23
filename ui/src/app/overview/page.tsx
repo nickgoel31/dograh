@@ -1,12 +1,6 @@
 "use client";
 
-import Link from 'next/link';
-
-import { GitHubStarBadge } from '@/components/layout/GitHubStarBadge';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/lib/auth';
 import {
-  AudioLines,
   BookOpen,
   Bug,
   ExternalLink,
@@ -19,6 +13,11 @@ import {
   Workflow,
   Zap,
 } from 'lucide-react';
+import Link from 'next/link';
+
+import { GitHubStarBadge } from '@/components/layout/GitHubStarBadge';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/lib/auth';
 
 const QUICK_ACTIONS = [
   {

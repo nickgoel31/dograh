@@ -50,7 +50,7 @@ async def handle_vobiz_xml_webhook(
 
     workflow = await db_client.get_workflow_by_id(workflow_run.workflow_id)
     if workflow:
-        logger.info(f"[run {workflow_run_id}] Loaded workflow config: {workflow.config}")
+        logger.info(f"[run {workflow_run_id}] Loaded workflow config: {workflow.workflow_configurations}")
 
     logger.debug(f"[run {workflow_run_id}] Using provider: {provider.PROVIDER_NAME}")
 

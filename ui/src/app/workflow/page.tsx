@@ -1,3 +1,4 @@
+import { Bot } from 'lucide-react';
 import { Suspense } from 'react';
 
 import { getWorkflowsApiV1WorkflowFetchGet, listFoldersApiV1FolderGet } from '@/client/sdk.gen';
@@ -9,8 +10,6 @@ import { FolderSection } from '@/components/workflow/folders/FolderSection';
 import { UploadWorkflowButton } from '@/components/workflow/UploadWorkflowButton';
 import { getServerAccessToken, getServerAuthProvider } from '@/lib/auth/server';
 import logger from '@/lib/logger';
-
-import { Bot, FolderOpen, Plus, Upload } from 'lucide-react';
 
 import WorkflowLayout from "./WorkflowLayout";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Megaphone, Plus, ArrowRight } from 'lucide-react';
+import { ArrowRight,Megaphone, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
