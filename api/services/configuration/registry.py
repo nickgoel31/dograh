@@ -45,6 +45,12 @@ from api.services.configuration.options import (
     INWORLD_REALTIME_TTS_MODELS,
     INWORLD_TTS_MODELS,
     INWORLD_TTS_VOICES,
+    SMALLEST_TTS_LANGUAGES,
+    SMALLEST_TTS_MODELS,
+    SMALLEST_TTS_PRO_VOICES,
+    SMALLEST_TTS_VOICES,
+    SMALLEST_STT_LANGUAGES,
+    SMALLEST_STT_MODELS,
 )
 from api.services.configuration.options.google import GOOGLE_VERTEX_MODELS
 
@@ -71,7 +77,6 @@ class ServiceProviders(str, Enum):
     DOGRAH = "dograh"
     SARVAM = "sarvam"
     SMALLEST = "smallest"
-    SMALLEST_PULSE = "smallest_pulse"
     SPEECHMATICS = "speechmatics"
     CAMB = "camb"
     AWS_BEDROCK = "aws_bedrock"
@@ -110,6 +115,7 @@ class BaseServiceConfiguration(BaseModel):
         ServiceProviders.RIME,
         ServiceProviders.MINIMAX,
         ServiceProviders.SARVAM,
+        ServiceProviders.SMALLEST,
         ServiceProviders.TOGETHER,
         ServiceProviders.GOOGLE_VERTEX,
         ServiceProviders.OPENAI_REALTIME,
@@ -1047,47 +1053,46 @@ class SarvamTTSConfiguration(BaseTTSConfiguration):
     )
 
 
-SMALLEST_TTS_MODELS = ["lightning", "lightning-large", "lightning-v3.1"]
-SMALLEST_TTS_VOICES = [
-    "sunidhi",
-    "chinmayi",
-    "aanya",
-    "siya",
-    "anuja",
-    "avni",
-    "ishani",
-    "yuvika",
-    "advika",
-    "sana",
-    "sameera",
-    "srishti",
-    "sakshi",
-    "maya",
-    "wasim",
-    "rehan",
-    "parth",
-    "atharv",
-    "vivaan",
-    "devansh",
-    "aarush",
-]
-
+SMALLEST_PROVIDER_MODEL_CONFIG = provider_model_config(
+    "Smallest AI",
+    description="Smallest AI ultralow-latency TTS (Waves) and STT (Pulse) APIs.",
+    provider_docs_url="https://smallest.ai/docs",
+)
 
 @register_tts
-class SmallestTTSConfiguration(BaseTTSConfiguration):
+class SmallestAITTSConfiguration(BaseTTSConfiguration):
+    model_config = SMALLEST_PROVIDER_MODEL_CONFIG
     provider: Literal[ServiceProviders.SMALLEST] = ServiceProviders.SMALLEST
     model: str = Field(
-        default="lightning-v3.1",
-        description="Smallest AI TTS model.",
-        json_schema_extra={"examples": SMALLEST_TTS_MODELS, "allow_custom_input": True},
+        default="lightning_v3.1",
+        description="Smallest AI TTS model. lightning_v3.1_pro is the premium pool (American, British, Indian accents); lightning_v3.1 is the standard pool with 217 voices across 12 languages.",
+        json_schema_extra={"examples": list(SMALLEST_TTS_MODELS)},
     )
     voice: str = Field(
-        default="sunidhi",
-        description="Smallest AI voice name.",
-        json_schema_extra={"examples": SMALLEST_TTS_VOICES, "allow_custom_input": True},
+        default="sophia",
+        description="Smallest AI voice ID. Available voices differ by model: lightning_v3.1 has a broad multilingual pool; lightning_v3.1_pro has premium American, British, and Indian accent voices (English + Hindi only).",
+        json_schema_extra={
+            "examples": list(SMALLEST_TTS_VOICES),
+            "allow_custom_input": True,
+            "model_options": {
+                "lightning_v3.1": list(SMALLEST_TTS_VOICES),
+                "lightning_v3.1_pro": list(SMALLEST_TTS_PRO_VOICES),
+            },
+        },
+    )
+    language: str = Field(
+        default="en",
+        description="ISO 639-1 language code for synthesis.",
+        json_schema_extra={
+            "examples": list(SMALLEST_TTS_LANGUAGES),
+            "allow_custom_input": True,
+        },
     )
     speed: float = Field(
-        default=1.0, ge=0.5, le=2.0, description="Speech speed multiplier."
+        default=1.0,
+        ge=0.5,
+        le=2.0,
+        description="Speech speed multiplier (0.5 to 2.0).",
     )
 
 
@@ -1273,7 +1278,7 @@ TTSConfig = Annotated[
         CartesiaTTSConfiguration,
         DograhTTSService,
         SarvamTTSConfiguration,
-        SmallestTTSConfiguration,
+        SmallestAITTSConfiguration,
         CambTTSConfiguration,
         RimeTTSConfiguration,
         SpeachesTTSConfiguration,
@@ -1543,25 +1548,27 @@ class AzureSpeechSTTConfiguration(BaseSTTConfiguration):
 
 
 @register_stt
-class SmallestPulseSTTConfiguration(BaseSTTConfiguration):
-    provider: Literal[ServiceProviders.SMALLEST_PULSE] = ServiceProviders.SMALLEST_PULSE
-    model: Literal["pulse"] = Field(
+class SmallestAISTTConfiguration(BaseSTTConfiguration):
+    model_config = SMALLEST_PROVIDER_MODEL_CONFIG
+    provider: Literal[ServiceProviders.SMALLEST] = ServiceProviders.SMALLEST
+    model: str = Field(
         default="pulse",
-        json_schema_extra=SMALLEST_PULSE_PROVIDER_MODEL_CONFIG,
+        description="Smallest AI STT model. Supports 38 languages with real-time streaming.",
+        json_schema_extra={"examples": list(SMALLEST_STT_MODELS)},
     )
     language: str = Field(
         default="en",
+        description="ISO 639-1 language code for transcription.",
         json_schema_extra={
-            "examples": ["en", "hi", "multi", "multi-eu"],
-            "allow_custom_input": True
+            "examples": list(SMALLEST_STT_LANGUAGES),
+            "allow_custom_input": True,
         },
     )
-    eou_timeout_ms: int = Field(default=300, ge=0)
 
 
 STTConfig = Annotated[
     Union[
-        SmallestPulseSTTConfiguration,
+        SmallestAISTTConfiguration,
         DeepgramSTTConfiguration,
         CartesiaSTTConfiguration,
         OpenAISTTConfiguration,

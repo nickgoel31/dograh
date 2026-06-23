@@ -47,7 +47,6 @@ class UserConfigurationValidator:
             ServiceProviders.DOGRAH.value: self._check_dograh_api_key,
             ServiceProviders.SARVAM.value: self._check_sarvam_api_key,
             ServiceProviders.SMALLEST.value: self._check_smallest_api_key,
-            ServiceProviders.SMALLEST_PULSE.value: self._check_smallest_api_key,
             ServiceProviders.SPEECHMATICS.value: self._check_speechmatics_api_key,
             ServiceProviders.TOGETHER.value: self._check_together_api_key,
             ServiceProviders.CAMB.value: self._check_camb_api_key,

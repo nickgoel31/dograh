@@ -57,7 +57,8 @@ from pipecat.services.speaches.llm import SpeachesLLMService, SpeachesLLMSetting
 from pipecat.services.speaches.stt import SpeachesSTTService, SpeachesSTTSettings
 from pipecat.services.speaches.tts import SpeachesTTSService, SpeachesTTSSettings
 from pipecat.services.together.llm import TogetherLLMService, TogetherLLMSettings
-from pipecat.services.smallest.stt import SmallestSTTService, SmallestSTTSettings, SmallestSTTModel
+from pipecat.services.smallest.stt import SmallestSTTService, SmallestSTTSettings
+from pipecat.services.smallest.tts import SmallestTTSService, SmallestTTSSettings
 from pipecat.services.speechmatics.stt import (
     SpeechmaticsSTTService,
     SpeechmaticsSTTSettings,
@@ -156,27 +157,19 @@ def create_stt_service(
             api_key=user_config.stt.api_key,
             sample_rate=audio_config.transport_in_sample_rate,
         )
-    elif user_config.stt.provider == ServiceProviders.SMALLEST_PULSE.value:
-        language = getattr(user_config.stt, "language", None) or "en"
+    elif user_config.stt.provider == ServiceProviders.SMALLEST.value:
+        language_code = getattr(user_config.stt, "language", None) or "en"
         try:
-            lang_val = Language(language)
+            pipecat_language = Language(language_code)
         except ValueError:
-            # Fall back to raw string for provider-specific codes like "multi" or "multi-eu"
-            lang_val = language
-            
-        encoding = "mulaw" if audio_config.transport_in_sample_rate == 8000 else "linear16"
-        # Force 250ms EOU timeout to override any old 800ms values saved in the database
-        eou_timeout_ms = 250
-        
+            pipecat_language = Language.EN
         return SmallestSTTService(
             api_key=user_config.stt.api_key,
-            encoding=encoding,
-            sample_rate=audio_config.transport_in_sample_rate,
             settings=SmallestSTTSettings(
-                model=SmallestSTTModel.PULSE,
-                language=lang_val,
-                eou_timeout_ms=eou_timeout_ms,
-            )
+                model=user_config.stt.model,
+                language=pipecat_language,
+            ),
+            sample_rate=audio_config.transport_in_sample_rate,
         )
     elif user_config.stt.provider == ServiceProviders.DOGRAH.value:
         base_url = MPS_API_URL.replace("http://", "ws://").replace("https://", "wss://")
@@ -522,14 +515,23 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             silence_time_s=1.0,
         )
     elif user_config.tts.provider == ServiceProviders.SMALLEST.value:
-        from pipecat.services.smallest.tts import SmallestTTSService
-
-        voice = getattr(user_config.tts, "voice", None) or "sophia"
+        language_code = getattr(user_config.tts, "language", None) or "en"
+        try:
+            pipecat_language = Language(language_code)
+        except ValueError:
+            pipecat_language = Language.EN
+        speed = getattr(user_config.tts, "speed", None)
+        model = user_config.tts.model.replace("lightning-v", "lightning_v")
+        settings_kwargs = SmallestTTSSettings(
+            model=model,
+            voice=user_config.tts.voice,
+            language=pipecat_language,
+        )
+        if speed and speed != 1.0:
+            settings_kwargs.speed = speed
         return SmallestTTSService(
             api_key=user_config.tts.api_key,
-            settings=SmallestTTSService.Settings(
-                voice=voice,
-            ),
+            settings=settings_kwargs,
             text_filters=[xml_function_tag_filter],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
