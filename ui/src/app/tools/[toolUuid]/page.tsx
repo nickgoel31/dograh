@@ -563,23 +563,22 @@ const data = await response.json();`;
     const categoryConfig = getCategoryConfig(tool.category as ToolCategory);
 
     return (
-        <div className="min-h-screen bg-background">
-            <div className="container mx-auto px-4 py-8">
-                <div className="max-w-4xl mx-auto">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-6">
+        <div className="min-h-screen bg-[#08080a] p-6 max-w-[1600px] mx-auto w-full page-enter">
+            <div className="max-w-4xl mx-auto">
+                {/* Header */}
+                <div className="border-b border-[#1d1d22]/50 pb-6 mb-6">
+                    <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <Button
                                 variant="ghost"
-                                size="sm"
                                 onClick={() => router.push("/tools")}
+                                className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] p-2.5 rounded-xl text-xs text-zinc-300 transition-colors"
                             >
-                                <ArrowLeft className="w-4 h-4 mr-2" />
-                                Back
+                                <ArrowLeft className="w-4 h-4" />
                             </Button>
                             <div className="flex items-center gap-3">
                                 <div
-                                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                                    className="w-10 h-10 rounded-xl flex items-center justify-center border border-zinc-700/30"
                                     style={{
                                         backgroundColor: tool.icon_color || categoryConfig?.iconColor || "#3B82F6",
                                     }}
@@ -587,8 +586,8 @@ const data = await response.json();`;
                                     {renderToolIcon(tool.category)}
                                 </div>
                                 <div>
-                                    <h1 className="text-xl font-bold">{name}</h1>
-                                    <p className="text-sm text-muted-foreground">
+                                    <h1 className="text-xl font-bold text-white tracking-tight">{name}</h1>
+                                    <p className="text-xs text-zinc-500 mt-0.5">
                                         {getToolTypeLabel(tool.category)}
                                     </p>
                                 </div>
@@ -597,10 +596,10 @@ const data = await response.json();`;
                         <div className="flex items-center gap-2">
                             {!isEndCallTool && !isTransferCallTool && !isBuiltinTool && !isMcpTool && (
                                 <Button
-                                    variant="outline"
                                     onClick={() => setShowCodeDialog(true)}
+                                    className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3.5 py-2 rounded-xl text-xs text-zinc-300 font-medium transition-colors"
                                 >
-                                    <Code className="w-4 h-4 mr-2" />
+                                    <Code className="w-4 h-4 mr-2 inline" />
                                     View Code
                                 </Button>
                             )}
@@ -609,7 +608,7 @@ const data = await response.json();`;
                                     href={TOOL_DOCUMENTATION_URLS[tool.category]}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                    className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
                                 >
                                     Docs
                                     <ExternalLink className="h-3.5 w-3.5" />
@@ -617,195 +616,204 @@ const data = await response.json();`;
                             )}
                         </div>
                     </div>
+                </div>
 
-                    {isBuiltinTool ? (
-                        <BuiltinToolConfig
-                            name={name}
-                            onNameChange={setName}
-                            description={description}
-                            onDescriptionChange={setDescription}
-                            title="Calculator Configuration"
-                            subtitle="Built-in calculator for arithmetic operations. No additional configuration needed."
-                        />
-                    ) : isEndCallTool ? (
-                        <EndCallToolConfig
-                            name={name}
-                            onNameChange={setName}
-                            description={description}
-                            onDescriptionChange={setDescription}
-                            messageType={endCallMessageType}
-                            onMessageTypeChange={setEndCallMessageType}
-                            customMessage={customMessage}
-                            onCustomMessageChange={setCustomMessage}
-                            audioRecordingId={audioRecordingId}
-                            onAudioRecordingIdChange={setAudioRecordingId}
-                            recordings={recordings}
-                            endCallReason={endCallReason}
-                            onEndCallReasonChange={handleEndCallReasonChange}
-                            endCallReasonDescription={endCallReasonDescription}
-                            onEndCallReasonDescriptionChange={setEndCallReasonDescription}
-                        />
-                    ) : isTransferCallTool ? (
-                        <TransferCallToolConfig
-                            name={name}
-                            onNameChange={setName}
-                            description={description}
-                            onDescriptionChange={setDescription}
-                            destination={transferDestination}
-                            onDestinationChange={setTransferDestination}
-                            messageType={transferMessageType}
-                            onMessageTypeChange={setTransferMessageType}
-                            customMessage={customMessage}
-                            onCustomMessageChange={setCustomMessage}
-                            audioRecordingId={transferAudioRecordingId}
-                            onAudioRecordingIdChange={setTransferAudioRecordingId}
-                            recordings={recordings}
-                            timeout={transferTimeout}
-                            onTimeoutChange={setTransferTimeout}
-                        />
-                    ) : isMcpTool ? (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>MCP Server Configuration</CardTitle>
-                                <CardDescription>
-                                    Configure the MCP server endpoint. Its tools become available to the agent.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="mcp-name">Tool Name</Label>
-                                    <Input
-                                        id="mcp-name"
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                        placeholder="e.g., Customer MCP Server"
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="mcp-description">Description</Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Provide a description which makes it easy for LLM to understand what this tool does
-                                    </p>
-                                    <Textarea
-                                        id="mcp-description"
-                                        value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
-                                        placeholder="What does this MCP server provide?"
-                                        rows={3}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="mcp-url">MCP Server URL</Label>
-                                    <Input
-                                        id="mcp-url"
-                                        value={mcpUrl}
-                                        onChange={(e) => setMcpUrl(e.target.value)}
-                                        placeholder="https://your-mcp-server.example.com/mcp"
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label>Transport</Label>
-                                    <Input
-                                        value="Streamable HTTP"
-                                        disabled
-                                        readOnly
-                                    />
-                                </div>
-
-                                <CredentialSelector
-                                    value={mcpCredentialUuid}
-                                    onChange={setMcpCredentialUuid}
-                                    label="Credential (Optional)"
-                                    description="Select a credential for authenticating with the MCP server, or leave empty for no auth."
+                {isBuiltinTool ? (
+                    <BuiltinToolConfig
+                        name={name}
+                        onNameChange={setName}
+                        description={description}
+                        onDescriptionChange={setDescription}
+                        title="Calculator Configuration"
+                        subtitle="Built-in calculator for arithmetic operations. No additional configuration needed."
+                    />
+                ) : isEndCallTool ? (
+                    <EndCallToolConfig
+                        name={name}
+                        onNameChange={setName}
+                        description={description}
+                        onDescriptionChange={setDescription}
+                        messageType={endCallMessageType}
+                        onMessageTypeChange={setEndCallMessageType}
+                        customMessage={customMessage}
+                        onCustomMessageChange={setCustomMessage}
+                        audioRecordingId={audioRecordingId}
+                        onAudioRecordingIdChange={setAudioRecordingId}
+                        recordings={recordings}
+                        endCallReason={endCallReason}
+                        onEndCallReasonChange={handleEndCallReasonChange}
+                        endCallReasonDescription={endCallReasonDescription}
+                        onEndCallReasonDescriptionChange={setEndCallReasonDescription}
+                    />
+                ) : isTransferCallTool ? (
+                    <TransferCallToolConfig
+                        name={name}
+                        onNameChange={setName}
+                        description={description}
+                        onDescriptionChange={setDescription}
+                        destination={transferDestination}
+                        onDestinationChange={setTransferDestination}
+                        messageType={transferMessageType}
+                        onMessageTypeChange={setTransferMessageType}
+                        customMessage={customMessage}
+                        onCustomMessageChange={setCustomMessage}
+                        audioRecordingId={transferAudioRecordingId}
+                        onAudioRecordingIdChange={setTransferAudioRecordingId}
+                        recordings={recordings}
+                        timeout={transferTimeout}
+                        onTimeoutChange={setTransferTimeout}
+                    />
+                ) : isMcpTool ? (
+                    <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 shadow-none">
+                        <CardHeader className="p-0 pb-6 mb-6 border-b border-[#1d1d22]/50">
+                            <CardTitle className="text-lg font-bold text-white">MCP Server Configuration</CardTitle>
+                            <CardDescription className="text-xs text-zinc-500">
+                                Configure the MCP server endpoint. Its tools become available to the agent.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0 space-y-6">
+                            <div className="space-y-1">
+                                <Label htmlFor="mcp-name" className="text-xs font-bold text-zinc-300 block mb-1.5">Tool Name</Label>
+                                <Input
+                                    id="mcp-name"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="e.g., Customer MCP Server"
+                                    className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
                                 />
+                            </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="mcp-tools-filter">Tools Filter (Optional)</Label>
-                                    <Input
-                                        id="mcp-tools-filter"
-                                        value={mcpToolsFilter}
-                                        onChange={(e) => setMcpToolsFilter(e.target.value)}
-                                        placeholder="e.g., tool_one, tool_two"
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        Comma-separated list of tool names to allow. Leave empty to expose all tools from the server.
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <HttpApiToolConfig
-                            name={name}
-                            onNameChange={setName}
-                            description={description}
-                            onDescriptionChange={setDescription}
-                            httpMethod={httpMethod}
-                            onHttpMethodChange={setHttpMethod}
-                            url={url}
-                            onUrlChange={setUrl}
-                            credentialUuid={credentialUuid}
-                            onCredentialUuidChange={setCredentialUuid}
-                            headers={headers}
-                            onHeadersChange={setHeaders}
-                            parameters={parameters}
-                            onParametersChange={setParameters}
-                            presetParameters={presetParameters}
-                            onPresetParametersChange={setPresetParameters}
-                            timeoutMs={timeoutMs}
-                            onTimeoutMsChange={setTimeoutMs}
-                            customMessage={customMessage}
-                            onCustomMessageChange={setCustomMessage}
-                            customMessageType={customMessageType}
-                            onCustomMessageTypeChange={setCustomMessageType}
-                            customMessageRecordingId={customMessageRecordingId}
-                            onCustomMessageRecordingIdChange={setCustomMessageRecordingId}
-                            recordings={recordings}
-                        />
-                    )}
+                            <div className="space-y-1">
+                                <Label htmlFor="mcp-description" className="text-xs font-bold text-zinc-300 block">Description</Label>
+                                <span className="text-[10px] text-zinc-500 mb-1.5 block leading-snug">
+                                    Provide a description which makes it easy for LLM to understand what this tool does
+                                </span>
+                                <Textarea
+                                    id="mcp-description"
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    placeholder="What does this MCP server provide?"
+                                    rows={3}
+                                    className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
+                                />
+                            </div>
 
-                    {error && (
-                        <div className="mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
-                            {error}
-                        </div>
-                    )}
+                            <div className="space-y-1">
+                                <Label htmlFor="mcp-url" className="text-xs font-bold text-zinc-300 block mb-1.5">MCP Server URL</Label>
+                                <Input
+                                    id="mcp-url"
+                                    value={mcpUrl}
+                                    onChange={(e) => setMcpUrl(e.target.value)}
+                                    placeholder="https://your-mcp-server.example.com/mcp"
+                                    className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
+                                />
+                            </div>
 
-                    {saveSuccess && (
-                        <div className="mt-4 p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-green-600">
-                            Tool saved successfully!
-                        </div>
-                    )}
+                            <div className="space-y-1">
+                                <Label className="text-xs font-bold text-zinc-300 block mb-1.5">Transport</Label>
+                                <Input
+                                    value="Streamable HTTP"
+                                    className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-zinc-400 focus:outline-none focus:border-zinc-700 transition-all"
+                                    disabled
+                                    readOnly
+                                />
+                            </div>
 
-                    <div className="flex justify-end mt-6">
-                        <Button onClick={handleSave} disabled={isSaving}>
-                            {isSaving ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Saving...
-                                </>
-                            ) : (
-                                <>
-                                    <Save className="w-4 h-4 mr-2" />
-                                    Save
-                                </>
-                            )}
-                        </Button>
+                            <CredentialSelector
+                                value={mcpCredentialUuid}
+                                onChange={setMcpCredentialUuid}
+                                label="Credential (Optional)"
+                                description="Select a credential for authenticating with the MCP server, or leave empty for no auth."
+                            />
+
+                            <div className="space-y-1">
+                                <Label htmlFor="mcp-tools-filter" className="text-xs font-bold text-zinc-300 block mb-1.5">Tools Filter (Optional)</Label>
+                                <Input
+                                    id="mcp-tools-filter"
+                                    value={mcpToolsFilter}
+                                    onChange={(e) => setMcpToolsFilter(e.target.value)}
+                                    placeholder="e.g., tool_one, tool_two"
+                                    className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
+                                />
+                                <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
+                                    Comma-separated list of tool names to allow. Leave empty to expose all tools from the server.
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <HttpApiToolConfig
+                        name={name}
+                        onNameChange={setName}
+                        description={description}
+                        onDescriptionChange={setDescription}
+                        httpMethod={httpMethod}
+                        onHttpMethodChange={setHttpMethod}
+                        url={url}
+                        onUrlChange={setUrl}
+                        credentialUuid={credentialUuid}
+                        onCredentialUuidChange={setCredentialUuid}
+                        headers={headers}
+                        onHeadersChange={setHeaders}
+                        parameters={parameters}
+                        onParametersChange={setParameters}
+                        presetParameters={presetParameters}
+                        onPresetParametersChange={setPresetParameters}
+                        timeoutMs={timeoutMs}
+                        onTimeoutMsChange={setTimeoutMs}
+                        customMessage={customMessage}
+                        onCustomMessageChange={setCustomMessage}
+                        customMessageType={customMessageType}
+                        onCustomMessageTypeChange={setCustomMessageType}
+                        customMessageRecordingId={customMessageRecordingId}
+                        onCustomMessageRecordingIdChange={setCustomMessageRecordingId}
+                        recordings={recordings}
+                    />
+                )}
+
+                {error && (
+                    <div className="mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-red-400 text-xs font-semibold">
+                        {error}
                     </div>
+                )}
+
+                {saveSuccess && (
+                    <div className="mt-4 p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-xs font-semibold">
+                        Tool saved successfully!
+                    </div>
+                )}
+
+                <div className="flex justify-end mt-6">
+                    <Button
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer"
+                    >
+                        {isSaving ? (
+                            <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                                Saving...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="w-4 h-4 mr-2 inline" />
+                                Save
+                            </>
+                        )}
+                    </Button>
                 </div>
             </div>
 
             {/* Code View Dialog (only for HTTP API tools) */}
             <Dialog open={showCodeDialog} onOpenChange={setShowCodeDialog}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Code Preview</DialogTitle>
-                        <DialogDescription>
+                <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-2xl p-6 relative shadow-2xl space-y-6 text-white">
+                    <DialogHeader className="space-y-1">
+                        <DialogTitle className="text-lg font-bold text-white">Code Preview</DialogTitle>
+                        <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
                             JavaScript code to make this API call
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="bg-muted rounded-lg p-4 font-mono text-sm overflow-auto max-h-96">
+                    <div className="bg-[#08080a] border border-[#1d1d22] rounded-xl p-4 font-mono text-xs overflow-auto max-h-96 text-zinc-300">
                         <pre>{getCodeSnippet()}</pre>
                     </div>
                 </DialogContent>

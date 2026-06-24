@@ -9,7 +9,7 @@ export default function ServiceConfigurationPage() {
                 <h1 className="text-2xl font-bold tracking-tight text-white">Models</h1>
                 <p className="text-xs text-zinc-500 mt-1">Configure AI, voice, and transcription service providers</p>
             </div>
-            <div className="max-w-2xl">
+            <div className="max-w-2xl mx-auto">
                 <ServiceConfiguration docsUrl={SETTINGS_DOCUMENTATION_URLS.modelOverrides} />
             </div>
         </div>

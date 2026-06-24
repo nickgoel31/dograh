@@ -82,72 +82,70 @@ export function TransferCallToolConfig({
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Transfer Call Configuration</CardTitle>
-                <CardDescription>
+        <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 shadow-none">
+            <CardHeader className="p-0 pb-6 mb-6 border-b border-[#1d1d22]/50">
+                <CardTitle className="text-lg font-bold text-white">Transfer Call Configuration</CardTitle>
+                <CardDescription className="text-xs text-zinc-500">
                     Configure call transfer settings. Supports phone numbers (Twilio) and SIP endpoints (Asterisk ARI).
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="grid gap-2">
-                    <Label>Tool Name</Label>
-                    <Label className="text-xs text-muted-foreground">
-                        A descriptive name for this tool
-                    </Label>
+            <CardContent className="p-0 space-y-6">
+                <div className="grid gap-1">
+                    <Label className="text-xs font-bold text-zinc-300 block mb-1.5">Tool Name</Label>
                     <Input
                         value={name}
                         onChange={(e) => onNameChange(e.target.value)}
                         placeholder="e.g., Transfer Call"
+                        className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
                     />
                 </div>
 
-                <div className="grid gap-2">
-                    <Label>Description</Label>
-                    <Label className="text-xs text-muted-foreground">
+                <div className="grid gap-1">
+                    <Label className="text-xs font-bold text-zinc-300 block">Description</Label>
+                    <span className="text-[10px] text-zinc-500 mb-1.5 block leading-snug">
                         Helps the LLM understand when to use this tool
-                    </Label>
+                    </span>
                     <Textarea
                         value={description}
                         onChange={(e) => onDescriptionChange(e.target.value)}
                         placeholder="When should the AI transfer the call?"
                         rows={3}
+                        className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all mt-1"
                     />
                 </div>
 
-                <div className="grid gap-2 pt-4 border-t">
-                    <Label>Transfer Destination</Label>
-                    <Label className="text-xs text-muted-foreground">
+                <div className="grid gap-1 pt-6 border-t border-[#1d1d22]/50">
+                    <Label className="text-xs font-bold text-zinc-300 block">Transfer Destination</Label>
+                    <span className="text-[10px] text-zinc-500 mb-1.5 block leading-snug">
                         {sipMode
                             ? "SIP endpoint to transfer the call to (e.g., PJSIP/1234 or SIP/extension@domain.com)"
                             : "Phone number to transfer the call to (E.164 format with country code)"
                         }
-                    </Label>
+                    </span>
                     <Input
                         value={destination}
                         onChange={(e) => onDestinationChange(e.target.value)}
                         placeholder={sipMode ? "PJSIP/1234 or SIP/extension@domain.com" : "+1234567890"}
-                        className={destinationError ? "border-red-500 focus:border-red-500" : ""}
+                        className={`bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all ${
+                            destinationError ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""
+                        }`}
                     />
                     {destinationError && (
-                        <Label className="text-xs text-red-500">
+                        <Label className="text-xs text-red-500 mt-1 block">
                             {destinationError}
                         </Label>
                     )}
                     <button
                         type="button"
-                        className="text-xs text-muted-foreground hover:text-foreground underline w-fit"
+                        className="text-[11px] text-purple-400 hover:text-purple-300 hover:underline w-fit mt-1.5 font-medium cursor-pointer"
                         onClick={handleSipModeToggle}
                     >
                         {sipMode ? "Use phone number instead" : "Use SIP endpoint instead"}
                     </button>
                 </div>
 
-                <div className="grid gap-4 pt-4 border-t">
-                    <Label>Pre-Transfer Message</Label>
-                    <Label className="text-xs text-muted-foreground">
-                        Choose whether to play a message before transferring
-                    </Label>
+                <div className="grid gap-2 pt-6 border-t border-[#1d1d22]/50">
+                    <Label className="text-xs font-bold text-zinc-300 block mb-1.5">Pre-Transfer Message</Label>
                     <RadioGroup
                         value={messageType}
                         onValueChange={(v) => onMessageTypeChange(v as EndCallMessageType)}
@@ -155,21 +153,21 @@ export function TransferCallToolConfig({
                     >
                         <label
                             htmlFor="none"
-                            className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                            className="flex items-start space-x-3 p-4 bg-[#08080a] border border-[#1d1d22] rounded-xl hover:border-zinc-700/80 transition-all cursor-pointer"
                         >
-                            <RadioGroupItem value="none" id="none" />
+                            <RadioGroupItem value="none" id="none" className="mt-1 border-[#232328] text-[#7c3aed]" />
                             <div className="flex-1">
-                                <span className="font-medium">No Message</span>
-                                <p className="text-xs text-muted-foreground">
+                                <span className="text-xs font-bold text-zinc-200 block">No Message</span>
+                                <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
                                     Transfer the call immediately without any message
                                 </p>
                             </div>
                         </label>
-                        <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50">
-                            <RadioGroupItem value="custom" id="custom" className="mt-1" />
+                        <div className="flex items-start space-x-3 p-4 bg-[#08080a] border border-[#1d1d22] rounded-xl hover:border-zinc-700/80 transition-all">
+                            <RadioGroupItem value="custom" id="custom" className="mt-1 border-[#232328] text-[#7c3aed]" />
                             <label htmlFor="custom" className="flex-1 space-y-2 cursor-pointer">
-                                <span className="font-medium">Custom Message</span>
-                                <p className="text-xs text-muted-foreground">
+                                <span className="text-xs font-bold text-zinc-200 block">Custom Message</span>
+                                <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
                                     Play a custom message before transferring
                                 </p>
                             </label>
@@ -182,14 +180,15 @@ export function TransferCallToolConfig({
                                     onChange={(e) => onCustomMessageChange(e.target.value)}
                                     placeholder="e.g., Please hold while I transfer your call."
                                     rows={2}
+                                    className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
                                 />
                             </div>
                         )}
-                        <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50">
-                            <RadioGroupItem value="audio" id="audio" className="mt-1" />
+                        <div className="flex items-start space-x-3 p-4 bg-[#08080a] border border-[#1d1d22] rounded-xl hover:border-zinc-700/80 transition-all">
+                            <RadioGroupItem value="audio" id="audio" className="mt-1 border-[#232328] text-[#7c3aed]" />
                             <label htmlFor="audio" className="flex-1 space-y-2 cursor-pointer">
-                                <span className="font-medium">Pre-recorded Audio</span>
-                                <p className="text-xs text-muted-foreground">
+                                <span className="text-xs font-bold text-zinc-200 block">Pre-recorded Audio</span>
+                                <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
                                     Play a pre-recorded audio file before transferring
                                 </p>
                             </label>
@@ -206,28 +205,24 @@ export function TransferCallToolConfig({
                     </RadioGroup>
                 </div>
 
-                <div className="grid gap-2 pt-4 border-t">
-                    <Label>Transfer Timeout</Label>
-                    <Label className="text-xs text-muted-foreground">
-                        Maximum time to wait for destination to answer (5-120 seconds)
-                    </Label>
+                <div className="grid gap-1 pt-6 border-t border-[#1d1d22]/50">
+                    <Label className="text-xs font-bold text-zinc-300 block">Transfer Timeout</Label>
+                    <span className="text-[10px] text-zinc-500 mb-1.5 block leading-snug">
+                        Maximum time to wait for destination to answer (5-120 seconds). Default: 30 seconds.
+                    </span>
                     <Input
                         type="number"
                         value={timeout ?? 30}
                         onChange={(e) => {
                             const value = parseInt(e.target.value) || 30;
-                            // Clamp value between 5 and 120 seconds
                             const clampedValue = Math.min(Math.max(value, 5), 120);
                             onTimeoutChange(clampedValue);
                         }}
                         placeholder="30"
                         min="5"
                         max="120"
-                        className="w-32"
+                        className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all w-32"
                     />
-                    <Label className="text-xs text-muted-foreground">
-                        Default: 30 seconds
-                    </Label>
                 </div>
             </CardContent>
         </Card>

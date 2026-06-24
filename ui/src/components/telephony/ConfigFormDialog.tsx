@@ -160,12 +160,12 @@ export function ConfigFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative shadow-2xl space-y-6 text-white">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="text-lg font-bold text-white">
             {isEdit ? "Edit telephony configuration" : "Add telephony configuration"}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
             {isEdit
               ? "Update credentials for this configuration. Phone numbers are managed separately."
               : "Connect a telephony provider account. Phone numbers are added after the configuration is created."}
@@ -175,7 +175,7 @@ export function ConfigFormDialog({
         <div className="space-y-4">
           {isEdit && existing && (
             <div className="space-y-1">
-              <Label>Configuration ID</Label>
+              <Label className="text-xs font-bold text-zinc-300 block mb-1.5">Configuration ID</Label>
               <button
                 type="button"
                 onClick={() => {
@@ -185,35 +185,36 @@ export function ConfigFormDialog({
                     .catch(() => toast.error("Failed to copy ID"));
                 }}
                 title="Click to copy"
-                className="group flex w-full items-center gap-2 rounded-md border bg-muted/20 p-2 text-left font-mono text-xs transition-colors hover:bg-muted/40"
+                className="group flex w-full items-center gap-2 rounded-xl border border-[#1d1d22] bg-[#08080a] p-3 text-left font-mono text-xs transition-colors hover:bg-white/5"
               >
-                <code className="flex-1 truncate">{existing.id}</code>
-                <Copy className="h-3 w-3 shrink-0 text-muted-foreground group-hover:text-foreground" />
+                <code className="flex-1 truncate text-zinc-300 group-hover:text-white">{existing.id}</code>
+                <Copy className="h-3.5 w-3.5 shrink-0 text-zinc-500 group-hover:text-white" />
               </button>
             </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="cfg-name">Name</Label>
+            <Label htmlFor="cfg-name" className="text-xs font-bold text-zinc-300 block mb-1.5">Name</Label>
             <Input
               id="cfg-name"
               placeholder="e.g. Twilio US prod"
               value={name}
+              className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
               onChange={(e) => setName(e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cfg-provider">Provider</Label>
+            <Label htmlFor="cfg-provider" className="text-xs font-bold text-zinc-300 block mb-1.5">Provider</Label>
             <Select
               value={providerName}
               onValueChange={setProviderName}
               disabled={lockedProvider || providers.length === 0}
             >
-              <SelectTrigger id="cfg-provider">
+              <SelectTrigger id="cfg-provider" className="w-full bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all">
                 <SelectValue placeholder="Select a provider" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#111113] border border-[#1d1d22] text-white">
                 {providers.map((p) => (
                   <SelectItem key={p.provider} value={p.provider}>
                     {p.display_name}
@@ -222,7 +223,7 @@ export function ConfigFormDialog({
               </SelectContent>
             </Select>
             {lockedProvider && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
                 Provider cannot be changed after creation.
               </p>
             )}
@@ -231,18 +232,18 @@ export function ConfigFormDialog({
                 href={currentProvider.docs_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-blue-600 underline"
+                className="text-blue-400 hover:underline inline-flex items-center gap-0.5 text-xs mt-1"
               >
-                {currentProvider.display_name} docs <ExternalLink className="h-3 w-3" />
+                {currentProvider.display_name} docs <ExternalLink className="w-3 h-3 inline" />
               </a>
             )}
           </div>
 
           {!isEdit && (
-            <div className="flex items-center justify-between rounded border p-3">
+            <div className="flex items-center justify-between rounded-xl border border-[#1d1d22] bg-[#08080a] p-4 mb-4">
               <div>
-                <Label className="text-sm">Set as default for outbound calls</Label>
-                <p className="text-xs text-muted-foreground">
+                <Label className="text-xs font-bold text-zinc-300 block mb-1.5">Set as default for outbound calls</Label>
+                <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
                   Used by test calls and campaigns when no specific config is selected.
                 </p>
               </div>
@@ -251,13 +252,13 @@ export function ConfigFormDialog({
           )}
 
           {currentProvider && (
-            <div className="space-y-3 border-t pt-3">
+            <div className="space-y-3 border-t border-[#1d1d22]/50 pt-4">
               {currentProvider.fields.map((field) => (
                 <div className="space-y-1" key={field.name}>
-                  <Label htmlFor={`cfg-field-${field.name}`}>
+                  <Label htmlFor={`cfg-field-${field.name}`} className="text-xs font-bold text-zinc-300 block mb-1.5">
                     {field.label}
                     {!field.required && (
-                      <span className="ml-1 text-xs text-muted-foreground">
+                      <span className="ml-1 text-[10px] font-normal text-zinc-500">
                         (optional)
                       </span>
                     )}
@@ -269,7 +270,7 @@ export function ConfigFormDialog({
                     isEdit={isEdit}
                   />
                   {field.description && (
-                    <p className="text-xs text-muted-foreground">{field.description}</p>
+                    <p className="text-[10px] text-zinc-500 mt-1 leading-snug">{field.description}</p>
                   )}
                 </div>
               ))}
@@ -277,11 +278,11 @@ export function ConfigFormDialog({
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+        <DialogFooter className="flex gap-3 justify-end pt-2 border-t border-[#1d1d22]/50">
+          <Button className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors cursor-pointer" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting || !currentProvider}>
+          <Button className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer" onClick={handleSubmit} disabled={submitting || !currentProvider}>
             {submitting ? "Saving..." : isEdit ? "Save changes" : "Create"}
           </Button>
         </DialogFooter>
@@ -302,7 +303,7 @@ interface FieldInputProps {
 function FieldInput({ field, value, onChange, isEdit }: FieldInputProps) {
   if (field.name === "from_numbers") {
     return (
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-zinc-500">
         Phone numbers are managed separately on the configuration page.
       </p>
     );
@@ -320,7 +321,7 @@ function FieldInput({ field, value, onChange, isEdit }: FieldInputProps) {
         value={(value as string) ?? ""}
         onChange={(e) => onChange(e.target.value)}
         rows={6}
-        className="field-sizing-fixed resize-y break-all font-mono text-xs"
+        className="bg-[#08080a] border border-[#1d1d22] rounded-xl p-2.5 text-[10px] text-zinc-400 leading-relaxed resize-none focus:outline-none focus:border-zinc-700 font-mono"
       />
     );
   }
@@ -331,6 +332,7 @@ function FieldInput({ field, value, onChange, isEdit }: FieldInputProps) {
         type="number"
         placeholder={placeholder}
         value={value as number | string | undefined ?? ""}
+        className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
         onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
       />
     );
@@ -341,6 +343,7 @@ function FieldInput({ field, value, onChange, isEdit }: FieldInputProps) {
       type={field.type === "password" || field.sensitive ? "password" : "text"}
       placeholder={placeholder}
       value={(value as string) ?? ""}
+      className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
       onChange={(e) => onChange(e.target.value)}
       autoComplete={field.sensitive ? "current-password" : undefined}
     />

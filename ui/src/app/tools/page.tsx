@@ -293,211 +293,206 @@ export default function ToolsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background">
-            <div className="container mx-auto px-4 py-8 fade-in-up">
-                <div className="max-w-6xl mx-auto">
-                    <div className="flex justify-between items-end mb-8 page-header">
+        <div className="min-h-screen bg-[#08080a] p-6 max-w-[1600px] mx-auto w-full page-enter">
+            {/* Header */}
+            <div className="border-b border-[#1d1d22]/50 pb-6 mb-6">
+                <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+                    Tools
+                </h1>
+                <p className="text-xs text-zinc-500 mt-1">
+                    Manage reusable tools that can be used across your workflows.{" "}
+                    <a href="https://docs.dograh.com/voice-agent/tools/introduction" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline-flex items-center gap-0.5">
+                        Learn more <ExternalLink className="w-3 h-3 inline" />
+                    </a>
+                </p>
+            </div>
+
+            {error && (
+                <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-red-400 text-xs font-semibold">
+                    {error}
+                </div>
+            )}
+
+            <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 shadow-none">
+                <CardHeader className="p-0 pb-6 mb-6 border-b border-[#1d1d22]/50">
+                    <div className="flex justify-between items-center">
                         <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight mb-1 flex items-center gap-3">
-                                <div className="icon-container">
-                                    <Wrench className="h-6 w-6" />
-                                </div>
-                                Tools
-                            </h1>
-                            <p className="text-muted-foreground mt-2">
-                                Manage reusable tools that can be used across your workflows.{" "}
-                                <a href="https://docs.dograh.com/voice-agent/tools/introduction" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline text-primary hover:text-primary/80 transition-colors">
-                                    Learn more <ExternalLink className="h-3 w-3" />
-                                </a>
-                            </p>
+                            <CardTitle className="text-lg font-bold text-white">Your Tools</CardTitle>
+                            <CardDescription className="text-xs text-zinc-500">
+                                Create and manage tools for your organization
+                            </CardDescription>
                         </div>
+                        <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer">
+                            <Plus className="w-4 h-4 mr-2 inline" />
+                            Create Tool
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    {/* Search */}
+                    <div className="relative mb-6">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                        <Input
+                            placeholder="Search tools..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 pl-10 pr-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all w-full"
+                        />
                     </div>
 
-                    {error && (
-                        <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
-                            {error}
-                        </div>
-                    )}
-
-                    <Card className="mb-6 glass-card fade-in-up" style={{ animationDelay: '0.1s' }}>
-                        <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <CardTitle>Your Tools</CardTitle>
-                                    <CardDescription>
-                                        Create and manage tools for your organization
-                                    </CardDescription>
+                    {isLoading ? (
+                        <div className="space-y-4">
+                            {[1, 2, 3].map((i) => (
+                                <div
+                                    key={i}
+                                    className="flex items-center justify-between p-4 border border-[#1d1d22] rounded-xl bg-[#111113] shimmer"
+                                    style={{ animationDelay: `${i * 0.08}s` }}
+                                >
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-4 w-32" />
+                                        <Skeleton className="h-3 w-48" />
+                                    </div>
+                                    <Skeleton className="h-8 w-20" />
                                 </div>
-                                <Button onClick={() => setIsCreateDialogOpen(true)} className="hover-glow bg-primary hover:bg-primary/90">
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Create Tool
+                            ))}
+                        </div>
+                    ) : activeTools.length === 0 && archivedTools.length === 0 ? (
+                        <div className="text-center py-12">
+                            {renderToolIcon("http_api", "w-12 h-12 text-zinc-500 mx-auto mb-4")}
+                            <p className="text-xs text-zinc-400 mb-4">
+                                {searchQuery
+                                    ? "No tools match your search"
+                                    : "No tools found"}
+                            </p>
+                            {!searchQuery && (
+                                <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer">
+                                    Create Your First Tool
                                 </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            {/* Search */}
-                            <div className="relative mb-4">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Search tools..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10"
-                                />
-                            </div>
-
-                            {isLoading ? (
-                                <div className="space-y-4">
-                                    {[1, 2, 3].map((i) => (
+                            )}
+                        </div>
+                    ) : (
+                        <>
+                            {/* Active Tools */}
+                            {activeTools.length > 0 ? (
+                                <div className="space-y-3">
+                                    {activeTools.map((tool) => (
                                         <div
-                                            key={i}
-                                            className="flex items-center justify-between p-4 border rounded-lg"
+                                            key={tool.tool_uuid}
+                                            className="flex items-center justify-between p-4 bg-[#08080a] border border-[#1d1d22] rounded-xl hover:border-zinc-700 transition-all cursor-pointer"
+                                            onClick={() =>
+                                                router.push(`/tools/${tool.tool_uuid}`)
+                                            }
                                         >
-                                            <div className="space-y-2">
-                                                <Skeleton className="h-4 w-32" />
-                                                <Skeleton className="h-3 w-48" />
+                                            <div className="flex items-center gap-4">
+                                                <div
+                                                    className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center border border-zinc-700/30"
+                                                    style={{
+                                                        backgroundColor:
+                                                            tool.icon_color || getCategoryConfig(tool.category as ToolCategory)?.iconColor || "#3B82F6",
+                                                    }}
+                                                >
+                                                    {renderToolIcon(tool.category)}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-semibold text-zinc-200 text-sm hover:text-white transition-colors">
+                                                            {tool.name}
+                                                        </span>
+                                                        <span className="bg-[#1c1c1f] text-zinc-400 border border-zinc-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">
+                                                            {tool.category === "http_api" ? "HTTP API" : tool.category === "end_call" ? "End Call" : tool.category}
+                                                        </span>
+                                                    </div>
+                                                    {tool.description && (
+                                                        <p className="text-xs text-zinc-500 mt-1">
+                                                            {tool.description}
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <Skeleton className="h-8 w-20" />
+                                            <Button
+                                                variant="ghost"
+                                                onClick={(e) =>
+                                                    handleDeleteTool(tool.tool_uuid, e)
+                                                }
+                                                className="p-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-rose-400 transition-colors bg-transparent"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
                                         </div>
                                     ))}
                                 </div>
-                            ) : activeTools.length === 0 && archivedTools.length === 0 ? (
-                                <div className="text-center py-12">
-                                    {renderToolIcon("http_api", "w-12 h-12 text-muted-foreground mx-auto mb-4")}
-                                    <p className="text-muted-foreground mb-4">
-                                        {searchQuery
-                                            ? "No tools match your search"
-                                            : "No tools found"}
+                            ) : !searchQuery ? (
+                                <div className="text-center py-8">
+                                    <p className="text-xs text-zinc-400 mb-4">
+                                        No active tools
                                     </p>
-                                    {!searchQuery && (
-                                        <Button onClick={() => setIsCreateDialogOpen(true)}>
-                                            Create Your First Tool
-                                        </Button>
-                                    )}
+                                    <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer">
+                                        Create Your First Tool
+                                    </Button>
                                 </div>
-                            ) : (
-                                <>
-                                    {/* Active Tools */}
-                                    {activeTools.length > 0 ? (
-                                        <div className="space-y-4">
-                                            {activeTools.map((tool) => (
-                                                <div
-                                                    key={tool.tool_uuid}
-                                                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                                                    onClick={() =>
-                                                        router.push(`/tools/${tool.tool_uuid}`)
-                                                    }
-                                                >
-                                                    <div className="flex items-center gap-4">
-                                                        <div
-                                                            className="w-10 h-10 shrink-0 rounded-lg flex items-center justify-center"
-                                                            style={{
-                                                                backgroundColor:
-                                                                    tool.icon_color || getCategoryConfig(tool.category as ToolCategory)?.iconColor || "#3B82F6",
-                                                            }}
-                                                        >
-                                                            {renderToolIcon(tool.category)}
-                                                        </div>
-                                                        <div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-medium">
-                                                                    {tool.name}
-                                                                </span>
-                                                                {getCategoryBadge(tool.category)}
-                                                            </div>
-                                                            {tool.description && (
-                                                                <p className="text-sm text-muted-foreground mt-1">
-                                                                    {tool.description}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={(e) =>
-                                                            handleDeleteTool(tool.tool_uuid, e)
-                                                        }
-                                                        className="text-destructive hover:text-destructive/90"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : !searchQuery ? (
-                                        <div className="text-center py-8">
-                                            <p className="text-muted-foreground mb-4">
-                                                No active tools
-                                            </p>
-                                            <Button onClick={() => setIsCreateDialogOpen(true)}>
-                                                Create Your First Tool
-                                            </Button>
-                                        </div>
-                                    ) : null}
+                            ) : null}
 
-                                    {/* Archived Tools */}
-                                    {archivedTools.length > 0 && (
-                                        <div className="mt-8">
-                                            <h3 className="text-lg font-semibold text-muted-foreground mb-4">
-                                                Archived Tools
-                                            </h3>
-                                            <div className="space-y-4">
-                                                {archivedTools.map((tool) => (
+                            {/* Archived Tools */}
+                            {archivedTools.length > 0 && (
+                                <div className="mt-8 border-t border-[#1d1d22]/50 pt-6">
+                                    <h3 className="text-sm font-semibold text-zinc-400 mb-4">
+                                        Archived Tools
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {archivedTools.map((tool) => (
+                                            <div
+                                                key={tool.tool_uuid}
+                                                className="flex items-center justify-between p-4 bg-[#08080a]/60 border border-[#1d1d22] rounded-xl hover:border-zinc-700 transition-all cursor-pointer opacity-60"
+                                                onClick={() =>
+                                                    router.push(`/tools/${tool.tool_uuid}`)
+                                                }
+                                            >
+                                                <div className="flex items-center gap-4">
                                                     <div
-                                                        key={tool.tool_uuid}
-                                                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors opacity-60"
-                                                        onClick={() =>
-                                                            router.push(`/tools/${tool.tool_uuid}`)
-                                                        }
+                                                        className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center border border-zinc-700/30"
+                                                        style={{
+                                                            backgroundColor:
+                                                                tool.icon_color || getCategoryConfig(tool.category as ToolCategory)?.iconColor || "#3B82F6",
+                                                        }}
                                                     >
-                                                        <div className="flex items-center gap-4">
-                                                            <div
-                                                                className="w-10 h-10 shrink-0 rounded-lg flex items-center justify-center"
-                                                                style={{
-                                                                    backgroundColor:
-                                                                        tool.icon_color || getCategoryConfig(tool.category as ToolCategory)?.iconColor || "#3B82F6",
-                                                                }}
-                                                            >
-                                                                {renderToolIcon(tool.category)}
-                                                            </div>
-                                                            <div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-medium">
-                                                                        {tool.name}
-                                                                    </span>
-                                                                    {getCategoryBadge(tool.category)}
-                                                                    {getStatusBadge(tool.status)}
-                                                                </div>
-                                                                {tool.description && (
-                                                                    <p className="text-sm text-muted-foreground mt-1">
-                                                                        {tool.description}
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) =>
-                                                                handleUnarchiveTool(tool.tool_uuid, e)
-                                                            }
-                                                            className="text-primary hover:text-primary/90"
-                                                            title="Restore tool"
-                                                        >
-                                                            <RotateCcw className="w-4 h-4" />
-                                                        </Button>
+                                                        {renderToolIcon(tool.category)}
                                                     </div>
-                                                ))}
+                                                    <div>
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="font-semibold text-zinc-300 text-sm">
+                                                                {tool.name}
+                                                            </span>
+                                                            <span className="bg-[#1c1c1f] text-zinc-400 border border-zinc-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">
+                                                                {tool.category === "http_api" ? "HTTP API" : tool.category === "end_call" ? "End Call" : tool.category}
+                                                            </span>
+                                                            <span className="bg-zinc-800 text-zinc-400 border border-zinc-700/50 text-[10px] font-semibold px-2.5 py-0.5 rounded-full">Archived</span>
+                                                        </div>
+                                                        {tool.description && (
+                                                            <p className="text-xs text-zinc-500 mt-1">
+                                                                {tool.description}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    onClick={(e) =>
+                                                        handleUnarchiveTool(tool.tool_uuid, e)
+                                                    }
+                                                    className="p-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-white transition-colors bg-transparent"
+                                                    title="Restore tool"
+                                                >
+                                                    <RotateCcw className="w-4 h-4" />
+                                                </Button>
                                             </div>
-                                        </div>
-                                    )}
-                                </>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
+                        </>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Create Tool Dialog */}
             <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
@@ -511,16 +506,16 @@ export default function ToolsPage() {
                     setMcpToolsFilter("");
                 }
             }}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Create New Tool</DialogTitle>
-                        <DialogDescription>
+                <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white">
+                    <DialogHeader className="space-y-1">
+                        <DialogTitle className="text-lg font-bold text-white">Create New Tool</DialogTitle>
+                        <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
                             Create a new tool that can be used in your workflows.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label>Tool Type</Label>
+                    <div className="grid gap-4 py-2">
+                        <div className="grid gap-1">
+                            <Label className="text-xs font-bold text-zinc-300 block mb-1.5">Tool Type</Label>
                             <Select
                                 value={newToolCategory}
                                 onValueChange={(v) => {
@@ -534,10 +529,10 @@ export default function ToolsPage() {
                                     }
                                 }}
                             >
-                                <SelectTrigger className="w-full">
+                                <SelectTrigger className="w-full bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all">
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="bg-[#111113] border border-[#1d1d22] text-white">
                                     {TOOL_CATEGORIES.map((category) => (
                                         <SelectItem
                                             key={category.value}
@@ -549,30 +544,32 @@ export default function ToolsPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
                                 {getCategoryConfig(newToolCategory)?.description}
                             </p>
                         </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="name">Tool Name</Label>
-                            <Label className="text-xs text-muted-foreground">
+                        <div className="grid gap-1">
+                            <Label htmlFor="name" className="text-xs font-bold text-zinc-300 block">Tool Name</Label>
+                            <span className="text-[10px] text-zinc-500 mb-1 leading-snug">
                                 Use a descriptive name, like &quot;Get Weather using API&quot; for a tool that fetches weather
-                            </Label>
+                            </span>
                             <Input
                                 id="name"
                                 value={newToolName}
+                                className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
                                 onChange={(e) => setNewToolName(e.target.value)}
                                 placeholder="e.g., Book Appointment, Check Inventory"
                             />
                         </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="description">Description (Optional)</Label>
-                            <Label className="text-xs text-muted-foreground">
+                        <div className="grid gap-1">
+                            <Label htmlFor="description" className="text-xs font-bold text-zinc-300 block">Description (Optional)</Label>
+                            <span className="text-[10px] text-zinc-500 mb-1 leading-snug">
                                 Provide a description which makes it easy for LLM to understand what this tool does
-                            </Label>
+                            </span>
                             <Input
                                 id="description"
                                 value={newToolDescription}
+                                className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
                                 onChange={(e) => setNewToolDescription(e.target.value)}
                                 placeholder="What does this tool do?"
                             />
@@ -580,19 +577,21 @@ export default function ToolsPage() {
 
                         {newToolCategory === "mcp" && (
                             <>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="mcp-url">MCP Server URL</Label>
+                                <div className="grid gap-1">
+                                    <Label htmlFor="mcp-url" className="text-xs font-bold text-zinc-300 block mb-1.5">MCP Server URL</Label>
                                     <Input
                                         id="mcp-url"
                                         value={mcpUrl}
+                                        className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
                                         onChange={(e) => setMcpUrl(e.target.value)}
                                         placeholder="https://your-mcp-server.example.com/mcp"
                                     />
                                 </div>
-                                <div className="grid gap-2">
-                                    <Label>Transport</Label>
+                                <div className="grid gap-1">
+                                    <Label className="text-xs font-bold text-zinc-300 block mb-1.5">Transport</Label>
                                     <Input
                                         value="Streamable HTTP"
+                                        className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-zinc-400 focus:outline-none focus:border-zinc-700 transition-all"
                                         disabled
                                         readOnly
                                     />
@@ -603,15 +602,16 @@ export default function ToolsPage() {
                                     label="Credential (Optional)"
                                     description="Select a credential for authenticating with the MCP server, or leave empty for no auth."
                                 />
-                                <div className="grid gap-2">
-                                    <Label htmlFor="mcp-tools-filter">Tools Filter (Optional)</Label>
+                                <div className="grid gap-1">
+                                    <Label htmlFor="mcp-tools-filter" className="text-xs font-bold text-zinc-300 block mb-1.5">Tools Filter (Optional)</Label>
                                     <Input
                                         id="mcp-tools-filter"
                                         value={mcpToolsFilter}
+                                        className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
                                         onChange={(e) => setMcpToolsFilter(e.target.value)}
                                         placeholder="e.g., tool_one, tool_two"
                                     />
-                                    <p className="text-xs text-muted-foreground">
+                                    <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
                                         Comma-separated list of tool names to allow. Leave empty to expose all tools from the server.
                                     </p>
                                 </div>
@@ -619,18 +619,18 @@ export default function ToolsPage() {
                         )}
                     </div>
                     {createError && (
-                        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+                        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-red-400 text-xs font-semibold">
                             {createError}
                         </div>
                     )}
-                    <DialogFooter>
+                    <DialogFooter className="flex gap-3 justify-end pt-2 border-t border-[#1d1d22]/50">
                         <Button
-                            variant="outline"
+                            className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors cursor-pointer"
                             onClick={() => setIsCreateDialogOpen(false)}
                         >
                             Cancel
                         </Button>
-                        <Button onClick={handleCreateTool} disabled={isCreating}>
+                        <Button className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer" onClick={handleCreateTool} disabled={isCreating}>
                             {isCreating ? "Creating..." : "Create Tool"}
                         </Button>
                     </DialogFooter>

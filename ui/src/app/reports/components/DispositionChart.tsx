@@ -24,12 +24,12 @@ interface DispositionChartProps {
 }
 
 const COLORS = [
-  '#3b82f6', // blue-500
-  '#10b981', // emerald-500
-  '#f59e0b', // amber-500
-  '#8b5cf6', // violet-500
-  '#ef4444', // red-500
-  '#6b7280', // gray-500 for "Other"
+  '#7c3aed', // accent-purple
+  '#2563eb', // accent-blue
+  '#10b981', // accent-green
+  '#fbbf24', // warning-amber
+  '#f87171', // danger-rose
+  '#71717a', // text-subtle
 ];
 
 export function DispositionChart({ data }: DispositionChartProps) {
@@ -42,10 +42,10 @@ export function DispositionChart({ data }: DispositionChartProps) {
     if (active && payload && payload[0]) {
       const data = payload[0].payload;
       return (
-        <div className="bg-background border rounded-lg shadow-lg p-3">
-          <p className="font-semibold">{data.disposition}</p>
-          <p className="text-sm">Count: {data.count}</p>
-          <p className="text-sm">{data.percentage}% of total</p>
+        <div className="bg-[#121214] border border-[#262629] rounded-xl shadow-2xl p-3 text-xs">
+          <p className="font-semibold text-white mb-1">{data.disposition}</p>
+          <p className="text-zinc-300">Count: <span className="font-medium text-white">{data.count}</span></p>
+          <p className="text-zinc-400 mt-0.5">{data.percentage}% of total</p>
         </div>
       );
     }
@@ -53,13 +53,13 @@ export function DispositionChart({ data }: DispositionChartProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Disposition Distribution</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
+      <div className="flex justify-between items-center mb-6">
+        <span className="text-sm font-semibold text-zinc-200">Disposition Distribution</span>
+      </div>
+      <div>
         {data.length === 0 ? (
-          <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+          <div className="h-[300px] flex items-center justify-center text-zinc-500 text-xs">
             No disposition data available
           </div>
         ) : (
@@ -67,21 +67,23 @@ export function DispositionChart({ data }: DispositionChartProps) {
             <BarChart
               data={chartData}
               layout="horizontal"
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
             >
-              <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1d1d22" opacity={0.5} />
               <XAxis
                 dataKey="disposition"
                 angle={-45}
                 textAnchor="end"
                 height={80}
                 interval={0}
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 10, fill: '#71717a' }}
+                stroke="#1d1d22"
               />
               <YAxis
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 10, fill: '#71717a' }}
+                stroke="#1d1d22"
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.02)' }} />
               <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                 {chartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -90,7 +92,7 @@ export function DispositionChart({ data }: DispositionChartProps) {
             </BarChart>
           </ResponsiveContainer>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

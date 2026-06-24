@@ -309,24 +309,24 @@ export default function ContactSourceSelector({
   const filteredCredentials = credentials.filter((c) => c.provider === sourceType);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-white">
       {/* 1. Source Type Selector */}
       <div className="space-y-2">
-        <Label htmlFor="source-type">Data Source Type</Label>
+        <Label htmlFor="source-type" className="text-xs font-semibold text-zinc-300">Data Source Type</Label>
         <Select value={sourceType} onValueChange={handleSourceTypeChange} required>
-          <SelectTrigger id="source-type">
+          <SelectTrigger id="source-type" className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus:ring-[#7c3aed]">
             <SelectValue placeholder="Select source type" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="csv">CSV File</SelectItem>
-            <SelectItem value="google_sheets">Google Sheets</SelectItem>
-            <SelectItem value="api_endpoint">Custom API Endpoint</SelectItem>
-            <SelectItem value="hubspot">HubSpot CRM</SelectItem>
-            <SelectItem value="zoho_crm">Zoho CRM</SelectItem>
-            <SelectItem value="salesforce">Salesforce CRM</SelectItem>
+          <SelectContent className="bg-[#111113] border-[#1d1d22] text-white">
+            <SelectItem value="csv" className="text-xs">CSV File</SelectItem>
+            <SelectItem value="google_sheets" className="text-xs">Google Sheets</SelectItem>
+            <SelectItem value="api_endpoint" className="text-xs">Custom API Endpoint</SelectItem>
+            <SelectItem value="hubspot" className="text-xs">HubSpot CRM</SelectItem>
+            <SelectItem value="zoho_crm" className="text-xs">Zoho CRM</SelectItem>
+            <SelectItem value="salesforce" className="text-xs">Salesforce CRM</SelectItem>
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-[11px] text-zinc-500">
           Choose where your contact data is stored
         </p>
       </div>
@@ -342,71 +342,74 @@ export default function ContactSourceSelector({
       )}
 
       {sourceType === 'google_sheets' && (
-        <Card className="border border-border/60 bg-muted/20">
-          <CardHeader className="py-4">
-            <CardTitle className="text-base font-semibold">Google Sheets Configuration</CardTitle>
-            <CardDescription className="text-xs">
+        <Card className="bg-[#111113] border-[#1d1d22] rounded-2xl shadow-none">
+          <CardHeader className="py-4 border-b border-[#1d1d22]/50">
+            <CardTitle className="text-sm font-bold text-white">Google Sheets Configuration</CardTitle>
+            <CardDescription className="text-xs text-zinc-500">
               Fetch contacts dynamically from a spreadsheet
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 py-2">
+          <CardContent className="space-y-4 pt-4">
             <div className="space-y-2">
-              <Label>Spreadsheet ID</Label>
+              <Label className="text-xs text-zinc-300">Spreadsheet ID</Label>
               <Input
                 placeholder="e.g. 1BxiMVs0XRA5nFMdKvBdBZjgpFD5mdLTuxaFFVLK2U0"
                 value={sourceConfig.spreadsheet_id || ''}
                 onChange={(e) => handleConfigChange('spreadsheet_id', e.target.value)}
                 required
+                className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[11px] text-zinc-500">
                 Found in the spreadsheet URL: https://docs.google.com/spreadsheets/d/{"<Spreadsheet ID>"}/edit
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label>Range Name</Label>
+              <Label className="text-xs text-zinc-300">Range Name</Label>
               <Input
                 placeholder="e.g. Sheet1!A:Z"
                 value={sourceConfig.range_name || ''}
                 onChange={(e) => handleConfigChange('range_name', e.target.value)}
+                className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[11px] text-zinc-500">
                 The sheet name and column range to sync from
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label>Authorization Type</Label>
+              <Label className="text-xs text-zinc-300">Authorization Type</Label>
               <Select
                 value={sourceConfig.auth_type || 'public'}
                 onValueChange={(val) => handleConfigChange('auth_type', val)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus:ring-[#7c3aed]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="public">Public (Shared spreadsheet + API Key)</SelectItem>
-                  <SelectItem value="service_account">Google Service Account JSON</SelectItem>
+                <SelectContent className="bg-[#111113] border-[#1d1d22] text-white">
+                  <SelectItem value="public" className="text-xs">Public (Shared spreadsheet + API Key)</SelectItem>
+                  <SelectItem value="service_account" className="text-xs">Google Service Account JSON</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {sourceConfig.auth_type === 'public' ? (
               <div className="space-y-2">
-                <Label>Google Sheets API Key</Label>
+                <Label className="text-xs text-zinc-300">Google Sheets API Key</Label>
                 <Input
                   type="password"
                   placeholder="Enter API Key"
                   value={sourceConfig.api_key || ''}
                   onChange={(e) => handleConfigChange('api_key', e.target.value)}
+                  className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                 />
               </div>
             ) : (
               <div className="space-y-2">
-                <Label>Service Account JSON Credentials</Label>
+                <Label className="text-xs text-zinc-300">Service Account JSON Credentials</Label>
                 <Textarea
                   placeholder="Paste service account JSON contents here"
-                  className="font-mono text-xs h-32"
+                  className="font-mono text-xs h-32 bg-[#08080a] border-[#1d1d22] text-white rounded-xl focus-visible:ring-[#7c3aed]"
                   value={sourceConfig.service_account_json || ''}
                   onChange={(e) => handleConfigChange('service_account_json', e.target.value)}
                 />
@@ -414,13 +417,14 @@ export default function ContactSourceSelector({
             )}
 
             <div className="space-y-2">
-              <Label>Phone Number Column</Label>
+              <Label className="text-xs text-zinc-300">Phone Number Column</Label>
               <Input
                 placeholder="phone_number"
                 value={sourceConfig.phone_column || 'phone_number'}
                 onChange={(e) => handleConfigChange('phone_column', e.target.value)}
+                className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[11px] text-zinc-500">
                 Name of the column containing the recipient phone numbers
               </p>
             </div>
@@ -429,57 +433,58 @@ export default function ContactSourceSelector({
       )}
 
       {sourceType === 'api_endpoint' && (
-        <Card className="border border-border/60 bg-muted/20">
-          <CardHeader className="py-4">
-            <CardTitle className="text-base font-semibold">API Endpoint Configuration</CardTitle>
-            <CardDescription className="text-xs">
+        <Card className="bg-[#111113] border-[#1d1d22] rounded-2xl shadow-none">
+          <CardHeader className="py-4 border-b border-[#1d1d22]/50">
+            <CardTitle className="text-sm font-bold text-white">API Endpoint Configuration</CardTitle>
+            <CardDescription className="text-xs text-zinc-500">
               Fetch contacts from a custom JSON API
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 py-2">
+          <CardContent className="space-y-4 pt-4">
             <div className="space-y-2">
-              <Label>Endpoint URL</Label>
+              <Label className="text-xs text-zinc-300">Endpoint URL</Label>
               <Input
                 placeholder="https://api.yourdomain.com/v1/contacts"
                 value={sourceConfig.url || ''}
                 onChange={(e) => handleConfigChange('url', e.target.value)}
                 required
+                className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>HTTP Method</Label>
+                <Label className="text-xs text-zinc-300">HTTP Method</Label>
                 <Select
                   value={sourceConfig.method || 'GET'}
                   onValueChange={(val) => handleConfigChange('method', val)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus:ring-[#7c3aed]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="GET">GET</SelectItem>
-                    <SelectItem value="POST">POST</SelectItem>
-                    <SelectItem value="PUT">PUT</SelectItem>
-                    <SelectItem value="PATCH">PATCH</SelectItem>
+                  <SelectContent className="bg-[#111113] border-[#1d1d22] text-white">
+                    <SelectItem value="GET" className="text-xs">GET</SelectItem>
+                    <SelectItem value="POST" className="text-xs">POST</SelectItem>
+                    <SelectItem value="PUT" className="text-xs">PUT</SelectItem>
+                    <SelectItem value="PATCH" className="text-xs">PATCH</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label>Authentication Type</Label>
+                <Label className="text-xs text-zinc-300">Authentication Type</Label>
                 <Select
                   value={sourceConfig.auth_type || 'none'}
                   onValueChange={(val) => handleConfigChange('auth_type', val)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus:ring-[#7c3aed]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="bearer">Bearer Token</SelectItem>
-                    <SelectItem value="basic">Basic Auth</SelectItem>
-                    <SelectItem value="api_key">API Key (Header)</SelectItem>
+                  <SelectContent className="bg-[#111113] border-[#1d1d22] text-white">
+                    <SelectItem value="none" className="text-xs">None</SelectItem>
+                    <SelectItem value="bearer" className="text-xs">Bearer Token</SelectItem>
+                    <SelectItem value="basic" className="text-xs">Basic Auth</SelectItem>
+                    <SelectItem value="api_key" className="text-xs">API Key (Header)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -487,12 +492,13 @@ export default function ContactSourceSelector({
 
             {sourceConfig.auth_type === 'bearer' && (
               <div className="space-y-2">
-                <Label>Token</Label>
+                <Label className="text-xs text-zinc-300">Token</Label>
                 <Input
                   type="password"
                   placeholder="Bearer Token"
                   value={sourceConfig.token || ''}
                   onChange={(e) => handleConfigChange('token', e.target.value)}
+                  className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                 />
               </div>
             )}
@@ -500,20 +506,22 @@ export default function ContactSourceSelector({
             {sourceConfig.auth_type === 'basic' && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Username</Label>
+                  <Label className="text-xs text-zinc-300">Username</Label>
                   <Input
                     placeholder="Username"
                     value={sourceConfig.username || ''}
                     onChange={(e) => handleConfigChange('username', e.target.value)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Password</Label>
+                  <Label className="text-xs text-zinc-300">Password</Label>
                   <Input
                     type="password"
                     placeholder="Password"
                     value={sourceConfig.password || ''}
                     onChange={(e) => handleConfigChange('password', e.target.value)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
               </div>
@@ -522,20 +530,22 @@ export default function ContactSourceSelector({
             {sourceConfig.auth_type === 'api_key' && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Header Name</Label>
+                  <Label className="text-xs text-zinc-300">Header Name</Label>
                   <Input
                     placeholder="X-API-Key"
                     value={sourceConfig.header_name || ''}
                     onChange={(e) => handleConfigChange('header_name', e.target.value)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>API Key</Label>
+                  <Label className="text-xs text-zinc-300">API Key</Label>
                   <Input
                     type="password"
                     placeholder="API Key Value"
                     value={sourceConfig.api_key || ''}
                     onChange={(e) => handleConfigChange('api_key', e.target.value)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
               </div>
@@ -543,119 +553,130 @@ export default function ContactSourceSelector({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>JSON Path to List</Label>
+                <Label className="text-xs text-zinc-300">JSON Path to List</Label>
                 <Input
                   placeholder="e.g. data.contacts (leave empty if root list)"
                   value={sourceConfig.json_path || ''}
                   onChange={(e) => handleConfigChange('json_path', e.target.value)}
+                  className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Phone Property Name</Label>
+                <Label className="text-xs text-zinc-300">Phone Property Name</Label>
                 <Input
                   placeholder="phone_number"
                   value={sourceConfig.phone_property || 'phone_number'}
                   onChange={(e) => handleConfigChange('phone_property', e.target.value)}
+                  className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Pagination Type</Label>
+              <Label className="text-xs text-zinc-300">Pagination Type</Label>
               <Select
                 value={sourceConfig.pagination_type || 'none'}
                 onValueChange={(val) => handleConfigChange('pagination_type', val)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus:ring-[#7c3aed]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No Pagination</SelectItem>
-                  <SelectItem value="page">Page-Based (page & limit)</SelectItem>
-                  <SelectItem value="offset">Offset-Based (offset & limit)</SelectItem>
-                  <SelectItem value="cursor">Cursor-Based</SelectItem>
+                <SelectContent className="bg-[#111113] border-[#1d1d22] text-white">
+                  <SelectItem value="none" className="text-xs">No Pagination</SelectItem>
+                  <SelectItem value="page" className="text-xs">Page-Based (page & limit)</SelectItem>
+                  <SelectItem value="offset" className="text-xs">Offset-Based (offset & limit)</SelectItem>
+                  <SelectItem value="cursor" className="text-xs">Cursor-Based</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {sourceConfig.pagination_type === 'page' && (
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-4 gap-2 bg-[#08080a]/50 p-3 rounded-xl border border-[#1d1d22]">
                 <div className="col-span-2 space-y-1">
-                  <Label className="text-[10px]">Page Param</Label>
+                  <Label className="text-[10px] text-zinc-400">Page Param</Label>
                   <Input
                     value={sourceConfig.page_param || 'page'}
                     onChange={(e) => handleConfigChange('page_param', e.target.value)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-lg h-8 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px]">Start Page</Label>
+                  <Label className="text-[10px] text-zinc-400">Start Page</Label>
                   <Input
                     type="number"
                     value={sourceConfig.start_page ?? 1}
                     onChange={(e) => handleConfigChange('start_page', parseInt(e.target.value) || 1)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-lg h-8 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px]">Limit</Label>
+                  <Label className="text-[10px] text-zinc-400">Limit</Label>
                   <Input
                     type="number"
                     value={sourceConfig.limit ?? 50}
                     onChange={(e) => handleConfigChange('limit', parseInt(e.target.value) || 50)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-lg h-8 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
               </div>
             )}
 
             {sourceConfig.pagination_type === 'offset' && (
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-4 gap-2 bg-[#08080a]/50 p-3 rounded-xl border border-[#1d1d22]">
                 <div className="col-span-2 space-y-1">
-                  <Label className="text-[10px]">Offset Param</Label>
+                  <Label className="text-[10px] text-zinc-400">Offset Param</Label>
                   <Input
                     value={sourceConfig.offset_param || 'offset'}
                     onChange={(e) => handleConfigChange('offset_param', e.target.value)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-lg h-8 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px]">Start Offset</Label>
+                  <Label className="text-[10px] text-zinc-400">Start Offset</Label>
                   <Input
                     type="number"
                     value={sourceConfig.start_offset ?? 0}
                     onChange={(e) => handleConfigChange('start_offset', parseInt(e.target.value) || 0)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-lg h-8 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px]">Limit</Label>
+                  <Label className="text-[10px] text-zinc-400">Limit</Label>
                   <Input
                     type="number"
                     value={sourceConfig.limit ?? 50}
                     onChange={(e) => handleConfigChange('limit', parseInt(e.target.value) || 50)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-lg h-8 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
               </div>
             )}
 
             {sourceConfig.pagination_type === 'cursor' && (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2 bg-[#08080a]/50 p-3 rounded-xl border border-[#1d1d22]">
                 <div className="space-y-1">
-                  <Label className="text-[10px]">Cursor Param</Label>
+                  <Label className="text-[10px] text-zinc-400">Cursor Param</Label>
                   <Input
                     value={sourceConfig.cursor_param || 'cursor'}
                     onChange={(e) => handleConfigChange('cursor_param', e.target.value)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-lg h-8 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px]">Cursor Path (in response)</Label>
+                  <Label className="text-[10px] text-zinc-400">Cursor Path</Label>
                   <Input
                     value={sourceConfig.cursor_path || 'next_cursor'}
                     onChange={(e) => handleConfigChange('cursor_path', e.target.value)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-lg h-8 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px]">Limit</Label>
+                  <Label className="text-[10px] text-zinc-400">Limit</Label>
                   <Input
                     type="number"
                     value={sourceConfig.limit ?? 50}
                     onChange={(e) => handleConfigChange('limit', parseInt(e.target.value) || 50)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-lg h-8 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
               </div>
@@ -665,17 +686,17 @@ export default function ContactSourceSelector({
       )}
 
       {['hubspot', 'zoho_crm', 'salesforce'].includes(sourceType) && (
-        <Card className="border border-border/60 bg-muted/20">
-          <CardHeader className="py-4">
-            <CardTitle className="text-base font-semibold capitalize">{sourceType.replace('_', ' ')} Settings</CardTitle>
-            <CardDescription className="text-xs">
+        <Card className="bg-[#111113] border-[#1d1d22] rounded-2xl shadow-none">
+          <CardHeader className="py-4 border-b border-[#1d1d22]/50">
+            <CardTitle className="text-sm font-bold text-white capitalize">{sourceType.replace('_', ' ')} Settings</CardTitle>
+            <CardDescription className="text-xs text-zinc-500">
               Link this campaign to your CRM organization data
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 py-2">
+          <CardContent className="space-y-4 pt-4">
             {/* Credential Selector */}
             <div className="space-y-2">
-              <Label>CRM Credential</Label>
+              <Label className="text-xs text-zinc-300">CRM Credential</Label>
               <div className="flex gap-2">
                 <div className="flex-1">
                   <Select
@@ -686,12 +707,12 @@ export default function ContactSourceSelector({
                     }}
                     disabled={isLoadingCredentials}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus:ring-[#7c3aed]">
                       <SelectValue placeholder={isLoadingCredentials ? "Loading..." : "Select saved credential"} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-[#111113] border-[#1d1d22] text-white">
                       {filteredCredentials.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>
+                        <SelectItem key={c.id} value={String(c.id)} className="text-xs">
                           {c.name}
                         </SelectItem>
                       ))}
@@ -702,6 +723,7 @@ export default function ContactSourceSelector({
                   type="button"
                   variant="outline"
                   onClick={() => setShowNewCredForm(!showNewCredForm)}
+                  className="border-[#1d1d22] hover:bg-[#1a1a1f] text-xs font-semibold rounded-xl text-white h-10 px-4"
                 >
                   {showNewCredForm ? 'Cancel' : 'New Credential'}
                 </Button>
@@ -710,27 +732,29 @@ export default function ContactSourceSelector({
 
             {/* In-place Add New Credential Form */}
             {showNewCredForm && (
-              <div className="border border-dashed border-border p-3 rounded-lg space-y-3 bg-muted/40">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="border border-dashed border-[#1d1d22] p-4 rounded-xl space-y-4 bg-[#08080a]/40">
+                <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#a78bfa]">
                   Add New {sourceType.replace('_', ' ')} Credential
                 </h4>
                 <div className="space-y-2">
-                  <Label>Credential Name</Label>
+                  <Label className="text-xs text-zinc-400">Credential Name</Label>
                   <Input
                     placeholder="e.g. Sales HubSpot Account"
                     value={newCredName}
                     onChange={(e) => setNewCredName(e.target.value)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
 
                 {sourceType === 'hubspot' && (
                   <div className="space-y-2">
-                    <Label>Access Token</Label>
+                    <Label className="text-xs text-zinc-400">Access Token</Label>
                     <Input
                       type="password"
                       placeholder="pat-na-..."
                       value={hubspotToken}
                       onChange={(e) => setHubspotToken(e.target.value)}
+                      className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                     />
                   </div>
                 )}
@@ -738,20 +762,22 @@ export default function ContactSourceSelector({
                 {sourceType === 'salesforce' && (
                   <>
                     <div className="space-y-2">
-                      <Label>Access Token</Label>
+                      <Label className="text-xs text-zinc-400">Access Token</Label>
                       <Input
                         type="password"
                         placeholder="Salesforce Access Token"
                         value={salesforceToken}
                         onChange={(e) => setSalesforceToken(e.target.value)}
+                        className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Instance URL</Label>
+                      <Label className="text-xs text-zinc-400">Instance URL</Label>
                       <Input
                         placeholder="https://mycompany.my.salesforce.com"
                         value={salesforceUrl}
                         onChange={(e) => setSalesforceUrl(e.target.value)}
+                        className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                       />
                     </div>
                   </>
@@ -760,55 +786,61 @@ export default function ContactSourceSelector({
                 {sourceType === 'zoho_crm' && (
                   <>
                     <div className="space-y-2">
-                      <Label>Access Token (Optional if refresh token is provided)</Label>
+                      <Label className="text-xs text-zinc-400">Access Token (Optional if refresh token is provided)</Label>
                       <Input
                         type="password"
                         placeholder="1000.xxxx..."
                         value={zohoToken}
                         onChange={(e) => setZohoToken(e.target.value)}
+                        className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <Label className="text-[10px]">Client ID</Label>
+                        <Label className="text-[10px] text-zinc-400">Client ID</Label>
                         <Input
                           placeholder="Client ID"
                           value={zohoClientId}
-                          onChange={(e) => setZohoClientId(e.target.value)}
+                          onChange={(e) => setNewCredName(e.target.value)}
+                          className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-lg h-9 focus-visible:ring-[#7c3aed]"
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[10px]">Client Secret</Label>
+                        <Label className="text-[10px] text-zinc-400">Client Secret</Label>
                         <Input
                           type="password"
                           placeholder="Client Secret"
                           value={zohoClientSecret}
                           onChange={(e) => setZohoClientSecret(e.target.value)}
+                          className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-lg h-9 focus-visible:ring-[#7c3aed]"
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Refresh Token</Label>
+                      <Label className="text-xs text-zinc-400">Refresh Token</Label>
                       <Input
                         type="password"
                         placeholder="Refresh Token"
                         value={zohoRefreshToken}
                         onChange={(e) => setZohoRefreshToken(e.target.value)}
+                        className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <Label className="text-[10px]">Accounts URL</Label>
+                        <Label className="text-[10px] text-zinc-400">Accounts URL</Label>
                         <Input
                           value={zohoAccountsUrl}
                           onChange={(e) => setZohoAccountsUrl(e.target.value)}
+                          className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-lg h-9 focus-visible:ring-[#7c3aed]"
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[10px]">API Domain</Label>
+                        <Label className="text-[10px] text-zinc-400">API Domain</Label>
                         <Input
                           value={zohoApiDomain}
                           onChange={(e) => setZohoApiDomain(e.target.value)}
+                          className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-lg h-9 focus-visible:ring-[#7c3aed]"
                         />
                       </div>
                     </div>
@@ -820,7 +852,7 @@ export default function ContactSourceSelector({
                   size="sm"
                   onClick={handleSaveCredential}
                   disabled={isSavingCred}
-                  className="w-full mt-2"
+                  className="w-full mt-2 bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs h-10 rounded-xl"
                 >
                   {isSavingCred ? 'Saving...' : 'Save & Select Credential'}
                 </Button>
@@ -831,23 +863,25 @@ export default function ContactSourceSelector({
             {sourceType === 'hubspot' && (
               <>
                 <div className="space-y-2">
-                  <Label>List ID (Optional)</Label>
+                  <Label className="text-xs text-zinc-300">List ID (Optional)</Label>
                   <Input
                     placeholder="Sync from a specific HubSpot list (e.g. 5)"
                     value={sourceConfig.list_id || ''}
                     onChange={(e) => handleConfigChange('list_id', e.target.value)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Phone Property Name</Label>
+                  <Label className="text-xs text-zinc-300">Phone Property Name</Label>
                   <Input
                     placeholder="phone"
                     value={sourceConfig.phone_property || 'phone'}
                     onChange={(e) => handleConfigChange('phone_property', e.target.value)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Extra Properties to Import (Comma-separated)</Label>
+                  <Label className="text-xs text-zinc-300">Extra Properties to Import (Comma-separated)</Label>
                   <Input
                     placeholder="firstname, lastname, email, city"
                     value={sourceConfig._extra_properties_raw || ''}
@@ -857,6 +891,7 @@ export default function ContactSourceSelector({
                       const parsed = raw.split(',').map((p) => p.trim()).filter(Boolean);
                       handleConfigChange('extra_properties', parsed);
                     }}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
               </>
@@ -866,27 +901,30 @@ export default function ContactSourceSelector({
             {sourceType === 'zoho_crm' && (
               <>
                 <div className="space-y-2">
-                  <Label>Module Name</Label>
+                  <Label className="text-xs text-zinc-300">Module Name</Label>
                   <Input
                     placeholder="Leads"
                     value={sourceConfig.module || 'Leads'}
                     onChange={(e) => handleConfigChange('module', e.target.value)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Phone Field Name</Label>
+                  <Label className="text-xs text-zinc-300">Phone Field Name</Label>
                   <Input
                     placeholder="Phone"
                     value={sourceConfig.phone_field || 'Phone'}
                     onChange={(e) => handleConfigChange('phone_field', e.target.value)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Custom View ID (Optional)</Label>
+                  <Label className="text-xs text-zinc-300">Custom View ID (Optional)</Label>
                   <Input
                     placeholder="Custom view ID if filtering results"
                     value={sourceConfig.view_id || ''}
                     onChange={(e) => handleConfigChange('view_id', e.target.value)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
               </>
@@ -896,22 +934,23 @@ export default function ContactSourceSelector({
             {sourceType === 'salesforce' && (
               <>
                 <div className="space-y-2">
-                  <Label>Phone Field Name</Label>
+                  <Label className="text-xs text-zinc-300">Phone Field Name</Label>
                   <Input
                     placeholder="Phone"
                     value={sourceConfig.phone_field || 'Phone'}
                     onChange={(e) => handleConfigChange('phone_field', e.target.value)}
+                    className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>SOQL Query (Optional)</Label>
+                  <Label className="text-xs text-zinc-300">SOQL Query (Optional)</Label>
                   <Textarea
                     placeholder="SELECT Phone, FirstName, LastName FROM Contact WHERE DoNotCall = false"
-                    className="font-mono text-xs h-24"
+                    className="font-mono text-xs h-24 bg-[#08080a] border-[#1d1d22] text-white rounded-xl focus-visible:ring-[#7c3aed]"
                     value={sourceConfig.soql_query || ''}
                     onChange={(e) => handleConfigChange('soql_query', e.target.value)}
                   />
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-[10px] text-zinc-500">
                     If omitted, the fetcher will select default phone fields from active Contacts.
                   </p>
                 </div>
@@ -927,7 +966,7 @@ export default function ContactSourceSelector({
           <Button
             type="button"
             variant="outline"
-            className="w-full"
+            className="w-full border-[#1d1d22] hover:bg-[#1a1a1f] text-xs font-semibold rounded-xl text-white h-10"
             onClick={handleValidateConnection}
             disabled={isValidating}
           >
@@ -936,20 +975,20 @@ export default function ContactSourceSelector({
 
           {validationResult && (
             <div
-              className={`p-3 rounded-lg text-sm border ${
+              className={`p-3 rounded-xl text-xs border ${
                 validationResult.isValid
-                  ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400'
-                  : 'bg-destructive/10 border-destructive/30 text-destructive'
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                  : 'bg-red-500/10 border-red-500/20 text-red-400'
               }`}
             >
               {validationResult.isValid ? (
                 <div>
                   <p className="font-semibold">Connection verified successfully!</p>
-                  <p className="text-xs mt-1">
-                    Found <strong className="font-medium">{validationResult.rowsCount}</strong> records.
+                  <p className="text-[11px] mt-1 text-zinc-300">
+                    Found <strong className="font-bold">{validationResult.rowsCount}</strong> records.
                   </p>
                   {validationResult.headers && validationResult.headers.length > 0 && (
-                    <p className="text-[10px] mt-1 text-muted-foreground font-mono">
+                    <p className="text-[10px] mt-1 text-zinc-500 font-mono">
                       Headers: {validationResult.headers.join(', ')}
                     </p>
                   )}
@@ -957,7 +996,7 @@ export default function ContactSourceSelector({
               ) : (
                 <div>
                   <p className="font-semibold">Connection failed</p>
-                  <p className="text-xs mt-1">{validationResult.errorMessage || 'Invalid settings or authorization'}</p>
+                  <p className="text-[11px] mt-1 text-zinc-300">{validationResult.errorMessage || 'Invalid settings or authorization'}</p>
                 </div>
               )}
             </div>
@@ -967,46 +1006,49 @@ export default function ContactSourceSelector({
 
       {/* 4. Automated Synchronization Settings */}
       {sourceType !== 'csv' && (
-        <Card className="border border-border/60 bg-muted/20">
+        <Card className="bg-[#111113] border-[#1d1d22] rounded-2xl shadow-none">
           <CardHeader className="py-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base font-semibold">Automated Background Sync</CardTitle>
-                <CardDescription className="text-xs">
+                <CardTitle className="text-sm font-bold text-white">Automated Background Sync</CardTitle>
+                <CardDescription className="text-xs text-zinc-500">
                   Keep campaign contacts in sync with the live source
                 </CardDescription>
               </div>
               <Switch
                 checked={autoSyncEnabled}
                 onCheckedChange={onAutoSyncEnabledChange}
+                className="data-[state=checked]:bg-[#7c3aed]"
               />
             </div>
           </CardHeader>
           {autoSyncEnabled && (
-            <CardContent className="space-y-4 py-2 border-t border-border/20 mt-2">
+            <CardContent className="space-y-4 pt-4 border-t border-[#1d1d22]/50">
               <div className="space-y-2">
-                <Label>Sync Interval (Minutes)</Label>
+                <Label className="text-xs text-zinc-300">Sync Interval (Minutes)</Label>
                 <Input
                   type="number"
                   min={1}
                   value={autoSyncIntervalMinutes}
                   onChange={(e) => onAutoSyncIntervalMinutesChange(parseInt(e.target.value) || 60)}
+                  className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[11px] text-zinc-500">
                   How often to pull updates from the data source
                 </p>
               </div>
 
               <div className="flex items-center justify-between pt-2">
                 <div className="space-y-0.5">
-                  <Label>Sync Only New Contacts</Label>
-                  <p className="text-xs text-muted-foreground">
+                  <Label className="text-xs text-zinc-300">Sync Only New Contacts</Label>
+                  <p className="text-[11px] text-zinc-500">
                     Only enqueue new contacts, avoiding duplicates
                   </p>
                 </div>
                 <Switch
                   checked={autoSyncOnlyNew}
                   onCheckedChange={onAutoSyncOnlyNewChange}
+                  className="data-[state=checked]:bg-[#7c3aed]"
                 />
               </div>
             </CardContent>

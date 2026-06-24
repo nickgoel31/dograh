@@ -126,50 +126,50 @@ export function WorkflowTable({
     };
 
     return (
-        <div className="bg-card border rounded-lg overflow-hidden shadow-sm">
+        <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl overflow-hidden shadow-none">
             <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="font-semibold">ID</TableHead>
-                        <TableHead className="font-semibold">Agent Name</TableHead>
-                        <TableHead className="font-semibold">Created At</TableHead>
-                        <TableHead className="font-semibold text-center">Total Runs</TableHead>
-                        <TableHead className="font-semibold text-right">Actions</TableHead>
+                <TableHeader className="bg-[#18181b]/20 border-b border-[#1d1d22]">
+                    <TableRow className="border-none hover:bg-transparent">
+                        <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">ID</TableHead>
+                        <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Agent Name</TableHead>
+                        <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Created At</TableHead>
+                        <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11 text-center">Total Runs</TableHead>
+                        <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11 text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {workflows.map((workflow) => (
                         <TableRow
                             key={workflow.id}
-                            className={`hover:bg-accent transition-colors ${showArchived ? 'opacity-60' : ''}`}
+                            className={`hover:bg-[#1a1a1f]/60 transition-colors border-b border-[#1d1d22]/50 ${showArchived ? 'opacity-65' : ''}`}
                         >
-                            <TableCell className="text-muted-foreground">
-                                {workflow.id}
+                            <TableCell className="text-zinc-600 font-mono text-xs py-3.5">
+                                #{workflow.id}
                             </TableCell>
-                            <TableCell className="font-medium">
+                            <TableCell className="font-bold text-white text-sm py-3.5">
                                 {workflow.name}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-zinc-400 text-xs py-3.5">
                                 {new Date(workflow.created_at).toLocaleDateString('en-US', {
                                     year: 'numeric',
                                     month: 'short',
                                     day: 'numeric',
                                 })}
                             </TableCell>
-                            <TableCell className="text-center">
-                                <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-1 text-sm font-semibold bg-muted rounded-full">
+                            <TableCell className="text-center py-3.5">
+                                <span className="inline-flex items-center justify-center min-w-[2rem] px-2.5 py-0.5 text-xs font-bold bg-[#08080a] border border-[#1d1d22] text-[#a78bfa] rounded-full">
                                     {workflow.total_runs || 0}
                                 </span>
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right py-3.5">
                                 <div className="flex justify-end gap-2">
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleEdit(workflow.id)}
-                                        className="flex items-center gap-2"
+                                        className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 h-8"
                                     >
-                                        <Pencil size={16} />
+                                        <Pencil size={13} className="text-zinc-400" />
                                         Edit
                                     </Button>
                                     {folders && (
@@ -179,27 +179,28 @@ export function WorkflowTable({
                                                     variant="outline"
                                                     size="sm"
                                                     disabled={movingWorkflowId === workflow.id || isPending}
-                                                    className="flex items-center gap-2"
+                                                    className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 h-8"
                                                 >
                                                     {movingWorkflowId === workflow.id ? (
-                                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
                                                     ) : (
-                                                        <FolderInput size={16} />
+                                                        <FolderInput size={13} className="text-zinc-400" />
                                                     )}
                                                     Move
                                                 </Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-52">
-                                                <DropdownMenuLabel>Move to folder</DropdownMenuLabel>
-                                                <DropdownMenuSeparator />
+                                            <DropdownMenuContent align="end" className="w-52 bg-[#111113] border border-[#232328] text-zinc-300 rounded-xl p-1.5 shadow-2xl">
+                                                <DropdownMenuLabel className="text-xs font-bold text-zinc-400 px-2 py-1.5">Move to folder</DropdownMenuLabel>
+                                                <DropdownMenuSeparator className="bg-[#1d1d22]" />
                                                 <DropdownMenuItem
                                                     disabled={currentFolderId === null}
                                                     onClick={() => handleMove(workflow.id, null)}
+                                                    className="rounded-lg text-xs px-2 py-1.5 focus:bg-[#1c1c1f] focus:text-white cursor-pointer"
                                                 >
-                                                    <Inbox size={14} className="mr-2" />
+                                                    <Inbox size={13} className="mr-2 text-zinc-400" />
                                                     Uncategorized
                                                     {currentFolderId === null && (
-                                                        <Check size={14} className="ml-auto" />
+                                                        <Check size={13} className="ml-auto text-[#7c3aed]" />
                                                     )}
                                                 </DropdownMenuItem>
                                                 {folders.map((folder) => (
@@ -207,11 +208,12 @@ export function WorkflowTable({
                                                         key={folder.id}
                                                         disabled={folder.id === currentFolderId}
                                                         onClick={() => handleMove(workflow.id, folder.id)}
+                                                        className="rounded-lg text-xs px-2 py-1.5 focus:bg-[#1c1c1f] focus:text-white cursor-pointer"
                                                     >
-                                                        <FolderIcon size={14} className="mr-2" />
+                                                        <FolderIcon size={13} className="mr-2 text-zinc-400" />
                                                         <span className="truncate">{folder.name}</span>
                                                         {folder.id === currentFolderId && (
-                                                            <Check size={14} className="ml-auto shrink-0" />
+                                                            <Check size={13} className="ml-auto shrink-0 text-[#7c3aed]" />
                                                         )}
                                                     </DropdownMenuItem>
                                                 ))}
@@ -219,27 +221,27 @@ export function WorkflowTable({
                                         </DropdownMenu>
                                     )}
                                     <Button
-                                        variant={showArchived ? "default" : "outline"}
+                                        variant="outline"
                                         size="sm"
                                         onClick={() => handleArchiveToggle(workflow.id, workflow.status)}
                                         disabled={loadingWorkflowId === workflow.id || isPending}
-                                        className="flex items-center gap-2"
+                                        className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 h-8"
                                     >
                                         {loadingWorkflowId === workflow.id ? (
                                             <>
-                                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                                <div className="h-3 w-3 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
                                                 {showArchived ? 'Restoring...' : 'Archiving...'}
                                             </>
                                         ) : (
                                             <>
                                                 {showArchived ? (
                                                     <>
-                                                        <RotateCcw size={16} />
+                                                        <RotateCcw size={13} className="text-zinc-400" />
                                                         Restore
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <Archive size={16} />
+                                                        <Archive size={13} className="text-zinc-400" />
                                                         Archive
                                                     </>
                                                 )}

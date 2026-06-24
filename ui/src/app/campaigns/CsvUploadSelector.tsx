@@ -93,8 +93,8 @@ export default function CsvUploadSelector({ onFileUploaded, selectedFileName }: 
   };
 
   return (
-    <div className="space-y-2">
-      <Label>CSV File</Label>
+    <div className="space-y-2 text-white">
+      <Label className="text-xs font-semibold text-zinc-300">CSV File</Label>
       <div className="flex items-center gap-4">
         <input
           ref={fileInputRef}
@@ -108,21 +108,23 @@ export default function CsvUploadSelector({ onFileUploaded, selectedFileName }: 
           variant="outline"
           onClick={handleButtonClick}
           disabled={uploading}
+          className="border-[#1d1d22] hover:bg-[#1a1a1f] text-xs font-semibold rounded-xl text-white h-10 px-4"
         >
           {uploading ? `Uploading... ${uploadProgress}%` : 'Upload CSV File'}
         </Button>
         {selectedFileName && !uploading && (
-          <div className="flex-1 text-sm">
-            <span className="text-muted-foreground">Selected: </span>
-            <span className="text-primary">{selectedFileName}</span>
+          <div className="flex-1 text-xs">
+            <span className="text-zinc-500">Selected: </span>
+            <span className="text-[#a78bfa] font-semibold">{selectedFileName}</span>
           </div>
         )}
       </div>
-      <p className="text-sm text-muted-foreground">
-        Upload a CSV file with contact data. Must include phone_number column.
+      <p className="text-[11px] text-zinc-500 leading-normal">
+        Upload a CSV file with contact data. Must include <code className="font-mono text-zinc-300">phone_number</code> column.
         The columns can be accessed as initial_context in the workflow nodes. <br/>
         Max 10MB.
       </p>
     </div>
   );
 }
+

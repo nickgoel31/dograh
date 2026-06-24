@@ -144,21 +144,21 @@ export function WorkflowTesterPanel({
         !hasSeenTooltip("web_call");
 
     return (
-        <div className={cn("flex h-full min-h-0 flex-col bg-background", className)}>
+        <div className={cn("flex h-full min-h-0 flex-col bg-[#111113]", className)}>
             <Tabs
                 value={activeMode}
                 onValueChange={(value) => setActiveMode(value as "audio" | "text")}
                 className="min-h-0 flex-1 gap-0"
             >
-                <div className="border-b border-border/70 px-4 py-3">
+                <div className="border-b border-[#1d1d22] px-4 py-3 bg-[#0c0c0e]/30">
                     <div className="flex items-center gap-3">
-                        <TabsList className="grid h-9 flex-1 grid-cols-2 rounded-lg bg-muted/60 p-1">
-                            <TabsTrigger value="audio" className="rounded-md text-sm">
-                                <Mic className="h-4 w-4" />
+                        <TabsList className="grid h-9 flex-1 grid-cols-2 rounded-xl bg-[#08080a] border border-[#1d1d22] p-1">
+                            <TabsTrigger value="audio" className="rounded-lg text-xs font-bold data-[state=active]:bg-[#1c1c1f] data-[state=active]:text-white text-zinc-400">
+                                <Mic className="h-3.5 w-3.5 mr-1" />
                                 Test Audio
                             </TabsTrigger>
-                            <TabsTrigger value="text" className="rounded-md text-sm">
-                                <MessageSquareText className="h-4 w-4" />
+                            <TabsTrigger value="text" className="rounded-lg text-xs font-bold data-[state=active]:bg-[#1c1c1f] data-[state=active]:text-white text-zinc-400">
+                                <MessageSquareText className="h-3.5 w-3.5 mr-1" />
                                 Test Chat
                             </TabsTrigger>
                         </TabsList>
@@ -167,7 +167,7 @@ export function WorkflowTesterPanel({
                                 variant="ghost"
                                 size="icon"
                                 onClick={onClose}
-                                className="shrink-0 text-muted-foreground hover:text-foreground"
+                                className="shrink-0 text-zinc-500 hover:text-white rounded-lg hover:bg-[#1c1c1f] cursor-pointer"
                                 aria-label="Close tester panel"
                             >
                                 <X className="h-4 w-4" />
@@ -180,8 +180,8 @@ export function WorkflowTesterPanel({
                     <div className="flex h-full min-h-0 flex-col gap-3">
                         {!tokenReady ? (
                             <div className="space-y-4">
-                                <Skeleton className="h-14 rounded-xl" />
-                                <Skeleton className="h-80 rounded-xl" />
+                                <Skeleton className="h-14 bg-zinc-800 rounded-xl" />
+                                <Skeleton className="h-80 bg-zinc-800 rounded-xl" />
                             </div>
                         ) : !accessToken ? (
                             <DisabledNotice
@@ -200,7 +200,7 @@ export function WorkflowTesterPanel({
                             <>
                                 {effectiveDisabledReason ? <DisabledNotice reason={effectiveDisabledReason} /> : null}
                                 <EmptyState
-                                    icon={<Phone className="h-7 w-7" />}
+                                    icon={<Phone className="h-7 w-7 text-zinc-400" />}
                                     title="Call this agent in the browser"
                                     description="Test the agent over a voice call. Some telephony-only tools, like call transfer, are not yet supported here."
                                     action={
@@ -208,15 +208,16 @@ export function WorkflowTesterPanel({
                                             ref={runTestButtonRef}
                                             onClick={createVoiceRun}
                                             disabled={creatingVoiceRun || testerBlocked}
+                                            className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-4 h-9 rounded-xl transition-all shadow-lg cursor-pointer"
                                         >
                                             {creatingVoiceRun ? (
                                                 <>
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                                                     Starting test...
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Phone className="h-4 w-4" />
+                                                    <Phone className="h-3.5 w-3.5 mr-1.5" />
                                                     Run Test
                                                 </>
                                             )}

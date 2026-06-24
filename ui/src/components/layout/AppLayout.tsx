@@ -48,7 +48,7 @@ function NeuralHeader() {
   const pageName = getPageName(pathname);
 
   return (
-    <header className="neural-header sticky top-0 z-50 flex h-11 items-center justify-between px-4 transition-all duration-300">
+    <header className="sticky top-0 z-50 flex h-16 items-center justify-between px-6 pb-6 pt-6 mb-4 border-b border-[#1d1d22] bg-[#08080a] transition-all duration-300">
       {/* Left: mobile menu + page name */}
       <div className="flex items-center gap-3">
         <Button
@@ -56,7 +56,7 @@ function NeuralHeader() {
           size="icon"
           onClick={toggleSidebar}
           aria-label="Open menu"
-          className="md:hidden h-7 w-7 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground"
+          className="md:hidden h-8 w-8 rounded-xl hover:bg-white/5 border border-transparent text-[#626266] hover:text-white"
         >
           <Menu className="h-4 w-4" />
         </Button>
@@ -66,36 +66,36 @@ function NeuralHeader() {
           <Image
             src="/logo.webp"
             alt="Swarvo AI"
-            width={22}
-            height={22}
-            className="rounded-md object-cover dark:invert"
+            width={28}
+            height={28}
+            className="rounded-xl object-cover dark:invert"
             unoptimized
           />
-          <span className="font-bold tracking-tight">Swarvo AI</span>
+          <span className="font-bold tracking-tight text-white">Swarvo AI</span>
         </Link>
 
         {/* Page breadcrumb — desktop only */}
         {pageName && (
           <div className="hidden md:flex items-center gap-2">
-            <span className="text-sm font-semibold text-foreground tracking-tight">{pageName}</span>
+            <span className="text-sm font-bold text-white tracking-tight">{pageName}</span>
           </div>
         )}
       </div>
 
       {/* Right: search hint + wallet + actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         {/* Search hint button */}
         <button
-          className="hidden md:flex items-center gap-2 rounded-md border border-border/60 bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150"
+          className="hidden md:flex items-center gap-2 rounded-xl border border-[#1d1d22] bg-[#111113] px-3.5 py-1.5 text-xs text-zinc-300 hover:bg-[#1a1a1f] hover:text-white transition-all duration-150 cursor-pointer"
           onClick={() => {/* future: open command palette */}}
           aria-label="Search"
         >
-          <Search className="h-3 w-3" />
+          <Search className="h-3.5 w-3.5 text-zinc-500" />
           <span>Search</span>
-          <kbd className="ml-1 rounded border border-border px-1 font-mono text-[10px] text-muted-foreground/60">⌘K</kbd>
+          <kbd className="ml-1 rounded border border-[#232328] px-1 font-mono text-[9px] text-zinc-600">⌘K</kbd>
         </button>
 
-        <div className="h-4 w-px bg-border/50 hidden md:block" />
+        <div className="h-4 w-px bg-[#1d1d22] hidden md:block" />
         <WalletBalance />
       </div>
     </header>

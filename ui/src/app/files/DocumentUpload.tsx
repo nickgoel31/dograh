@@ -34,11 +34,11 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const ossNotice = isOSS ? (
-    <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-950/30">
-      <Info className="h-4 w-4 flex-shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
-      <div className="text-xs text-amber-900 dark:text-amber-200">
-        <p className="font-medium">Processed by an external service</p>
-        <p className="mt-1">
+    <div className="flex gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-white">
+      <Info className="h-4 w-4 flex-shrink-0 text-amber-400 mt-0.5" />
+      <div className="text-xs text-zinc-300">
+        <p className="font-bold text-amber-400">Processed by an external service</p>
+        <p className="mt-1 leading-relaxed">
           Uploaded documents are sent to Dograh&apos;s managed Model Proxy Service for
           parsing and chunking. Dograh Model Proxy Service does not store or read your documents -
           the extracted text and embeddings are returned and stored locally in your
@@ -184,33 +184,33 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
       <div className="space-y-4">
         {ossNotice}
         {/* Selected file info */}
-        <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
-          <FileText className="w-8 h-8 text-primary flex-shrink-0" />
+        <div className="flex items-center gap-3 p-4 bg-[#08080a] border border-[#1d1d22] rounded-xl">
+          <FileText className="w-8 h-8 text-purple-400 flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="font-medium truncate">{selectedFile.name}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs font-semibold text-zinc-200 truncate">{selectedFile.name}</p>
+            <p className="text-[10px] text-zinc-500 mt-0.5">
               {(selectedFile.size / 1024).toFixed(1)} KB
             </p>
           </div>
-          <Button variant="ghost" size="icon" onClick={clearSelectedFile}>
+          <Button variant="ghost" size="icon" onClick={clearSelectedFile} className="p-1 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[#1a1a1f] transition-all bg-transparent">
             <X className="w-4 h-4" />
           </Button>
         </div>
 
         {/* Retrieval mode selection */}
         <div className="space-y-3">
-          <Label className="text-sm font-medium">How should the agent use this document?</Label>
-          <RadioGroup value={retrievalMode} onValueChange={setRetrievalMode}>
+          <Label className="text-xs font-bold text-zinc-300 block mb-1.5">How should the agent use this document?</Label>
+          <RadioGroup value={retrievalMode} onValueChange={setRetrievalMode} className="space-y-3">
             <label
               htmlFor="full_document"
-              className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                retrievalMode === 'full_document' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+              className={`flex items-start gap-3 p-4 bg-[#08080a] border rounded-xl cursor-pointer transition-colors ${
+                retrievalMode === 'full_document' ? 'border-[#7c3aed]' : 'border-[#1d1d22] hover:border-zinc-700'
               }`}
             >
-              <RadioGroupItem value="full_document" id="full_document" className="mt-0.5" />
+              <RadioGroupItem value="full_document" id="full_document" className="mt-0.5 border-[#232328] text-[#7c3aed]" />
               <div>
-                <p className="font-medium text-sm">Full Document</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="font-bold text-xs text-zinc-200">Full Document</p>
+                <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
                   The entire document is provided to the agent on each retrieval.
                   Best for menus, price lists, FAQs, and other small reference documents.
                 </p>
@@ -218,14 +218,14 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
             </label>
             <label
               htmlFor="chunked"
-              className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                retrievalMode === 'chunked' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+              className={`flex items-start gap-3 p-4 bg-[#08080a] border rounded-xl cursor-pointer transition-colors ${
+                retrievalMode === 'chunked' ? 'border-[#7c3aed]' : 'border-[#1d1d22] hover:border-zinc-700'
               }`}
             >
-              <RadioGroupItem value="chunked" id="chunked" className="mt-0.5" />
+              <RadioGroupItem value="chunked" id="chunked" className="mt-0.5 border-[#232328] text-[#7c3aed]" />
               <div>
-                <p className="font-medium text-sm">Chunked Search</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="font-bold text-xs text-zinc-200">Chunked Search</p>
+                <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
                   The document is split into chunks and the most relevant ones are retrieved.
                   Better for large documents like manuals or policies.
                 </p>
@@ -235,7 +235,7 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
         </div>
 
         {/* Upload button */}
-        <Button onClick={uploadFile} className="w-full">
+        <Button onClick={uploadFile} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer w-full">
           Upload & Process
         </Button>
       </div>
@@ -257,9 +257,9 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
       {/* Drag and Drop Area */}
       <div
         className={`
-          border-2 border-dashed rounded-lg p-8 text-center transition-colors
-          ${dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'}
-          ${uploading ? 'opacity-50 pointer-events-none' : 'cursor-pointer hover:border-primary hover:bg-muted/50'}
+          border-2 border-dashed rounded-xl p-8 text-center transition-colors
+          ${dragActive ? 'border-[#7c3aed] bg-[#7c3aed]/5' : 'border-[#1d1d22]'}
+          ${uploading ? 'opacity-50 pointer-events-none' : 'cursor-pointer hover:border-zinc-700 hover:bg-[#08080a]/50'}
         `}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -267,14 +267,14 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
         onDrop={handleDrop}
         onClick={handleButtonClick}
       >
-        <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-        <p className="text-lg font-medium mb-2">
+        <Upload className="w-12 h-12 mx-auto mb-4 text-zinc-600" />
+        <p className="text-sm font-semibold mb-1 text-zinc-200">
           {uploading ? 'Uploading...' : 'Drop your document here'}
         </p>
-        <p className="text-sm text-muted-foreground mb-4">
+        <p className="text-xs text-zinc-500 mb-4">
           or click to browse
         </p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-[10px] text-zinc-500">
           Supported formats: {ACCEPTED_FILE_TYPES.join(', ')} (Max 5MB)
         </p>
       </div>
@@ -286,7 +286,7 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
             <span>Uploading...</span>
             <span>{uploadProgress}%</span>
           </div>
-          <Progress value={uploadProgress} />
+          <Progress value={uploadProgress} className="h-2 bg-[#08080a] border border-[#1d1d22] rounded-full [&>div]:bg-[#7c3aed]" />
         </div>
       )}
 
@@ -295,8 +295,8 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
         <div className="flex justify-center">
           <Button
             type="button"
-            variant="outline"
             onClick={handleButtonClick}
+            className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-4 py-2 rounded-xl text-xs text-zinc-300 font-medium transition-colors cursor-pointer"
           >
             Choose File
           </Button>

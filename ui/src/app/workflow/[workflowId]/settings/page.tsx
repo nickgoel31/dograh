@@ -1190,19 +1190,20 @@ function WorkflowSettingsInner({
     }, []);
 
     return (
-        <div className="min-h-screen">
+        <div className="min-h-screen bg-[#08080a] text-zinc-300">
             {/* Sticky header */}
-            <header className="sticky top-0 z-10 flex items-center gap-3 border-b bg-background/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-[#1d1d22] bg-[#0c0c0e]/85 px-6 py-4 backdrop-blur-md">
                 <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => confirmNavigate(() => router.push(`/workflow/${workflowId}`))}
+                    className="h-9 w-9 rounded-xl hover:bg-[#1c1c1f] hover:text-white text-zinc-400 border border-[#232328]/40 hover:border-[#1d1d22] transition-all cursor-pointer"
                 >
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div>
-                    <p className="text-xs text-muted-foreground">Workflow Settings</p>
-                    <h1 className="text-sm font-semibold">{workflowName || workflow.name}</h1>
+                    <p className="text-[10px] uppercase tracking-wider font-bold text-[#7c3aed]">Workflow Settings</p>
+                    <h1 className="text-sm font-bold text-white mt-0.5">{workflowName || workflow.name}</h1>
                 </div>
             </header>
 
@@ -1222,19 +1223,19 @@ function WorkflowSettingsInner({
 
                             {/* Model Overrides */}
                             {userRole !== "client" && (
-                                <Card id="models">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2 text-base">
-                                            <Brain className="h-4 w-4" />
+                                <Card id="models" className="bg-[#111113] border border-[#1d1d22] rounded-2xl shadow-none overflow-hidden p-0">
+                                    <CardHeader className="border-b border-[#1d1d22]/50 p-6 pb-5 mb-5">
+                                        <CardTitle className="flex items-center gap-2 text-base font-bold text-white">
+                                            <Brain className="h-4 w-4 text-[#7c3aed]" />
                                             Model Overrides
                                         </CardTitle>
-                                        <CardDescription>
+                                        <CardDescription className="text-xs text-zinc-500 mt-1">
                                             Override global model settings for this workflow. Toggle individual services to
                                             customize.{" "}
-                                            <a href={SETTINGS_DOCUMENTATION_URLS.modelOverrides} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">Learn more <ExternalLink className="h-3 w-3" /></a>
+                                            <a href={SETTINGS_DOCUMENTATION_URLS.modelOverrides} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline hover:text-white transition-colors">Learn more <ExternalLink className="h-3 w-3" /></a>
                                         </CardDescription>
                                     </CardHeader>
-                                    <CardContent>
+                                    <CardContent className="p-6 pt-0">
                                         <ServiceConfigurationForm
                                             mode="override"
                                             currentOverrides={workflowConfigurations.model_overrides}
@@ -1271,42 +1272,42 @@ function WorkflowSettingsInner({
                             />
 
                             {/* Recordings – moved to org-level page */}
-                            <Card id="recordings">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-base">
-                                        <Mic className="h-4 w-4" />
+                            <Card id="recordings" className="bg-[#111113] border border-[#1d1d22] rounded-2xl shadow-none overflow-hidden p-0">
+                                <CardHeader className="p-6">
+                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-white">
+                                        <Mic className="h-4 w-4 text-[#7c3aed]" />
                                         Recordings
                                     </CardTitle>
-                                    <CardDescription>
+                                    <CardDescription className="text-xs text-zinc-500 mt-1">
                                         Recordings are now managed at the organization level and shared across all agents.
-                                        Use <code className="rounded bg-muted px-1 text-xs">@</code> in prompt fields to insert them.{" "}
-                                        <a href={SETTINGS_DOCUMENTATION_URLS.recordings} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">Learn more <ExternalLink className="h-3 w-3" /></a>
+                                        Use <code className="rounded bg-[#08080a] border border-[#1d1d22] px-1 text-zinc-300 font-mono text-[10px] py-0.5">@</code> in prompt fields to insert them.{" "}
+                                        <a href={SETTINGS_DOCUMENTATION_URLS.recordings} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline hover:text-white transition-colors">Learn more <ExternalLink className="h-3 w-3" /></a>
                                     </CardDescription>
                                 </CardHeader>
-                                <CardFooter className="border-t pt-6">
-                                    <Button variant="outline" asChild>
+                                <CardFooter className="border-t border-[#1d1d22]/50 p-6 pt-6">
+                                    <Button variant="outline" asChild className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white rounded-xl text-xs font-bold px-4 h-9 transition-all cursor-pointer">
                                         <Link href="/recordings">
                                             Go to Recordings
-                                            <ExternalLink className="ml-2 h-4 w-4" />
+                                            <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
                                         </Link>
                                     </Button>
                                 </CardFooter>
                             </Card>
 
                             {/* Deployment (dialog trigger) */}
-                            <Card id="deployment">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-base">
-                                        <Rocket className="h-4 w-4" />
+                            <Card id="deployment" className="bg-[#111113] border border-[#1d1d22] rounded-2xl shadow-none overflow-hidden p-0">
+                                <CardHeader className="p-6">
+                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-white">
+                                        <Rocket className="h-4 w-4 text-[#7c3aed]" />
                                         Add to Website
                                     </CardTitle>
-                                    <CardDescription>
+                                    <CardDescription className="text-xs text-zinc-500 mt-1">
                                         Configure a widget to add this voice agent to your website.{" "}
-                                        <a href={SETTINGS_DOCUMENTATION_URLS.deployment} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">Learn more <ExternalLink className="h-3 w-3" /></a>
+                                        <a href={SETTINGS_DOCUMENTATION_URLS.deployment} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline hover:text-white transition-colors">Learn more <ExternalLink className="h-3 w-3" /></a>
                                     </CardDescription>
                                 </CardHeader>
-                                <CardFooter className="border-t pt-6">
-                                    <Button variant="outline" onClick={() => setIsEmbedDialogOpen(true)}>
+                                <CardFooter className="border-t border-[#1d1d22]/50 p-6 pt-6">
+                                    <Button variant="outline" onClick={() => setIsEmbedDialogOpen(true)} className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white rounded-xl text-xs font-bold px-4 h-9 transition-all cursor-pointer">
                                         Configure Widget
                                     </Button>
                                 </CardFooter>
@@ -1324,27 +1325,31 @@ function WorkflowSettingsInner({
                 </div>
 
                 {/* ---- Right-side sticky nav ---- */}
-                <nav className="hidden w-44 shrink-0 lg:block">
-                    <div className="sticky top-20 space-y-1">
-                        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <nav className="hidden w-48 shrink-0 lg:block">
+                    <div className="sticky top-24 space-y-1">
+                        <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-600 px-3">
                             On this page
                         </p>
-                        {NAV_ITEMS.filter((item) => userRole !== "client" || item.id !== "models").map((item) => (
-                            <a
-                                key={item.id}
-                                href={`#${item.id}`}
-                                className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-sm transition-colors hover:text-foreground ${
-                                    activeSection === item.id
-                                        ? "font-medium text-foreground"
-                                        : "text-muted-foreground"
-                                }`}
-                            >
-                                {item.label}
-                                {dirtySections.has(item.id) && (
-                                    <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-                                )}
-                            </a>
-                        ))}
+                        {NAV_ITEMS.filter((item) => userRole !== "client" || item.id !== "models").map((item) => {
+                            const Icon = item.icon;
+                            return (
+                                <a
+                                    key={item.id}
+                                    href={`#${item.id}`}
+                                    className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
+                                        activeSection === item.id
+                                            ? "bg-[#1c1c1f] text-white border border-[#232328]"
+                                            : "text-zinc-500 hover:text-zinc-300 hover:bg-[#1a1a1f]/40"
+                                    }`}
+                                >
+                                    <Icon className="h-3.5 w-3.5 text-zinc-400" />
+                                    {item.label}
+                                    {dirtySections.has(item.id) && (
+                                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                    )}
+                                </a>
+                            );
+                        })}
                     </div>
                 </nav>
             </div>

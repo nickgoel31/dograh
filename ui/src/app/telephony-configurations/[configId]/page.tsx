@@ -197,30 +197,30 @@ export default function TelephonyConfigurationDetailPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
+    <div className="min-h-screen bg-[#08080a] p-6 max-w-[1600px] mx-auto w-full page-enter space-y-6">
       <div>
         <Link
           href="/telephony-configurations"
-          className="inline-flex items-center text-sm text-muted-foreground hover:underline"
+          className="inline-flex items-center text-xs text-zinc-400 hover:text-white transition-colors"
         >
           <ArrowLeft className="h-4 w-4 mr-1" /> All configurations
         </Link>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
+      <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 shadow-none">
+        <CardHeader className="flex flex-row items-start justify-between gap-4 p-0 pb-6 mb-6 border-b border-[#1d1d22]/50">
           <div className="space-y-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <CardTitle className="truncate">{config.name}</CardTitle>
-              <Badge variant="secondary">{config.provider}</Badge>
+              <CardTitle className="truncate text-lg font-bold text-white">{config.name}</CardTitle>
+              <span className="bg-[#1c1c1f] text-zinc-400 border border-zinc-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">{config.provider}</span>
               {config.is_default_outbound && (
-                <Badge className="gap-1">
+                <span className="bg-blue-500/15 text-blue-400 text-[9px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-0.5">
                   <Star className="h-3 w-3 fill-current" />
                   Default
-                </Badge>
+                </span>
               )}
             </div>
-            <CardDescription>
+            <CardDescription className="text-xs text-zinc-500">
               Updated {new Date(config.updated_at).toLocaleString()}
             </CardDescription>
             <button
@@ -232,7 +232,7 @@ export default function TelephonyConfigurationDetailPage() {
                   .catch(() => toast.error("Failed to copy ID"));
               }}
               title="Click to copy"
-              className="inline-flex items-center gap-1 self-start rounded font-mono text-xs text-muted-foreground hover:text-foreground"
+              className="inline-flex items-center gap-1 self-start rounded font-mono text-[9px] text-zinc-500 hover:text-zinc-300 transition-colors mt-1"
             >
               <span className="truncate">Configuration ID: {config.id}</span>
               <Copy className="h-3 w-3 shrink-0" />
@@ -240,28 +240,30 @@ export default function TelephonyConfigurationDetailPage() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {!config.is_default_outbound && (
-              <Button variant="outline" size="sm" onClick={onSetDefaultOutbound}>
+              <Button className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors cursor-pointer" onClick={onSetDefaultOutbound}>
                 <Star className="h-4 w-4 mr-2" /> Set as default
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => setEditConfigOpen(true)}>
+            <Button className="bg-[#1c1c1f] hover:bg-[#27272a] text-xs font-semibold py-2 px-4 rounded-xl text-zinc-300 transition-colors border border-zinc-700/50 cursor-pointer" onClick={() => setEditConfigOpen(true)}>
               <Pencil className="h-4 w-4 mr-2" /> Edit credentials
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-            {Object.entries(config.credentials ?? {}).map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-3">
-                <dt className="text-muted-foreground">{k}</dt>
-                <dd className="font-mono text-right truncate max-w-[60%]">
-                  {String(v ?? "")}
-                </dd>
-              </div>
-            ))}
-          </dl>
+        <CardContent className="space-y-4 p-0">
+          <div className="bg-[#08080a] border border-[#1d1d22] rounded-xl p-4">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+              {Object.entries(config.credentials ?? {}).map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-3 border-b border-[#1d1d22]/50 pb-1.5 last:border-0 last:pb-0">
+                  <dt className="text-zinc-400 font-medium">{k}</dt>
+                  <dd className="font-mono text-right text-white truncate max-w-[60%]">
+                    {String(v ?? "")}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Inbound webhook URL</p>
+            <p className="text-[10px] text-zinc-500 mt-1 leading-snug">Inbound webhook URL</p>
             <button
               type="button"
               onClick={() => {
@@ -273,7 +275,7 @@ export default function TelephonyConfigurationDetailPage() {
               }}
               title="Click to copy inbound webhook URL"
               aria-label="Copy inbound webhook URL"
-              className="inline-flex items-center gap-1 self-start rounded font-mono text-xs text-muted-foreground hover:text-foreground"
+              className="inline-flex items-center gap-1 self-start rounded font-mono text-xs text-zinc-400 hover:text-white transition-colors"
             >
               <span className="truncate">{getInboundWebhookUrl()}</span>
               <Copy className="h-3 w-3 shrink-0" />
@@ -282,85 +284,85 @@ export default function TelephonyConfigurationDetailPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
+      <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 shadow-none">
+        <CardHeader className="flex flex-row items-start justify-between gap-4 p-0 pb-6 mb-6 border-b border-[#1d1d22]/50">
           <div className="space-y-1">
-            <CardTitle>Phone numbers</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg font-bold text-white">Phone numbers</CardTitle>
+            <CardDescription className="text-xs text-zinc-500 leading-relaxed">
               Numbers used as caller ID for outbound and accepted for inbound matching.
               SIP URIs and extensions are supported alongside PSTN numbers.{" "}
               <a
                 href="https://docs.dograh.com/integrations/telephony/inbound"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-0.5 underline"
+                className="text-blue-400 hover:underline inline-flex items-center gap-0.5"
               >
-                Inbound docs <ExternalLink className="h-3 w-3" />
+                Inbound docs <ExternalLink className="h-3 w-3 inline" />
               </a>
             </CardDescription>
           </div>
           <Button
-            size="sm"
+            className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer"
             onClick={() => {
               setPhoneEditTarget(null);
               setPhoneDialogOpen(true);
             }}
           >
-            <Plus className="h-4 w-4 mr-2" /> Add phone number
+            <Plus className="h-4 w-4 mr-2 inline" /> Add phone number
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {phoneNumbers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-zinc-400">
               No phone numbers yet. Add one to start placing or receiving calls on this
               configuration.
             </p>
           ) : (
-            <Table>
+            <Table className="w-full text-left text-xs border-collapse">
               <TableHeader>
-                <TableRow>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Label</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Inbound workflow</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                <TableRow className="border-b border-[#1d1d22] text-zinc-500 font-medium">
+                  <TableHead className="pb-3 font-medium">Address</TableHead>
+                  <TableHead className="pb-3 font-medium">Type</TableHead>
+                  <TableHead className="pb-3 font-medium">Label</TableHead>
+                  <TableHead className="pb-3 font-medium">Status</TableHead>
+                  <TableHead className="pb-3 font-medium">Inbound workflow</TableHead>
+                  <TableHead className="pb-3 font-medium text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="divide-y divide-[#1d1d22]/50">
                 {phoneNumbers.map((n) => (
-                  <TableRow key={n.id}>
-                    <TableCell className="font-mono">{n.address}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{n.address_type}</Badge>
+                  <TableRow key={n.id} className="group hover:bg-white/1 transition-colors">
+                    <TableCell className="py-3.5 font-mono text-zinc-300">{n.address}</TableCell>
+                    <TableCell className="py-3.5">
+                      <span className="bg-[#1c1c1f] text-zinc-400 border border-zinc-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">{n.address_type}</span>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="py-3.5 text-zinc-400">
                       {n.label ?? "-"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-3.5">
                       <div className="flex flex-wrap gap-1">
                         {n.is_active ? (
-                          <Badge variant="secondary">Active</Badge>
+                          <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 text-[10px] font-semibold px-2.5 py-0.5 rounded-full">Active</span>
                         ) : (
-                          <Badge variant="outline">Inactive</Badge>
+                          <span className="bg-zinc-800 text-zinc-400 border border-zinc-700/50 text-[10px] font-semibold px-2.5 py-0.5 rounded-full">Inactive</span>
                         )}
                         {n.is_default_caller_id && (
-                          <Badge className="gap-1">
+                          <span className="bg-blue-500/15 text-blue-400 text-[9px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-0.5">
                             <Star className="h-3 w-3 fill-current" /> Default caller
-                          </Badge>
+                          </span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="py-3.5 text-zinc-400">
                       {n.inbound_workflow_id ? (
                         <Link
                           href={`/workflow/${n.inbound_workflow_id}`}
-                          className="inline-flex items-center gap-1 hover:underline hover:text-foreground"
+                          className="inline-flex items-center gap-1 hover:underline hover:text-white transition-colors"
                         >
                           <span>#{n.inbound_workflow_id}</span>
                           {n.inbound_workflow_name && (
                             <span
-                              className="truncate max-w-[160px]"
+                              className="truncate max-w-[160px] text-zinc-500"
                               title={n.inbound_workflow_name}
                             >
                               {n.inbound_workflow_name.length > 24
@@ -373,12 +375,12 @@ export default function TelephonyConfigurationDetailPage() {
                         "-"
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
+                    <TableCell className="py-3.5 text-right">
+                      <div className="flex justify-end gap-1.5">
                         {!n.is_default_caller_id && n.is_active && (
                           <Button
                             variant="ghost"
-                            size="sm"
+                            className="p-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-white transition-colors cursor-pointer bg-transparent"
                             onClick={() => onSetDefaultCaller(n)}
                             title="Set as default caller ID"
                           >
@@ -387,7 +389,7 @@ export default function TelephonyConfigurationDetailPage() {
                         )}
                         <Button
                           variant="ghost"
-                          size="sm"
+                          className="p-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-white transition-colors cursor-pointer bg-transparent"
                           onClick={() => {
                             setPhoneEditTarget(n);
                             setPhoneDialogOpen(true);
@@ -398,11 +400,11 @@ export default function TelephonyConfigurationDetailPage() {
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          className="p-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-rose-400 transition-colors cursor-pointer bg-transparent"
                           onClick={() => setPhoneDeleteTarget(n)}
                           title="Delete"
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -433,17 +435,17 @@ export default function TelephonyConfigurationDetailPage() {
         open={!!phoneDeleteTarget}
         onOpenChange={(o) => !o && setPhoneDeleteTarget(null)}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete phone number?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {phoneDeleteTarget?.address} will no longer accept inbound calls or be
+        <AlertDialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white">
+          <AlertDialogHeader className="space-y-1">
+            <AlertDialogTitle className="text-lg font-bold text-white">Delete phone number?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-zinc-500 leading-relaxed">
+              <strong className="text-zinc-200">{phoneDeleteTarget?.address}</strong> will no longer accept inbound calls or be
               available as a caller ID for this configuration.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={onConfirmDeletePhone}>Delete</AlertDialogAction>
+          <AlertDialogFooter className="flex gap-3 justify-end pt-2 border-t border-[#1d1d22]/50">
+            <AlertDialogCancel className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors">Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer" onClick={onConfirmDeletePhone}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

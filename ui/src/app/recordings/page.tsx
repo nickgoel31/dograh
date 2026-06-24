@@ -24,7 +24,7 @@ export default function RecordingsPage() {
 
     if (loading || !user) {
         return (
-            <div className="container mx-auto px-4 py-8">
+            <div className="min-h-screen bg-[#08080a] p-6 max-w-[1600px] mx-auto w-full page-enter">
                 <div className="space-y-4">
                     <Skeleton className="h-12 w-64" />
                     <Skeleton className="h-64 w-full" />
@@ -34,42 +34,38 @@ export default function RecordingsPage() {
     }
 
     return (
-        <div className="container mx-auto px-4 py-8 fade-in-up">
-            <div className="flex justify-between items-end mb-8 page-header">
-                <div>
-                    <h1 className="text-3xl font-extrabold tracking-tight mb-1 flex items-center gap-3">
-                        <div className="icon-container">
-                            <AudioLines className="h-6 w-6" />
-                        </div>
-                        Recordings
-                    </h1>
-                    <p className="text-muted-foreground mt-2">
-                        Manage audio recordings for your organization. Use{" "}
-                        <code className="rounded bg-muted px-1 text-xs">@</code> in prompt fields to insert them,
-                        or as transition messages in tool calls.{" "}
-                        <a href="https://docs.dograh.com/voice-agent/pre-recorded-audio" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline text-primary hover:text-primary/80 transition-colors">
-                            Learn more <ExternalLink className="h-3 w-3" />
-                        </a>
-                    </p>
-                </div>
+        <div className="min-h-screen bg-[#08080a] p-6 max-w-[1600px] mx-auto w-full page-enter">
+            {/* Header */}
+            <div className="border-b border-[#1d1d22]/50 pb-6 mb-6">
+                <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+                    Recordings
+                </h1>
+                <p className="text-xs text-zinc-500 mt-1">
+                    Manage audio recordings for your organization. Use{" "}
+                    <code className="rounded bg-[#1c1c1f] border border-[#232328] px-1 py-0.5 text-xs text-zinc-300">@</code> in prompt fields to insert them,
+                    or as transition messages in tool calls.{" "}
+                    <a href="https://docs.dograh.com/voice-agent/pre-recorded-audio" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline-flex items-center gap-0.5">
+                        Learn more <ExternalLink className="w-3.5 h-3.5 inline" />
+                    </a>
+                </p>
             </div>
 
-            <Card className="glass-card fade-in-up" style={{ animationDelay: '0.1s' }}>
-                <CardHeader>
+            <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 shadow-none">
+                <CardHeader className="p-0 pb-6 mb-6 border-b border-[#1d1d22]/50">
                     <div className="flex justify-between items-center">
                         <div>
-                            <CardTitle>All Recordings</CardTitle>
-                            <CardDescription>
+                            <CardTitle className="text-lg font-bold text-white">All Recordings</CardTitle>
+                            <CardDescription className="text-xs text-zinc-500">
                                 Audio recordings shared across all agents in your organization
                             </CardDescription>
                         </div>
-                        <Button onClick={() => setIsUploadOpen(true)} className="hover-glow bg-primary hover:bg-primary/90">
-                            <Upload className="w-4 h-4 mr-2" />
+                        <Button onClick={() => setIsUploadOpen(true)} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer">
+                            <Upload className="w-4 h-4 mr-2 inline" />
                             Upload Recording
                         </Button>
                     </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                     <RecordingsList refreshKey={refreshKey} />
                 </CardContent>
             </Card>

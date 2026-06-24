@@ -265,10 +265,10 @@ export default function EditCampaignPage() {
 
     if (isLoading) {
         return (
-            <div className="container mx-auto p-6 space-y-6 max-w-2xl">
-                <div className="animate-pulse">
-                    <div className="h-8 bg-muted rounded w-1/4 mb-4"></div>
-                    <div className="h-64 bg-muted rounded"></div>
+            <div className="min-h-screen bg-[#08080a] flex items-center justify-center">
+                <div className="space-y-4">
+                    <div className="h-8 bg-[#111113] rounded-xl w-64 animate-pulse"></div>
+                    <div className="h-64 bg-[#111113] rounded-xl w-96 animate-pulse"></div>
                 </div>
             </div>
         );
@@ -276,39 +276,39 @@ export default function EditCampaignPage() {
 
     if (!campaign) {
         return (
-            <div className="container mx-auto p-6 space-y-6 max-w-2xl">
-                <p className="text-center text-muted-foreground">Campaign not found</p>
+            <div className="min-h-screen bg-[#08080a] flex items-center justify-center">
+                <p className="text-center text-zinc-500 text-xs font-semibold">Campaign not found</p>
             </div>
         );
     }
 
     return (
-        <div className="container mx-auto p-6 pb-12 space-y-6 max-w-2xl">
+        <div className="min-h-screen bg-[#08080a] p-6 max-w-3xl mx-auto w-full page-enter">
             <div>
                 <Button
                     variant="ghost"
                     onClick={handleBack}
-                    className="mb-4"
+                    className="mb-6 border border-[#1d1d22] text-zinc-400 hover:text-white hover:bg-[#1a1a1f] text-xs font-semibold rounded-xl h-10 px-4"
                 >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Campaign
                 </Button>
-                <h1 className="text-3xl font-bold mb-2">Edit Campaign</h1>
-                <p className="text-muted-foreground">Modify campaign settings</p>
+                <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Edit Campaign</h1>
+                <p className="text-xs text-zinc-500">Modify campaign settings</p>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Campaign Settings</CardTitle>
-                    <CardDescription>
+            <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl shadow-none mt-6">
+                <CardHeader className="p-6 pb-4 border-b border-[#1d1d22]/50">
+                    <CardTitle className="text-base font-bold text-white">Campaign Settings</CardTitle>
+                    <CardDescription className="text-xs text-zinc-500">
                         Update name, concurrency, retry, and schedule configuration
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-6">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Campaign Name */}
                         <div className="space-y-2">
-                            <Label htmlFor="campaign-name">Campaign Name</Label>
+                            <Label htmlFor="campaign-name" className="text-xs font-semibold text-zinc-300">Campaign Name</Label>
                             <Input
                                 id="campaign-name"
                                 placeholder="Enter campaign name"
@@ -316,10 +316,11 @@ export default function EditCampaignPage() {
                                 onChange={(e) => setCampaignName(e.target.value)}
                                 maxLength={255}
                                 required
+                                className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
                             />
                         </div>
 
-                        <Separator />
+                        <Separator className="bg-[#1d1d22]/50" />
 
                         <CampaignAdvancedSettings
                             maxConcurrency={maxConcurrency}
@@ -356,7 +357,7 @@ export default function EditCampaignPage() {
                         />
 
                         {submitError && (
-                            <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+                            <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-400 font-semibold">
                                 {submitError}
                             </div>
                         )}
@@ -365,6 +366,7 @@ export default function EditCampaignPage() {
                             <Button
                                 type="submit"
                                 disabled={isSubmitting || !campaignName.trim()}
+                                className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs h-10 px-6 rounded-xl transition-all shadow-lg cursor-pointer"
                             >
                                 {isSubmitting ? 'Saving...' : 'Save Changes'}
                             </Button>
@@ -373,6 +375,7 @@ export default function EditCampaignPage() {
                                 variant="outline"
                                 onClick={handleBack}
                                 disabled={isSubmitting}
+                                className="border border-[#1d1d22] hover:bg-[#1a1a1f] text-white font-semibold text-xs h-10 px-6 rounded-xl transition-all"
                             >
                                 Cancel
                             </Button>

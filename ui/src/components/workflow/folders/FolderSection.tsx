@@ -123,40 +123,40 @@ export function FolderSection({
     };
 
     return (
-        <div className="mb-3">
+        <div className="mb-4">
             <Collapsible open={open} onOpenChange={setOpen}>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5 bg-[#111113]/40 border border-[#1d1d22]/40 rounded-xl p-1 mb-2">
                     <CollapsibleTrigger asChild>
                         <button
-                            className="group flex flex-1 items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors hover:bg-accent"
+                            className="group flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-left transition-all hover:bg-[#1a1a1f] cursor-pointer"
                             aria-label={`Toggle ${title}`}
                         >
                             <ChevronRight
-                                size={16}
+                                size={14}
                                 className={cn(
-                                    'shrink-0 text-muted-foreground transition-transform duration-200',
+                                    'shrink-0 text-zinc-500 transition-transform duration-200 group-hover:text-zinc-300',
                                     open && 'rotate-90',
                                 )}
                             />
                             {isFolder ? (
                                 open ? (
-                                    <FolderOpen size={17} className="shrink-0 text-amber-500" />
+                                    <FolderOpen size={16} className="shrink-0 text-amber-500" />
                                 ) : (
-                                    <FolderIcon size={17} className="shrink-0 text-amber-500" />
+                                    <FolderIcon size={16} className="shrink-0 text-amber-500" />
                                 )
                             ) : isArchived ? (
-                                <Archive size={16} className="shrink-0 text-muted-foreground" />
+                                <Archive size={15} className="shrink-0 text-[#7c3aed]" />
                             ) : (
-                                <Inbox size={17} className="shrink-0 text-muted-foreground" />
+                                <Inbox size={16} className="shrink-0 text-[#7c3aed]" />
                             )}
                             <span
-                                className={cn('font-medium', !isFolder && 'text-muted-foreground')}
+                                className={cn('text-sm font-bold text-white', !isFolder && 'text-zinc-300')}
                             >
                                 {title}
                             </span>
-                            <Badge variant="secondary" className="ml-1 font-normal">
+                            <span className="ml-1 px-2 py-0.5 text-[10px] font-bold bg-[#1c1c1f] border border-[#232328] text-zinc-400 rounded-full">
                                 {count}
-                            </Badge>
+                            </span>
                         </button>
                     </CollapsibleTrigger>
 
@@ -166,22 +166,22 @@ export function FolderSection({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-muted-foreground"
+                                    className="h-8 w-8 text-zinc-400 hover:text-white rounded-lg hover:bg-[#1c1c1f] cursor-pointer"
                                     aria-label="Folder actions"
                                 >
-                                    <MoreVertical size={16} />
+                                    <MoreVertical size={15} />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setIsRenaming(true)}>
-                                    <Pencil size={14} className="mr-2" />
+                            <DropdownMenuContent align="end" className="bg-[#111113] border border-[#232328] text-zinc-300 rounded-xl p-1.5 shadow-2xl">
+                                <DropdownMenuItem onClick={() => setIsRenaming(true)} className="rounded-lg text-xs px-2.5 py-1.5 focus:bg-[#1c1c1f] focus:text-white cursor-pointer">
+                                    <Pencil size={13} className="mr-2 text-zinc-400" />
                                     Rename
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     onClick={() => setConfirmDelete(true)}
-                                    className="text-destructive focus:text-destructive"
+                                    className="rounded-lg text-xs px-2.5 py-1.5 text-rose-400 focus:text-rose-400 focus:bg-rose-500/10 cursor-pointer"
                                 >
-                                    <Trash2 size={14} className="mr-2" />
+                                    <Trash2 size={13} className="mr-2 text-rose-400" />
                                     Delete
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -190,7 +190,7 @@ export function FolderSection({
                 </div>
 
                 <CollapsibleContent className="data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-1">
-                    <div className="pl-7 pt-2">
+                    <div className="pl-3.5 pt-1 pb-4">
                         {count > 0 ? (
                             <WorkflowTable
                                 workflows={workflows}
@@ -200,7 +200,7 @@ export function FolderSection({
                                 currentFolderId={folder?.id ?? null}
                             />
                         ) : (
-                            <div className="rounded-lg border border-dashed bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+                            <div className="rounded-2xl border border-dashed border-[#1d1d22] bg-[#111113]/20 p-8 text-center text-xs text-zinc-500">
                                 {isArchived
                                     ? 'No archived agents.'
                                     : isFolder

@@ -352,27 +352,38 @@ export default function BillingPage() {
   if (!isModeLoaded) return null;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="max-w-[1600px] mx-auto w-full p-6 space-y-6 animate-fade-in">
       {/* Header & Settings Bar */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 page-header fade-in-up">
-        <div>
-          <h1 className="text-3xl font-extrabold mb-1 flex items-center gap-3">
-            <div className="icon-container">
-              <IndianRupee className="h-6 w-6" />
-            </div>
-            Billing & Usage
-          </h1>
-          <p className="text-muted-foreground">Manage client billing and pricing tiers.</p>
-        </div>
+      <div className="border-b border-[#1d1d22]/50 pb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+          <IndianRupee className="h-6 w-6 text-[#7c3aed]" />
+          Billing & Usage
+        </h1>
+        <p className="text-xs text-zinc-500 mt-1">Manage client billing and pricing tiers.</p>
+      </div>
 
-        <div className="flex flex-wrap items-center gap-3 bg-muted/30 p-2 rounded-lg border mb-1">
+      {/* Settings Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
           {/* Month Navigator */}
-          <div className="flex items-center gap-2 px-2 border-r pr-4">
-            <Button variant="ghost" size="icon" onClick={goToPrevMonth} disabled={isFetchingAll}>
+          <div className="flex items-center gap-2 bg-[#111113] border border-[#1d1d22] p-1.5 rounded-xl">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={goToPrevMonth}
+              disabled={isFetchingAll}
+              className="h-8 w-8 hover:bg-[#1a1a1f] text-zinc-400 hover:text-white rounded-lg"
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="font-medium min-w-[120px] text-center">{monthYearString}</span>
-            <Button variant="ghost" size="icon" onClick={goToNextMonth} disabled={isCurrentMonth() || isFetchingAll}>
+            <span className="text-xs font-semibold text-zinc-200 px-2 min-w-[100px] text-center">{monthYearString}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={goToNextMonth}
+              disabled={isCurrentMonth() || isFetchingAll}
+              className="h-8 w-8 hover:bg-[#1a1a1f] text-zinc-400 hover:text-white rounded-lg"
+            >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -380,17 +391,21 @@ export default function BillingPage() {
           {/* Agent Filter (Multi-Select) */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="w-[200px] justify-between font-normal h-9">
+              <Button
+                variant="outline"
+                className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] text-zinc-300 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors h-10 w-[200px] justify-between"
+              >
                 {selectedAgentIds.length === 0
                   ? "All Agents"
                   : `${selectedAgentIds.length} Agent${selectedAgentIds.length > 1 ? 's' : ''} Selected`}
-                <span className="opacity-50 text-xs">▼</span>
+                <span className="opacity-50 text-[10px]">▼</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-[200px]" align="end">
+            <DropdownMenuContent className="bg-[#111113] border border-[#1d1d22] text-zinc-300 rounded-xl" align="end">
               <DropdownMenuCheckboxItem
                 checked={selectedAgentIds.length === 0}
                 onCheckedChange={() => setSelectedAgentIds([])}
+                className="hover:bg-[#1a1a1f] focus:bg-[#1a1a1f] text-xs"
               >
                 All Agents
               </DropdownMenuCheckboxItem>
@@ -407,6 +422,7 @@ export default function BillingPage() {
                         setSelectedAgentIds(prev => prev.filter(id => id !== wfIdStr));
                       }
                     }}
+                    className="hover:bg-[#1a1a1f] focus:bg-[#1a1a1f] text-xs"
                   >
                     {wf.name}
                   </DropdownMenuCheckboxItem>
@@ -417,332 +433,307 @@ export default function BillingPage() {
 
           {/* Clear filter button */}
           {selectedAgentIds.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => setSelectedAgentIds([])} className="h-9">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedAgentIds([])}
+              className="text-xs text-zinc-400 hover:text-white hover:bg-white/5 rounded-xl h-10"
+            >
               Clear
             </Button>
           )}
+        </div>
 
-          {/* Billing Mode Toggle */}
-          <div className="border-l pl-4 flex items-center">
-            <Select
-              value={wallet && wallet.billing_rate > 0 ? "custom" : billingMode}
-              onValueChange={handleBillingModeChange}
-              disabled={wallet && wallet.billing_rate > 0}
-            >
-              <SelectTrigger className="w-[160px] h-9">
-                <SelectValue placeholder="Billing Mode" />
-              </SelectTrigger>
-              <SelectContent>
-                {wallet && wallet.billing_rate > 0 ? (
-                  <SelectItem value="custom">Custom ({getPulseUnitShortLabel()})</SelectItem>
-                ) : (
-                  <>
-                    <SelectItem value="per_minute">Per Minute</SelectItem>
-                    <SelectItem value="per_30s">Per 30s Pulse</SelectItem>
-                  </>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Billing Mode Toggle */}
+        <div className="flex items-center">
+          <Select
+            value={wallet && wallet.billing_rate > 0 ? "custom" : billingMode}
+            onValueChange={handleBillingModeChange}
+            disabled={wallet && wallet.billing_rate > 0}
+          >
+            <SelectTrigger className="w-[180px] bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] text-zinc-300 rounded-xl text-xs h-10">
+              <SelectValue placeholder="Billing Mode" />
+            </SelectTrigger>
+            <SelectContent className="bg-[#111113] border border-[#1d1d22] text-zinc-300 rounded-xl">
+              {wallet && wallet.billing_rate > 0 ? (
+                <SelectItem value="custom" className="hover:bg-[#1a1a1f] focus:bg-[#1a1a1f] text-xs">Custom ({getPulseUnitShortLabel()})</SelectItem>
+              ) : (
+                <>
+                  <SelectItem value="per_minute" className="hover:bg-[#1a1a1f] focus:bg-[#1a1a1f] text-xs">Per Minute</SelectItem>
+                  <SelectItem value="per_30s" className="hover:bg-[#1a1a1f] focus:bg-[#1a1a1f] text-xs">Per 30s Pulse</SelectItem>
+                </>
+              )}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* Tier Badge */}
-      <Card className="bg-primary/5 border-primary/20 glass-card fade-in-up" style={{ animationDelay: '0.1s' }}>
-        <CardContent className="py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Badge variant="default" className="text-sm px-3 py-1">📊 {tier}</Badge>
-            <span className="font-medium">
-              {orgTotalCalls.toLocaleString()} calls this month
-            </span>
-            <span className="text-muted-foreground hidden sm:inline">|</span>
-            <span className="font-medium text-primary">
-              Rate: {formatCurrency(currentRate)}/{getPulseUnitLabel()}
-            </span>
+      {/* Tier Badge Banner */}
+      <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="bg-blue-500/15 text-blue-400 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-blue-500/20">
+            📊 {tier}
+          </span>
+          <span className="text-xs font-medium text-zinc-200">
+            {orgTotalCalls.toLocaleString()} calls this month
+          </span>
+          <span className="text-zinc-700 hidden sm:inline">|</span>
+          <span className="text-xs font-semibold text-[#7c3aed]">
+            Rate: {formatCurrency(currentRate)}/{getPulseUnitLabel()}
+          </span>
+        </div>
+        {nextTier && !(wallet && wallet.billing_rate > 0) && (
+          <div className="text-xs text-zinc-400">
+            {Math.max(0, nextTier.maxCalls - orgTotalCalls + 1).toLocaleString()} more calls to reach {nextTier.label} ({formatCurrency(getPricePerUnit(nextTier.label, billingMode))}/{billingMode === 'per_minute' ? 'min' : '30s'})
           </div>
-          {nextTier && !(wallet && wallet.billing_rate > 0) && (
-            <div className="text-sm text-muted-foreground flex items-center">
-              {Math.max(0, nextTier.maxCalls - orgTotalCalls + 1).toLocaleString()} more calls to reach {nextTier.label} ({formatCurrency(getPricePerUnit(nextTier.label, billingMode))}/{billingMode === 'per_minute' ? 'min' : '30s'})
-            </div>
-          )}
-          {wallet && wallet.billing_rate > 0 && (
-            <div className="text-sm text-muted-foreground flex items-center">
-              Custom Organization Pricing Active
-            </div>
-          )}
-          {selectedAgentIds.length > 0 && (
-            <div className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
-              Tier is based on org-wide total
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        )}
+        {wallet && wallet.billing_rate > 0 && (
+          <div className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/15 px-2.5 py-0.5 rounded-full font-semibold">
+            Custom Organization Pricing Active
+          </div>
+        )}
+        {selectedAgentIds.length > 0 && (
+          <div className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/15">
+            Tier is based on org-wide total
+          </div>
+        )}
+      </div>
 
       {/* Summary Cards */}
       {wallet && wallet.monthly_minutes_limit > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 stagger-children">
-          <Card className="border-emerald-500/20 bg-emerald-500/5 dark:border-emerald-500/30 dark:bg-emerald-500/10 glass-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Rupees Remaining</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                ₹{(wallet.balance ?? 0).toFixed(2)}
-              </div>
-              <p className="text-xs text-muted-foreground pt-1">
-                Value of unused remaining minutes
-              </p>
-            </CardContent>
-          </Card>
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 relative overflow-hidden">
+            <div className="text-xs font-semibold text-emerald-400 mb-2">Rupees Remaining</div>
+            <div className="text-2xl font-bold text-emerald-400">
+              ₹{(wallet.balance ?? 0).toFixed(2)}
+            </div>
+            <p className="text-[10px] text-zinc-500 mt-2">
+              Value of unused remaining minutes
+            </p>
+            <div className="absolute right-0 bottom-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-3xl" />
+          </div>
 
-          <Card className="border-border/60 bg-card/50 backdrop-blur-md glass-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-semibold text-foreground">Minutes Remaining</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-extrabold text-foreground">
-                {(wallet.minutes_remaining ?? 0).toFixed(1)} min
-              </div>
-              <p className="text-xs text-muted-foreground pt-1">
-                Out of {((wallet.monthly_minutes_limit ?? 0) + (wallet.carry_forward_minutes ?? 0)).toFixed(0)} min total allowance
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
+            <div className="text-xs font-semibold text-zinc-400 mb-2">Minutes Remaining</div>
+            <div className="text-2xl font-bold text-white">
+              {(wallet.minutes_remaining ?? 0).toFixed(1)} min
+            </div>
+            <p className="text-[10px] text-zinc-500 mt-2">
+              Out of {((wallet.monthly_minutes_limit ?? 0) + (wallet.carry_forward_minutes ?? 0)).toFixed(0)} min allowance
+            </p>
+          </div>
 
-          <Card className="border-border/60 bg-card/50 backdrop-blur-md glass-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-semibold text-foreground">Minutes Used</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                {(wallet.minutes_used ?? 0).toFixed(1)} min
-              </div>
-              <p className="text-xs text-muted-foreground pt-1">
-                This cycle's total usage
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
+            <div className="text-xs font-semibold text-zinc-400 mb-2">Minutes Used</div>
+            <div className="text-2xl font-bold text-white">
+              {(wallet.minutes_used ?? 0).toFixed(1)} min
+            </div>
+            <p className="text-[10px] text-zinc-500 mt-2">
+              This cycle's total usage
+            </p>
+          </div>
 
-          <Card className="border-border/60 bg-card/50 backdrop-blur-md glass-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-semibold text-foreground">Carry Forward</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                {(wallet.carry_forward_minutes ?? 0).toFixed(1)} min
-              </div>
-              <p className="text-xs text-muted-foreground pt-1">
-                From previous cycle (2-month limit)
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
+            <div className="text-xs font-semibold text-zinc-400 mb-2">Carry Forward</div>
+            <div className="text-2xl font-bold text-white">
+              {(wallet.carry_forward_minutes ?? 0).toFixed(1)} min
+            </div>
+            <p className="text-[10px] text-zinc-500 mt-2">
+              From previous cycle (2-month limit)
+            </p>
+          </div>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 stagger-children">
-          <Card className="glass-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Accumulated Minutes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalMinutes.toFixed(1)}</div>
-              <p className="text-xs text-muted-foreground pt-1">
-                Raw sum of durations
-              </p>
-            </CardContent>
-          </Card>
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
+            <div className="text-xs font-semibold text-zinc-400 mb-2">Accumulated Minutes</div>
+            <div className="text-2xl font-bold text-white">{totalMinutes.toFixed(1)}</div>
+            <p className="text-[10px] text-zinc-500 mt-2">
+              Raw sum of durations
+            </p>
+          </div>
 
-          <Card className="glass-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Billable Units</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalBillableUnits.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground pt-1">
-                {wallet && wallet.billing_rate > 0
-                  ? `Total billable ${getPulseUnitShortLabel()} units`
-                  : (billingMode === 'per_minute' ? 'Total billable minutes' : 'Total 30s pulses')}
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
+            <div className="text-xs font-semibold text-zinc-400 mb-2">Billable Units</div>
+            <div className="text-2xl font-bold text-white">{totalBillableUnits.toLocaleString()}</div>
+            <p className="text-[10px] text-zinc-500 mt-2">
+              {wallet && wallet.billing_rate > 0
+                ? `Total billable ${getPulseUnitShortLabel()} units`
+                : (billingMode === 'per_minute' ? 'Total billable minutes' : 'Total 30s pulses')}
+            </p>
+          </div>
 
-          <Card className="glass-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Billed</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-              <p className="text-xs text-muted-foreground pt-1">
-                Total revenue for selected filters
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 relative overflow-hidden">
+            <div className="text-xs font-semibold text-[#7c3aed] mb-2">Total Billed</div>
+            <div className="text-2xl font-bold text-white">{formatCurrency(totalRevenue)}</div>
+            <p className="text-[10px] text-zinc-500 mt-2">
+              Total revenue for selected filters
+            </p>
+            <div className="absolute right-0 bottom-0 w-24 h-24 bg-[#7c3aed]/5 rounded-full blur-3xl" />
+          </div>
 
-          <Card className="glass-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Cost Per Call</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(avgRevenuePerCall)}</div>
-              <p className="text-xs text-muted-foreground pt-1">
-                Revenue / call count
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
+            <div className="text-xs font-semibold text-zinc-400 mb-2">Avg Cost Per Call</div>
+            <div className="text-2xl font-bold text-white">{formatCurrency(avgRevenuePerCall)}</div>
+            <p className="text-[10px] text-zinc-500 mt-2">
+              Revenue / call count
+            </p>
+          </div>
         </div>
       )}
 
       {/* Breakdown Table */}
-      <Card className="glass-card fade-in-up" style={{ animationDelay: '0.3s' }}>
-        <CardHeader>
-          <CardTitle>Per-Agent Breakdown</CardTitle>
-          <CardDescription>Revenue and usage separated by voice agent</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border border-border/50 overflow-hidden shadow-sm">
-            <Table className="premium-table">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Agent Name</TableHead>
-                  <TableHead className="text-right">Calls</TableHead>
-                  <TableHead className="text-right">Total Minutes</TableHead>
-                  <TableHead className="text-right">Billable Units</TableHead>
-                  <TableHead className="text-right">Avg/Call</TableHead>
-                  <TableHead className="text-right font-bold">Billed Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {breakdownArray.length > 0 ? (
-                  <>
-                    {breakdownArray.map(b => (
-                      <TableRow key={b.name}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {b.name}
-                            <Badge variant="outline" className="text-[10px] h-5">{tier}</Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">{b.calls.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{b.minutes.toFixed(1)}</TableCell>
-                        <TableCell className="text-right">{b.billableUnits.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(b.revenue / b.calls)}</TableCell>
-                        <TableCell className="text-right font-bold">{formatCurrency(b.revenue)}</TableCell>
-                      </TableRow>
-                    ))}
-                    <TableRow className="bg-muted/50 font-bold">
-                      <TableCell>Totals</TableCell>
-                      <TableCell className="text-right">{filteredRuns.length.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">{totalMinutes.toFixed(1)}</TableCell>
-                      <TableCell className="text-right">{totalBillableUnits.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(avgRevenuePerCall)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(totalRevenue)}</TableCell>
-                    </TableRow>
-                  </>
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      {isFetchingAll ? 'Loading breakdown...' : 'No calls recorded for this period'}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
+        <div className="flex justify-between items-center mb-6">
+          <span className="text-sm font-semibold text-zinc-200">Per-Agent Breakdown</span>
+          <span className="text-[10px] text-zinc-500">Revenue and usage separated by voice agent</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-[#1d1d22] text-zinc-500 font-medium">
+                <th className="pb-3 font-medium">Agent Name</th>
+                <th className="pb-3 text-right font-medium">Calls</th>
+                <th className="pb-3 text-right font-medium">Total Minutes</th>
+                <th className="pb-3 text-right font-medium">Billable Units</th>
+                <th className="pb-3 text-right font-medium">Avg/Call</th>
+                <th className="pb-3 text-right font-medium text-white">Billed Amount</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#1d1d22]/50">
+              {breakdownArray.length > 0 ? (
+                <>
+                  {breakdownArray.map(b => (
+                    <tr key={b.name} className="group hover:bg-white/1 transition-colors">
+                      <td className="py-3.5 text-zinc-300">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-zinc-200">{b.name}</span>
+                          <span className="bg-[#1c1c1f] text-zinc-400 border border-zinc-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">
+                            {tier}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 text-right text-zinc-300">{b.calls.toLocaleString()}</td>
+                      <td className="py-3.5 text-right text-zinc-300">{b.minutes.toFixed(1)}</td>
+                      <td className="py-3.5 text-right text-zinc-300">{b.billableUnits.toLocaleString()}</td>
+                      <td className="py-3.5 text-right text-zinc-300">{formatCurrency(b.revenue / b.calls)}</td>
+                      <td className="py-3.5 text-right font-bold text-white">{formatCurrency(b.revenue)}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-[#08080a] font-bold">
+                    <td className="py-4 text-zinc-200">Totals</td>
+                    <td className="py-4 text-right text-zinc-200">{filteredRuns.length.toLocaleString()}</td>
+                    <td className="py-4 text-right text-zinc-200">{totalMinutes.toFixed(1)}</td>
+                    <td className="py-4 text-right text-zinc-200">{totalBillableUnits.toLocaleString()}</td>
+                    <td className="py-4 text-right text-zinc-200">{formatCurrency(avgRevenuePerCall)}</td>
+                    <td className="py-4 text-right text-[#7c3aed]">{formatCurrency(totalRevenue)}</td>
+                  </tr>
+                </>
+              ) : (
+                <tr>
+                  <td colSpan={6} className="h-24 text-center text-zinc-500">
+                    {isFetchingAll ? 'Loading breakdown...' : 'No calls recorded for this period'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Call Log */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Call Log</CardTitle>
-          <CardDescription>Individual call records for the selected period</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>Agent</TableHead>
-                  <TableHead>Caller</TableHead>
-                  <TableHead>Call Type</TableHead>
-                  <TableHead className="text-right">Duration</TableHead>
-                  <TableHead className="text-right">Units</TableHead>
-                  <TableHead className="text-right">Rate Used</TableHead>
-                  <TableHead className="text-right font-bold">Billed</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoadingRuns ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center animate-pulse">Loading calls...</TableCell>
-                  </TableRow>
-                ) : paginatedRuns.length > 0 ? (
-                  paginatedRuns.map(run => {
-                    const units = getRunBillableUnits(run.call_duration_seconds);
-                    const charge = calculateRunCharge(run.call_duration_seconds);
-                    return (
-                      <TableRow key={run.id}>
-                        <TableCell className="text-sm whitespace-nowrap">{formatDate(run.created_at)}</TableCell>
-                        <TableCell className="max-w-[150px] truncate" title={run.workflow_name || ''}>
-                          {run.workflow_name || 'Unknown'}
-                        </TableCell>
-                        <TableCell className="text-sm font-mono">
-                          {run.caller_number || run.called_number || '-'}
-                        </TableCell>
-                        <TableCell className="capitalize text-sm">{run.call_type || '-'}</TableCell>
-                        <TableCell className="text-right whitespace-nowrap">{formatDuration(run.call_duration_seconds)}</TableCell>
-                        <TableCell className="text-right text-sm">
-                          {units} {getPulseUnitShortLabel()}
-                        </TableCell>
-                        <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
-                          {formatCurrency(currentRate)}/{getPulseUnitShortLabel()}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">{formatCurrency(charge)}</TableCell>
-                      </TableRow>
-                    );
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={8} className="h-32 text-center">
-                      <div className="flex flex-col items-center justify-center text-muted-foreground">
-                        <IndianRupee className="h-8 w-8 mb-2 opacity-20" />
-                        <p>No calls recorded for this period</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+      <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
+        <div className="flex justify-between items-center mb-6">
+          <span className="text-sm font-semibold text-zinc-200">Call Log</span>
+          <span className="text-[10px] text-zinc-500">Individual call records for the selected period</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-[#1d1d22] text-zinc-500 font-medium">
+                <th className="pb-3 font-medium">Date & Time</th>
+                <th className="pb-3 font-medium">Agent</th>
+                <th className="pb-3 font-medium">Caller</th>
+                <th className="pb-3 font-medium">Call Type</th>
+                <th className="pb-3 text-right font-medium">Duration</th>
+                <th className="pb-3 text-right font-medium">Units</th>
+                <th className="pb-3 text-right font-medium">Rate Used</th>
+                <th className="pb-3 text-right font-medium text-white">Billed</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#1d1d22]/50">
+              {isLoadingRuns ? (
+                <tr>
+                  <td colSpan={8} className="h-24 text-center text-zinc-500 animate-pulse">Loading calls...</td>
+                </tr>
+              ) : paginatedRuns.length > 0 ? (
+                paginatedRuns.map(run => {
+                  const units = getRunBillableUnits(run.call_duration_seconds);
+                  const charge = calculateRunCharge(run.call_duration_seconds);
+                  return (
+                    <tr key={run.id} className="group hover:bg-white/1 transition-colors">
+                      <td className="py-3.5 text-zinc-300 whitespace-nowrap">{formatDate(run.created_at)}</td>
+                      <td className="py-3.5 text-zinc-300 max-w-[150px] truncate" title={run.workflow_name || ''}>
+                        {run.workflow_name || 'Unknown'}
+                      </td>
+                      <td className="py-3.5 text-zinc-300 font-mono">
+                        {run.caller_number || run.called_number || '-'}
+                      </td>
+                      <td className="py-3.5 text-zinc-300 capitalize">{run.call_type || '-'}</td>
+                      <td className="py-3.5 text-right text-zinc-300 whitespace-nowrap">{formatDuration(run.call_duration_seconds)}</td>
+                      <td className="py-3.5 text-right text-zinc-300 whitespace-nowrap">
+                        {units} {getPulseUnitShortLabel()}
+                      </td>
+                      <td className="py-3.5 text-right text-zinc-500 whitespace-nowrap">
+                        {formatCurrency(currentRate)}/{getPulseUnitShortLabel()}
+                      </td>
+                      <td className="py-3.5 text-right font-semibold text-zinc-200">{formatCurrency(charge)}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={8} className="h-32 text-center">
+                    <div className="flex flex-col items-center justify-center text-zinc-500">
+                      <IndianRupee className="h-8 w-8 mb-2 opacity-20" />
+                      <p className="text-xs">No calls recorded for this period</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <p className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages} ({filteredRuns.length} total calls)
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" /> Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Next <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-[#1d1d22]/50">
+            <p className="text-[10px] text-zinc-500">
+              Page {currentPage} of {totalPages} ({filteredRuns.length} total calls)
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 transition-colors"
+              >
+                Next <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

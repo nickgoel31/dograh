@@ -28,6 +28,25 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Separator } from '@/components/ui/separator';
 import { CampaignRuns } from '@/components/workflow-runs';
 import { useAuth } from '@/lib/auth';
+import { cn } from '@/lib/utils';
+
+const STATE_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string }> = {
+    created:   { label: 'Created',   dot: 'bg-zinc-500', bg: 'bg-zinc-500/10 border-zinc-500/20',          text: 'text-zinc-400' },
+    running:   { label: 'Running',   dot: 'bg-[#7c3aed] animate-pulse',  bg: 'bg-[#7c3aed]/10 border-[#7c3aed]/20',         text: 'text-[#a78bfa]' },
+    paused:    { label: 'Paused',    dot: 'bg-amber-500', bg: 'bg-amber-500/10 border-amber-500/20',       text: 'text-amber-400' },
+    completed: { label: 'Completed', dot: 'bg-emerald-500',   bg: 'bg-emerald-500/10 border-emerald-500/20',     text: 'text-emerald-400' },
+    failed:    { label: 'Failed',    dot: 'bg-red-500',    bg: 'bg-red-500/10 border-red-500/20',     text: 'text-red-400' },
+};
+
+function StateBadge({ state }: { state: string }) {
+    const cfg = STATE_CONFIG[state] ?? STATE_CONFIG.created;
+    return (
+        <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold border", cfg.bg, cfg.text)}>
+            <span className={cn("w-1.5 h-1.5 rounded-full", cfg.dot)} />
+            {cfg.label}
+        </span>
+    );
+}
 
 export default function CampaignDetailPage() {
     const { user, getAccessToken, redirectToLogin, loading } = useAuth();
@@ -42,6 +61,7 @@ export default function CampaignDetailPage() {
             redirectToLogin();
         }
     }, [loading, user, redirectToLogin]);
+
 
     // Campaign state
     const [campaign, setCampaign] = useState<CampaignResponse | null>(null);
@@ -418,8 +438,8 @@ export default function CampaignDetailPage() {
         if (!campaign || isExecutingAction) return null;
 
         const editButton = canEdit ? (
-            <Button variant="outline" onClick={() => router.push(`/campaigns/${campaignId}/edit`)}>
-                <Pencil className="h-4 w-4 mr-2" />
+            <Button onClick={() => router.push(`/campaigns/${campaignId}/edit`)} className="border border-[#1d1d22] hover:bg-[#1a1a1f] text-white font-semibold text-xs h-10 px-4 rounded-xl transition-all">
+                <Pencil className="h-4 w-4 mr-2 inline" />
                 Edit Campaign
             </Button>
         ) : null;
@@ -429,8 +449,8 @@ export default function CampaignDetailPage() {
                 return (
                     <div className="flex items-center gap-2">
                         {editButton}
-                        <Button onClick={handleStart} disabled={isExecutingAction}>
-                            <Play className="h-4 w-4 mr-2" />
+                        <Button onClick={handleStart} disabled={isExecutingAction} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs h-10 px-5 rounded-xl transition-all shadow-lg cursor-pointer">
+                            <Play className="h-4 w-4 mr-2 inline" />
                             Start Campaign
                         </Button>
                     </div>
@@ -439,8 +459,8 @@ export default function CampaignDetailPage() {
                 return (
                     <div className="flex items-center gap-2">
                         {editButton}
-                        <Button onClick={handlePause} disabled={isExecutingAction}>
-                            <Pause className="h-4 w-4 mr-2" />
+                        <Button onClick={handlePause} disabled={isExecutingAction} className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs h-10 px-5 rounded-xl transition-all shadow-lg cursor-pointer">
+                            <Pause className="h-4 w-4 mr-2 inline" />
                             Pause Campaign
                         </Button>
                     </div>
@@ -449,8 +469,8 @@ export default function CampaignDetailPage() {
                 return (
                     <div className="flex items-center gap-2">
                         {editButton}
-                        <Button onClick={handleResume} disabled={isExecutingAction}>
-                            <RefreshCw className="h-4 w-4 mr-2" />
+                        <Button onClick={handleResume} disabled={isExecutingAction} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs h-10 px-5 rounded-xl transition-all shadow-lg cursor-pointer">
+                            <RefreshCw className="h-4 w-4 mr-2 inline" />
                             Resume Campaign
                         </Button>
                     </div>
@@ -460,8 +480,8 @@ export default function CampaignDetailPage() {
                     return null;
                 }
                 return (
-                    <Button onClick={openRedialDialog}>
-                        <Phone className="h-4 w-4 mr-2" />
+                    <Button onClick={openRedialDialog} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs h-10 px-5 rounded-xl transition-all shadow-lg cursor-pointer">
+                        <Phone className="h-4 w-4 mr-2 inline" />
                         Redial Campaign
                     </Button>
                 );
@@ -472,10 +492,10 @@ export default function CampaignDetailPage() {
 
     if (isLoadingCampaign) {
         return (
-            <div className="container mx-auto p-6 space-y-6">
-                <div className="animate-pulse">
-                    <div className="h-8 bg-muted rounded w-1/4 mb-4"></div>
-                    <div className="h-64 bg-muted rounded"></div>
+            <div className="min-h-screen bg-[#08080a] flex items-center justify-center">
+                <div className="space-y-4">
+                    <div className="h-8 bg-[#111113] rounded-xl w-64 animate-pulse"></div>
+                    <div className="h-64 bg-[#111113] rounded-xl w-96 animate-pulse"></div>
                 </div>
             </div>
         );
@@ -483,476 +503,488 @@ export default function CampaignDetailPage() {
 
     if (!campaign) {
         return (
-            <div className="container mx-auto p-6 space-y-6">
-                <p className="text-center text-muted-foreground">Campaign not found</p>
+            <div className="min-h-screen bg-[#08080a] flex items-center justify-center">
+                <p className="text-center text-zinc-500 text-xs font-semibold">Campaign not found</p>
             </div>
         );
     }
 
     return (
-        <div className="container mx-auto p-6 space-y-6">
+        <div className="min-h-screen bg-[#08080a] p-6 max-w-[1600px] mx-auto w-full page-enter">
             <div>
                 <Button
                     variant="ghost"
                     onClick={handleBack}
-                    className="mb-4"
+                    className="mb-6 border border-[#1d1d22] text-zinc-400 hover:text-white hover:bg-[#1a1a1f] text-xs font-semibold rounded-xl h-10 px-4"
                 >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Campaigns
                 </Button>
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start mb-6">
                     <div>
-                        <h1 className="text-3xl font-bold mb-2">{campaign.name}</h1>
-                            <div className="flex items-center gap-4">
-                                <Badge variant={getStateBadgeVariant(campaign.state)}>
-                                    {campaign.state}
-                                </Badge>
-                                <span className="text-muted-foreground">
-                                    Created {formatDate(campaign.created_at)}
-                                </span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Popover open={isReportPopoverOpen} onOpenChange={setIsReportPopoverOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" disabled={isDownloadingReport}>
-                                        <Download className="h-4 w-4 mr-2" />
-                                        Download Report
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-4" align="end">
-                                    <div className="space-y-4">
-                                        <div className="text-sm font-medium">Filter by date range</div>
-                                        <div className="grid gap-3">
-                                            <div className="space-y-1.5">
-                                                <Label className="text-xs">From</Label>
-                                                <div className="flex gap-2">
-                                                    <Popover>
-                                                        <PopoverTrigger asChild>
-                                                            <Button variant="outline" size="sm" className="w-[140px] justify-start text-left font-normal">
-                                                                <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                                                                {reportStartDate ? format(reportStartDate, 'MMM dd, yyyy') : 'Start date'}
-                                                            </Button>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-auto p-0" align="start">
-                                                            <Calendar
-                                                                mode="single"
-                                                                selected={reportStartDate}
-                                                                onSelect={setReportStartDate}
-                                                                disabled={(date) => reportEndDate ? date > reportEndDate : false}
-                                                            />
-                                                        </PopoverContent>
-                                                    </Popover>
-                                                    <Input
-                                                        type="time"
-                                                        value={reportStartTime}
-                                                        onChange={(e) => setReportStartTime(e.target.value)}
-                                                        className="w-[100px] h-8 text-xs"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <Label className="text-xs">To</Label>
-                                                <div className="flex gap-2">
-                                                    <Popover>
-                                                        <PopoverTrigger asChild>
-                                                            <Button variant="outline" size="sm" className="w-[140px] justify-start text-left font-normal">
-                                                                <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                                                                {reportEndDate ? format(reportEndDate, 'MMM dd, yyyy') : 'End date'}
-                                                            </Button>
-                                                        </PopoverTrigger>
-                                                        <PopoverContent className="w-auto p-0" align="start">
-                                                            <Calendar
-                                                                mode="single"
-                                                                selected={reportEndDate}
-                                                                onSelect={setReportEndDate}
-                                                                disabled={(date) => reportStartDate ? date < reportStartDate : false}
-                                                            />
-                                                        </PopoverContent>
-                                                    </Popover>
-                                                    <Input
-                                                        type="time"
-                                                        value={reportEndTime}
-                                                        onChange={(e) => setReportEndTime(e.target.value)}
-                                                        className="w-[100px] h-8 text-xs"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <Separator />
-                                        <div className="flex justify-between">
-                                            <Button variant="ghost" size="sm" onClick={handleClearDateRange}>
-                                                Clear
-                                            </Button>
-                                            <Button size="sm" onClick={handleDownloadReport} disabled={isDownloadingReport}>
-                                                <Download className="h-3.5 w-3.5 mr-1.5" />
-                                                {reportStartDate || reportEndDate ? 'Download Filtered' : 'Download All'}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                            {renderActionButton()}
+                        <h1 className="text-2xl font-bold tracking-tight text-white mb-2">{campaign.name}</h1>
+                        <div className="flex items-center gap-4">
+                            <StateBadge state={campaign.state} />
+                            <span className="text-xs text-zinc-500">
+                                Created {formatDate(campaign.created_at)}
+                            </span>
                         </div>
                     </div>
+                    <div className="flex items-center gap-2">
+                        <Popover open={isReportPopoverOpen} onOpenChange={setIsReportPopoverOpen}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" disabled={isDownloadingReport} className="border border-[#1d1d22] hover:bg-[#1a1a1f] text-white font-semibold text-xs h-10 px-4 rounded-xl transition-all">
+                                    <Download className="h-4 w-4 mr-2 inline" />
+                                    Download Report
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-4 bg-[#111113] border border-[#1d1d22] text-white rounded-xl shadow-xl" align="end">
+                                <div className="space-y-4">
+                                    <div className="text-xs font-bold">Filter by date range</div>
+                                    <div className="grid gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[11px] text-zinc-400">From</Label>
+                                            <div className="flex gap-2">
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button variant="outline" size="sm" className="w-[140px] justify-start text-left font-normal border-[#1d1d22] hover:bg-[#1a1a1f] text-xs h-8 text-white rounded-lg">
+                                                            <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                                                            {reportStartDate ? format(reportStartDate, 'MMM dd, yyyy') : 'Start date'}
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-0 bg-[#111113] border border-[#1d1d22]" align="start">
+                                                        <Calendar
+                                                            mode="single"
+                                                            selected={reportStartDate}
+                                                            onSelect={setReportStartDate}
+                                                            disabled={(date) => reportEndDate ? date > reportEndDate : false}
+                                                            className="bg-[#111113] text-white"
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
+                                                <Input
+                                                    type="time"
+                                                    value={reportStartTime}
+                                                    onChange={(e) => setReportStartTime(e.target.value)}
+                                                    className="w-[100px] h-8 text-xs bg-[#08080a] border-[#1d1d22] text-white rounded-lg"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[11px] text-zinc-400">To</Label>
+                                            <div className="flex gap-2">
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button variant="outline" size="sm" className="w-[140px] justify-start text-left font-normal border-[#1d1d22] hover:bg-[#1a1a1f] text-xs h-8 text-white rounded-lg">
+                                                            <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                                                            {reportEndDate ? format(reportEndDate, 'MMM dd, yyyy') : 'End date'}
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-0 bg-[#111113] border border-[#1d1d22]" align="start">
+                                                        <Calendar
+                                                            mode="single"
+                                                            selected={reportEndDate}
+                                                            onSelect={setReportEndDate}
+                                                            disabled={(date) => reportStartDate ? date < reportStartDate : false}
+                                                            className="bg-[#111113] text-white"
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
+                                                <Input
+                                                    type="time"
+                                                    value={reportEndTime}
+                                                    onChange={(e) => setReportEndTime(e.target.value)}
+                                                    className="w-[100px] h-8 text-xs bg-[#08080a] border-[#1d1d22] text-white rounded-lg"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <Separator className="bg-[#1d1d22]/50" />
+                                    <div className="flex justify-between gap-2">
+                                        <Button variant="ghost" size="sm" onClick={handleClearDateRange} className="text-xs hover:bg-[#1a1a1f] rounded-lg">
+                                            Clear
+                                        </Button>
+                                        <Button size="sm" onClick={handleDownloadReport} disabled={isDownloadingReport} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs h-8 px-3 rounded-lg">
+                                            <Download className="h-3.5 w-3.5 mr-1.5 inline" />
+                                            {reportStartDate || reportEndDate ? 'Download Filtered' : 'Download All'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                        {renderActionButton()}
+                    </div>
                 </div>
+            </div>
 
-                {/* Campaign Details */}
-                <Card className="mb-6">
-                    <CardHeader>
-                        <CardTitle>Campaign Details</CardTitle>
-                        <CardDescription>
-                            Configuration and source information
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <dt className="text-sm font-medium">Workflow</dt>
-                                <dd className="mt-1">
-                                    <button
-                                        onClick={handleWorkflowClick}
-                                        className="text-blue-600 hover:text-blue-800 hover:underline"
-                                    >
-                                        {campaign.workflow_name}
-                                    </button>
-                                </dd>
-                            </div>
-                            <div>
-                                <dt className="text-sm font-medium">Source Type</dt>
-                                <dd className="mt-1 capitalize">{campaign.source_type.replace('-', ' ')}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-sm font-medium">
-                                    {campaign.source_type === 'csv' ? 'Source File' : 'Source Sheet'}
-                                </dt>
-                                <dd className="mt-1">
-                                    {campaign.source_type === 'csv' ? (
-                                        <button
-                                            onClick={handleDownloadCsv}
-                                            className="text-blue-600 hover:text-blue-800 hover:underline text-sm break-all"
-                                        >
-                                            {campaign.source_id.split('/').pop()}
-                                        </button>
-                                    ) : (
-                                        <a
-                                            href={campaign.source_id}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-blue-600 hover:text-blue-800 hover:underline text-sm break-all"
-                                        >
-                                            {campaign.source_id}
-                                        </a>
-                                    )}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt className="text-sm font-medium">Telephony Configuration</dt>
-                                <dd className="mt-1">
-                                    {campaign.telephony_configuration_id ? (
-                                        <button
-                                            onClick={() => router.push(`/telephony-configurations/${campaign.telephony_configuration_id}`)}
-                                            className="text-blue-600 hover:text-blue-800 hover:underline"
-                                        >
-                                            {campaign.telephony_configuration_name || `Configuration #${campaign.telephony_configuration_id}`}
-                                        </button>
-                                    ) : (
-                                        <span className="text-muted-foreground">Not assigned</span>
-                                    )}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt className="text-sm font-medium">State</dt>
-                                <dd className="mt-1 capitalize">{campaign.state}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-sm font-medium">Progress</dt>
-                                <dd className="mt-1">
-                                    {campaign.executed_count} / {campaign.total_queued_count}
-                                </dd>
-                            </div>
-                            {campaign.parent_campaign_id && (
-                                <div>
-                                    <dt className="text-sm font-medium">Redial Of</dt>
-                                    <dd className="mt-1">
-                                        <button
-                                            onClick={() => router.push(`/campaigns/${campaign.parent_campaign_id}`)}
-                                            className="text-blue-600 hover:text-blue-800 hover:underline"
-                                        >
-                                            Campaign #{campaign.parent_campaign_id}
-                                        </button>
-                                    </dd>
-                                </div>
-                            )}
-                            {campaign.redialed_campaign_id && (
-                                <div>
-                                    <dt className="text-sm font-medium">Redialed As</dt>
-                                    <dd className="mt-1">
-                                        <button
-                                            onClick={() => router.push(`/campaigns/${campaign.redialed_campaign_id}`)}
-                                            className="text-blue-600 hover:text-blue-800 hover:underline"
-                                        >
-                                            Campaign #{campaign.redialed_campaign_id}
-                                        </button>
-                                    </dd>
-                                </div>
-                            )}
-                            {campaign.started_at && (
-                                <div>
-                                    <dt className="text-sm font-medium">Started At</dt>
-                                    <dd className="mt-1">{formatDateTime(campaign.started_at)}</dd>
-                                </div>
-                            )}
-                            {campaign.completed_at && (
-                                <div>
-                                    <dt className="text-sm font-medium">Completed At</dt>
-                                    <dd className="mt-1">{formatDateTime(campaign.completed_at)}</dd>
-                                </div>
-                            )}
-                        </dl>
-                    </CardContent>
-                </Card>
-
-                {/* Campaign Settings */}
-                <Card className="mb-6">
-                    <CardHeader>
-                        <CardTitle>Campaign Settings</CardTitle>
-                        <CardDescription>
-                            Concurrency and retry configuration
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {/* Concurrency Setting */}
+            {/* Campaign Details */}
+            <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl shadow-none p-6 mb-6">
+                <CardHeader className="p-0 pb-4 mb-4 border-b border-[#1d1d22]/50">
+                    <CardTitle className="text-base font-bold text-white">Campaign Details</CardTitle>
+                    <CardDescription className="text-xs text-zinc-500">
+                        Configuration and source information
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <dl className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <dt className="text-sm font-medium">Max Concurrent Calls</dt>
+                            <dt className="text-xs font-semibold text-zinc-500">Workflow</dt>
                             <dd className="mt-1">
-                                {campaign.max_concurrency ? (
-                                    <span>{campaign.max_concurrency}</span>
+                                <button
+                                    onClick={handleWorkflowClick}
+                                    className="text-xs font-semibold text-[#a78bfa] hover:text-[#c084fc] hover:underline text-left"
+                                >
+                                    {campaign.workflow_name}
+                                </button>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-semibold text-zinc-500">Source Type</dt>
+                            <dd className="mt-1 text-sm font-semibold text-white capitalize">{campaign.source_type.replace('-', ' ')}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-semibold text-zinc-500">
+                                {campaign.source_type === 'csv' ? 'Source File' : 'Source Sheet'}
+                            </dt>
+                            <dd className="mt-1">
+                                {campaign.source_type === 'csv' ? (
+                                    <button
+                                        onClick={handleDownloadCsv}
+                                        className="text-xs font-semibold text-[#a78bfa] hover:text-[#c084fc] hover:underline text-left break-all"
+                                    >
+                                        {campaign.source_id.split('/').pop()}
+                                    </button>
                                 ) : (
-                                    <span className="text-muted-foreground">Using organization default</span>
+                                    <a
+                                        href={campaign.source_id}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs font-semibold text-[#a78bfa] hover:text-[#c084fc] hover:underline break-all"
+                                    >
+                                        {campaign.source_id}
+                                    </a>
                                 )}
                             </dd>
                         </div>
-
-                        <Separator />
-
-                        {/* Retry Configuration */}
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium">Retries Enabled</span>
-                                {campaign.retry_config.enabled ? (
-                                    <Badge variant="default" className="flex items-center gap-1">
-                                        <Check className="h-3 w-3" />
-                                        Enabled
-                                    </Badge>
+                        <div>
+                            <dt className="text-xs font-semibold text-zinc-500">Telephony Configuration</dt>
+                            <dd className="mt-1">
+                                {campaign.telephony_configuration_id ? (
+                                    <button
+                                        onClick={() => router.push(`/telephony-configurations/${campaign.telephony_configuration_id}`)}
+                                        className="text-xs font-semibold text-[#a78bfa] hover:text-[#c084fc] hover:underline text-left"
+                                    >
+                                        {campaign.telephony_configuration_name || `Configuration #${campaign.telephony_configuration_id}`}
+                                    </button>
                                 ) : (
-                                    <Badge variant="secondary" className="flex items-center gap-1">
-                                        <X className="h-3 w-3" />
-                                        Disabled
-                                    </Badge>
+                                    <span className="text-xs text-zinc-500">Not assigned</span>
+                                )}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-semibold text-zinc-500">State</dt>
+                            <dd className="mt-1 text-sm font-semibold text-white capitalize">{campaign.state}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-semibold text-zinc-500">Progress</dt>
+                            <dd className="mt-1 text-sm font-semibold text-white">
+                                {campaign.executed_count} / {campaign.total_queued_count}
+                            </dd>
+                        </div>
+                        {campaign.parent_campaign_id && (
+                            <div>
+                                <dt className="text-xs font-semibold text-zinc-500">Redial Of</dt>
+                                <dd className="mt-1">
+                                    <button
+                                        onClick={() => router.push(`/campaigns/${campaign.parent_campaign_id}`)}
+                                        className="text-xs font-semibold text-[#a78bfa] hover:text-[#c084fc] hover:underline text-left"
+                                    >
+                                        Campaign #{campaign.parent_campaign_id}
+                                    </button>
+                                </dd>
+                            </div>
+                        )}
+                        {campaign.redialed_campaign_id && (
+                            <div>
+                                <dt className="text-xs font-semibold text-zinc-500">Redialed As</dt>
+                                <dd className="mt-1">
+                                    <button
+                                        onClick={() => router.push(`/campaigns/${campaign.redialed_campaign_id}`)}
+                                        className="text-xs font-semibold text-[#a78bfa] hover:text-[#c084fc] hover:underline text-left"
+                                    >
+                                        Campaign #{campaign.redialed_campaign_id}
+                                    </button>
+                                </dd>
+                            </div>
+                        )}
+                        {campaign.started_at && (
+                            <div>
+                                <dt className="text-xs font-semibold text-zinc-500">Started At</dt>
+                                <dd className="mt-1 text-sm font-semibold text-white">{formatDateTime(campaign.started_at)}</dd>
+                            </div>
+                        )}
+                        {campaign.completed_at && (
+                            <div>
+                                <dt className="text-xs font-semibold text-zinc-500">Completed At</dt>
+                                <dd className="mt-1 text-sm font-semibold text-white">{formatDateTime(campaign.completed_at)}</dd>
+                            </div>
+                        )}
+                    </dl>
+                </CardContent>
+            </Card>
+
+            {/* Campaign Settings */}
+            <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl shadow-none p-6 mb-6">
+                <CardHeader className="p-0 pb-4 mb-4 border-b border-[#1d1d22]/50">
+                    <CardTitle className="text-base font-bold text-white">Campaign Settings</CardTitle>
+                    <CardDescription className="text-xs text-zinc-500">
+                        Concurrency and retry configuration
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0 space-y-6">
+                    {/* Concurrency Setting */}
+                    <div>
+                        <dt className="text-xs font-semibold text-zinc-500">Max Concurrent Calls</dt>
+                        <dd className="mt-1 text-sm font-semibold text-white">
+                            {campaign.max_concurrency ? (
+                                <span>{campaign.max_concurrency}</span>
+                            ) : (
+                                <span className="text-xs text-zinc-500">Using organization default</span>
+                            )}
+                        </dd>
+                    </div>
+
+                    <Separator className="bg-[#1d1d22]/50" />
+
+                    {/* Retry Configuration */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-zinc-300">Retries Enabled</span>
+                            {campaign.retry_config.enabled ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
+                                    <Check className="h-3.5 w-3.5" />
+                                    Enabled
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold border border-zinc-500/20 bg-zinc-500/10 text-zinc-400">
+                                    <X className="h-3.5 w-3.5" />
+                                    Disabled
+                                </span>
+                            )}
+                        </div>
+
+                        {campaign.retry_config.enabled && (
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 pl-4 border-l border-[#1d1d22] bg-[#08080a]/30 p-4 rounded-xl border border-[#1d1d22]">
+                                <div>
+                                    <dt className="text-xs font-semibold text-zinc-500">Max Retries</dt>
+                                    <dd className="mt-1 text-sm font-bold text-white">{campaign.retry_config.max_retries}</dd>
+                                </div>
+                                <div>
+                                    <dt className="text-xs font-semibold text-zinc-500">Retry Delay</dt>
+                                    <dd className="mt-1 text-sm font-bold text-white">{campaign.retry_config.retry_delay_seconds}s</dd>
+                                </div>
+                                <div className="col-span-2 md:col-span-1">
+                                    <dt className="text-xs font-semibold text-zinc-500">Retry On</dt>
+                                    <dd className="mt-1.5 flex flex-wrap gap-1.5">
+                                        {campaign.retry_config.retry_on_busy && (
+                                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#08080a] border border-[#1d1d22] text-zinc-300">Busy</span>
+                                        )}
+                                        {campaign.retry_config.retry_on_no_answer && (
+                                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#08080a] border border-[#1d1d22] text-zinc-300">No Answer</span>
+                                        )}
+                                        {campaign.retry_config.retry_on_voicemail && (
+                                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#08080a] border border-[#1d1d22] text-zinc-300">Voicemail</span>
+                                        )}
+                                    </dd>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <Separator className="bg-[#1d1d22]/50" />
+
+                    {/* Call Schedule (read-only) */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-zinc-300">Call Schedule</span>
+                            <div className="flex items-center gap-2">
+                                {campaign.schedule_config?.enabled ? (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold border border-[#7c3aed]/20 bg-[#7c3aed]/10 text-[#a78bfa]">
+                                        <Clock className="h-3.5 w-3.5" />
+                                        Enabled
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold border border-zinc-500/20 bg-zinc-500/10 text-zinc-400">
+                                        <X className="h-3.5 w-3.5" />
+                                        Not configured
+                                    </span>
                                 )}
                             </div>
-
-                            {campaign.retry_config.enabled && (
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pl-4 border-l-2 border-muted">
-                                    <div>
-                                        <dt className="text-sm text-muted-foreground">Max Retries</dt>
-                                        <dd className="mt-1 font-medium">{campaign.retry_config.max_retries}</dd>
-                                    </div>
-                                    <div>
-                                        <dt className="text-sm text-muted-foreground">Retry Delay</dt>
-                                        <dd className="mt-1 font-medium">{campaign.retry_config.retry_delay_seconds}s</dd>
-                                    </div>
-                                    <div className="col-span-2 md:col-span-1">
-                                        <dt className="text-sm text-muted-foreground">Retry On</dt>
-                                        <dd className="mt-1 flex flex-wrap gap-1">
-                                            {campaign.retry_config.retry_on_busy && (
-                                                <Badge variant="outline" className="text-xs">Busy</Badge>
-                                            )}
-                                            {campaign.retry_config.retry_on_no_answer && (
-                                                <Badge variant="outline" className="text-xs">No Answer</Badge>
-                                            )}
-                                            {campaign.retry_config.retry_on_voicemail && (
-                                                <Badge variant="outline" className="text-xs">Voicemail</Badge>
-                                            )}
-                                        </dd>
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
-                        <Separator />
-
-                        {/* Call Schedule (read-only) */}
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium">Call Schedule</span>
-                                <div className="flex items-center gap-2">
-                                    {campaign.schedule_config?.enabled ? (
-                                        <Badge variant="default" className="flex items-center gap-1">
-                                            <Clock className="h-3 w-3" />
-                                            Enabled
-                                        </Badge>
-                                    ) : (
-                                        <Badge variant="secondary" className="flex items-center gap-1">
-                                            <X className="h-3 w-3" />
-                                            Not configured
-                                        </Badge>
-                                    )}
+                        {campaign.schedule_config?.enabled && (
+                            <div className="pl-4 border-l border-[#1d1d22] space-y-4 bg-[#08080a]/30 p-4 rounded-xl border border-[#1d1d22]">
+                                <div>
+                                    <dt className="text-xs font-semibold text-zinc-500">Timezone</dt>
+                                    <dd className="mt-1 text-sm font-semibold text-white">{campaign.schedule_config.timezone.replace(/_/g, ' ')}</dd>
+                                </div>
+                                <div>
+                                    <dt className="text-xs font-semibold text-zinc-500">Time Slots</dt>
+                                    <dd className="mt-1.5 flex flex-wrap gap-2">
+                                        {campaign.schedule_config.slots.map((slot, index) => {
+                                            const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                                            return (
+                                                <div key={index} className="flex items-center gap-2 bg-[#111113] border border-[#1d1d22] px-2.5 py-1 rounded-lg">
+                                                    <span className="text-[10px] font-bold text-[#a78bfa]">{dayNames[slot.day_of_week]}</span>
+                                                    <span className="text-xs text-zinc-300 font-semibold">{slot.start_time} - {slot.end_time}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </dd>
                                 </div>
                             </div>
-
-                            {campaign.schedule_config?.enabled && (
-                                <div className="pl-4 border-l-2 border-muted space-y-3">
-                                    <div>
-                                        <dt className="text-sm text-muted-foreground">Timezone</dt>
-                                        <dd className="mt-1 font-medium">{campaign.schedule_config.timezone.replace(/_/g, ' ')}</dd>
-                                    </div>
-                                    <div>
-                                        <dt className="text-sm text-muted-foreground">Time Slots</dt>
-                                        <dd className="mt-1 flex flex-wrap gap-2">
-                                            {campaign.schedule_config.slots.map((slot, index) => {
-                                                const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                                                return (
-                                                    <div key={index} className="flex items-center gap-1">
-                                                        <Badge variant="outline" className="text-xs">{dayNames[slot.day_of_week]}</Badge>
-                                                        <span className="text-sm">{slot.start_time} - {slot.end_time}</span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </dd>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Activity Log */}
-                <Card className="mb-6">
-                    <CardHeader>
-                        <CardTitle>Activity Log</CardTitle>
-                        <CardDescription>
-                            Recent state transitions and failures. Newest first.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {sortedLogs.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No events recorded yet.</p>
-                        ) : (
-                            <ul className="space-y-3">
-                                {sortedLogs.map((entry, idx) => (
-                                    <li
-                                        key={`${entry.ts}-${idx}`}
-                                        className="flex gap-3 border-b last:border-b-0 pb-3 last:pb-0"
-                                    >
-                                        <div className="mt-0.5">{getLogIcon(entry.level)}</div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <Badge variant={getLogBadgeVariant(entry.level)} className="text-xs">
-                                                    {entry.level}
-                                                </Badge>
-                                                <code className="text-xs text-muted-foreground">
-                                                    {entry.event}
-                                                </code>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {formatLogTimestamp(entry.ts)}
-                                                </span>
-                                            </div>
-                                            <p className="text-sm mt-1 break-words">{entry.message}</p>
-                                            {entry.details && Object.keys(entry.details).length > 0 && (
-                                                <details className="mt-1.5">
-                                                    <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
-                                                        Details
-                                                    </summary>
-                                                    <pre className="mt-1.5 text-xs bg-muted rounded p-2 overflow-x-auto whitespace-pre-wrap break-words">
-                                                        {JSON.stringify(entry.details, null, 2)}
-                                                    </pre>
-                                                </details>
-                                            )}
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
                         )}
-                    </CardContent>
-                </Card>
+                    </div>
+                </CardContent>
+            </Card>
 
-                {/* Workflow Runs */}
-                <CampaignRuns
-                    campaignId={campaignId}
-                    workflowId={campaign.workflow_id}
-                    searchParams={searchParams}
-                />
+            {/* Activity Log */}
+            <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl shadow-none p-6 mb-6">
+                <CardHeader className="p-0 pb-4 mb-4 border-b border-[#1d1d22]/50">
+                    <CardTitle className="text-base font-bold text-white">Activity Log</CardTitle>
+                    <CardDescription className="text-xs text-zinc-500">
+                        Recent state transitions and failures. Newest first.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                    {sortedLogs.length === 0 ? (
+                        <p className="text-xs text-zinc-500 font-semibold py-4">No events recorded yet.</p>
+                    ) : (
+                        <ul className="space-y-4">
+                            {sortedLogs.map((entry, idx) => (
+                                <li
+                                    key={`${entry.ts}-${idx}`}
+                                    className="flex gap-4 border-b border-[#1d1d22]/50 last:border-b-0 pb-4 last:pb-0"
+                                >
+                                    <div className="mt-0.5 shrink-0">{getLogIcon(entry.level)}</div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className={cn(
+                                                "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border",
+                                                entry.level === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
+                                                entry.level === 'warning' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' :
+                                                'bg-[#08080a] border-[#1d1d22] text-zinc-400'
+                                            )}>
+                                                {entry.level}
+                                            </span>
+                                            <code className="text-[11px] font-mono bg-[#08080a] px-1.5 py-0.5 rounded border border-[#1d1d22] text-[#a78bfa]">
+                                                {entry.event}
+                                            </code>
+                                            <span className="text-[11px] text-zinc-500">
+                                                {formatLogTimestamp(entry.ts)}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs mt-2 text-zinc-300 font-medium leading-relaxed break-words">{entry.message}</p>
+                                        {entry.details && Object.keys(entry.details).length > 0 && (
+                                            <details className="mt-2 bg-[#08080a]/50 border border-[#1d1d22] rounded-xl overflow-hidden">
+                                                <summary className="text-[10px] font-semibold text-zinc-500 cursor-pointer hover:text-white p-2 bg-[#08080a]/80 select-none">
+                                                    Details
+                                                </summary>
+                                                <pre className="text-[10px] font-mono text-zinc-400 p-3 overflow-x-auto whitespace-pre-wrap break-words border-t border-[#1d1d22]/50">
+                                                    {JSON.stringify(entry.details, null, 2)}
+                                                </pre>
+                                            </details>
+                                        )}
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </CardContent>
+            </Card>
 
-                <Dialog open={isRedialDialogOpen} onOpenChange={setIsRedialDialogOpen}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Redial Campaign</DialogTitle>
-                            <DialogDescription>
-                                Creates a new campaign that re-dials unique subscribers whose
-                                last call ended with one of the selected outcomes. Subscribers
-                                who were successfully reached on a retry are skipped.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-2">
-                            <div className="space-y-1.5">
-                                <Label htmlFor="redial-name">Name</Label>
-                                <Input
-                                    id="redial-name"
-                                    value={redialName}
-                                    onChange={(e) => setRedialName(e.target.value)}
-                                    placeholder="Campaign name"
-                                />
-                            </div>
+            {/* Workflow Runs */}
+            <CampaignRuns
+                campaignId={campaignId}
+                workflowId={campaign.workflow_id}
+                searchParams={searchParams}
+            />
+
+            <Dialog open={isRedialDialogOpen} onOpenChange={setIsRedialDialogOpen}>
+                <DialogContent className="bg-[#111113] border border-[#1d1d22] text-white rounded-2xl shadow-xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-bold text-white">Redial Campaign</DialogTitle>
+                        <DialogDescription className="text-xs text-zinc-500">
+                            Creates a new campaign that re-dials unique subscribers whose
+                            last call ended with one of the selected outcomes. Subscribers
+                            who were successfully reached on a retry are skipped.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="redial-name" className="text-xs font-semibold text-zinc-300">Name</Label>
+                            <Input
+                                id="redial-name"
+                                value={redialName}
+                                onChange={(e) => setRedialName(e.target.value)}
+                                placeholder="Campaign name"
+                                className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
+                            />
+                        </div>
+                        <div className="space-y-3 bg-[#08080a] border border-[#1d1d22] rounded-xl p-4">
+                            <Label className="text-xs font-semibold text-zinc-400 block mb-2">Redial when last call was</Label>
                             <div className="space-y-3">
-                                <Label>Redial when last call was</Label>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-3">
                                     <Checkbox
                                         id="redial-voicemail"
                                         checked={redialOnVoicemail}
                                         onCheckedChange={(v) => setRedialOnVoicemail(v === true)}
+                                        className="border-[#1d1d22] data-[state=checked]:bg-[#7c3aed] data-[state=checked]:border-[#7c3aed]"
                                     />
-                                    <Label htmlFor="redial-voicemail" className="font-normal">
+                                    <Label htmlFor="redial-voicemail" className="text-xs text-zinc-300 font-semibold select-none cursor-pointer">
                                         Voicemail
                                     </Label>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-3">
                                     <Checkbox
                                         id="redial-no-answer"
                                         checked={redialOnNoAnswer}
                                         onCheckedChange={(v) => setRedialOnNoAnswer(v === true)}
+                                        className="border-[#1d1d22] data-[state=checked]:bg-[#7c3aed] data-[state=checked]:border-[#7c3aed]"
                                     />
-                                    <Label htmlFor="redial-no-answer" className="font-normal">
+                                    <Label htmlFor="redial-no-answer" className="text-xs text-zinc-300 font-semibold select-none cursor-pointer">
                                         No Answer
                                     </Label>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-3">
                                     <Checkbox
                                         id="redial-busy"
                                         checked={redialOnBusy}
                                         onCheckedChange={(v) => setRedialOnBusy(v === true)}
+                                        className="border-[#1d1d22] data-[state=checked]:bg-[#7c3aed] data-[state=checked]:border-[#7c3aed]"
                                     />
-                                    <Label htmlFor="redial-busy" className="font-normal">
+                                    <Label htmlFor="redial-busy" className="text-xs text-zinc-300 font-semibold select-none cursor-pointer">
                                         Busy
                                     </Label>
                                 </div>
                             </div>
                         </div>
-                        <DialogFooter>
-                            <Button
-                                variant="outline"
-                                onClick={() => setIsRedialDialogOpen(false)}
-                                disabled={isRedialing}
-                            >
-                                Cancel
-                            </Button>
-                            <Button onClick={handleRedial} disabled={isRedialing}>
-                                {isRedialing ? 'Creating...' : 'Create Redial Campaign'}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsRedialDialogOpen(false)}
+                            disabled={isRedialing}
+                            className="border border-[#1d1d22] hover:bg-[#1a1a1f] text-white font-semibold text-xs h-10 px-4 rounded-xl"
+                        >
+                            Cancel
+                        </Button>
+                        <Button onClick={handleRedial} disabled={isRedialing} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs h-10 px-5 rounded-xl transition-all shadow-lg cursor-pointer">
+                            {isRedialing ? 'Creating...' : 'Create Redial Campaign'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

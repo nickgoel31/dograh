@@ -535,7 +535,7 @@ function RenderWorkflow({
                                     variant={BackgroundVariant.Dots}
                                     gap={16}
                                     size={1}
-                                    color="#94a3b8"
+                                    color="#1d1d22"
                                 />
 
                                 {/* Top-right controls - vertical layout (hidden when viewing history) */}
@@ -549,12 +549,12 @@ function RenderWorkflow({
                                                             variant="default"
                                                             size="icon"
                                                             onClick={() => setIsAddNodePanelOpen(true)}
-                                                            className="shadow-md hover:shadow-lg"
+                                                            className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white shadow-lg cursor-pointer h-9 w-9 rounded-xl transition-all"
                                                         >
                                                             <Plus className="h-4 w-4" />
                                                         </Button>
                                                     </TooltipTrigger>
-                                                    <TooltipContent side="left">
+                                                    <TooltipContent side="left" className="bg-[#111113] border border-[#232328] text-zinc-300 text-xs">
                                                         <p>Add node</p>
                                                     </TooltipContent>
                                                 </Tooltip>
@@ -565,12 +565,12 @@ function RenderWorkflow({
                                                             variant="outline"
                                                             size="icon"
                                                             onClick={() => router.push(`/workflow/${workflowId}/settings`)}
-                                                            className="bg-white shadow-sm hover:shadow-md"
+                                                            className="bg-[#111113] hover:bg-[#1c1c1f] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white shadow-none h-9 w-9 rounded-xl transition-all cursor-pointer"
                                                         >
                                                             <Settings className="h-4 w-4" />
                                                         </Button>
                                                     </TooltipTrigger>
-                                                    <TooltipContent side="left">
+                                                    <TooltipContent side="left" className="bg-[#111113] border border-[#232328] text-zinc-300 text-xs">
                                                         <p>Workflow settings</p>
                                                     </TooltipContent>
                                                 </Tooltip>
@@ -589,12 +589,12 @@ function RenderWorkflow({
                                                 variant="outline"
                                                 size="icon"
                                                 onClick={() => rfInstance.current?.zoomIn()}
-                                                className="bg-white shadow-sm hover:shadow-md h-8 w-8"
+                                                className="bg-[#111113] hover:bg-[#1c1c1f] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white shadow-none h-8 w-8 rounded-lg cursor-pointer transition-all"
                                             >
                                                 <Plus className="h-4 w-4" />
                                             </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent side="top">
+                                        <TooltipContent side="top" className="bg-[#111113] border border-[#232328] text-zinc-300 text-xs">
                                             <p>Zoom in</p>
                                         </TooltipContent>
                                     </Tooltip>
@@ -605,12 +605,12 @@ function RenderWorkflow({
                                                 variant="outline"
                                                 size="icon"
                                                 onClick={() => rfInstance.current?.zoomOut()}
-                                                className="bg-white shadow-sm hover:shadow-md h-8 w-8"
+                                                className="bg-[#111113] hover:bg-[#1c1c1f] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white shadow-none h-8 w-8 rounded-lg cursor-pointer transition-all"
                                             >
                                                 <Minus className="h-4 w-4" />
                                             </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent side="top">
+                                        <TooltipContent side="top" className="bg-[#111113] border border-[#232328] text-zinc-300 text-xs">
                                             <p>Zoom out</p>
                                         </TooltipContent>
                                     </Tooltip>
@@ -621,12 +621,12 @@ function RenderWorkflow({
                                                 variant="outline"
                                                 size="icon"
                                                 onClick={() => rfInstance.current?.fitView()}
-                                                className="bg-white shadow-sm hover:shadow-md h-8 w-8"
+                                                className="bg-[#111113] hover:bg-[#1c1c1f] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white shadow-none h-8 w-8 rounded-lg cursor-pointer transition-all"
                                             >
                                                 <Maximize2 className="h-4 w-4" />
                                             </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent side="top">
+                                        <TooltipContent side="top" className="bg-[#111113] border border-[#232328] text-zinc-300 text-xs">
                                             <p>Fit view</p>
                                         </TooltipContent>
                                     </Tooltip>
@@ -641,12 +641,12 @@ function RenderWorkflow({
                                                         setNodes(layoutNodes(nodes, edges, 'TB', rfInstance));
                                                         setIsDirty(true);
                                                     }}
-                                                    className="bg-white shadow-sm hover:shadow-md h-8 w-8"
+                                                    className="bg-[#111113] hover:bg-[#1c1c1f] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white shadow-none h-8 w-8 rounded-lg cursor-pointer transition-all"
                                                 >
                                                     <BrushCleaning className="h-4 w-4" />
                                                 </Button>
                                             </TooltipTrigger>
-                                            <TooltipContent side="top">
+                                            <TooltipContent side="top" className="bg-[#111113] border border-[#232328] text-zinc-300 text-xs">
                                                 <p>Tidy Up</p>
                                             </TooltipContent>
                                         </Tooltip>
@@ -656,7 +656,7 @@ function RenderWorkflow({
                         </div>
 
                         {isTesterRailOpen && (
-                            <aside className="hidden h-full w-[400px] shrink-0 border-l border-border xl:block">
+                            <aside className="hidden h-full w-[400px] shrink-0 border-l border-[#1d1d22] xl:block">
                                 <WorkflowTesterPanel
                                     workflowId={workflowId}
                                     initialContextVariables={templateContextVariables}

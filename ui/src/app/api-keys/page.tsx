@@ -304,7 +304,7 @@ export default function APIKeysPage() {
     // Don't render content until auth is loaded
     if (loading || !user) {
         return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
+            <div className="min-h-screen bg-[#08080a] p-6 max-w-[1600px] mx-auto w-full page-enter">
                 <div className="space-y-4">
                     <Skeleton className="h-12 w-64" />
                     <Skeleton className="h-64 w-96" />
@@ -319,418 +319,411 @@ export default function APIKeysPage() {
     const showServiceKeyArchiveControls = !isOSS;
 
     return (
-        <div className="min-h-screen bg-background">
-            <div className="container mx-auto px-4 py-8 fade-in-up">
-                <div className="max-w-6xl mx-auto">
-                    <div className="flex justify-between items-end mb-8 page-header">
-                        <div>
-                            <h1 className="text-3xl font-extrabold tracking-tight mb-1 flex items-center gap-3">
-                                <div className="icon-container">
-                                    <Key className="h-6 w-6" />
-                                </div>
-                                Developer Portal
-                            </h1>
-                            <p className="text-muted-foreground mt-2">Manage your API keys to access Dograh services programmatically</p>
-                        </div>
+        <div className="min-h-screen bg-[#08080a] p-6 max-w-[1600px] mx-auto w-full page-enter">
+            <div className="max-w-6xl mx-auto">
+                {/* Header */}
+                <div className="border-b border-[#1d1d22]/50 pb-6 mb-6">
+                    <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+                        Developer Portal
+                    </h1>
+                    <p className="text-xs text-zinc-500 mt-1">Manage your API keys to access Dograh services programmatically</p>
+                </div>
+
+                {error && (
+                    <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-red-400 text-xs font-semibold">
+                        {error}
                     </div>
+                )}
 
-                    {error && (
-                        <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
-                            {error}
-                        </div>
-                    )}
-
-                    <Card className="mb-6 glass-card fade-in-up" style={{ animationDelay: '0.1s' }}>
-                        <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <CardTitle>API Keys</CardTitle>
-                                    <CardDescription>
-                                        Create and manage API keys for your organization
-                                    </CardDescription>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setShowArchived(!showArchived)}
-                                    >
-                                        {showArchived ? <Eye className="w-4 h-4 mr-2" /> : <EyeOff className="w-4 h-4 mr-2" />}
-                                        {showArchived ? 'Hide' : 'Show'} Archived
-                                    </Button>
-                                    <Button
-                                        onClick={() => setIsCreateDialogOpen(true)}
-                                        size="sm"
-                                    >
-                                        <Plus className="w-4 h-4 mr-2" />
-                                        Create New Key
-                                    </Button>
-                                </div>
+                <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 shadow-none mb-6">
+                    <CardHeader className="p-0 pb-6 mb-6 border-b border-[#1d1d22]/50">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle className="text-lg font-bold text-white">API Keys</CardTitle>
+                                <CardDescription className="text-xs text-zinc-500">
+                                    Create and manage API keys for your organization
+                                </CardDescription>
                             </div>
-                        </CardHeader>
-                        <CardContent>
-                            {isLoading ? (
-                                <div className="space-y-4">
-                                    {[1, 2, 3].map((i) => (
-                                        <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
-                                            <div className="space-y-2">
-                                                <Skeleton className="h-4 w-32" />
-                                                <Skeleton className="h-3 w-24" />
-                                            </div>
-                                            <Skeleton className="h-8 w-20" />
+                            <div className="flex gap-2">
+                                <Button
+                                    onClick={() => setShowArchived(!showArchived)}
+                                    className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3.5 py-2.5 rounded-xl text-xs text-zinc-300 transition-colors cursor-pointer"
+                                >
+                                    {showArchived ? <Eye className="w-4 h-4 mr-2 inline" /> : <EyeOff className="w-4 h-4 mr-2 inline" />}
+                                    {showArchived ? 'Hide' : 'Show'} Archived
+                                </Button>
+                                <Button
+                                    onClick={() => setIsCreateDialogOpen(true)}
+                                    className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer"
+                                >
+                                    <Plus className="w-4 h-4 mr-2 inline" />
+                                    Create New Key
+                                </Button>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        {isLoading ? (
+                            <div className="space-y-4">
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className="flex items-center justify-between p-4 border border-[#1d1d22] rounded-xl bg-[#111113] shimmer">
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-4 w-32 bg-zinc-800" />
+                                            <Skeleton className="h-3 w-24 bg-zinc-800" />
                                         </div>
-                                    ))}
-                                </div>
-                            ) : apiKeys.length === 0 ? (
-                                <div className="text-center py-12">
-                                    <Key className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                                    <p className="text-muted-foreground mb-4">No API keys found</p>
-                                    <Button onClick={() => setIsCreateDialogOpen(true)}>
-                                        Create Your First API Key
-                                    </Button>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {apiKeys.map((key) => (
-                                        <div
-                                            key={key.id}
-                                            className={`flex items-center justify-between p-4 border rounded-lg ${
-                                                key.archived_at ? 'bg-muted opacity-60' : 'bg-card'
-                                            }`}
-                                        >
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="font-medium">{key.name}</span>
-                                                    {key.archived_at ? (
-                                                        <Badge variant="secondary">Archived</Badge>
-                                                    ) : key.is_active ? (
-                                                        <Badge variant="default">Active</Badge>
-                                                    ) : (
-                                                        <Badge variant="destructive">Inactive</Badge>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                    <span className="font-mono bg-muted px-2 py-1 rounded">{key.key_prefix}...</span>
-                                                    <span className="text-xs text-muted-foreground/70">
-                                                        (Full key hidden for security)
-                                                    </span>
-                                                </div>
-                                                <div className="mt-2 text-xs text-muted-foreground">
-                                                    Created: {formatDate(key.created_at)} •
-                                                    Last used: {formatDate(key.last_used_at ?? null)}
-                                                </div>
-                                            </div>
-                                            <div className="flex gap-2">
+                                        <Skeleton className="h-8 w-20 bg-zinc-800" />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : apiKeys.length === 0 ? (
+                            <div className="text-center py-12">
+                                <Key className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
+                                <p className="text-xs text-zinc-400 mb-4">No API keys found</p>
+                                <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer">
+                                    Create Your First API Key
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {apiKeys.map((key) => (
+                                    <div
+                                        key={key.id}
+                                        className={`flex items-center justify-between p-4 border border-[#1d1d22] rounded-xl ${
+                                            key.archived_at ? 'bg-[#08080a]/60 opacity-60' : 'bg-[#08080a]'
+                                        }`}
+                                    >
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                <span className="font-semibold text-zinc-200 text-sm">{key.name}</span>
                                                 {key.archived_at ? (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleReactivateKey(key.id)}
-                                                    >
-                                                        <RefreshCw className="w-4 h-4 mr-1" />
-                                                        Reactivate
-                                                    </Button>
+                                                    <Badge className="bg-zinc-800 text-zinc-400 border border-zinc-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Archived</Badge>
+                                                ) : key.is_active ? (
+                                                    <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Active</Badge>
                                                 ) : (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleArchiveKey(key.id)}
-                                                        className="text-destructive hover:text-destructive/90"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
+                                                    <Badge className="bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Inactive</Badge>
                                                 )}
                                             </div>
+                                            <div className="flex items-center gap-2 text-xs text-zinc-500">
+                                                <span className="font-mono bg-[#1c1c1f] border border-[#232328] px-2 py-0.5 rounded text-zinc-300">{key.key_prefix}...</span>
+                                                <span className="text-[10px] text-zinc-600">
+                                                    (Full key hidden for security)
+                                                </span>
+                                            </div>
+                                            <div className="mt-2 text-[10px] text-zinc-500">
+                                                Created: {formatDate(key.created_at)} •
+                                                Last used: {formatDate(key.last_used_at ?? null)}
+                                            </div>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Dograh Service Keys Section */}
-                    <Card className="mb-6 glass-card fade-in-up" style={{ animationDelay: '0.2s' }}>
-                        <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <CardTitle>Dograh Service Keys</CardTitle>
-                                    <CardDescription>
-                                        Manage service keys for accessing Dograh AI services (LLM, TTS, STT)
-                                    </CardDescription>
-                                </div>
-                                <div className="flex gap-2">
-                                    {showServiceKeyArchiveControls && (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setShowServiceArchived(!showServiceArchived)}
-                                        >
-                                            {showServiceArchived ? <Eye className="w-4 h-4 mr-2" /> : <EyeOff className="w-4 h-4 mr-2" />}
-                                            {showServiceArchived ? 'Hide' : 'Show'} Archived
-                                        </Button>
-                                    )}
-                                    {canCreateServiceKey ? (
-                                        <Button
-                                            onClick={() => setIsCreateServiceDialogOpen(true)}
-                                            size="sm"
-                                        >
-                                            <Plus className="w-4 h-4 mr-2" />
-                                            Create Service Key
-                                        </Button>
-                                    ) : (
-                                        <span className="text">
-                                            To generate additional service keys, <a href="https://app.dograh.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Sign up on app.dograh.com</a>
-                                        </span>
-                                    )}
-                                </div>
+                                        <div className="flex gap-2">
+                                            {key.archived_at ? (
+                                                <Button
+                                                    onClick={() => handleReactivateKey(key.id)}
+                                                    className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors cursor-pointer"
+                                                >
+                                                    <RefreshCw className="w-4 h-4 mr-1 inline" />
+                                                    Reactivate
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    onClick={() => handleArchiveKey(key.id)}
+                                                    className="p-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-rose-400 transition-colors bg-transparent cursor-pointer"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        </CardHeader>
-                        <CardContent>
-                            {isServiceKeysLoading ? (
-                                <div className="space-y-4">
-                                    {[1, 2].map((i) => (
-                                        <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
-                                            <div className="space-y-2">
-                                                <Skeleton className="h-4 w-32" />
-                                                <Skeleton className="h-3 w-24" />
-                                            </div>
-                                            <Skeleton className="h-8 w-20" />
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Dograh Service Keys Section */}
+                <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 shadow-none mb-6">
+                    <CardHeader className="p-0 pb-6 mb-6 border-b border-[#1d1d22]/50">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle className="text-lg font-bold text-white">Dograh Service Keys</CardTitle>
+                                <CardDescription className="text-xs text-zinc-500">
+                                    Manage service keys for accessing Dograh AI services (LLM, TTS, STT)
+                                </CardDescription>
+                            </div>
+                            <div className="flex gap-2">
+                                {showServiceKeyArchiveControls && (
+                                    <Button
+                                        onClick={() => setShowServiceArchived(!showServiceArchived)}
+                                        className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3.5 py-2.5 rounded-xl text-xs text-zinc-300 transition-colors cursor-pointer"
+                                    >
+                                        {showServiceArchived ? <Eye className="w-4 h-4 mr-2 inline" /> : <EyeOff className="w-4 h-4 mr-2 inline" />}
+                                        {showServiceArchived ? 'Hide' : 'Show'} Archived
+                                    </Button>
+                                )}
+                                {canCreateServiceKey ? (
+                                    <Button
+                                        onClick={() => setIsCreateServiceDialogOpen(true)}
+                                        className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer"
+                                    >
+                                        <Plus className="w-4 h-4 mr-2 inline" />
+                                        Create Service Key
+                                    </Button>
+                                ) : (
+                                    <span className="text-xs text-zinc-400">
+                                        To generate additional service keys, <a href="https://app.dograh.com" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">Sign up on app.dograh.com</a>
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        {isServiceKeysLoading ? (
+                            <div className="space-y-4">
+                                {[1, 2].map((i) => (
+                                    <div key={i} className="flex items-center justify-between p-4 border border-[#1d1d22] rounded-xl bg-[#111113] shimmer">
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-4 w-32 bg-zinc-800" />
+                                            <Skeleton className="h-3 w-24 bg-zinc-800" />
                                         </div>
-                                    ))}
-                                </div>
-                            ) : serviceKeys.length === 0 ? (
-                                <div className="text-center py-12">
-                                    <Key className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                                    <p className="text-muted-foreground mb-4">No service keys found</p>
-                                    {canCreateServiceKey && (
-                                        <Button onClick={() => setIsCreateServiceDialogOpen(true)}>
-                                            Create Your First Service Key
-                                        </Button>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {serviceKeys.map((key) => (
-                                        <div
-                                            key={key.id}
-                                            className={`flex items-center justify-between p-4 border rounded-lg ${
-                                                key.archived_at ? 'bg-muted opacity-60' : 'bg-card'
-                                            }`}
-                                        >
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="font-medium">{key.name}</span>
-                                                    {key.archived_at ? (
-                                                        <Badge variant="secondary">Archived</Badge>
-                                                    ) : key.is_active ? (
-                                                        <Badge variant="default">Active</Badge>
-                                                    ) : (
-                                                        <Badge variant="destructive">Inactive</Badge>
-                                                    )}
-                                                    {key.expires_at && new Date(key.expires_at) > new Date() && (
-                                                        <Badge variant="outline">
-                                                            Expires: {formatDate(key.expires_at)}
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                    <span className="font-mono bg-muted px-2 py-1 rounded">{key.key_prefix}...</span>
-                                                    <span className="text-xs text-muted-foreground/70">
-                                                        (Full key hidden for security)
-                                                    </span>
-                                                </div>
-                                                <div className="mt-2 text-xs text-muted-foreground">
-                                                    Created: {formatDate(key.created_at)} •
-                                                    Last used: {formatDate(key.last_used_at ?? null)}
-                                                </div>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                {!key.archived_at && showServiceKeyArchiveControls && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleArchiveServiceKey(String(key.id))}
-                                                        className="text-destructive hover:text-destructive/90"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
+                                        <Skeleton className="h-8 w-20 bg-zinc-800" />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : serviceKeys.length === 0 ? (
+                            <div className="text-center py-12">
+                                <Key className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
+                                <p className="text-xs text-zinc-400 mb-4">No service keys found</p>
+                                {canCreateServiceKey && (
+                                    <Button onClick={() => setIsCreateServiceDialogOpen(true)} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer">
+                                        Create Your First Service Key
+                                    </Button>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {serviceKeys.map((key) => (
+                                    <div
+                                        key={key.id}
+                                        className={`flex items-center justify-between p-4 border border-[#1d1d22] rounded-xl ${
+                                            key.archived_at ? 'bg-[#08080a]/60 opacity-60' : 'bg-[#08080a]'
+                                        }`}
+                                    >
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                <span className="font-semibold text-zinc-200 text-sm">{key.name}</span>
+                                                {key.archived_at ? (
+                                                    <Badge className="bg-zinc-800 text-zinc-400 border border-zinc-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Archived</Badge>
+                                                ) : key.is_active ? (
+                                                    <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Active</Badge>
+                                                ) : (
+                                                    <Badge className="bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Inactive</Badge>
+                                                )}
+                                                {key.expires_at && new Date(key.expires_at) > new Date() && (
+                                                    <Badge className="bg-[#1c1c1f] text-zinc-400 border border-zinc-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">
+                                                        Expires: {formatDate(key.expires_at)}
+                                                    </Badge>
                                                 )}
                                             </div>
+                                            <div className="flex items-center gap-2 text-xs text-zinc-500">
+                                                <span className="font-mono bg-[#1c1c1f] border border-[#232328] px-2 py-0.5 rounded text-zinc-300">{key.key_prefix}...</span>
+                                                <span className="text-[10px] text-zinc-600">
+                                                    (Full key hidden for security)
+                                                </span>
+                                            </div>
+                                            <div className="mt-2 text-[10px] text-zinc-500">
+                                                Created: {formatDate(key.created_at)} •
+                                                Last used: {formatDate(key.last_used_at ?? null)}
+                                            </div>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                                        <div className="flex gap-2">
+                                            {!key.archived_at && showServiceKeyArchiveControls && (
+                                                <Button
+                                                    onClick={() => handleArchiveServiceKey(String(key.id))}
+                                                    className="p-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-rose-400 transition-colors bg-transparent cursor-pointer"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
 
-                    <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                        <p className="text-sm text-yellow-600 dark:text-yellow-500">
-                            <strong>Important:</strong> Keep your API keys secure. Never share them publicly or commit them to version control.
-                            API keys provide full access to your organization&apos;s resources.
-                        </p>
-                    </div>
+                <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                    <p className="text-xs text-amber-400 font-semibold leading-relaxed">
+                        <strong>Important:</strong> Keep your API keys secure. Never share them publicly or commit them to version control.
+                        API keys provide full access to your organization&apos;s resources.
+                    </p>
                 </div>
             </div>
 
-            {/* Create API Key Dialog */}
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Create New API Key</DialogTitle>
-                        <DialogDescription>
-                            Enter a descriptive name for your API key to help you identify it later.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="name">Key Name</Label>
-                            <Input
-                                id="name"
-                                value={newKeyName}
-                                onChange={(e) => setNewKeyName(e.target.value)}
-                                placeholder="e.g., Production Server, Development Environment"
-                            />
+        {/* Create API Key Dialog */}
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white">
+                <DialogHeader className="space-y-1">
+                    <DialogTitle className="text-lg font-bold text-white">Create New API Key</DialogTitle>
+                    <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
+                        Enter a descriptive name for your API key to help you identify it later.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-2">
+                    <div className="grid gap-1">
+                        <Label htmlFor="name" className="text-xs font-bold text-zinc-300 block mb-1.5">Key Name</Label>
+                        <Input
+                            id="name"
+                            value={newKeyName}
+                            onChange={(e) => setNewKeyName(e.target.value)}
+                            placeholder="e.g., Production Server, Development Environment"
+                            className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
+                        />
+                    </div>
+                </div>
+                <DialogFooter className="flex gap-3 justify-end pt-2 border-t border-[#1d1d22]/50">
+                    <Button
+                        className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors cursor-pointer"
+                        onClick={() => setIsCreateDialogOpen(false)}
+                    >
+                        Cancel
+                    </Button>
+                    <Button onClick={handleCreateKey} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer">
+                        Create Key
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        {/* Show Created Key Dialog */}
+        <Dialog open={showCreatedKeyDialog} onOpenChange={setShowCreatedKeyDialog}>
+            <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white">
+                <DialogHeader className="space-y-1">
+                    <DialogTitle className="text-lg font-bold text-white">API Key Created Successfully</DialogTitle>
+                    <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
+                        Make sure to copy your API key now. You won&apos;t be able to see it again!
+                    </DialogDescription>
+                </DialogHeader>
+                {createdKey && (
+                    <div className="space-y-4">
+                        <div className="p-4 bg-[#08080a] border border-[#1d1d22] rounded-xl">
+                            <p className="text-xs text-zinc-400 mb-2 font-bold">Your API Key:</p>
+                            <div className="flex items-center gap-2">
+                                <code className="flex-1 p-2 bg-[#1c1c1f] border border-[#232328] rounded text-xs font-mono break-all text-zinc-300">
+                                    {createdKey.api_key}
+                                </code>
+                                <Button
+                                    onClick={() => copyToClipboard(createdKey.api_key)}
+                                    className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] p-2 rounded-xl text-xs text-zinc-300 transition-colors cursor-pointer shrink-0"
+                                >
+                                    <Copy className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                            <p className="text-xs text-amber-400 font-semibold leading-relaxed">
+                                Store this key securely. It will only be shown once and cannot be retrieved later.
+                            </p>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleCreateKey}>
-                            Create Key
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                )}
+                <DialogFooter className="flex gap-3 justify-end pt-2 border-t border-[#1d1d22]/50">
+                    <Button onClick={() => {
+                        setShowCreatedKeyDialog(false);
+                        setCreatedKey(null);
+                    }} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer">
+                        Done
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
-            {/* Show Created Key Dialog */}
-            <Dialog open={showCreatedKeyDialog} onOpenChange={setShowCreatedKeyDialog}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>API Key Created Successfully</DialogTitle>
-                        <DialogDescription>
-                            Make sure to copy your API key now. You won&apos;t be able to see it again!
-                        </DialogDescription>
-                    </DialogHeader>
-                    {createdKey && (
-                        <div className="space-y-4">
-                            <div className="p-4 bg-muted rounded-lg">
-                                <p className="text-sm text-muted-foreground mb-2">Your API Key:</p>
-                                <div className="flex items-center gap-2">
-                                    <code className="flex-1 p-2 bg-background rounded text-sm font-mono break-all">
-                                        {createdKey.api_key}
-                                    </code>
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => copyToClipboard(createdKey.api_key)}
-                                    >
-                                        <Copy className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                            <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                                <p className="text-sm text-yellow-600 dark:text-yellow-500">
-                                    Store this key securely. It will only be shown once and cannot be retrieved later.
-                                </p>
+        {/* Create Service Key Dialog */}
+        <Dialog open={isCreateServiceDialogOpen} onOpenChange={setIsCreateServiceDialogOpen}>
+            <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white">
+                <DialogHeader className="space-y-1">
+                    <DialogTitle className="text-lg font-bold text-white">Create New Service Key</DialogTitle>
+                    <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
+                        Create a service key to access Dograh AI services (LLM, TTS, STT)
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-2">
+                    <div className="grid gap-1">
+                        <Label htmlFor="service-name" className="text-xs font-bold text-zinc-300 block mb-1.5">Service Key Name</Label>
+                        <Input
+                            id="service-name"
+                            value={newServiceKeyName}
+                            onChange={(e) => setNewServiceKeyName(e.target.value)}
+                            placeholder="e.g., Production AI Services, Development LLM Access"
+                            className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
+                        />
+                    </div>
+                </div>
+                <DialogFooter className="flex gap-3 justify-end pt-2 border-t border-[#1d1d22]/50">
+                    <Button
+                        className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors cursor-pointer"
+                        onClick={() => setIsCreateServiceDialogOpen(false)}
+                    >
+                        Cancel
+                    </Button>
+                    <Button onClick={handleCreateServiceKey} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer">
+                        Create Service Key
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        {/* Show Created Service Key Dialog */}
+        <Dialog open={showCreatedServiceKeyDialog} onOpenChange={setShowCreatedServiceKeyDialog}>
+            <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white">
+                <DialogHeader className="space-y-1">
+                    <DialogTitle className="text-lg font-bold text-white">Service Key Created Successfully</DialogTitle>
+                    <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
+                        Make sure to copy your service key now. You won&apos;t be able to see it again!
+                    </DialogDescription>
+                </DialogHeader>
+                {createdServiceKey && (
+                    <div className="space-y-4">
+                        <div className="p-4 bg-[#08080a] border border-[#1d1d22] rounded-xl">
+                            <p className="text-xs text-zinc-400 mb-2 font-bold">Your Service Key:</p>
+                            <div className="flex items-center gap-2">
+                                <code className="flex-1 p-2 bg-[#1c1c1f] border border-[#232328] rounded text-xs font-mono break-all text-zinc-300">
+                                    {createdServiceKey.service_key}
+                                </code>
+                                <Button
+                                    onClick={() => copyToClipboard(createdServiceKey.service_key)}
+                                    className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] p-2 rounded-xl text-xs text-zinc-300 transition-colors cursor-pointer shrink-0"
+                                >
+                                    <Copy className="w-4 h-4" />
+                                </Button>
                             </div>
                         </div>
-                    )}
-                    <DialogFooter>
-                        <Button onClick={() => {
-                            setShowCreatedKeyDialog(false);
-                            setCreatedKey(null);
-                        }}>
-                            Done
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Create Service Key Dialog */}
-            <Dialog open={isCreateServiceDialogOpen} onOpenChange={setIsCreateServiceDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Create New Service Key</DialogTitle>
-                        <DialogDescription>
-                            Create a service key to access Dograh AI services (LLM, TTS, STT)
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="service-name">Service Key Name</Label>
-                            <Input
-                                id="service-name"
-                                value={newServiceKeyName}
-                                onChange={(e) => setNewServiceKeyName(e.target.value)}
-                                placeholder="e.g., Production AI Services, Development LLM Access"
-                            />
+                        <div className="p-4 bg-[#08080a] border border-[#1d1d22] rounded-xl">
+                            <p className="text-xs text-blue-400 font-semibold leading-relaxed">
+                                This key provides access to Dograh AI services including LLM, Text-to-Speech, and Speech-to-Text.
+                                {createdServiceKey.expires_at && (
+                                    <span className="block mt-1">
+                                        Expires on: {formatDate(createdServiceKey.expires_at)}
+                                    </span>
+                                )}
+                            </p>
+                        </div>
+                        <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                            <p className="text-xs text-amber-400 font-semibold leading-relaxed">
+                                Store this key securely. It will only be shown once and cannot be retrieved later.
+                            </p>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsCreateServiceDialogOpen(false)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleCreateServiceKey}>
-                            Create Service Key
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Show Created Service Key Dialog */}
-            <Dialog open={showCreatedServiceKeyDialog} onOpenChange={setShowCreatedServiceKeyDialog}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Service Key Created Successfully</DialogTitle>
-                        <DialogDescription>
-                            Make sure to copy your service key now. You won&apos;t be able to see it again!
-                        </DialogDescription>
-                    </DialogHeader>
-                    {createdServiceKey && (
-                        <div className="space-y-4">
-                            <div className="p-4 bg-muted rounded-lg">
-                                <p className="text-sm text-muted-foreground mb-2">Your Service Key:</p>
-                                <div className="flex items-center gap-2">
-                                    <code className="flex-1 p-2 bg-background rounded text-sm font-mono break-all">
-                                        {createdServiceKey.service_key}
-                                    </code>
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => copyToClipboard(createdServiceKey.service_key)}
-                                    >
-                                        <Copy className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                            <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                                <p className="text-sm text-blue-600 dark:text-blue-500">
-                                    This key provides access to Dograh AI services including LLM, Text-to-Speech, and Speech-to-Text.
-                                    {createdServiceKey.expires_at && (
-                                        <span className="block mt-1">
-                                            Expires on: {formatDate(createdServiceKey.expires_at)}
-                                        </span>
-                                    )}
-                                </p>
-                            </div>
-                            <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                                <p className="text-sm text-yellow-600 dark:text-yellow-500">
-                                    Store this key securely. It will only be shown once and cannot be retrieved later.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-                    <DialogFooter>
-                        <Button onClick={() => {
-                            setShowCreatedServiceKeyDialog(false);
-                            setCreatedServiceKey(null);
-                        }}>
-                            Done
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
+                )}
+                <DialogFooter className="flex gap-3 justify-end pt-2 border-t border-[#1d1d22]/50">
+                    <Button onClick={() => {
+                        setShowCreatedServiceKeyDialog(false);
+                        setCreatedServiceKey(null);
+                    }} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer">
+                        Done
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    </div>
     );
 }

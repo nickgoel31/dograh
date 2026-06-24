@@ -25,7 +25,7 @@ async function WorkflowList() {
             redirect('/');
         } else {
             return (
-                <div className="text-destructive text-sm">
+                <div className="text-red-400 text-xs font-semibold p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
                     Authentication required. Please refresh the page.
                 </div>
             );
@@ -64,12 +64,12 @@ async function WorkflowList() {
                     {activeWorkflows.length > 0 || folders.length > 0 ? (
                         <AgentFolderView workflows={activeWorkflows} folders={folders} />
                     ) : (
-                        <div className="neural-card rounded-xl p-12 text-center">
-                            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 border border-primary/20">
-                                <Bot className="h-6 w-6 text-primary" />
+                        <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-12 text-center max-w-xl mx-auto shadow-sm">
+                            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#7c3aed]/10 border border-[#7c3aed]/20">
+                                <Bot className="h-6 w-6 text-[#7c3aed]" />
                             </div>
-                            <h3 className="text-base font-semibold mb-1">No agents yet</h3>
-                            <p className="text-sm text-muted-foreground mb-5 max-w-xs mx-auto">
+                            <h3 className="text-sm font-bold text-white mb-1.5">No voice agents yet</h3>
+                            <p className="text-xs text-zinc-500 mb-6 max-w-xs mx-auto leading-relaxed">
                                 Create your first voice agent to get started with conversational AI.
                             </p>
                             <CreateWorkflowButton />
@@ -78,7 +78,7 @@ async function WorkflowList() {
                 </div>
 
                 {archivedWorkflows.length > 0 && (
-                    <div className="mb-6">
+                    <div className="mt-8 border-t border-[#1d1d22]/50 pt-8">
                         <FolderSection kind="archived" workflows={archivedWorkflows} />
                     </div>
                 )}
@@ -87,7 +87,7 @@ async function WorkflowList() {
     } catch (err) {
         logger.error(`Error fetching workflows: ${err}`);
         return (
-            <div className="text-destructive text-sm">
+            <div className="text-red-400 text-xs font-semibold p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
                 Failed to load agents. Please try again later.
             </div>
         );
@@ -98,14 +98,14 @@ async function PageContent() {
     const workflowList = await WorkflowList();
 
     return (
-        <div className="px-6 py-6 page-enter">
+        <div className="px-6 py-6 page-enter max-w-[1600px] mx-auto w-full">
             {/* Page header */}
-            <div className="flex items-end justify-between mb-6 pb-5 border-b border-border/50">
+            <div className="flex items-end justify-between mb-8 pb-6 border-b border-[#1d1d22]/50">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Voice Agents</h1>
-                    <p className="text-sm text-muted-foreground mt-0.5">Build and manage your AI conversational agents</p>
+                    <h1 className="text-2xl font-bold tracking-tight text-white">Voice Agents</h1>
+                    <p className="text-xs text-zinc-500 mt-1.5">Build and manage your AI conversational agents</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                     <UploadWorkflowButton />
                     <CreateFolderButton />
                     <CreateWorkflowButton />
@@ -119,20 +119,20 @@ async function PageContent() {
 
 function WorkflowsLoading() {
     return (
-        <div className="px-6 py-6">
-            <div className="flex items-end justify-between mb-6 pb-5 border-b border-border/50">
-                <div className="space-y-2">
-                    <div className="h-7 w-40 bg-muted rounded-lg shimmer" />
-                    <div className="h-4 w-64 bg-muted rounded shimmer" />
+        <div className="px-6 py-6 max-w-[1600px] mx-auto w-full">
+            <div className="flex items-end justify-between mb-8 pb-6 border-b border-[#1d1d22]/50">
+                <div className="space-y-2.5">
+                    <div className="h-7 w-40 bg-[#111113] border border-[#1d1d22] rounded-lg shimmer" />
+                    <div className="h-4 w-64 bg-[#111113] border border-[#1d1d22] rounded-lg shimmer" />
                 </div>
-                <div className="flex gap-2">
-                    <div className="h-9 w-24 bg-muted rounded-lg shimmer" />
-                    <div className="h-9 w-32 bg-muted rounded-lg shimmer" />
+                <div className="flex gap-3">
+                    <div className="h-9 w-24 bg-[#111113] border border-[#1d1d22] rounded-lg shimmer" />
+                    <div className="h-9 w-32 bg-[#111113] border border-[#1d1d22] rounded-lg shimmer" />
                 </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 6 }, (_, i) => (
-                    <div key={i} className="neural-card rounded-xl h-32 shimmer" style={{ animationDelay: `${i * 0.05}s` }} />
+                    <div key={i} className="bg-[#111113] border border-[#1d1d22] rounded-2xl h-36 shimmer" style={{ animationDelay: `${i * 0.05}s` }} />
                 ))}
             </div>
         </div>

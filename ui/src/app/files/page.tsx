@@ -37,7 +37,7 @@ export default function FilesPage() {
 
     if (loading || !user) {
         return (
-            <div className="container mx-auto px-4 py-8">
+            <div className="min-h-screen bg-[#08080a] p-6 max-w-[1600px] mx-auto w-full page-enter">
                 <div className="space-y-4">
                     <Skeleton className="h-12 w-64" />
                     <Skeleton className="h-64 w-full" />
@@ -47,49 +47,45 @@ export default function FilesPage() {
     }
 
     return (
-        <div className="container mx-auto px-4 py-8 fade-in-up">
-            <div className="flex justify-between items-end mb-8 page-header">
-                <div>
-                    <h1 className="text-3xl font-extrabold tracking-tight mb-1 flex items-center gap-3">
-                        <div className="icon-container">
-                            <Files className="h-6 w-6" />
-                        </div>
-                        Knowledge Base Files
-                    </h1>
-                    <p className="text-muted-foreground mt-2">
-                        Upload and manage documents for your voice agents to reference.{" "}
-                        <a href="https://docs.dograh.com/voice-agent/knowledge-base" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline text-primary hover:text-primary/80 transition-colors">
-                            Learn more <ExternalLink className="h-3 w-3" />
-                        </a>
-                    </p>
-                </div>
+        <div className="min-h-screen bg-[#08080a] p-6 max-w-[1600px] mx-auto w-full page-enter">
+            {/* Header */}
+            <div className="border-b border-[#1d1d22]/50 pb-6 mb-6">
+                <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+                    Knowledge Base Files
+                </h1>
+                <p className="text-xs text-zinc-500 mt-1">
+                    Upload and manage documents for your voice agents to reference.{" "}
+                    <a href="https://docs.dograh.com/voice-agent/knowledge-base" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline-flex items-center gap-0.5">
+                        Learn more <ExternalLink className="w-3.5 h-3.5 inline" />
+                    </a>
+                </p>
             </div>
 
-            <Card className="glass-card fade-in-up" style={{ animationDelay: '0.1s' }}>
-                <CardHeader>
+            <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 shadow-none">
+                <CardHeader className="p-0 pb-6 mb-6 border-b border-[#1d1d22]/50">
                     <div className="flex justify-between items-center">
                         <div>
-                            <CardTitle>Your Documents</CardTitle>
-                            <CardDescription>
+                            <CardTitle className="text-lg font-bold text-white">Your Documents</CardTitle>
+                            <CardDescription className="text-xs text-zinc-500">
                                 Documents shared across all agents in your organization
                             </CardDescription>
                         </div>
-                        <Button onClick={() => setIsUploadOpen(true)} className="hover-glow bg-primary hover:bg-primary/90">
-                            <Upload className="w-4 h-4 mr-2" />
+                        <Button onClick={() => setIsUploadOpen(true)} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer">
+                            <Upload className="w-4 h-4 mr-2 inline" />
                             Upload Document
                         </Button>
                     </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                     <DocumentList refreshTrigger={refreshKey} />
                 </CardContent>
             </Card>
 
             <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Upload Document</DialogTitle>
-                        <DialogDescription>
+                <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white">
+                    <DialogHeader className="space-y-1">
+                        <DialogTitle className="text-lg font-bold text-white">Upload Document</DialogTitle>
+                        <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
                             Upload a PDF or document file to add to your knowledge base
                         </DialogDescription>
                     </DialogHeader>

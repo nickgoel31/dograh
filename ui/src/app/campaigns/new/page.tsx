@@ -330,225 +330,229 @@ export default function NewCampaignPage() {
             setIsSubmitting(false);
         }
     };
-
     // Handle back navigation
     const handleBack = () => {
         router.push('/campaigns');
     };
 
     return (
-        <div className="container mx-auto p-6 pb-12 space-y-6 max-w-2xl">
+        <div className="min-h-screen bg-[#08080a] p-6 max-w-3xl mx-auto w-full page-enter">
             <div>
                 <Button
                     variant="ghost"
                     onClick={handleBack}
-                    className="mb-4"
+                    className="mb-6 border border-[#1d1d22] text-zinc-400 hover:text-white hover:bg-[#1a1a1f] text-xs font-semibold rounded-xl h-10 px-4"
                 >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Campaigns
                 </Button>
-                <h1 className="text-3xl font-bold mb-2">Create New Campaign</h1>
-                <p className="text-muted-foreground">Set up a new campaign to execute workflows at scale</p>
+                <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Create New Campaign</h1>
+                <p className="text-xs text-zinc-500">Set up a new campaign to execute workflows at scale</p>
             </div>
 
-            <Card>
-                    <CardHeader>
-                        <CardTitle>Campaign Details</CardTitle>
-                        <CardDescription>
-                            Configure your campaign settings
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="campaign-name">Campaign Name</Label>
-                                <Input
-                                    id="campaign-name"
-                                    placeholder="Enter campaign name"
-                                    value={campaignName}
-                                    onChange={(e) => setCampaignName(e.target.value)}
-                                    maxLength={255}
-                                    required
-                                />
-                                <p className="text-sm text-muted-foreground">
-                                    Choose a descriptive name for your campaign
-                                </p>
-                            </div>
+            <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl shadow-none mt-6">
+                <CardHeader className="p-6 pb-4 border-b border-[#1d1d22]/50">
+                    <CardTitle className="text-base font-bold text-white">Campaign Details</CardTitle>
+                    <CardDescription className="text-xs text-zinc-500">
+                        Configure your campaign settings
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="campaign-name" className="text-xs font-semibold text-zinc-300">Campaign Name</Label>
+                            <Input
+                                id="campaign-name"
+                                placeholder="Enter campaign name"
+                                value={campaignName}
+                                onChange={(e) => setCampaignName(e.target.value)}
+                                maxLength={255}
+                                required
+                                className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
+                            />
+                            <p className="text-[11px] text-zinc-500">
+                                Choose a descriptive name for your campaign
+                            </p>
+                        </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="workflow">Workflow</Label>
+                        <div className="space-y-2">
+                            <Label htmlFor="workflow" className="text-xs font-semibold text-zinc-300">Workflow</Label>
+                            <Select
+                                value={selectedWorkflowId}
+                                onValueChange={setSelectedWorkflowId}
+                                required
+                            >
+                                <SelectTrigger id="workflow" className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus:ring-[#7c3aed]">
+                                    <SelectValue placeholder="Select a workflow" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#111113] border-[#1d1d22] text-white">
+                                    {isLoadingWorkflows ? (
+                                        <SelectItem value="loading" disabled className="text-xs">
+                                            Loading workflows...
+                                        </SelectItem>
+                                    ) : workflows.length === 0 ? (
+                                        <SelectItem value="none" disabled className="text-xs">
+                                            No workflows found
+                                        </SelectItem>
+                                    ) : (
+                                        workflows.map((workflow) => (
+                                            <SelectItem
+                                                key={workflow.id}
+                                                value={workflow.id.toString()}
+                                                className="text-xs"
+                                            >
+                                                {workflow.name} (#{workflow.id})
+                                            </SelectItem>
+                                        ))
+                                    )}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-[11px] text-zinc-500">
+                                Select the workflow to execute for each row in the data source
+                            </p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="telephony-config" className="text-xs font-semibold text-zinc-300">Telephony Configuration</Label>
+                            {!isLoadingTelephonyConfigs && telephonyConfigs.length === 0 ? (
+                                <div className="rounded-xl border border-dashed border-[#1d1d22] p-4 text-xs text-zinc-500 bg-[#08080a]/50">
+                                    No telephony configurations yet.{' '}
+                                    <Link
+                                        href="/telephony-configurations"
+                                        className="underline text-white font-medium"
+                                    >
+                                        Add one
+                                    </Link>{' '}
+                                    to create a campaign.
+                                </div>
+                            ) : (
                                 <Select
-                                    value={selectedWorkflowId}
-                                    onValueChange={setSelectedWorkflowId}
+                                    value={selectedTelephonyConfigId}
+                                    onValueChange={setSelectedTelephonyConfigId}
                                     required
                                 >
-                                    <SelectTrigger id="workflow">
-                                        <SelectValue placeholder="Select a workflow" />
+                                    <SelectTrigger id="telephony-config" className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus:ring-[#7c3aed]">
+                                        <SelectValue placeholder="Select a telephony configuration" />
                                     </SelectTrigger>
-                                    <SelectContent>
-                                        {isLoadingWorkflows ? (
-                                            <SelectItem value="loading" disabled>
-                                                Loading workflows...
-                                            </SelectItem>
-                                        ) : workflows.length === 0 ? (
-                                            <SelectItem value="none" disabled>
-                                                No workflows found
+                                    <SelectContent className="bg-[#111113] border-[#1d1d22] text-white">
+                                        {isLoadingTelephonyConfigs ? (
+                                            <SelectItem value="loading" disabled className="text-xs">
+                                                Loading configurations...
                                             </SelectItem>
                                         ) : (
-                                            workflows.map((workflow) => (
+                                            telephonyConfigs.map((config) => (
                                                 <SelectItem
-                                                    key={workflow.id}
-                                                    value={workflow.id.toString()}
+                                                    key={config.id}
+                                                    value={config.id.toString()}
+                                                    className="text-xs"
                                                 >
-                                                    {workflow.name} (#{workflow.id})
+                                                    {config.name} ({config.provider})
+                                                    {config.is_default_outbound ? ' — default' : ''}
                                                 </SelectItem>
                                             ))
                                         )}
                                     </SelectContent>
                                 </Select>
-                                <p className="text-sm text-muted-foreground">
-                                    Select the workflow to execute for each row in the data source
-                                </p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="telephony-config">Telephony Configuration</Label>
-                                {!isLoadingTelephonyConfigs && telephonyConfigs.length === 0 ? (
-                                    <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-                                        No telephony configurations yet.{' '}
-                                        <Link
-                                            href="/telephony-configurations"
-                                            className="underline text-foreground"
-                                        >
-                                            Add one
-                                        </Link>{' '}
-                                        to create a campaign.
-                                    </div>
-                                ) : (
-                                    <Select
-                                        value={selectedTelephonyConfigId}
-                                        onValueChange={setSelectedTelephonyConfigId}
-                                        required
-                                    >
-                                        <SelectTrigger id="telephony-config">
-                                            <SelectValue placeholder="Select a telephony configuration" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {isLoadingTelephonyConfigs ? (
-                                                <SelectItem value="loading" disabled>
-                                                    Loading configurations...
-                                                </SelectItem>
-                                            ) : (
-                                                telephonyConfigs.map((config) => (
-                                                    <SelectItem
-                                                        key={config.id}
-                                                        value={config.id.toString()}
-                                                    >
-                                                        {config.name} ({config.provider})
-                                                        {config.is_default_outbound ? ' — default' : ''}
-                                                    </SelectItem>
-                                                ))
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                )}
-                                <p className="text-sm text-muted-foreground">
-                                    Outbound calls for this campaign will use this configuration&apos;s caller IDs
-                                </p>
-                            </div>
-
-                            <ContactSourceSelector
-                                sourceType={sourceType}
-                                onSourceTypeChange={setSourceType}
-                                sourceId={sourceId}
-                                onSourceIdChange={setSourceId}
-                                sourceConfig={sourceConfig}
-                                onSourceConfigChange={setSourceConfig}
-                                autoSyncEnabled={autoSyncEnabled}
-                                onAutoSyncEnabledChange={setAutoSyncEnabled}
-                                autoSyncIntervalMinutes={autoSyncIntervalMinutes}
-                                onAutoSyncIntervalMinutesChange={setAutoSyncIntervalMinutes}
-                                autoSyncOnlyNew={autoSyncOnlyNew}
-                                onAutoSyncOnlyNewChange={setAutoSyncOnlyNew}
-                                getAccessToken={getAccessToken}
-                            />
-
-                            {/* Advanced Settings */}
-                            <Collapsible
-                                open={showAdvancedSettings}
-                                onOpenChange={setShowAdvancedSettings}
-                                className="border rounded-lg"
-                            >
-                                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
-                                    <span className="font-medium">Advanced Settings</span>
-                                    {showAdvancedSettings ? (
-                                        <ChevronDown className="h-4 w-4" />
-                                    ) : (
-                                        <ChevronRight className="h-4 w-4" />
-                                    )}
-                                </CollapsibleTrigger>
-                                <CollapsibleContent className="px-4 pb-4">
-                                    <CampaignAdvancedSettings
-                                        maxConcurrency={maxConcurrency}
-                                        onMaxConcurrencyChange={setMaxConcurrency}
-                                        effectiveLimit={effectiveLimit}
-                                        orgConcurrentLimit={orgConcurrentLimit}
-                                        fromNumbersCount={fromNumbersCount}
-                                        retryEnabled={retryEnabled}
-                                        onRetryEnabledChange={setRetryEnabled}
-                                        maxRetries={maxRetries}
-                                        onMaxRetriesChange={setMaxRetries}
-                                        retryDelaySeconds={retryDelaySeconds}
-                                        onRetryDelaySecondsChange={setRetryDelaySeconds}
-                                        retryOnBusy={retryOnBusy}
-                                        onRetryOnBusyChange={setRetryOnBusy}
-                                        retryOnNoAnswer={retryOnNoAnswer}
-                                        onRetryOnNoAnswerChange={setRetryOnNoAnswer}
-                                        retryOnVoicemail={retryOnVoicemail}
-                                        onRetryOnVoicemailChange={setRetryOnVoicemail}
-                                        scheduleEnabled={scheduleEnabled}
-                                        onScheduleEnabledChange={setScheduleEnabled}
-                                        scheduleTimezone={scheduleTimezone}
-                                        onScheduleTimezoneChange={setScheduleTimezone}
-                                        timeSlots={timeSlots}
-                                        onTimeSlotsChange={setTimeSlots}
-                                        circuitBreakerEnabled={circuitBreakerEnabled}
-                                        onCircuitBreakerEnabledChange={setCircuitBreakerEnabled}
-                                        circuitBreakerFailureThreshold={circuitBreakerFailureThreshold}
-                                        onCircuitBreakerFailureThresholdChange={setCircuitBreakerFailureThreshold}
-                                        circuitBreakerWindowSeconds={circuitBreakerWindowSeconds}
-                                        onCircuitBreakerWindowSecondsChange={setCircuitBreakerWindowSeconds}
-                                        circuitBreakerMinCalls={circuitBreakerMinCalls}
-                                        onCircuitBreakerMinCallsChange={setCircuitBreakerMinCalls}
-                                    />
-                                </CollapsibleContent>
-                            </Collapsible>
-
-                            {createError && (
-                                <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-                                    {createError}
-                                </div>
                             )}
+                            <p className="text-[11px] text-zinc-500">
+                                Outbound calls for this campaign will use this configuration&apos;s caller IDs
+                            </p>
+                        </div>
 
-                            <div className="flex gap-4 pt-4">
-                                <Button
-                                    type="submit"
-                                    disabled={isSubmitting || !campaignName || !selectedWorkflowId || !sourceId || !selectedTelephonyConfigId}
-                                >
-                                    {isSubmitting ? 'Creating...' : 'Create Campaign'}
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={handleBack}
-                                    disabled={isSubmitting}
-                                >
-                                    Cancel
-                                </Button>
+                        <ContactSourceSelector
+                            sourceType={sourceType}
+                            onSourceTypeChange={setSourceType}
+                            sourceId={sourceId}
+                            onSourceIdChange={setSourceId}
+                            sourceConfig={sourceConfig}
+                            onSourceConfigChange={setSourceConfig}
+                            autoSyncEnabled={autoSyncEnabled}
+                            onAutoSyncEnabledChange={setAutoSyncEnabled}
+                            autoSyncIntervalMinutes={autoSyncIntervalMinutes}
+                            onAutoSyncIntervalMinutesChange={setAutoSyncIntervalMinutes}
+                            autoSyncOnlyNew={autoSyncOnlyNew}
+                            onAutoSyncOnlyNewChange={setAutoSyncOnlyNew}
+                            getAccessToken={getAccessToken}
+                        />
+
+                        {/* Advanced Settings */}
+                        <Collapsible
+                            open={showAdvancedSettings}
+                            onOpenChange={setShowAdvancedSettings}
+                            className="border border-[#1d1d22] rounded-xl overflow-hidden bg-[#08080a]/30"
+                        >
+                            <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-[#111113]/50 hover:bg-[#1a1a1f] transition-colors text-white font-semibold text-xs">
+                                <span>Advanced Settings</span>
+                                {showAdvancedSettings ? (
+                                    <ChevronDown className="h-4 w-4 text-zinc-400" />
+                                ) : (
+                                    <ChevronRight className="h-4 w-4 text-zinc-400" />
+                                )}
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="px-4 pb-4 bg-[#111113]">
+                                <CampaignAdvancedSettings
+                                    maxConcurrency={maxConcurrency}
+                                    onMaxConcurrencyChange={setMaxConcurrency}
+                                    effectiveLimit={effectiveLimit}
+                                    orgConcurrentLimit={orgConcurrentLimit}
+                                    fromNumbersCount={fromNumbersCount}
+                                    retryEnabled={retryEnabled}
+                                    onRetryEnabledChange={setRetryEnabled}
+                                    maxRetries={maxRetries}
+                                    onMaxRetriesChange={setMaxRetries}
+                                    retryDelaySeconds={retryDelaySeconds}
+                                    onRetryDelaySecondsChange={setRetryDelaySeconds}
+                                    retryOnBusy={retryOnBusy}
+                                    onRetryOnBusyChange={setRetryOnBusy}
+                                    retryOnNoAnswer={retryOnNoAnswer}
+                                    onRetryOnNoAnswerChange={setRetryOnNoAnswer}
+                                    retryOnVoicemail={retryOnVoicemail}
+                                    onRetryOnVoicemailChange={setRetryOnVoicemail}
+                                    scheduleEnabled={scheduleEnabled}
+                                    onScheduleEnabledChange={setScheduleEnabled}
+                                    scheduleTimezone={scheduleTimezone}
+                                    onScheduleTimezoneChange={setScheduleTimezone}
+                                    timeSlots={timeSlots}
+                                    onTimeSlotsChange={setTimeSlots}
+                                    circuitBreakerEnabled={circuitBreakerEnabled}
+                                    onCircuitBreakerEnabledChange={setCircuitBreakerEnabled}
+                                    circuitBreakerFailureThreshold={circuitBreakerFailureThreshold}
+                                    onCircuitBreakerFailureThresholdChange={setCircuitBreakerFailureThreshold}
+                                    circuitBreakerWindowSeconds={circuitBreakerWindowSeconds}
+                                    onCircuitBreakerWindowSecondsChange={setCircuitBreakerWindowSeconds}
+                                    circuitBreakerMinCalls={circuitBreakerMinCalls}
+                                    onCircuitBreakerMinCallsChange={setCircuitBreakerMinCalls}
+                                />
+                            </CollapsibleContent>
+                        </Collapsible>
+
+                        {createError && (
+                            <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-400 font-semibold">
+                                {createError}
                             </div>
-                        </form>
-                    </CardContent>
-                </Card>
+                        )}
+
+                        <div className="flex gap-4 pt-4">
+                            <Button
+                                type="submit"
+                                disabled={isSubmitting || !campaignName || !selectedWorkflowId || !sourceId || !selectedTelephonyConfigId}
+                                className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs h-10 px-6 rounded-xl transition-all shadow-lg cursor-pointer"
+                            >
+                                {isSubmitting ? 'Creating...' : 'Create Campaign'}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleBack}
+                                disabled={isSubmitting}
+                                className="border border-[#1d1d22] hover:bg-[#1a1a1f] text-white font-semibold text-xs h-10 px-6 rounded-xl transition-all"
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </form>
+                </CardContent>
+            </Card>
         </div>
     );
 }

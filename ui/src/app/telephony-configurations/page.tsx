@@ -130,39 +130,39 @@ export default function TelephonyConfigurationsPage() {
   };
 
   return (
-    <div className="min-h-screen page-enter">
+    <div className="min-h-screen bg-[#08080a] p-6 max-w-[1600px] mx-auto w-full page-enter">
       {/* Page header */}
-      <div className="px-6 py-6 border-b border-border/50">
+      <div className="border-b border-[#1d1d22]/50 pb-6 mb-6">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Telephony</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <h1 className="text-2xl font-bold tracking-tight text-white">Telephony</h1>
+            <p className="text-xs text-zinc-500 mt-1">
               Connect provider accounts to enable outbound calls and receive inbound calls.{" "}
               <a
                 href="https://docs.dograh.com/integrations/telephony/overview"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-0.5 text-primary hover:underline"
+                className="text-blue-400 hover:underline inline-flex items-center gap-0.5"
               >
-                Docs <ExternalLink className="h-3 w-3" />
+                Docs <ExternalLink className="w-3 h-3 inline" />
               </a>
             </p>
           </div>
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
+          <Button className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-3.5 w-3.5 mr-1.5 inline" />
             Add Configuration
           </Button>
         </div>
       </div>
 
-      <div className="px-6 py-6 space-y-4">
+      <div className="space-y-4">
         {/* Warning banner */}
         {telnyxMissingWebhookPublicKeyCount > 0 && (
-          <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/8 px-4 py-3">
-            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
-            <div className="text-sm">
-              <p className="font-semibold text-amber-700 dark:text-amber-300">Webhook public key not configured</p>
-              <p className="text-amber-600 dark:text-amber-400 mt-0.5">
+          <div className="flex items-start gap-3 rounded-xl border border-amber-500/15 bg-amber-500/10 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
+            <div className="text-xs">
+              <p className="font-semibold text-amber-400">Webhook public key not configured</p>
+              <p className="text-zinc-400 mt-0.5">
                 {telnyxMissingWebhookPublicKeyCount === 1
                   ? "1 Telnyx configuration is"
                   : `${telnyxMissingWebhookPublicKeyCount} Telnyx configurations are`}{" "}
@@ -176,31 +176,31 @@ export default function TelephonyConfigurationsPage() {
         {loading ? (
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-20 rounded-xl bg-muted shimmer" style={{ animationDelay: `${i * 0.08}s` }} />
+              <div key={i} className="h-20 rounded-2xl bg-[#111113] border border-[#1d1d22] shimmer" style={{ animationDelay: `${i * 0.08}s` }} />
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="neural-card rounded-xl p-12 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 border border-primary/20">
-              <Phone className="h-6 w-6 text-primary" />
+          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-12 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#7c3aed]/10 border border-[#7c3aed]/20">
+              <Phone className="h-6 w-6 text-[#8b5cf6]" />
             </div>
-            <h3 className="text-base font-semibold mb-1">No telephony configurations</h3>
-            <p className="text-sm text-muted-foreground mb-5 max-w-xs mx-auto">
+            <h3 className="text-sm font-semibold text-white mb-1">No telephony configurations</h3>
+            <p className="text-xs text-zinc-400 mb-5 max-w-xs mx-auto">
               Add a provider account to enable outbound calls and receive inbound calls.
             </p>
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
+            <Button className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer" onClick={() => setCreateOpen(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1.5 inline" />
               Add Configuration
             </Button>
           </div>
         ) : (
           <div className="space-y-2">
             {items.map((item) => (
-              <div key={item.id} className="neural-card rounded-xl">
-                <div className="flex items-center gap-4 px-4 py-3.5">
+              <div key={item.id} className="bg-[#111113] border border-[#1d1d22] rounded-2xl hover:border-zinc-700 transition-all">
+                <div className="flex items-center justify-between gap-4 px-5 py-4">
                   {/* Provider icon area */}
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
-                    <Phone className="h-4.5 w-4.5 text-primary" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800/40 border border-zinc-700/50">
+                    <Phone className="h-4.5 w-4.5 text-zinc-400" />
                   </div>
 
                   {/* Info */}
@@ -209,19 +209,19 @@ export default function TelephonyConfigurationsPage() {
                     className="flex-1 min-w-0"
                   >
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold truncate">{item.name}</span>
-                      <span className="inline-flex items-center rounded-full bg-muted border border-border/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      <span className="text-sm font-semibold text-zinc-200 hover:text-white transition-colors truncate">{item.name}</span>
+                      <span className="bg-[#1c1c1f] text-zinc-400 border border-zinc-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">
                         {PROVIDER_LABELS[item.provider] ?? item.provider}
                       </span>
                       {item.is_default_outbound && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/25 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                        <span className="bg-blue-500/15 text-blue-400 text-[9px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-0.5">
                           <Star className="h-2.5 w-2.5 fill-current" />
                           Default
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-zinc-400">
                         {item.phone_number_count} {item.phone_number_count === 1 ? "number" : "numbers"}
                       </span>
                       <button
@@ -234,7 +234,7 @@ export default function TelephonyConfigurationsPage() {
                             .then(() => toast.success("Configuration ID copied"))
                             .catch(() => toast.error("Failed to copy ID"));
                         }}
-                        className="inline-flex items-center gap-1 rounded font-mono text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                        className="inline-flex items-center gap-1 rounded font-mono text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors"
                       >
                         ID: {item.id}
                         <Copy className="h-2.5 w-2.5" />
@@ -243,12 +243,11 @@ export default function TelephonyConfigurationsPage() {
                   </Link>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     {!item.is_default_outbound && (
                       <Button
                         variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        className="p-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-white transition-colors cursor-pointer bg-transparent"
                         onClick={() => onSetDefault(item)}
                         title="Set as default outbound"
                       >
@@ -257,8 +256,7 @@ export default function TelephonyConfigurationsPage() {
                     )}
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                      className="p-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-white transition-colors cursor-pointer bg-transparent"
                       onClick={() => onEdit(item)}
                       title="Edit"
                     >
@@ -266,8 +264,7 @@ export default function TelephonyConfigurationsPage() {
                     </Button>
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      className="p-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-rose-400 transition-colors cursor-pointer bg-transparent"
                       onClick={() => setDeleteTarget(item)}
                       title="Delete"
                     >
@@ -275,7 +272,7 @@ export default function TelephonyConfigurationsPage() {
                     </Button>
                     <Link
                       href={`/telephony-configurations/${item.id}`}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-700/50 text-zinc-500 hover:text-white transition-colors bg-transparent"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Link>
@@ -291,17 +288,17 @@ export default function TelephonyConfigurationsPage() {
       <ConfigFormDialog open={editOpen} onOpenChange={setEditOpen} existing={editTarget} onSaved={onSaved} />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete configuration?</AlertDialogTitle>
-            <AlertDialogDescription>
-              <strong>{deleteTarget?.name}</strong> and all of its phone numbers will be removed.
+        <AlertDialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white">
+          <AlertDialogHeader className="space-y-1">
+            <AlertDialogTitle className="text-lg font-bold text-white">Delete configuration?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-zinc-500 leading-relaxed">
+              <strong className="text-zinc-200">{deleteTarget?.name}</strong> and all of its phone numbers will be removed.
               Any campaigns referencing this configuration must be reassigned first.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={onConfirmDelete}>Delete</AlertDialogAction>
+          <AlertDialogFooter className="flex gap-3 justify-end pt-2 border-t border-[#1d1d22]/50">
+            <AlertDialogCancel className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors">Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer" onClick={onConfirmDelete}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

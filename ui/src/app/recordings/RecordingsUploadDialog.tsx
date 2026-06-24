@@ -281,27 +281,27 @@ export const RecordingsUploadDialog = ({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>Upload Recordings</DialogTitle>
-                    <DialogDescription>
+            <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white max-h-[85vh] overflow-y-auto">
+                <DialogHeader className="space-y-1">
+                    <DialogTitle className="text-lg font-bold text-white">Upload Recordings</DialogTitle>
+                    <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
                         Upload or record audio files. Use{" "}
-                        <code className="text-xs bg-muted px-1 rounded">@</code> in
+                        <code className="text-xs bg-[#1c1c1f] border border-[#232328] px-1 py-0.5 rounded text-zinc-300 font-mono">@</code> in
                         prompt fields to insert them into your agents.
                     </DialogDescription>
                 </DialogHeader>
 
                 {error && (
-                    <div className="text-sm text-destructive bg-destructive/10 rounded-md p-2">
+                    <div className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 font-semibold">
                         {error}
                     </div>
                 )}
 
                 {/* Upload Section */}
-                <div className="space-y-3">
+                <div className="space-y-4">
                     {/* Audio source: file picker or record */}
-                    <div>
-                        <Label className="text-xs text-muted-foreground">Audio Files</Label>
+                    <div className="space-y-1.5">
+                        <Label className="text-xs font-bold text-zinc-300 block">Audio Files</Label>
                         <div className="flex gap-2">
                             <input
                                 ref={fileInputRef}
@@ -313,24 +313,21 @@ export const RecordingsUploadDialog = ({
                             />
                             <Button
                                 type="button"
-                                variant="outline"
-                                size="sm"
-                                className="flex-1 justify-start text-sm font-normal"
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isBusy}
+                                className="flex-1 bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3.5 py-2.5 rounded-xl text-xs text-zinc-400 transition-colors cursor-pointer justify-start font-normal"
                             >
-                                <Upload className="w-4 h-4 mr-2 shrink-0" />
-                                <span className="text-muted-foreground">Choose audio files (max 5MB each)</span>
+                                <Upload className="w-4 h-4 mr-2 shrink-0 inline" />
+                                <span>Choose audio files (max 5MB each)</span>
                             </Button>
                             {recordingStep === "idle" && (
                                 <Button
                                     type="button"
-                                    variant="outline"
-                                    size="sm"
                                     onClick={() => setRecordingStep("naming")}
                                     disabled={uploading || anyTranscribing}
+                                    className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3.5 py-2.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors cursor-pointer"
                                 >
-                                    <Mic className="w-4 h-4 mr-1" />
+                                    <Mic className="w-4 h-4 mr-1 inline" />
                                     Record
                                 </Button>
                             )}
@@ -339,24 +336,25 @@ export const RecordingsUploadDialog = ({
 
                     {/* Recording: filename + start/stop */}
                     {(recordingStep === "naming" || isRecording) && (
-                        <div className="space-y-2 rounded-md border border-dashed p-3 bg-muted/20">
+                        <div className="space-y-3 rounded-xl border border-dashed border-[#1d1d22] p-4 bg-[#08080a]/50">
                             {recordingStep === "naming" && (
                                 <>
-                                    <div>
-                                        <Label className="text-xs text-muted-foreground">Recording Name</Label>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs font-bold text-zinc-300 block mb-1">Recording Name</Label>
                                         <Input
                                             placeholder="e.g. greeting, hold-message"
                                             value={recordingFilename}
                                             onChange={(e) => setRecordingFilename(e.target.value)}
+                                            className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
                                             autoFocus
                                         />
                                     </div>
                                     <div className="flex gap-2">
-                                        <Button size="sm" onClick={startRecording} disabled={!recordingFilename.trim()}>
-                                            <Mic className="w-4 h-4 mr-1" />
+                                        <Button onClick={startRecording} disabled={!recordingFilename.trim()} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-lg cursor-pointer">
+                                            <Mic className="w-4 h-4 mr-1 inline" />
                                             Start Recording
                                         </Button>
-                                        <Button size="sm" variant="ghost" onClick={resetRecordingState}>
+                                        <Button onClick={resetRecordingState} className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-2 rounded-xl text-xs text-zinc-300 transition-colors cursor-pointer">
                                             Cancel
                                         </Button>
                                     </div>
@@ -368,17 +366,16 @@ export const RecordingsUploadDialog = ({
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
                                         <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
                                     </span>
-                                    <span className="text-sm font-mono">
+                                    <span className="text-sm font-mono text-zinc-200">
                                         {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, "0")}
                                     </span>
-                                    <span className="text-xs text-muted-foreground">{recordingFilename}</span>
+                                    <span className="text-xs text-zinc-400 truncate">{recordingFilename}</span>
                                     <Button
-                                        size="sm"
                                         variant="destructive"
                                         onClick={() => stopRecording()}
-                                        className="ml-auto"
+                                        className="ml-auto bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
                                     >
-                                        <Square className="w-4 h-4 mr-1" />
+                                        <Square className="w-4 h-4 mr-1 inline" />
                                         Stop
                                     </Button>
                                 </div>
@@ -389,22 +386,20 @@ export const RecordingsUploadDialog = ({
                     {/* Pending files list */}
                     {pendingFiles.length > 0 && (
                         <div className="space-y-2">
-                            <Label className="text-xs text-muted-foreground">
+                            <Label className="text-xs font-bold text-zinc-300 block">
                                 Pending ({pendingFiles.length} file{pendingFiles.length !== 1 ? "s" : ""})
                             </Label>
                             {pendingFiles.map((pf) => (
-                                <div key={pf.id} className="rounded-md border p-2 space-y-1.5 bg-muted/10">
+                                <div key={pf.id} className="rounded-xl border border-[#1d1d22] p-3 space-y-2.5 bg-[#08080a]/50">
                                     <div className="flex items-center gap-2">
-                                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono truncate flex-1">
+                                        <code className="text-xs bg-[#1c1c1f] border border-[#232328] px-1.5 py-0.5 rounded font-mono truncate flex-1 text-zinc-300">
                                             {pf.file.name} ({(pf.file.size / (1024 * 1024)).toFixed(1)}MB)
                                         </code>
                                         {pf.isTranscribing && (
-                                            <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground shrink-0" />
+                                            <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500 shrink-0" />
                                         )}
                                         <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-6 w-6 p-0 shrink-0"
+                                            className="h-6 w-6 p-0 shrink-0 bg-transparent border-none text-zinc-500 hover:text-zinc-300 rounded hover:bg-white/5"
                                             onClick={() => removePendingFile(pf.id)}
                                             disabled={uploading}
                                         >
@@ -412,7 +407,7 @@ export const RecordingsUploadDialog = ({
                                         </Button>
                                     </div>
                                     {pf.error && (
-                                        <p className="text-xs text-destructive">{pf.error}</p>
+                                        <p className="text-xs text-rose-400">{pf.error}</p>
                                     )}
                                     <Textarea
                                         placeholder={pf.isTranscribing ? "Transcribing..." : "What does this recording say?"}
@@ -420,7 +415,7 @@ export const RecordingsUploadDialog = ({
                                         onChange={(e) => updateTranscript(pf.id, e.target.value)}
                                         disabled={pf.isTranscribing}
                                         rows={2}
-                                        className="resize-none text-sm"
+                                        className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2 px-3 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all resize-none w-full"
                                     />
                                 </div>
                             ))}
@@ -428,13 +423,13 @@ export const RecordingsUploadDialog = ({
                     )}
 
                     {/* Language */}
-                    <div>
-                        <Label className="text-xs text-muted-foreground">Language</Label>
+                    <div className="space-y-1">
+                        <Label className="text-xs font-bold text-zinc-300 block mb-1">Language</Label>
                         <Select value={language} onValueChange={setLanguage}>
-                            <SelectTrigger className="h-9 text-sm">
+                            <SelectTrigger className="w-full bg-[#08080a] border border-[#1d1d22] rounded-xl py-2 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all h-10">
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-[#111113] border border-[#1d1d22] text-white">
                                 {Object.entries(LANGUAGE_DISPLAY_NAMES).map(([code, name]) => (
                                     <SelectItem key={code} value={code}>
                                         {name}
@@ -445,14 +440,14 @@ export const RecordingsUploadDialog = ({
                     </div>
 
                     <Button
-                        size="sm"
                         onClick={handleUpload}
                         disabled={readyCount === 0 || isBusy}
+                        className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer w-full mt-2"
                     >
                         {uploading ? (
-                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin inline" />
                         ) : (
-                            <Upload className="w-4 h-4 mr-1" />
+                            <Upload className="w-4 h-4 mr-1 inline" />
                         )}
                         {uploading
                             ? "Uploading..."

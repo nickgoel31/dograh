@@ -186,39 +186,39 @@ export function PhoneNumberDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="text-lg font-bold text-white">
             {isEdit ? "Edit phone number" : "Add phone number"}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
             PSTN numbers (E.164), SIP URIs (sip:user@host), and SIP extensions are all supported.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-1">
-            <Label htmlFor="pn-address">Address</Label>
+            <Label htmlFor="pn-address" className="text-xs font-bold text-zinc-300 block mb-1.5">Address</Label>
             <Input
               id="pn-address"
               placeholder="+19781899185, sip:101@asterisk.local, or 101"
               value={address}
+              className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
               onChange={(e) => setAddress(e.target.value)}
               onBlur={() => setAddressTouched(true)}
               disabled={isEdit}
               aria-invalid={addressTouched && !!addressError}
             />
             {!isEdit && addressTouched && addressError && (
-              <p className="text-xs text-destructive">{addressError}</p>
+              <p className="text-xs text-red-400 font-semibold">{addressError}</p>
             )}
             {isEdit && (
-              <p className="text-xs text-muted-foreground">
-                Address cannot be changed. Delete this number and create a new one to
-                change it.
+              <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
+                Address cannot be changed. Delete this number and create a new one to change it.
               </p>
             )}
             {isEdit && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
                 Stored as <code>{existing?.address_normalized}</code> ({existing?.address_type})
               </p>
             )}
@@ -226,33 +226,35 @@ export function PhoneNumberDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label htmlFor="pn-country">Country (ISO-2)</Label>
+              <Label htmlFor="pn-country" className="text-xs font-bold text-zinc-300 block mb-1.5">Country (ISO-2)</Label>
               <Input
                 id="pn-country"
                 placeholder="US"
                 maxLength={2}
                 value={countryCode}
+                className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
                 onChange={(e) => setCountryCode(e.target.value.toUpperCase())}
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="pn-label">Label</Label>
+              <Label htmlFor="pn-label" className="text-xs font-bold text-zinc-300 block mb-1.5">Label</Label>
               <Input
                 id="pn-label"
                 placeholder="e.g. Boston caller ID"
                 value={label}
+                className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
                 onChange={(e) => setLabel(e.target.value)}
               />
             </div>
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="pn-workflow">Inbound workflow</Label>
+            <Label htmlFor="pn-workflow" className="text-xs font-bold text-zinc-300 block mb-1.5">Inbound workflow</Label>
             <Select value={inboundWorkflowId} onValueChange={setInboundWorkflowId}>
-              <SelectTrigger id="pn-workflow">
+              <SelectTrigger id="pn-workflow" className="w-full bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all">
                 <SelectValue placeholder="(none)" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#111113] border border-[#1d1d22] text-white">
                 <SelectItem value={NO_WORKFLOW}>(none)</SelectItem>
                 {workflows.map((w) => (
                   <SelectItem key={w.id} value={String(w.id)}>
@@ -261,22 +263,21 @@ export function PhoneNumberDialog({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              Used when per-number inbound routing is enabled. Today, inbound calls still
-              route by the workflow_id in the webhook URL.
+            <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
+              Used when per-number inbound routing is enabled. Today, inbound calls still route by the workflow_id in the webhook URL.
             </p>
           </div>
 
-          <div className="flex items-center justify-between rounded border p-3">
-            <Label className="text-sm">Active</Label>
+          <div className="flex items-center justify-between rounded-xl border border-[#1d1d22] bg-[#08080a] p-4">
+            <Label className="text-xs font-bold text-zinc-300 block mb-1.5">Active</Label>
             <Switch checked={isActive} onCheckedChange={setIsActive} />
           </div>
 
           {!isEdit && (
-            <div className="flex items-center justify-between rounded border p-3">
+            <div className="flex items-center justify-between rounded-xl border border-[#1d1d22] bg-[#08080a] p-4">
               <div>
-                <Label className="text-sm">Default caller ID for this configuration</Label>
-                <p className="text-xs text-muted-foreground">
+                <Label className="text-xs font-bold text-zinc-300 block mb-1.5">Default caller ID for this configuration</Label>
+                <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
                   Used as the from-number for test calls when set.
                 </p>
               </div>
@@ -288,11 +289,12 @@ export function PhoneNumberDialog({
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+        <DialogFooter className="flex gap-3 justify-end pt-2 border-t border-[#1d1d22]/50">
+          <Button className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors cursor-pointer" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancel
           </Button>
           <Button
+            className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer"
             onClick={handleSubmit}
             disabled={submitting || (!isEdit && !!addressError)}
           >
