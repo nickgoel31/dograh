@@ -250,20 +250,24 @@ export function AppSidebar() {
         asChild
         tooltip={{ children: <span className="notranslate">{item.title}</span> }}
         className={cn(
-          "relative h-8 rounded-lg text-sm font-medium transition-all duration-150",
-          "text-muted-foreground hover:text-foreground hover:bg-accent",
-          isItemActive && "nav-pill-active text-primary bg-primary/8 hover:bg-primary/10 hover:text-primary"
+          "relative transition-all duration-300 border font-semibold",
+          isCollapsed
+            ? "h-12 w-12 mx-auto rounded-xl flex items-center justify-center"
+            : "h-10 w-full rounded-xl flex items-center text-xs",
+          isItemActive
+            ? "bg-[#1f1f22] text-white border-[#2d2d30] shadow-[0_0_15px_rgba(255,255,255,0.05)]"
+            : "text-[#626266] border-transparent hover:text-white hover:bg-white/5"
         )}
       >
         <Link
           href={item.url}
           onClick={handleMobileNavClick}
-          className={cn("flex items-center gap-2.5 px-2", isCollapsed && "justify-center px-0")}
+          className={cn("flex items-center gap-2.5 w-full", isCollapsed ? "justify-center p-0" : "px-3")}
           translate="no"
         >
           <Icon className={cn(
-            "h-4 w-4 shrink-0 transition-colors duration-150",
-            isItemActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+            "h-[22px] w-[22px] shrink-0 stroke-[1.75] transition-transform duration-300",
+            isItemActive ? "text-white scale-105" : "text-[#626266] group-hover:text-white"
           )} />
           <span className={cn("notranslate truncate", isCollapsed && "sr-only")} translate="no">
             {item.title}
@@ -299,25 +303,25 @@ export function AppSidebar() {
           </div>
         )}
 
-        <div className="flex items-center justify-between">
+        <div className={cn("flex items-center justify-between", isCollapsed ? "flex-col gap-3" : "w-full")}>
           {/* Logo */}
           <div className={cn("flex items-center gap-2 min-w-0", isCollapsed && "hidden")}>
             <Link
               href="/"
-              className="notranslate flex items-center gap-2 hover:opacity-80 transition-opacity"
+              className="notranslate flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer"
               translate="no"
             >
               <div className="relative">
                 <Image
                   src="/logo.webp"
                   alt="Swarvo AI"
-                  width={28}
-                  height={28}
-                  className="rounded-lg object-cover ring-1 ring-primary/25 dark:invert"
+                  width={36}
+                  height={36}
+                  className="rounded-xl object-cover dark:invert"
                   unoptimized
                 />
               </div>
-              <span className="text-sm font-bold tracking-tight text-foreground">
+              <span className="text-sm font-bold tracking-tight text-white">
                 Swarvo AI
               </span>
             </Link>
@@ -353,23 +357,25 @@ export function AppSidebar() {
 
           {/* Collapsed: just the logo icon */}
           {isCollapsed && (
-            <div className="mx-auto">
-              <Image
-                src="/logo.webp"
-                alt="Swarvo AI"
-                width={24}
-                height={24}
-                className="rounded-md object-cover dark:invert"
-                unoptimized
-              />
+            <div className="mx-auto cursor-pointer hover:opacity-90 transition-opacity">
+              <Link href="/">
+                <Image
+                  src="/logo.webp"
+                  alt="Swarvo AI"
+                  width={36}
+                  height={36}
+                  className="rounded-xl object-cover dark:invert"
+                  unoptimized
+                />
+              </Link>
             </div>
           )}
 
-          <SidebarTrigger className={cn("h-7 w-7 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors", isCollapsed && "mx-auto mt-1")}>
+          <SidebarTrigger className={cn("h-8 w-8 rounded-xl hover:bg-white/5 border border-transparent text-[#626266] hover:text-white transition-colors flex items-center justify-center", isCollapsed && "mx-auto mt-1")}>
             {isCollapsed ? (
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight className="h-4 w-4" />
             ) : (
-              <ChevronLeft className="h-3.5 w-3.5" />
+              <ChevronLeft className="h-4 w-4" />
             )}
           </SidebarTrigger>
         </div>
