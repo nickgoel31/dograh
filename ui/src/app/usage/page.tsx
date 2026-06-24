@@ -326,14 +326,17 @@ export default function UsagePage() {
     };
 
     return (
-        <div className="container mx-auto p-6 space-y-6 max-w-[1600px] w-full text-zinc-300">
-            <div className="fade-in-up">
-                <div className="flex justify-between items-start page-header border-b border-[#1d1d22]/50 pb-6 mb-6">
+        <div className="max-w-[1600px] mx-auto w-full p-6 space-y-6 animate-fade-in">
+            <div>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#1d1d22]/50 pb-6 mb-6">
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-white mb-1.5">Agent Runs</h1>
-                        <p className="text-xs text-zinc-500 leading-relaxed">See all your Agent Runs across all Voice Agents. You can use filters to find specific runs.</p>
+                        <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+                            <Database className="h-6 w-6 text-[#7c3aed]" />
+                            Agent Runs
+                        </h1>
+                        <p className="text-xs text-zinc-500 mt-1">See all your Agent Runs across all Voice Agents. You can use filters to find specific runs.</p>
                     </div>
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2">
                         <Globe className="h-4 w-4 text-zinc-500" />
                         <div className="w-[300px]">
                             <TimezoneSelect
@@ -348,26 +351,26 @@ export default function UsagePage() {
                                         minHeight: '36px',
                                         fontSize: '12px',
                                         backgroundColor: '#08080a',
-                                        borderColor: state.isFocused ? '#7c3aed' : '#1d1d22',
+                                        borderColor: state.isFocused ? '#2c2c35' : '#1d1d22',
+                                        borderRadius: '0.75rem',
                                         boxShadow: 'none',
-                                        borderRadius: '12px',
                                         color: '#ffffff',
                                         '&:hover': {
-                                            borderColor: '#1d1d22',
+                                            borderColor: '#2c2c35',
                                         },
                                     }),
                                     menu: (base) => ({
                                         ...base,
                                         zIndex: 9999,
                                         backgroundColor: '#111113',
-                                        border: '1px solid #232328',
-                                        borderRadius: '12px',
-                                        boxShadow: 'none',
+                                        border: '1px solid #1d1d22',
+                                        borderRadius: '0.75rem',
+                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
                                     }),
                                     menuList: (base) => ({
                                         ...base,
                                         backgroundColor: '#111113',
-                                        padding: 0,
+                                        padding: '4px',
                                     }),
                                     option: (base, state) => ({
                                         ...base,
@@ -378,6 +381,7 @@ export default function UsagePage() {
                                             : '#111113',
                                         color: '#ffffff',
                                         fontSize: '12px',
+                                        borderRadius: '0.5rem',
                                         cursor: 'pointer',
                                         '&:active': {
                                             backgroundColor: '#1c1c1f',
@@ -487,7 +491,7 @@ export default function UsagePage() {
                                             <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
-                                    <TableBody>
+                                    <TableBody className="divide-y divide-[#1d1d22]/50">
                                         {usageHistory.runs.map((run) => (
                                             <TableRow
                                                 key={run.id}
@@ -518,202 +522,7 @@ export default function UsagePage() {
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-zinc-400 text-xs py-3.5">{formatDateTime(run.created_at)}</TableCell>
-                                                <TableCell className="text-right text-zinc-300 text-xs py-3.5 text-semibold">
-                                                    {formatDuration(run.call_duration_seconds)}
-                                                </TableCell>
-                                                <TableCell className="text-right font-medium text-white py-3.5">
-                                                    {organizationPricing?.price_per_second_usd && run.charge_usd !== undefined && run.charge_usd !== null
-                                                        ? `$${run.charge_usd.toFixed(2)}`
-                                                        : run.dograh_token_usage.toLocaleString()
-                                                    }
-                                                </TableCell>
-                                                <TableCell className="py-3.5">
-                                                    <MediaPreviewButton
-                                                        recordingUrl={run.recording_url}
-                                                        transcriptUrl={run.transcript_url}
-                                                        runId={run.id}
-                                                        onOpenPreview={mediaPreview.openPreview}
-                                                    />
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-
-                            {/* Summary */}
-                            {appliedFilters.length > 0 && (
-                                <div className="mt-4 p-4 bg-[#08080a] border border-[#1d1d22] rounded-xl text-xs">
-                                    <p className="text-xs text-zinc-400">
-                                        Total for filtered period: <span className="font-bold text-white">
-                                            {usageHistory.total_dograh_tokens.toLocaleString()} Tokens
-                                        </span>
-                                        {' • '}
-                                        <span className="font-bold text-white">
-                                            {formatDuration(usageHistory.total_duration_seconds)}
-                                        </span>
-                                    </p>
-                                </div>
-                            )}
-
-                            {/* Pagination */}
-                            {usageHistory.total_pages > 1 && (
-                                <div className="flex items-center justify-between mt-6">
-                                    <p className="text-xs text-zinc-500">
-                                        Page {usageHistory.page} of {usageHistory.total_pages} ({usageHistory.total_count} total runs)
-                                    </p>
-                                    <div className="flex gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handlePageChange(currentPage - 1)}
-                                            disabled={currentPage === 1}
-                                            className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white rounded-xl text-xs font-bold px-3 py-1.5 h-8 transition-all cursor-pointer"
-                                        >
-                                            <ChevronLeft className="h-3.5 w-3.5 mr-1" />
-                                            Previous
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handlePageChange(currentPage + 1)}
-                                            disabled={currentPage === usageHistory.total_pages}
-                                            className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white rounded-xl text-xs font-bold px-3 py-1.5 h-8 transition-all cursor-pointer"
-                                        >
-                                            Next
-                                            <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
-                        </>
-                    ) : (
-                                        color: '#71717a',
-                                    }),
-                                    indicatorSeparator: (base) => ({
-                                        ...base,
-                                        backgroundColor: '#1d1d22',
-                                    }),
-                                    dropdownIndicator: (base) => ({
-                                        ...base,
-                                        color: '#71717a',
-                                        '&:hover': {
-                                            color: '#ffffff',
-                                        },
-                                    }),
-                                }}
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Daily Usage Table - Only for paid organizations */}
-            {organizationPricing?.price_per_second_usd && (
-                <div className="mb-6 fade-in-up" style={{ animationDelay: '0.2s' }}>
-                    <DailyUsageTable
-                        data={dailyUsage}
-                        isLoading={isLoadingDaily}
-                    />
-                </div>
-            )}
-
-            {/* Filter Builder */}
-            <div className="mb-6 space-y-3 fade-in-up" style={{ animationDelay: '0.3s' }}>
-                <FilterBuilder
-                    availableAttributes={usageFilterAttributes}
-                    activeFilters={activeFilters}
-                    onFiltersChange={handleFiltersChange}
-                    onApplyFilters={handleApplyFilters}
-                    onClearFilters={handleClearFilters}
-                    isExecuting={isExecutingFilters}
-                />
-                {appliedFilters.length > 0 && (
-                    <div className="flex justify-end">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleDownloadReport}
-                            disabled={isDownloadingReport}
-                            className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white rounded-xl text-xs font-bold px-3.5 py-1.5 h-8 transition-all cursor-pointer"
-                        >
-                            <Download className="h-3.5 w-3.5 mr-1.5" />
-                            {isDownloadingReport ? 'Preparing...' : 'Download Filtered Results'}
-                        </Button>
-                    </div>
-                )}
-            </div>
-
-            {/* Usage History */}
-            <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl shadow-none overflow-hidden p-0 fade-in-up" style={{ animationDelay: '0.4s' }}>
-                <CardHeader className="border-b border-[#1d1d22]/50 p-6 pb-5 mb-5">
-                    <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                            <CardTitle className="text-base font-bold text-white">All Runs</CardTitle>
-                            <CardDescription className="text-xs text-zinc-500 mt-1">
-                                Every agent run across your organization, with usage details
-                            </CardDescription>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-6 pt-0">
-                    {isLoadingHistory ? (
-                        <div className="animate-pulse space-y-3">
-                            {[...Array(5)].map((_, i) => (
-                                <div key={i} className="h-12 bg-muted rounded"></div>
-                            ))}
-                        </div>
-                    ) : usageHistory && usageHistory.runs.length > 0 ? (
-                        <>
-                            <div className="rounded-2xl border border-[#1d1d22] overflow-hidden shadow-none">
-                                <Table className="w-full text-left text-xs border-collapse">
-                                    <TableHeader className="bg-[#18181b]/20 border-b border-[#1d1d22]">
-                                        <TableRow className="border-none hover:bg-transparent">
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Run ID</TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Agent Name</TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Call Type</TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Phone Number</TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Disposition</TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Date</TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11 text-right">Duration</TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11 text-right">
-                                                {organizationPricing?.price_per_second_usd ? 'Cost (USD)' : 'Tokens'}
-                                            </TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {usageHistory.runs.map((run) => (
-                                            <TableRow
-                                                key={run.id}
-                                                className="hover:bg-[#1a1a1f]/60 transition-colors border-b border-[#1d1d22]/50"
-                                            >
-                                                <TableCell
-                                                    className="font-mono text-xs cursor-pointer hover:underline text-zinc-500 hover:text-white py-3.5"
-                                                    onClick={() => handleRowClick(run)}
-                                                >
-                                                    #{run.id}
-                                                </TableCell>
-                                                <TableCell className="text-white font-semibold py-3.5">{run.workflow_name || 'Unknown'}</TableCell>
-                                                <TableCell className="py-3.5">
-                                                    <CallTypeCell mode={run.mode} callType={run.call_type} />
-                                                </TableCell>
-                                                <TableCell className="text-zinc-300 text-xs py-3.5">
-                                                    {(run.call_type === 'inbound'
-                                                        ? run.caller_number
-                                                        : run.called_number) || '-'}
-                                                </TableCell>
-                                                <TableCell className="py-3.5">
-                                                    {run.disposition ? (
-                                                        <Badge variant="outline" className="bg-[#1c1c1f] text-zinc-400 border border-zinc-700/50 text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
-                                                            {run.disposition}
-                                                        </Badge>
-                                                    ) : (
-                                                        <span className="text-xs text-zinc-500">-</span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="text-zinc-400 text-xs py-3.5">{formatDateTime(run.created_at)}</TableCell>
-                                                <TableCell className="text-right text-zinc-300 text-xs py-3.5 text-semibold">
+                                                <TableCell className="text-right text-zinc-300 text-xs py-3.5 font-semibold">
                                                     {formatDuration(run.call_duration_seconds)}
                                                 </TableCell>
                                                 <TableCell className="text-right font-medium text-white py-3.5">
