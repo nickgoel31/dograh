@@ -15,10 +15,10 @@ export default function ServiceConfiguration({ docsUrl }: ServiceConfigurationPr
     return (
         <div className="w-full">
             {docsUrl && (
-                <p className="text-xs text-muted-foreground mb-5">
+                <p className="text-xs text-[#a1a1aa] mb-5 leading-relaxed">
                     Configure AI model, voice, and transcription services.{" "}
-                    <a href={docsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-primary hover:underline">
-                        Learn more <ExternalLink className="h-3 w-3" />
+                    <a href={docsUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline-flex items-center gap-0.5">
+                        Learn more <ExternalLink className="w-3 h-3 inline" />
                     </a>
                 </p>
             )}

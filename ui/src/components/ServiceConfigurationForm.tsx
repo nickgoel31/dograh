@@ -489,17 +489,17 @@ export function ServiceConfigurationForm({
             <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label>Provider</Label>
+                        <Label className="text-xs font-bold text-zinc-300 block mb-1.5">Provider</Label>
                         <Select
                             value={currentProvider}
                             onValueChange={(providerName) => {
                                 handleProviderChange(service, providerName);
                             }}
                         >
-                            <SelectTrigger className="w-full">
+                            <SelectTrigger className="w-full bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all">
                                 <SelectValue placeholder="Select provider" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-[#111113] border border-[#1d1d22] text-white">
                                 {availableProviders.map((provider) => (
                                     <SelectItem key={provider} value={provider}>
                                         {getProviderDisplayName(provider, schemas?.[service]?.[provider])}
@@ -508,16 +508,16 @@ export function ServiceConfigurationForm({
                             </SelectContent>
                         </Select>
                         {(providerSchema?.description || providerSchema?.provider_docs_url) && (
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
                                 {providerSchema?.description}{" "}
                                 {providerSchema?.provider_docs_url && (
                                     <a
                                         href={providerSchema.provider_docs_url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-0.5 underline"
+                                        className="inline-flex items-center gap-0.5 text-blue-400 hover:underline"
                                     >
-                                        Learn more <ExternalLink className="h-3 w-3" />
+                                        Learn more <ExternalLink className="h-3 w-3 inline" />
                                     </a>
                                 )}
                             </p>
@@ -526,7 +526,7 @@ export function ServiceConfigurationForm({
 
                     {currentProvider && providerSchema && configFields[0] && (
                         <div className="space-y-2">
-                            <Label className="capitalize">{configFields[0].replace(/_/g, ' ')}</Label>
+                            <Label className="capitalize text-xs font-bold text-zinc-300 block mb-1.5">{configFields[0].replace(/_/g, ' ')}</Label>
                             {renderField(service, configFields[0], providerSchema)}
                         </div>
                     )}
@@ -542,7 +542,7 @@ export function ServiceConfigurationForm({
                             const fullWidth = actualFieldSchema?.multiline;
                             return (
                                 <div key={field} className={`space-y-2 ${fullWidth ? "col-span-2" : ""}`}>
-                                    <Label className="capitalize">{field.replace(/_/g, ' ')}</Label>
+                                    <Label className="capitalize text-xs font-bold text-zinc-300 block mb-1.5">{field.replace(/_/g, ' ')}</Label>
                                     {renderField(service, field, providerSchema)}
                                 </div>
                             );
@@ -552,14 +552,15 @@ export function ServiceConfigurationForm({
 
                 {currentProvider && providerSchema && providerSchema.properties.api_key && (
                     <div className="space-y-2">
-                        <Label>{mode === 'override' ? 'API Key (leave empty to use global)' : 'API Key(s)'}</Label>
+                        <Label className="text-xs font-bold text-zinc-300 block mb-1.5">{mode === 'override' ? 'API Key (leave empty to use global)' : 'API Key(s)'}</Label>
                         {renderFieldDescription("api_key", providerSchema)}
                         {apiKeys[service].map((key, index) => (
-                            <div key={index} className="flex gap-2">
+                            <div key={index} className="flex gap-2 mt-1">
                                 <Input
                                     type="text"
                                     placeholder="Enter API key"
                                     value={key}
+                                    className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all font-mono"
                                     onChange={(e) => {
                                         const newKeys = [...apiKeys[service]];
                                         newKeys[index] = e.target.value;
@@ -570,8 +571,7 @@ export function ServiceConfigurationForm({
                                     <Button
                                         type="button"
                                         variant="ghost"
-                                        size="icon"
-                                        className="shrink-0"
+                                        className="p-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-rose-400 transition-colors shrink-0"
                                         onClick={() => {
                                             setApiKeys(prev => ({
                                                 ...prev,
@@ -587,8 +587,7 @@ export function ServiceConfigurationForm({
                         {mode !== 'override' && (
                             <Button
                                 type="button"
-                                variant="outline"
-                                size="sm"
+                                className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors mt-2"
                                 onClick={() => {
                                     setApiKeys(prev => ({
                                         ...prev,
@@ -596,7 +595,7 @@ export function ServiceConfigurationForm({
                                     }));
                                 }}
                             >
-                                <Plus className="h-4 w-4 mr-1" /> Add API Key
+                                <Plus className="h-4 w-4 mr-1 inline" /> Add API Key
                             </Button>
                         )}
                     </div>
@@ -613,16 +612,16 @@ export function ServiceConfigurationForm({
             : schema;
         if (!actualSchema?.description && !actualSchema?.docs_url) return null;
         return (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
                 {actualSchema?.description}{" "}
                 {actualSchema?.docs_url && (
                     <a
                         href={actualSchema.docs_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-0.5 underline"
+                        className="inline-flex items-center gap-0.5 text-blue-400 hover:underline"
                     >
-                        Supported languages <ExternalLink className="h-3 w-3" />
+                        Supported languages <ExternalLink className="h-3 w-3 inline" />
                     </a>
                 )}
             </p>
@@ -672,6 +671,7 @@ export function ServiceConfigurationForm({
                             type="text"
                             placeholder={`Enter ${field}`}
                             value={currentValue}
+                            className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
                             onChange={(e) => {
                                 setValue(fieldKey, e.target.value, { shouldDirty: true });
                             }}
@@ -680,6 +680,7 @@ export function ServiceConfigurationForm({
                             <Checkbox
                                 id={`custom-input-${fieldKey}`}
                                 checked={true}
+                                className="rounded bg-[#08080a] border-[#1d1d22] text-[#6366f1] focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5"
                                 onCheckedChange={(checked) => {
                                     setIsCustomInput(prev => ({ ...prev, [fieldKey]: checked as boolean }));
                                     if (!checked && options.length > 0) {
@@ -687,7 +688,7 @@ export function ServiceConfigurationForm({
                                     }
                                 }}
                             />
-                            <Label htmlFor={`custom-input-${fieldKey}`} className="text-sm font-normal cursor-pointer">
+                            <Label htmlFor={`custom-input-${fieldKey}`} className="text-xs text-zinc-300 cursor-pointer">
                                 Enter Custom Value
                             </Label>
                         </div>
@@ -704,10 +705,10 @@ export function ServiceConfigurationForm({
                             setValue(fieldKey, value, { shouldDirty: true });
                         }}
                     >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all">
                             <SelectValue placeholder={`Select ${field}`} />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-[#111113] border border-[#1d1d22] text-white">
                             {options.map((value: string) => (
                                 <SelectItem key={value} value={value}>
                                     {value}
@@ -719,11 +720,12 @@ export function ServiceConfigurationForm({
                         <Checkbox
                             id={`custom-input-${fieldKey}-dropdown`}
                             checked={false}
+                            className="rounded bg-[#08080a] border-[#1d1d22] text-[#6366f1] focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5"
                             onCheckedChange={(checked) => {
                                 setIsCustomInput(prev => ({ ...prev, [fieldKey]: checked as boolean }));
                             }}
                         />
-                        <Label htmlFor={`custom-input-${fieldKey}-dropdown`} className="text-sm font-normal cursor-pointer">
+                        <Label htmlFor={`custom-input-${fieldKey}-dropdown`} className="text-xs text-zinc-300 cursor-pointer">
                             Enter Custom Value
                         </Label>
                     </div>
@@ -759,10 +761,10 @@ export function ServiceConfigurationForm({
                         setValue(`${service}_${field}`, value, { shouldDirty: true });
                     }}
                 >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all">
                         <SelectValue placeholder={`Select ${field}`} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-[#111113] border border-[#1d1d22] text-white">
                         {dropdownOptions.map((value: string) => (
                             <SelectItem key={value} value={value}>
                                 {getDisplayName(value)}
@@ -777,7 +779,7 @@ export function ServiceConfigurationForm({
             return (
                 <Textarea
                     rows={6}
-                    className="font-mono text-xs"
+                    className="bg-[#08080a] border border-[#1d1d22] rounded-xl p-2.5 text-[10px] text-zinc-400 leading-relaxed resize-none focus:outline-none focus:border-zinc-700 font-mono"
                     placeholder={`Enter ${field}`}
                     {...register(`${service}_${field}`, {
                         required: service !== "embeddings" && providerSchema.required?.includes(field),
@@ -791,6 +793,7 @@ export function ServiceConfigurationForm({
                 type={actualSchema?.type === "number" ? "number" : "text"}
                 {...(actualSchema?.type === "number" && { step: "any" })}
                 placeholder={`Enter ${field}`}
+                className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
                 {...register(`${service}_${field}`, {
                     required: service !== "embeddings" && providerSchema.required?.includes(field),
                     valueAsNumber: actualSchema?.type === "number"
@@ -810,13 +813,13 @@ export function ServiceConfigurationForm({
         const globalProviderSchema = globalProvider ? schemas?.[service]?.[globalProvider] : undefined;
 
         return (
-            <div className="flex items-center justify-between p-3 border rounded-md bg-muted/20 mb-4">
+            <div className="flex items-center justify-between p-4 bg-[#08080a] border border-[#1d1d22] rounded-xl mb-4">
                 <div className="space-y-0.5">
-                    <Label htmlFor={`override-${service}`} className="text-sm cursor-pointer font-medium">
+                    <Label htmlFor={`override-${service}`} className="text-sm cursor-pointer font-semibold text-zinc-200">
                         Override {label}
                     </Label>
                     {!isEnabled && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
                             Using global: {getGlobalSummary(globalVal, globalProviderSchema)}
                         </p>
                     )}
@@ -843,12 +846,12 @@ export function ServiceConfigurationForm({
     return (
         <form onSubmit={handleSubmit(onSubmit)}>
             {/* Realtime toggle */}
-            <div className="flex items-center justify-between mb-4 p-4 border rounded-lg">
+            <div className="flex items-center justify-between mb-6 p-6 bg-[#111113] border border-[#1d1d22] rounded-2xl">
                 <div>
-                    <Label htmlFor="realtime-toggle" className="text-sm font-medium">
+                    <Label htmlFor="realtime-toggle" className="text-sm font-semibold text-zinc-200">
                         Realtime Mode
                     </Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
                         Uses a single speech-to-speech model (no separate STT/TTS). An LLM is still required for variable extraction and QA.
                     </p>
                 </div>
@@ -859,12 +862,12 @@ export function ServiceConfigurationForm({
                 />
             </div>
 
-            <Card>
-                <CardContent className="pt-6">
+            <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 shadow-none">
+                <CardContent className="p-0">
                     <Tabs key={defaultTab} defaultValue={defaultTab} className="w-full">
-                        <TabsList className="grid w-full mb-6" style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, 1fr)` }}>
+                        <TabsList className="grid w-full mb-6 bg-[#08080a] border border-[#1d1d22] p-1 rounded-xl flex gap-1 h-auto" style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, 1fr)` }}>
                             {visibleTabs.map(({ key, label }) => (
-                                <TabsTrigger key={key} value={key}>
+                                <TabsTrigger key={key} value={key} className="data-[state=active]:bg-[#1f1f24] data-[state=active]:text-white text-zinc-500 hover:text-[#d4d4d8] py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer">
                                     {label}
                                 </TabsTrigger>
                             ))}
@@ -880,9 +883,9 @@ export function ServiceConfigurationForm({
                 </CardContent>
             </Card>
 
-            {apiError && <p className="text-red-500 mt-4">{apiError}</p>}
+            {apiError && <p className="text-red-400 mt-4 text-xs font-semibold">{apiError}</p>}
 
-            <Button type="submit" className="w-full mt-6" disabled={isSaving}>
+            <Button type="submit" className="w-full mt-6 bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer" disabled={isSaving}>
                 {isSaving ? "Saving..." : (submitLabel || "Save Configuration")}
             </Button>
         </form>
