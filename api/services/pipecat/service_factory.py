@@ -105,7 +105,7 @@ def create_stt_service(
                     except Exception as e:
                         logger.warning(f"Failed to resolve language hint {language}: {e}")
 
-            return DeepgramFluxSTTService(
+            service = DeepgramFluxSTTService(
                 api_key=user_config.stt.api_key,
                 settings=DeepgramFluxSTTSettings(
                     model=user_config.stt.model,
@@ -118,6 +118,20 @@ def create_stt_service(
                 should_interrupt=False,  # Let UserAggregator take care of sending InterruptionFrame
                 sample_rate=audio_config.transport_in_sample_rate,
             )
+
+            @service.event_handler("on_update")
+            async def on_update(service, transcript):
+                from pipecat.frames.frames import InterimTranscriptionFrame
+                from pipecat.utils.time import time_now_iso8601
+                await service.push_frame(
+                    InterimTranscriptionFrame(
+                        text=transcript,
+                        user_id=service._user_id,
+                        timestamp=time_now_iso8601(),
+                    )
+                )
+
+            return service
 
         # Other models than flux
         # Use language from user config, defaulting to "multi" for multilingual support
