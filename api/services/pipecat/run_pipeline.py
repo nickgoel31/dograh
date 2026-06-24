@@ -618,7 +618,7 @@ async def _run_pipeline(
         # Other models use configurable turn detection strategy
         is_deepgram_flux = (
             user_config.stt.provider == ServiceProviders.DEEPGRAM.value
-            and user_config.stt.model == "flux-general-en"
+            and user_config.stt.model in ("flux-general-en", "flux-general-multi")
         )
 
         if is_deepgram_flux:

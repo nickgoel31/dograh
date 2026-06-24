@@ -1303,12 +1303,25 @@ class DeepgramSTTConfiguration(BaseSTTConfiguration):
     )
     language: str = Field(
         default="multi",
-        description="Language code; 'multi' enables auto-detect (Nova-3 only).",
+        description="Language code; 'multi' enables auto-detect (Nova-3 and Flux-multi only).",
         json_schema_extra={
             "examples": DEEPGRAM_LANGUAGES,
             "model_options": {
                 "nova-3-general": DEEPGRAM_LANGUAGES,
                 "flux-general-en": ("en",),
+                "flux-general-multi": (
+                    "multi",
+                    "en",
+                    "es",
+                    "fr",
+                    "de",
+                    "hi",
+                    "ru",
+                    "pt",
+                    "ja",
+                    "it",
+                    "nl",
+                ),
             },
         },
     )
