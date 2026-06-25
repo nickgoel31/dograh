@@ -69,7 +69,7 @@ server {
     location /voice-audio/ {
         resolver 127.0.0.11 valid=10s;
         set $minio_upstream http://minio:9000;
-        proxy_pass $minio_upstream/voice-audio/;
+        proxy_pass $minio_upstream;
 
         proxy_http_version 1.1;
 
