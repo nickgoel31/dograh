@@ -27,6 +27,7 @@ from pipecat.services.deepgram.flux.stt import (
 from pipecat.services.deepgram.stt import DeepgramSTTService, DeepgramSTTSettings
 from pipecat.services.deepgram.tts import DeepgramTTSService, DeepgramTTSSettings
 from pipecat.services.dograh.llm import DograhLLMService
+from pipecat.services.dograh.flux.stt import DograhFluxSTTService
 from pipecat.services.dograh.stt import DograhSTTService, DograhSTTSettings
 from pipecat.services.dograh.tts import DograhTTSService, DograhTTSSettings
 from pipecat.services.elevenlabs.tts import ElevenLabsTTSService, ElevenLabsTTSSettings
@@ -79,6 +80,17 @@ def _validate_runtime_service_url(url: str, field_name: str) -> None:
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
+
+def dograh_stt_uses_flux_language(language: str | None) -> bool:
+    language = language or "multi"
+    return language in ("multi", "ar", "da", "nl", "en", "en-US", "en-AU", "en-GB", "en-IN", "en-NZ", "es", "es-419", "fr", "fr-CA", "de", "hi", "id", "it", "ja", "ko", "ko-KR", "nl", "pl", "pt", "pt-BR", "pt-PT", "ru", "sv", "sv-SE", "ta", "tr", "uk")
+
+def stt_uses_flux_turns(user_config) -> bool:
+    if user_config.stt.provider == ServiceProviders.DEEPGRAM.value:
+        return user_config.stt.model in ("flux-general-en", "flux-general-multi")
+    if user_config.stt.provider == ServiceProviders.DOGRAH.value:
+        return dograh_stt_uses_flux_language(getattr(user_config.stt, "language", None))
+    return False
 
 def create_stt_service(
     user_config, audio_config: "AudioConfig", keyterms: list[str] | None = None
@@ -199,6 +211,30 @@ def create_stt_service(
     elif user_config.stt.provider == ServiceProviders.DOGRAH.value:
         base_url = MPS_API_URL.replace("http://", "ws://").replace("https://", "wss://")
         language = getattr(user_config.stt, "language", None) or "multi"
+
+        if dograh_stt_uses_flux_language(language):
+            settings_kwargs = {
+                "model": "flux-general-multi",
+                "eot_timeout_ms": 3000,
+                "eot_threshold": 0.7,
+                "eager_eot_threshold": 0.5,
+                "keyterm": keyterms or [],
+            }
+            if language != "multi":
+                try:
+                    from pipecat.transcriptions.language import Language
+                    settings_kwargs["language_hints"] = [Language(language)]
+                except Exception as e:
+                    logger.warning(f"Failed to resolve language hint {language}: {e}")
+
+            return DograhFluxSTTService(
+                base_url=base_url,
+                api_key=user_config.stt.api_key,
+                settings=DeepgramFluxSTTSettings(**settings_kwargs),
+                should_interrupt=False,
+                sample_rate=audio_config.transport_in_sample_rate,
+            )
+
         return DograhSTTService(
             base_url=base_url,
             api_key=user_config.stt.api_key,

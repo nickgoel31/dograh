@@ -614,14 +614,11 @@ async def _run_pipeline(
             user_config.realtime.provider
         )
     else:
-        # Deepgram Flux uses external turn detection (VAD + External start/stop)
-        # Other models use configurable turn detection strategy
-        is_deepgram_flux = (
-            user_config.stt.provider == ServiceProviders.DEEPGRAM.value
-            and user_config.stt.model in ("flux-general-en", "flux-general-multi")
-        )
-
-        if is_deepgram_flux:
+        # Deepgram Flux and supported Dograh managed Flux languages emit their
+        # own turn boundaries, so the aggregator follows those external signals.
+        # Other models use configurable turn detection.
+        from api.services.pipecat.service_factory import stt_uses_flux_turns
+        if stt_uses_flux_turns(user_config):
             user_turn_strategies = UserTurnStrategies(
                 start=[
                     VADUserTurnStartStrategy(),
