@@ -435,7 +435,7 @@ export default function TelephonyConfigurationDetailPage() {
         open={!!phoneDeleteTarget}
         onOpenChange={(o) => !o && setPhoneDeleteTarget(null)}
       >
-        <AlertDialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white">
+        <AlertDialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 text-white">
           <AlertDialogHeader className="space-y-1">
             <AlertDialogTitle className="text-lg font-bold text-white">Delete phone number?</AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-zinc-500 leading-relaxed">

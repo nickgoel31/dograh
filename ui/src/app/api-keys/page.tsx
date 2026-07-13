@@ -561,7 +561,7 @@ export default function APIKeysPage() {
 
         {/* Create API Key Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white">
+            <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 text-white">
                 <DialogHeader className="space-y-1">
                     <DialogTitle className="text-lg font-bold text-white">Create New API Key</DialogTitle>
                     <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
@@ -596,7 +596,7 @@ export default function APIKeysPage() {
 
         {/* Show Created Key Dialog */}
         <Dialog open={showCreatedKeyDialog} onOpenChange={setShowCreatedKeyDialog}>
-            <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white">
+            <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 text-white">
                 <DialogHeader className="space-y-1">
                     <DialogTitle className="text-lg font-bold text-white">API Key Created Successfully</DialogTitle>
                     <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
@@ -639,7 +639,7 @@ export default function APIKeysPage() {
 
         {/* Create Service Key Dialog */}
         <Dialog open={isCreateServiceDialogOpen} onOpenChange={setIsCreateServiceDialogOpen}>
-            <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white">
+            <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 text-white">
                 <DialogHeader className="space-y-1">
                     <DialogTitle className="text-lg font-bold text-white">Create New Service Key</DialogTitle>
                     <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
@@ -674,7 +674,7 @@ export default function APIKeysPage() {
 
         {/* Show Created Service Key Dialog */}
         <Dialog open={showCreatedServiceKeyDialog} onOpenChange={setShowCreatedServiceKeyDialog}>
-            <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white">
+            <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 text-white">
                 <DialogHeader className="space-y-1">
                     <DialogTitle className="text-lg font-bold text-white">Service Key Created Successfully</DialogTitle>
                     <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
