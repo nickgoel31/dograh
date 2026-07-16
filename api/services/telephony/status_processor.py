@@ -135,8 +135,9 @@ async def _process_status_update(workflow_run_id: int, status: StatusCallbackReq
     workflow_run = await db_client.get_workflow_run_by_id(workflow_run_id)
     if not workflow_run:
         logger.warning(
-            f"[run {workflow_run_id}] Workflow run not found in status update"
+            f"[run {workflow_run_id}] Workflow run not found in status update. Releasing slots anyway."
         )
+        await campaign_call_dispatcher.release_call_slot(workflow_run_id)
         return
 
     telephony_callback_logs = workflow_run.logs.get("telephony_status_callbacks", [])

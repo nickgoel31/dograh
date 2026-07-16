@@ -186,7 +186,7 @@ export function PhoneNumberDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 relative shadow-2xl space-y-6 text-white">
+      <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 text-white">
         <DialogHeader className="space-y-1">
           <DialogTitle className="text-lg font-bold text-white">
             {isEdit ? "Edit phone number" : "Add phone number"}
