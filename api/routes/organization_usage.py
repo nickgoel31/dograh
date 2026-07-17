@@ -97,7 +97,7 @@ class DailyUsageBreakdownResponse(BaseModel):
 
 
 @router.get("/usage/current-period", response_model=CurrentUsageResponse)
-async def get_current_period_usage(user: UserModel = Depends(require_role([UserRole.ADMIN]))):
+async def get_current_period_usage(user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT]))):
     """Get current billing period usage for the user's organization."""
     if not user.selected_organization_id:
         raise HTTPException(status_code=400, detail="No organization selected")
@@ -110,7 +110,7 @@ async def get_current_period_usage(user: UserModel = Depends(require_role([UserR
 
 
 @router.get("/usage/mps-credits", response_model=MPSCreditsResponse)
-async def get_mps_credits(user: UserModel = Depends(require_role([UserRole.ADMIN]))):
+async def get_mps_credits(user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT]))):
     """Get aggregated usage and quota from MPS.
 
     OSS users: queries by provider_id (created_by).
@@ -192,7 +192,7 @@ async def get_usage_history(
             '[{"attribute":"dispositionCode","type":"multiSelect","value":{"codes":["XFER","DNC"]}}]',
         ],
     ),
-    user: UserModel = Depends(require_role([UserRole.ADMIN])),
+    user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT])),
 ):
     """Get paginated workflow runs with usage for the organization."""
     if not user.selected_organization_id:
@@ -262,7 +262,7 @@ async def download_usage_runs_report(
         None,
         description=FILTERS_DESCRIPTION,
     ),
-    user: UserModel = Depends(require_role([UserRole.ADMIN])),
+    user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT])),
 ) -> StreamingResponse:
     """Download a CSV of runs matching the same filters as `/usage/runs`."""
     if not user.selected_organization_id:
@@ -295,7 +295,7 @@ async def download_usage_runs_report(
 @router.get("/usage/daily-breakdown", response_model=DailyUsageBreakdownResponse)
 async def get_daily_usage_breakdown(
     days: int = Query(7, ge=1, le=30, description="Number of days to include"),
-    user: UserModel = Depends(require_role([UserRole.ADMIN])),
+    user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT])),
 ):
     """Get daily usage breakdown for the last N days. Only available for organizations with pricing."""
     if not user.selected_organization_id:
