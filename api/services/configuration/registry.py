@@ -1009,7 +1009,7 @@ class CartesiaTTSConfiguration(BaseTTSConfiguration):
     model_config = CARTESIA_PROVIDER_MODEL_CONFIG
     provider: Literal[ServiceProviders.CARTESIA] = ServiceProviders.CARTESIA
     model: str = Field(
-        default="sonic-3",
+        default="sonic-3.5",
         description="Cartesia TTS model.",
         json_schema_extra={"examples": CARTESIA_TTS_MODELS},
     )
@@ -1023,6 +1023,26 @@ class CartesiaTTSConfiguration(BaseTTSConfiguration):
         ge=0.5,
         le=2.0,
         description="Volume multiplier for generated speech.",
+    )
+    emotion: Union[str, None] = Field(
+        default=None,
+        description="Emotional tone of the voice.",
+        json_schema_extra={
+            "examples": [
+                "neutral", "happy", "excited", "enthusiastic", "elated", "euphoric",
+                "triumphant", "amazed", "surprised", "flirtatious", "curious",
+                "content", "peaceful", "serene", "calm", "grateful", "affectionate",
+                "trust", "sympathetic", "anticipation", "mysterious", "angry", "mad",
+                "outraged", "frustrated", "agitated", "threatened", "disgusted",
+                "contempt", "envious", "sarcastic", "ironic", "sad", "dejected",
+                "melancholic", "disappointed", "hurt", "guilty", "bored", "tired",
+                "rejected", "nostalgic", "wistful", "apologetic", "hesitant",
+                "insecure", "confused", "resigned", "anxious", "panicked",
+                "alarmed", "scared", "proud", "confident", "distant", "skeptical",
+                "contemplative", "determined"
+            ],
+            "allow_custom_input": True,
+        }
     )
 
 
