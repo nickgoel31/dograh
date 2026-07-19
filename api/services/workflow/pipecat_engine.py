@@ -80,6 +80,7 @@ class PipecatEngine:
         embeddings_api_version: Optional[str] = None,
         has_recordings: bool = False,
         context_compaction_enabled: bool = False,
+        add_cartesia_instructions: bool = False,
     ):
         self.task = task
         self.llm = llm
@@ -155,6 +156,7 @@ class PipecatEngine:
             None
         )
         self._last_node_context_hash: str = ""
+        self._add_cartesia_instructions: bool = add_cartesia_instructions
 
     async def _get_organization_id(self) -> Optional[int]:
         """Get and cache the organization ID from workflow run."""
@@ -565,6 +567,7 @@ class PipecatEngine:
                 workflow=self.workflow,
                 format_prompt=self._format_prompt,
                 has_recordings=self._has_recordings,
+                add_cartesia_instructions=self._add_cartesia_instructions,
             )
             # update_llm_context with empty functions list to skip resetting tools
             await self._update_llm_context(system_prompt, [])
@@ -600,6 +603,7 @@ class PipecatEngine:
             workflow=self.workflow,
             format_prompt=self._format_prompt,
             has_recordings=self._has_recordings,
+            add_cartesia_instructions=self._add_cartesia_instructions,
         )
         functions = await compose_functions_for_node(
             node=node,

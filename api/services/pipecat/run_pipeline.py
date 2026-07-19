@@ -544,6 +544,10 @@ async def _run_pipeline(
         logger.info("Disabling context_compaction_enabled for realtime workflow run")
         context_compaction_enabled = False
 
+    add_cartesia_instructions = False
+    if user_config and user_config.tts and getattr(user_config.tts, "provider", "") == "cartesia":
+        add_cartesia_instructions = getattr(user_config.tts, "auto_expressiveness_prompt", True)
+
     engine = PipecatEngine(
         llm=llm,
         inference_llm=inference_llm,
@@ -559,6 +563,7 @@ async def _run_pipeline(
         embeddings_api_version=embeddings_api_version,
         has_recordings=has_recordings,
         context_compaction_enabled=context_compaction_enabled,
+        add_cartesia_instructions=add_cartesia_instructions,
     )
 
     # Create pipeline components

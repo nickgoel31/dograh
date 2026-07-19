@@ -459,21 +459,17 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             gen_config_kwargs["speed"] = speed
         if volume and volume != 1.0:
             gen_config_kwargs["volume"] = volume
-        if emotion:
-            gen_config_kwargs["emotion"] = emotion
-        generation_config = (
-            GenerationConfig(**gen_config_kwargs) if gen_config_kwargs else None
-        )
+        
+        # Always set an emotion to ensure the expressiveness pipeline is fully activated
+        gen_config_kwargs["emotion"] = emotion if emotion else "neutral"
+
+        generation_config = GenerationConfig(**gen_config_kwargs)
         return CartesiaTTSService(
             api_key=user_config.tts.api_key,
             settings=CartesiaTTSSettings(
                 voice=user_config.tts.voice,
                 model=user_config.tts.model,
-                **(
-                    {"generation_config": generation_config}
-                    if generation_config
-                    else {}
-                ),
+                generation_config=generation_config,
             ),
             text_filters=[xml_function_tag_filter],
             skip_aggregator_types=["recording_router", "recording"],

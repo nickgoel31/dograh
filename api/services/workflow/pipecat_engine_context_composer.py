@@ -56,12 +56,28 @@ LANGUAGE & FORMATTING RULES:
 - Spell out numbers, acronyms, and currency phonetically in words (e.g., "bees rupaye" instead of "20 Rs", "ek sau" instead of "100", "ay tee em" instead of "ATM") so the TTS engine pronounces them correctly."""
 
 
+# ---------------------------------------------------------------------------
+# TTS Specific Instructions
+# ---------------------------------------------------------------------------
+
+CARTESIA_TTS_INSTRUCTIONS = """\
+--- TTS EXPRESSIVENESS INSTRUCTIONS ---
+You are speaking through Cartesia Sonic 3.5. Use these inline markers to make speech natural:
+• Non-verbal sounds (insert in brackets): [laughter], [sigh], [breath], [gasp], [hmm]
+• Inline pauses: <break time="0.5s"/>
+• Per-phrase emotion: <emotion value="excited">Text here.</emotion>
+  Valid emotions: neutral, happy, excited, enthusiastic, sad, angry, curious, calm, confident, etc.
+• Per-phrase speed: <speed value="slow">Text here.</speed> or <speed value="fast">
+Use these sparingly and naturally. Match the emotional tone to your content.
+--- END TTS INSTRUCTIONS ---"""
+
 def compose_system_prompt_for_node(
     *,
     node: "Node",
     workflow: "WorkflowGraph",
     format_prompt: Callable[[str], str],
     has_recordings: bool,
+    add_cartesia_instructions: bool = False,
 ) -> str:
     """Compose the full system prompt text for a workflow node.
 
@@ -92,6 +108,9 @@ def compose_system_prompt_for_node(
 
     # Always append the quality and formatting rules for optimal TTS
     parts.append(HINDI_HINGLISH_INSTRUCTIONS)
+
+    if add_cartesia_instructions:
+        parts.append(CARTESIA_TTS_INSTRUCTIONS)
 
     return "\n\n".join(parts)
 
