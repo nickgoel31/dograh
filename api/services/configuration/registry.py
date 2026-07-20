@@ -1044,10 +1044,6 @@ class CartesiaTTSConfiguration(BaseTTSConfiguration):
             "allow_custom_input": True,
         }
     )
-    auto_expressiveness_prompt: bool = Field(
-        default=True,
-        description="Automatically append instructions for non-verbal sounds and emotions to the system prompt.",
-    )
 
 
 @register_tts
