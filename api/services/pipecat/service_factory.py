@@ -897,7 +897,7 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
             "voice": voice or "Puck",
             "context_window_compression": ContextWindowCompressionParams(
                 enabled=True,
-                trigger_tokens=40000,
+                trigger_tokens=8000,  # Compress at 8k tokens (was 40k)
             ),
             "vad": GeminiVADParams(
                 disabled=False,
@@ -928,7 +928,7 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
             "voice": voice or "Charon",
             "context_window_compression": ContextWindowCompressionParams(
                 enabled=True,
-                trigger_tokens=40000,
+                trigger_tokens=8000,  # Compress at 8k tokens (was 40k)
             ),
             "vad": GeminiVADParams(
                 disabled=False,
