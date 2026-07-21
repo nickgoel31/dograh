@@ -67,6 +67,62 @@ class TokenPricingModel(PricingModel):
         return max(total_cost, Decimal("0"))  # Ensure non-negative
 
 
+class MultimodalTokenPricingModel(PricingModel):
+    """Pricing model for multimodal LLM services where audio and text tokens
+    have different rates (e.g. Gemini Live).
+
+    Google Gemini Live bills audio and text tokens separately:
+      - Audio input:  $3.00 / 1M tokens
+      - Text input:   $0.75 / 1M tokens
+      - Audio output: $12.00 / 1M tokens
+      - Text output:  $4.50 / 1M tokens
+
+    The usage dict may carry explicit modality breakdowns under the keys
+    ``audio_input_tokens``, ``text_input_tokens``, ``audio_output_tokens``,
+    and ``text_output_tokens``.  When those are absent the model falls back
+    to the blended ``prompt_tokens`` / ``completion_tokens`` counts, applying
+    the audio rate as a conservative upper-bound estimate.
+    """
+
+    def __init__(
+        self,
+        audio_input_token_price: Decimal,
+        text_input_token_price: Decimal,
+        audio_output_token_price: Decimal,
+        text_output_token_price: Decimal,
+    ):
+        self.audio_input_token_price = audio_input_token_price
+        self.text_input_token_price = text_input_token_price
+        self.audio_output_token_price = audio_output_token_price
+        self.text_output_token_price = text_output_token_price
+
+    def calculate_cost(self, usage: Dict[str, int]) -> Decimal:
+        """Calculate cost using per-modality breakdown when available."""
+        audio_input = usage.get("audio_input_tokens", 0) or 0
+        text_input = usage.get("text_input_tokens", 0) or 0
+        audio_output = usage.get("audio_output_tokens", 0) or 0
+        text_output = usage.get("text_output_tokens", 0) or 0
+
+        if audio_input or text_input or audio_output or text_output:
+            # Explicit modality breakdown — use exact rates
+            cost = (
+                Decimal(audio_input) * self.audio_input_token_price
+                + Decimal(text_input) * self.text_input_token_price
+                + Decimal(audio_output) * self.audio_output_token_price
+                + Decimal(text_output) * self.text_output_token_price
+            )
+        else:
+            # Fallback: no breakdown available — use audio rate as upper bound
+            prompt_tokens = usage.get("prompt_tokens", 0) or 0
+            completion_tokens = usage.get("completion_tokens", 0) or 0
+            cost = (
+                Decimal(prompt_tokens) * self.audio_input_token_price
+                + Decimal(completion_tokens) * self.audio_output_token_price
+            )
+
+        return max(cost, Decimal("0"))
+
+
 class CharacterPricingModel(PricingModel):
     """Pricing model for character-based services (TTS)"""
 

@@ -9,7 +9,7 @@ from typing import Dict
 
 from api.services.configuration.registry import ServiceProviders
 
-from .models import TokenPricingModel
+from .models import MultimodalTokenPricingModel, TokenPricingModel
 
 # LLM pricing registry
 # ---------------------------------------------------------------------------
@@ -157,27 +157,37 @@ LLM_PRICING: Dict[str, Dict[str, TokenPricingModel]] = {
             / 1000000,  # $1.60 per 1M tokens if using data zone
         )
     },
-    # Google Realtime (AI Studio) — Gemini Live audio token pricing
+    # Google Realtime (AI Studio) — Gemini Live, separate audio vs text token rates
+    # Prices from ai.google.dev/gemini-api/docs/pricing (paid tier, July 2025)
+    #   Audio input:  $3.00 / 1M  |  Text input:  $0.75 / 1M
+    #   Audio output: $12.00 / 1M |  Text output: $4.50 / 1M
     ServiceProviders.GOOGLE_REALTIME: {
-        "gemini-3.1-flash-live-preview": TokenPricingModel(
-            prompt_token_price=Decimal("3.00") / 1_000_000,   # $3.00 / 1M audio input tokens
-            completion_token_price=Decimal("12.00") / 1_000_000,  # $12.00 / 1M audio output tokens
+        "gemini-3.1-flash-live-preview": MultimodalTokenPricingModel(
+            audio_input_token_price=Decimal("3.00") / 1_000_000,
+            text_input_token_price=Decimal("0.75") / 1_000_000,
+            audio_output_token_price=Decimal("12.00") / 1_000_000,
+            text_output_token_price=Decimal("4.50") / 1_000_000,
         ),
-        # Default fallback for any other Gemini Live (AI Studio) model
-        "default": TokenPricingModel(
-            prompt_token_price=Decimal("3.00") / 1_000_000,
-            completion_token_price=Decimal("12.00") / 1_000_000,
+        "default": MultimodalTokenPricingModel(
+            audio_input_token_price=Decimal("3.00") / 1_000_000,
+            text_input_token_price=Decimal("0.75") / 1_000_000,
+            audio_output_token_price=Decimal("12.00") / 1_000_000,
+            text_output_token_price=Decimal("4.50") / 1_000_000,
         ),
     },
-    # Google Vertex Realtime — Gemini Live on Vertex AI (native audio)
+    # Google Vertex Realtime — Gemini Live on Vertex AI (same rate structure)
     ServiceProviders.GOOGLE_VERTEX_REALTIME: {
-        "google/gemini-live-2.5-flash-native-audio": TokenPricingModel(
-            prompt_token_price=Decimal("3.00") / 1_000_000,
-            completion_token_price=Decimal("12.00") / 1_000_000,
+        "google/gemini-live-2.5-flash-native-audio": MultimodalTokenPricingModel(
+            audio_input_token_price=Decimal("3.00") / 1_000_000,
+            text_input_token_price=Decimal("0.75") / 1_000_000,
+            audio_output_token_price=Decimal("12.00") / 1_000_000,
+            text_output_token_price=Decimal("4.50") / 1_000_000,
         ),
-        "default": TokenPricingModel(
-            prompt_token_price=Decimal("3.00") / 1_000_000,
-            completion_token_price=Decimal("12.00") / 1_000_000,
+        "default": MultimodalTokenPricingModel(
+            audio_input_token_price=Decimal("3.00") / 1_000_000,
+            text_input_token_price=Decimal("0.75") / 1_000_000,
+            audio_output_token_price=Decimal("12.00") / 1_000_000,
+            text_output_token_price=Decimal("4.50") / 1_000_000,
         ),
     },
 }
