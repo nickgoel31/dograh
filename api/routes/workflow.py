@@ -1184,6 +1184,8 @@ async def get_workflow_run(
             )
             if run.cost_info and run.cost_info.get("call_duration_seconds") is not None
             else None,
+            "total_cost_usd": run.cost_info.get("total_cost_usd"),
+            "cost_breakdown": run.cost_info.get("cost_breakdown"),
         }
         if run.cost_info
         else None,

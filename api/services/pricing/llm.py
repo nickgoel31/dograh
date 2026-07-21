@@ -12,6 +12,13 @@ from api.services.configuration.registry import ServiceProviders
 from .models import TokenPricingModel
 
 # LLM pricing registry
+# ---------------------------------------------------------------------------
+# Google Realtime (Gemini Live) — audio token pricing
+# In a Gemini Live session all tokens are audio-native; we map
+#   prompt_tokens   → AUDIO_INPUT   ($3.00 / 1M tokens)
+#   completion_tokens → AUDIO_OUTPUT ($12.00 / 1M tokens)
+# Prices from ai.google.dev/gemini-api/docs/pricing (paid tier, July 2025)
+# ---------------------------------------------------------------------------
 LLM_PRICING: Dict[str, Dict[str, TokenPricingModel]] = {
     ServiceProviders.OPENAI: {
         "gpt-3.5-turbo": TokenPricingModel(
@@ -149,5 +156,28 @@ LLM_PRICING: Dict[str, Dict[str, TokenPricingModel]] = {
             completion_token_price=Decimal("8.80")
             / 1000000,  # $1.60 per 1M tokens if using data zone
         )
+    },
+    # Google Realtime (AI Studio) — Gemini Live audio token pricing
+    ServiceProviders.GOOGLE_REALTIME: {
+        "gemini-3.1-flash-live-preview": TokenPricingModel(
+            prompt_token_price=Decimal("3.00") / 1_000_000,   # $3.00 / 1M audio input tokens
+            completion_token_price=Decimal("12.00") / 1_000_000,  # $12.00 / 1M audio output tokens
+        ),
+        # Default fallback for any other Gemini Live (AI Studio) model
+        "default": TokenPricingModel(
+            prompt_token_price=Decimal("3.00") / 1_000_000,
+            completion_token_price=Decimal("12.00") / 1_000_000,
+        ),
+    },
+    # Google Vertex Realtime — Gemini Live on Vertex AI (native audio)
+    ServiceProviders.GOOGLE_VERTEX_REALTIME: {
+        "google/gemini-live-2.5-flash-native-audio": TokenPricingModel(
+            prompt_token_price=Decimal("3.00") / 1_000_000,
+            completion_token_price=Decimal("12.00") / 1_000_000,
+        ),
+        "default": TokenPricingModel(
+            prompt_token_price=Decimal("3.00") / 1_000_000,
+            completion_token_price=Decimal("12.00") / 1_000_000,
+        ),
     },
 }

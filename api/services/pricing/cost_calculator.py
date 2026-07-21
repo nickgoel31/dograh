@@ -184,12 +184,23 @@ class CostCalculator:
         ):
             return ServiceProviders.DEEPGRAM
 
+        # Google Vertex Realtime (Gemini Live on Vertex AI)
+        # Must be checked before GOOGLE_REALTIME because vertex model names
+        # may contain "gemini-live" as well.
+        if any(keyword in model_lower for keyword in ["native-audio", "google/"]):
+            return ServiceProviders.GOOGLE_VERTEX_REALTIME
+
+        # Google Realtime (Gemini Live on AI Studio)
+        if any(keyword in model_lower for keyword in ["gemini", "live"]):
+            return ServiceProviders.GOOGLE_REALTIME
+
         # Default to first available provider for the service type
         service_providers = self.pricing_registry.get(service_type, {})
         if service_providers:
             return list(service_providers.keys())[0]
 
         return "unknown"
+
 
     def _infer_provider_from_processor(self, processor: str, service_type: str) -> str:
         """Infer provider from processor name"""

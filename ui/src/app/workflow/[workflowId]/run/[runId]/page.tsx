@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Copy, ExternalLink, FileText, Video } from 'lucide-react';
+import { Check, Copy, ExternalLink, FileText, IndianRupee, Video, X } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import posthog from 'posthog-js';
@@ -20,6 +20,27 @@ import { useOnboarding } from '@/context/OnboardingContext';
 import { useAuth } from '@/lib/auth';
 import { downloadFile } from '@/lib/files';
 
+// ---------------------------------------------------------------------------
+// Gemini Live cost constants  (update if Google changes pricing)
+// Prices: ai.google.dev/gemini-api/docs/pricing — paid tier, July 2025
+// ---------------------------------------------------------------------------
+const GEMINI_LIVE_PRICING = {
+    AUDIO_INPUT_PER_M: 3.00,   // $ per 1M audio-input tokens
+    AUDIO_OUTPUT_PER_M: 12.00, // $ per 1M audio-output tokens
+};
+const USD_TO_INR = 96; // 1 USD = ₹96
+const GEMINI_LIVE_MODEL_KEYWORD = 'gemini';
+
+/** Detect if a run used Gemini Live and return the first matching LLM key. */
+function getGeminiLiveUsageKey(usageInfo: WorkflowRunResponse['usage_info']): string | null {
+    if (!usageInfo?.llm) return null;
+    const key = Object.keys(usageInfo.llm).find((k) =>
+        k.toLowerCase().includes(GEMINI_LIVE_MODEL_KEYWORD) &&
+        k.toLowerCase().includes('live')
+    );
+    return key ?? null;
+}
+
 interface WorkflowRunResponse {
     mode: string;
     is_completed: boolean;
@@ -28,11 +49,151 @@ interface WorkflowRunResponse {
     cost_info: {
         dograh_token_usage?: number | null;
         call_duration_seconds?: number | null;
+        total_cost_usd?: number | null;
+        cost_breakdown?: {
+            llm_cost?: number;
+            tts_cost?: number;
+            stt_cost?: number;
+            total?: number;
+        } | null;
+    } | null;
+    usage_info: {
+        llm?: Record<string, {
+            prompt_tokens: number;
+            completion_tokens: number;
+            total_tokens: number;
+        }>;
+        tts?: Record<string, number>;
+        stt?: Record<string, number>;
+        call_duration_seconds?: number;
     } | null;
     initial_context: Record<string, string | number | boolean | object> | null;
     gathered_context: Record<string, string | number | boolean | object> | null;
     logs: WorkflowRunLogs | null;
     annotations: Record<string, unknown> | null;
+}
+
+// ---------------------------------------------------------------------------
+// GeminiCostDialog — shown only for Gemini Live runs
+// ---------------------------------------------------------------------------
+function GeminiCostDialog({ usageInfo, costInfo }: {
+    usageInfo: WorkflowRunResponse['usage_info'];
+    costInfo: WorkflowRunResponse['cost_info'];
+}) {
+    const [open, setOpen] = useState(false);
+
+    const geminiKey = getGeminiLiveUsageKey(usageInfo);
+    if (!geminiKey || !usageInfo?.llm) return null;
+
+    const usage = usageInfo.llm[geminiKey];
+    const promptTokens = usage?.prompt_tokens ?? 0;
+    const completionTokens = usage?.completion_tokens ?? 0;
+
+    // Model name is the part after '|||'
+    const modelName = geminiKey.includes('|||') ? geminiKey.split('|||')[1] : geminiKey;
+
+    // Cost calculation
+    const inputCostUsd  = (promptTokens / 1_000_000) * GEMINI_LIVE_PRICING.AUDIO_INPUT_PER_M;
+    const outputCostUsd = (completionTokens / 1_000_000) * GEMINI_LIVE_PRICING.AUDIO_OUTPUT_PER_M;
+    const totalUsd = costInfo?.total_cost_usd ?? (inputCostUsd + outputCostUsd);
+    const totalInr = totalUsd * USD_TO_INR;
+    const inputInr  = inputCostUsd * USD_TO_INR;
+    const outputInr = outputCostUsd * USD_TO_INR;
+
+    const fmt = (n: number, decimals = 5) => n.toFixed(decimals);
+    const fmtInr = (n: number) => `₹${n.toFixed(3)}`;
+    const fmtTokens = (n: number) => n.toLocaleString();
+
+    return (
+        <>
+            <Button
+                id="gemini-cost-button"
+                variant="outline"
+                size="sm"
+                className="gap-2 border-amber-500/40 bg-amber-500/5 text-amber-600 hover:bg-amber-500/10 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+                onClick={() => setOpen(true)}
+            >
+                <IndianRupee className="h-4 w-4" />
+                Google API Cost
+            </Button>
+
+            {open && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+                    onClick={() => setOpen(false)}
+                >
+                    <div
+                        id="gemini-cost-dialog"
+                        className="relative w-full max-w-md rounded-xl border border-border bg-background shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                            <div className="flex items-center gap-2">
+                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/15">
+                                    <IndianRupee className="h-4 w-4 text-amber-500" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold">Google API Cost</p>
+                                    <p className="text-xs text-muted-foreground">{modelName}</p>
+                                </div>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setOpen(false)}>
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="space-y-3 p-5">
+                            {/* Token rows */}
+                            <div className="overflow-hidden rounded-lg border border-border">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-border bg-muted/60">
+                                            <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Modality</th>
+                                            <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Tokens</th>
+                                            <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">USD</th>
+                                            <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">INR</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        <tr>
+                                            <td className="px-3 py-2 font-medium text-blue-600 dark:text-blue-400">Audio Input</td>
+                                            <td className="px-3 py-2 text-right tabular-nums">{fmtTokens(promptTokens)}</td>
+                                            <td className="px-3 py-2 text-right tabular-nums">${fmt(inputCostUsd)}</td>
+                                            <td className="px-3 py-2 text-right tabular-nums text-amber-600 dark:text-amber-400">{fmtInr(inputInr)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="px-3 py-2 font-medium text-purple-600 dark:text-purple-400">Audio Output</td>
+                                            <td className="px-3 py-2 text-right tabular-nums">{fmtTokens(completionTokens)}</td>
+                                            <td className="px-3 py-2 text-right tabular-nums">${fmt(outputCostUsd)}</td>
+                                            <td className="px-3 py-2 text-right tabular-nums text-amber-600 dark:text-amber-400">{fmtInr(outputInr)}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Total */}
+                            <div className="flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+                                <span className="text-sm font-semibold">Total Cost</span>
+                                <div className="text-right">
+                                    <p className="text-lg font-bold text-amber-600 dark:text-amber-400">{fmtInr(totalInr)}</p>
+                                    <p className="text-xs text-muted-foreground">${fmt(totalUsd, 6)} USD</p>
+                                </div>
+                            </div>
+
+                            {/* Rate info */}
+                            <div className="rounded-md bg-muted/40 px-3 py-2">
+                                <p className="text-xs text-muted-foreground">
+                                    Rates: Audio Input ${GEMINI_LIVE_PRICING.AUDIO_INPUT_PER_M}/1M · Audio Output ${GEMINI_LIVE_PRICING.AUDIO_OUTPUT_PER_M}/1M · 1 USD = ₹{USD_TO_INR}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
 }
 
 const RUN_SHELL_HEIGHT_CLASS = "h-[calc(100svh-49px)] min-h-[calc(100svh-49px)] max-h-[calc(100svh-49px)]";
@@ -149,6 +310,8 @@ export default function WorkflowRunPage() {
     const [isLoading, setIsLoading] = useState(true);
     const auth = useAuth();
     const [workflowRun, setWorkflowRun] = useState<WorkflowRunResponse | null>(null);
+    // Regenerate gemini key check when workflowRun changes
+    const geminiUsageKey = getGeminiLiveUsageKey(workflowRun?.usage_info ?? null);
     const { hasSeenTooltip, markTooltipSeen } = useOnboarding();
     const customizeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -181,6 +344,7 @@ export default function WorkflowRunPage() {
                 transcript_url: response.data?.transcript_url ?? null,
                 recording_url: response.data?.recording_url ?? null,
                 cost_info: response.data?.cost_info ?? null,
+                usage_info: (response.data as Record<string, unknown>)?.usage_info as WorkflowRunResponse['usage_info'] ?? null,
                 initial_context: response.data?.initial_context as Record<string, string> | null ?? null,
                 gathered_context: response.data?.gathered_context as Record<string, string> | null ?? null,
                 logs: response.data?.logs as WorkflowRunLogs | null ?? null,
@@ -246,6 +410,13 @@ export default function WorkflowRunPage() {
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
+                                {/* Gemini Live cost button — only shown for Gemini Live runs */}
+                                {geminiUsageKey && (
+                                    <GeminiCostDialog
+                                        usageInfo={workflowRun?.usage_info ?? null}
+                                        costInfo={workflowRun?.cost_info ?? null}
+                                    />
+                                )}
                                 <Link href={`/workflow/${params.workflowId}`}>
                                     <Button
                                         ref={customizeButtonRef}
