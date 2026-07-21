@@ -82,6 +82,14 @@ class PipelineMetricsAggregator(FrameProcessor):
                 + (new_usage.cache_read_input_tokens or 0),
                 cache_creation_input_tokens=(existing.cache_creation_input_tokens or 0)
                 + (new_usage.cache_creation_input_tokens or 0),
+                text_input_tokens=(existing.text_input_tokens or 0)
+                + (getattr(new_usage, "text_input_tokens", None) or 0),
+                audio_input_tokens=(existing.audio_input_tokens or 0)
+                + (getattr(new_usage, "audio_input_tokens", None) or 0),
+                text_output_tokens=(existing.text_output_tokens or 0)
+                + (getattr(new_usage, "text_output_tokens", None) or 0),
+                audio_output_tokens=(existing.audio_output_tokens or 0)
+                + (getattr(new_usage, "audio_output_tokens", None) or 0),
             )
             self._llm_usage_metrics[key] = aggregated
         else:
@@ -92,6 +100,10 @@ class PipelineMetricsAggregator(FrameProcessor):
                 total_tokens=new_usage.total_tokens,
                 cache_read_input_tokens=new_usage.cache_read_input_tokens,
                 cache_creation_input_tokens=new_usage.cache_creation_input_tokens,
+                text_input_tokens=getattr(new_usage, "text_input_tokens", None),
+                audio_input_tokens=getattr(new_usage, "audio_input_tokens", None),
+                text_output_tokens=getattr(new_usage, "text_output_tokens", None),
+                audio_output_tokens=getattr(new_usage, "audio_output_tokens", None),
             )
 
         logger.debug(f"LLM usage metrics: {self._llm_usage_metrics}")
@@ -136,6 +148,10 @@ class PipelineMetricsAggregator(FrameProcessor):
                 "total_tokens": usage.total_tokens,
                 "cache_read_input_tokens": usage.cache_read_input_tokens,
                 "cache_creation_input_tokens": usage.cache_creation_input_tokens,
+                "text_input_tokens": getattr(usage, "text_input_tokens", None) or 0,
+                "audio_input_tokens": getattr(usage, "audio_input_tokens", None) or 0,
+                "text_output_tokens": getattr(usage, "text_output_tokens", None) or 0,
+                "audio_output_tokens": getattr(usage, "audio_output_tokens", None) or 0,
             }
 
         return {

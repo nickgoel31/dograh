@@ -24,8 +24,14 @@ import { downloadFile } from '@/lib/files';
 // Gemini Live cost constants  (update if Google changes pricing)
 // Prices: ai.google.dev/gemini-api/docs/pricing — paid tier, July 2025
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Gemini Live cost constants  (update if Google changes pricing)
+// Prices: ai.google.dev/gemini-api/docs/pricing — paid tier, July 2025
+// ---------------------------------------------------------------------------
 const GEMINI_LIVE_PRICING = {
+    TEXT_INPUT_PER_M: 0.75,    // $ per 1M text-input tokens
     AUDIO_INPUT_PER_M: 3.00,   // $ per 1M audio-input tokens
+    TEXT_OUTPUT_PER_M: 4.50,   // $ per 1M text-output tokens
     AUDIO_OUTPUT_PER_M: 12.00, // $ per 1M audio-output tokens
 };
 const USD_TO_INR = 96; // 1 USD = ₹96
@@ -62,6 +68,10 @@ interface WorkflowRunResponse {
             prompt_tokens: number;
             completion_tokens: number;
             total_tokens: number;
+            text_input_tokens?: number;
+            audio_input_tokens?: number;
+            text_output_tokens?: number;
+            audio_output_tokens?: number;
         }>;
         tts?: Record<string, number>;
         stt?: Record<string, number>;
@@ -88,17 +98,44 @@ function GeminiCostDialog({ usageInfo, costInfo }: {
     const usage = usageInfo.llm[geminiKey];
     const promptTokens = usage?.prompt_tokens ?? 0;
     const completionTokens = usage?.completion_tokens ?? 0;
+    const durationSeconds = usageInfo?.call_duration_seconds ?? 0;
 
     // Model name is the part after '|||'
     const modelName = geminiKey.includes('|||') ? geminiKey.split('|||')[1] : geminiKey;
 
-    // Cost calculation
-    const inputCostUsd  = (promptTokens / 1_000_000) * GEMINI_LIVE_PRICING.AUDIO_INPUT_PER_M;
-    const outputCostUsd = (completionTokens / 1_000_000) * GEMINI_LIVE_PRICING.AUDIO_OUTPUT_PER_M;
-    const totalUsd = costInfo?.total_cost_usd ?? (inputCostUsd + outputCostUsd);
+    // Modality breakdown with fallback estimation for historical runs
+    let textInputTokens = usage?.text_input_tokens ?? 0;
+    let audioInputTokens = usage?.audio_input_tokens ?? 0;
+    let textOutputTokens = usage?.text_output_tokens ?? 0;
+    let audioOutputTokens = usage?.audio_output_tokens ?? 0;
+
+    if (!textInputTokens && !audioInputTokens && promptTokens > 0) {
+        // Fallback for runs before modality breakdown was explicit:
+        // Audio input tokens = call_duration (sec) * 32 tokens/sec (~32 tokens/sec for audio stream)
+        // Remainder is Text Input (system prompt + tools + history re-read across turns).
+        const estimatedAudio = Math.min(promptTokens, Math.round(durationSeconds * 32));
+        audioInputTokens = estimatedAudio;
+        textInputTokens = Math.max(0, promptTokens - estimatedAudio);
+    }
+
+    if (!textOutputTokens && !audioOutputTokens && completionTokens > 0) {
+        audioOutputTokens = completionTokens;
+    }
+
+    // Cost calculation per modality
+    const textInputCostUsd   = (textInputTokens / 1_000_000) * GEMINI_LIVE_PRICING.TEXT_INPUT_PER_M;
+    const audioInputCostUsd  = (audioInputTokens / 1_000_000) * GEMINI_LIVE_PRICING.AUDIO_INPUT_PER_M;
+    const textOutputCostUsd  = (textOutputTokens / 1_000_000) * GEMINI_LIVE_PRICING.TEXT_OUTPUT_PER_M;
+    const audioOutputCostUsd = (audioOutputTokens / 1_000_000) * GEMINI_LIVE_PRICING.AUDIO_OUTPUT_PER_M;
+
+    const calculatedTotalUsd = textInputCostUsd + audioInputCostUsd + textOutputCostUsd + audioOutputCostUsd;
+    const totalUsd = calculatedTotalUsd;
     const totalInr = totalUsd * USD_TO_INR;
-    const inputInr  = inputCostUsd * USD_TO_INR;
-    const outputInr = outputCostUsd * USD_TO_INR;
+
+    const textInputInr   = textInputCostUsd * USD_TO_INR;
+    const audioInputInr  = audioInputCostUsd * USD_TO_INR;
+    const textOutputInr  = textOutputCostUsd * USD_TO_INR;
+    const audioOutputInr = audioOutputCostUsd * USD_TO_INR;
 
     const fmt = (n: number, decimals = 5) => n.toFixed(decimals);
     const fmtInr = (n: number) => `₹${n.toFixed(3)}`;
@@ -157,18 +194,38 @@ function GeminiCostDialog({ usageInfo, costInfo }: {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        <tr>
-                                            <td className="px-3 py-2 font-medium text-blue-600 dark:text-blue-400">Audio Input</td>
-                                            <td className="px-3 py-2 text-right tabular-nums">{fmtTokens(promptTokens)}</td>
-                                            <td className="px-3 py-2 text-right tabular-nums">${fmt(inputCostUsd)}</td>
-                                            <td className="px-3 py-2 text-right tabular-nums text-amber-600 dark:text-amber-400">{fmtInr(inputInr)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="px-3 py-2 font-medium text-purple-600 dark:text-purple-400">Audio Output</td>
-                                            <td className="px-3 py-2 text-right tabular-nums">{fmtTokens(completionTokens)}</td>
-                                            <td className="px-3 py-2 text-right tabular-nums">${fmt(outputCostUsd)}</td>
-                                            <td className="px-3 py-2 text-right tabular-nums text-amber-600 dark:text-amber-400">{fmtInr(outputInr)}</td>
-                                        </tr>
+                                        {textInputTokens > 0 && (
+                                            <tr>
+                                                <td className="px-3 py-2 font-medium text-blue-600 dark:text-blue-400">Text Input</td>
+                                                <td className="px-3 py-2 text-right tabular-nums">{fmtTokens(textInputTokens)}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums">${fmt(textInputCostUsd)}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums text-amber-600 dark:text-amber-400">{fmtInr(textInputInr)}</td>
+                                            </tr>
+                                        )}
+                                        {audioInputTokens > 0 && (
+                                            <tr>
+                                                <td className="px-3 py-2 font-medium text-cyan-600 dark:text-cyan-400">Audio Input</td>
+                                                <td className="px-3 py-2 text-right tabular-nums">{fmtTokens(audioInputTokens)}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums">${fmt(audioInputCostUsd)}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums text-amber-600 dark:text-amber-400">{fmtInr(audioInputInr)}</td>
+                                            </tr>
+                                        )}
+                                        {audioOutputTokens > 0 && (
+                                            <tr>
+                                                <td className="px-3 py-2 font-medium text-purple-600 dark:text-purple-400">Audio Output</td>
+                                                <td className="px-3 py-2 text-right tabular-nums">{fmtTokens(audioOutputTokens)}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums">${fmt(audioOutputCostUsd)}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums text-amber-600 dark:text-amber-400">{fmtInr(audioOutputInr)}</td>
+                                            </tr>
+                                        )}
+                                        {textOutputTokens > 0 && (
+                                            <tr>
+                                                <td className="px-3 py-2 font-medium text-emerald-600 dark:text-emerald-400">Text Output</td>
+                                                <td className="px-3 py-2 text-right tabular-nums">{fmtTokens(textOutputTokens)}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums">${fmt(textOutputCostUsd)}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums text-amber-600 dark:text-amber-400">{fmtInr(textOutputInr)}</td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -185,7 +242,7 @@ function GeminiCostDialog({ usageInfo, costInfo }: {
                             {/* Rate info */}
                             <div className="rounded-md bg-muted/40 px-3 py-2">
                                 <p className="text-xs text-muted-foreground">
-                                    Rates: Audio Input ${GEMINI_LIVE_PRICING.AUDIO_INPUT_PER_M}/1M · Audio Output ${GEMINI_LIVE_PRICING.AUDIO_OUTPUT_PER_M}/1M · 1 USD = ₹{USD_TO_INR}
+                                    Rates: Text Input ${GEMINI_LIVE_PRICING.TEXT_INPUT_PER_M}/1M · Audio Input ${GEMINI_LIVE_PRICING.AUDIO_INPUT_PER_M}/1M · Audio Output ${GEMINI_LIVE_PRICING.AUDIO_OUTPUT_PER_M}/1M · 1 USD = ₹{USD_TO_INR}
                                 </p>
                             </div>
                         </div>
