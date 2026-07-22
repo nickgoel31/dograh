@@ -901,7 +901,7 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
             ),
             "vad": GeminiVADParams(
                 disabled=False,
-                silence_duration_ms=2000,
+                silence_duration_ms=600,
             ),
         }
         if language:
@@ -932,7 +932,7 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
             ),
             "vad": GeminiVADParams(
                 disabled=False,
-                silence_duration_ms=2000,
+                silence_duration_ms=600,
             ),
         }
         if language:
