@@ -702,12 +702,8 @@ class CampaignClient(BaseDBClient):
             raise ValueError("Provide exactly one of campaign_id or workflow_id")
 
         async with self.async_session() as session:
-            conditions = [
-                WorkflowRunModel.is_completed.is_(True),
-                WorkflowRunModel.cost_info["call_duration_seconds"]
-                .as_string()
-                .isnot(None),
-            ]
+            # Return all runs regardless of their completion status
+            conditions = []
             if campaign_id is not None:
                 conditions.append(WorkflowRunModel.campaign_id == campaign_id)
             if workflow_id is not None:
