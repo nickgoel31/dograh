@@ -115,8 +115,6 @@ def _create_realtime_user_turn_config(provider: str):
             SileroVADAnalyzer(params=VADParams(
                 stop_secs=0.2,
                 start_secs=0.2,
-                confidence=0.7,
-                min_volume=0.4,
             )),
         )
 
@@ -150,8 +148,6 @@ def _create_realtime_user_turn_config(provider: str):
         SileroVADAnalyzer(params=VADParams(
             stop_secs=0.2,
             start_secs=0.2,
-            confidence=0.7,
-            min_volume=0.4,
         )),
     )
 
