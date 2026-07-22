@@ -30,6 +30,9 @@ class PipelineMetricsAggregator(FrameProcessor):
         self._start_time: Optional[float] = None
         self._stop_time: Optional[float] = None
         self._llm_usage_metrics: Dict[str, LLMTokenUsage] = {}
+        self._llm_modality_metrics: Dict[str, Dict[str, int]] = defaultdict(
+            lambda: defaultdict(int)
+        )
         self._tts_usage_metrics: Dict[str, int] = defaultdict(int)
         self._stt_usage_metrics: Dict[str, float] = defaultdict(float)
 
@@ -82,14 +85,6 @@ class PipelineMetricsAggregator(FrameProcessor):
                 + (new_usage.cache_read_input_tokens or 0),
                 cache_creation_input_tokens=(existing.cache_creation_input_tokens or 0)
                 + (new_usage.cache_creation_input_tokens or 0),
-                text_input_tokens=(existing.text_input_tokens or 0)
-                + (getattr(new_usage, "text_input_tokens", None) or 0),
-                audio_input_tokens=(existing.audio_input_tokens or 0)
-                + (getattr(new_usage, "audio_input_tokens", None) or 0),
-                text_output_tokens=(existing.text_output_tokens or 0)
-                + (getattr(new_usage, "text_output_tokens", None) or 0),
-                audio_output_tokens=(existing.audio_output_tokens or 0)
-                + (getattr(new_usage, "audio_output_tokens", None) or 0),
             )
             self._llm_usage_metrics[key] = aggregated
         else:
@@ -100,11 +95,18 @@ class PipelineMetricsAggregator(FrameProcessor):
                 total_tokens=new_usage.total_tokens,
                 cache_read_input_tokens=new_usage.cache_read_input_tokens,
                 cache_creation_input_tokens=new_usage.cache_creation_input_tokens,
-                text_input_tokens=getattr(new_usage, "text_input_tokens", None),
-                audio_input_tokens=getattr(new_usage, "audio_input_tokens", None),
-                text_output_tokens=getattr(new_usage, "text_output_tokens", None),
-                audio_output_tokens=getattr(new_usage, "audio_output_tokens", None),
             )
+
+        # Track per-modality metrics safely in dictionary
+        text_in = getattr(new_usage, "text_input_tokens", None) or 0
+        audio_in = getattr(new_usage, "audio_input_tokens", None) or 0
+        text_out = getattr(new_usage, "text_output_tokens", None) or 0
+        audio_out = getattr(new_usage, "audio_output_tokens", None) or 0
+
+        self._llm_modality_metrics[key]["text_input_tokens"] += text_in
+        self._llm_modality_metrics[key]["audio_input_tokens"] += audio_in
+        self._llm_modality_metrics[key]["text_output_tokens"] += text_out
+        self._llm_modality_metrics[key]["audio_output_tokens"] += audio_out
 
         logger.debug(f"LLM usage metrics: {self._llm_usage_metrics}")
 
@@ -142,16 +144,17 @@ class PipelineMetricsAggregator(FrameProcessor):
         """Get all aggregated usage metrics in JSON-serializable format."""
         serialized_llm = {}
         for key, usage in self._llm_usage_metrics.items():
+            modality = self._llm_modality_metrics.get(key, {})
             serialized_llm[key] = {
                 "prompt_tokens": usage.prompt_tokens,
                 "completion_tokens": usage.completion_tokens,
                 "total_tokens": usage.total_tokens,
                 "cache_read_input_tokens": usage.cache_read_input_tokens,
                 "cache_creation_input_tokens": usage.cache_creation_input_tokens,
-                "text_input_tokens": getattr(usage, "text_input_tokens", None) or 0,
-                "audio_input_tokens": getattr(usage, "audio_input_tokens", None) or 0,
-                "text_output_tokens": getattr(usage, "text_output_tokens", None) or 0,
-                "audio_output_tokens": getattr(usage, "audio_output_tokens", None) or 0,
+                "text_input_tokens": modality.get("text_input_tokens", 0),
+                "audio_input_tokens": modality.get("audio_input_tokens", 0),
+                "text_output_tokens": modality.get("text_output_tokens", 0),
+                "audio_output_tokens": modality.get("audio_output_tokens", 0),
             }
 
         return {
@@ -164,6 +167,7 @@ class PipelineMetricsAggregator(FrameProcessor):
     def reset_metrics(self):
         """Reset all aggregated metrics."""
         self._llm_usage_metrics.clear()
+        self._llm_modality_metrics.clear()
         self._tts_usage_metrics.clear()
         self._stt_usage_metrics.clear()
         self._start_time = None
