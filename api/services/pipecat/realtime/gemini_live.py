@@ -22,6 +22,19 @@ from typing import Any
 
 from loguru import logger
 
+# Monkeypatch LLMTokenUsage dynamically to support Gemini Live modality tokens.
+# This avoids editing the submodule's metrics.py which the user has no push rights to.
+from pipecat.metrics.metrics import LLMTokenUsage
+if not hasattr(LLMTokenUsage, "text_input_tokens"):
+    LLMTokenUsage.__annotations__["text_input_tokens"] = int | None
+    LLMTokenUsage.__annotations__["audio_input_tokens"] = int | None
+    LLMTokenUsage.__annotations__["text_output_tokens"] = int | None
+    LLMTokenUsage.__annotations__["audio_output_tokens"] = int | None
+    try:
+        LLMTokenUsage.model_rebuild(force=True)
+    except Exception as e:
+        logger.error(f"Failed to rebuild LLMTokenUsage model: {e}")
+
 from pipecat.frames.frames import (
     BotStoppedSpeakingFrame,
     Frame,
