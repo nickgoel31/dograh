@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Menu, RefreshCw, Search } from "lucide-react";
+import { AlertTriangle, Bell, HelpCircle, Menu, Plus, RefreshCw, Search, Upload } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -48,15 +48,15 @@ function NeuralHeader() {
   const pageName = getPageName(pathname);
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 items-center justify-between px-6 pb-6 pt-6 mb-4 border-b border-[#1d1d22] bg-[#08080a] transition-all duration-300">
-      {/* Left: mobile menu + page name */}
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-50 flex h-16 items-center justify-between px-6 border-b border-white/5 bg-surface/80 backdrop-blur-xl shadow-sm transition-all duration-300">
+      {/* Left: Mobile toggle & Search Input */}
+      <div className="flex items-center gap-4 flex-1 max-w-md">
         <Button
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
           aria-label="Open menu"
-          className="md:hidden h-8 w-8 rounded-xl hover:bg-white/5 border border-transparent text-[#626266] hover:text-white"
+          className="md:hidden h-8 w-8 rounded-xl hover:bg-white/5 border border-transparent text-slate-400 hover:text-white"
         >
           <Menu className="h-4 w-4" />
         </Button>
@@ -74,28 +74,56 @@ function NeuralHeader() {
           <span className="font-bold tracking-tight text-white">Swarvo AI</span>
         </Link>
 
-        {/* Page breadcrumb — desktop only */}
-        {pageName && (
-          <div className="hidden md:flex items-center gap-2">
-            <span className="text-sm font-bold text-white tracking-tight">{pageName}</span>
-          </div>
-        )}
+        {/* Reference Image Search Input */}
+        <div className="relative w-full hidden md:block group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-on-surface-variant group-focus-within:text-primary transition-colors" />
+          <input
+            type="text"
+            placeholder="Search agents, campaigns, or logs..."
+            className="w-full h-10 pl-10 pr-4 rounded-full bg-surface-container-lowest border border-white/10 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
+          />
+        </div>
       </div>
 
-      {/* Right: search hint + wallet + actions */}
-      <div className="flex items-center gap-3">
-        {/* Search hint button */}
-        <button
-          className="hidden md:flex items-center gap-2 rounded-xl border border-[#1d1d22] bg-[#111113] px-3.5 py-1.5 text-xs text-zinc-300 hover:bg-[#1a1a1f] hover:text-white transition-all duration-150 cursor-pointer"
-          onClick={() => {/* future: open command palette */}}
-          aria-label="Search"
+      {/* Right: Actions, Notifications, Avatar */}
+      <div className="flex items-center gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 rounded-full text-on-surface-variant hover:text-primary hover:bg-white/5 border border-transparent transition-colors active:scale-95"
         >
-          <Search className="h-3.5 w-3.5 text-zinc-500" />
-          <span>Search</span>
-          <kbd className="ml-1 rounded border border-[#232328] px-1 font-mono text-[9px] text-zinc-600">⌘K</kbd>
-        </button>
+          <Bell className="h-4 w-4" />
+        </Button>
 
-        <div className="h-4 w-px bg-[#1d1d22] hidden md:block" />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 rounded-full text-on-surface-variant hover:text-primary hover:bg-white/5 border border-transparent transition-colors active:scale-95"
+        >
+          <HelpCircle className="h-4 w-4" />
+        </Button>
+
+        <Link href="/workflow">
+          <Button
+            size="sm"
+            className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3.5 rounded-xl bg-[#0d121f] border border-[#1c273e] text-xs font-semibold text-slate-200 hover:bg-[#151c2e] hover:text-white transition-all cursor-pointer"
+          >
+            <Upload className="h-3.5 w-3.5 text-slate-400" />
+            Upload Agent Definition
+          </Button>
+        </Link>
+
+        <div className="h-6 w-px bg-white/10 hidden md:block" />
+
+        <Link href="/workflow">
+          <Button
+            size="sm"
+            className="hidden sm:inline-flex items-center gap-2 h-10 px-6 rounded-full bg-primary hover:opacity-90 text-sm font-bold text-on-primary transition-all cursor-pointer active:scale-95"
+          >
+            <Plus className="h-[18px] w-[18px]" />
+            Create Agent
+          </Button>
+        </Link>
         <WalletBalance />
       </div>
     </header>

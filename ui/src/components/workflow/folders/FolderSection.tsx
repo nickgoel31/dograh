@@ -123,39 +123,39 @@ export function FolderSection({
     };
 
     return (
-        <div className="mb-4">
+        <div className="mb-3">
             <Collapsible open={open} onOpenChange={setOpen}>
-                <div className="flex items-center gap-1.5 bg-[#111113]/40 border border-[#1d1d22]/40 rounded-xl p-1 mb-2">
+                <div className="flex items-center gap-2 bg-[#0d121f] border border-[#182135] rounded-xl px-4 py-3 mb-2 shadow-sm hover:border-[#263452] transition-all">
                     <CollapsibleTrigger asChild>
                         <button
-                            className="group flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-left transition-all hover:bg-[#1a1a1f] cursor-pointer"
+                            className="group flex flex-1 items-center gap-3 text-left cursor-pointer"
                             aria-label={`Toggle ${title}`}
                         >
                             <ChevronRight
-                                size={14}
+                                size={16}
                                 className={cn(
-                                    'shrink-0 text-zinc-500 transition-transform duration-200 group-hover:text-zinc-300',
+                                    'shrink-0 text-slate-400 transition-transform duration-200 group-hover:text-slate-200',
                                     open && 'rotate-90',
                                 )}
                             />
                             {isFolder ? (
                                 open ? (
-                                    <FolderOpen size={16} className="shrink-0 text-amber-500" />
+                                    <FolderOpen size={18} className="shrink-0 text-[#38bdf8]" />
                                 ) : (
-                                    <FolderIcon size={16} className="shrink-0 text-amber-500" />
+                                    <FolderIcon size={18} className="shrink-0 text-[#38bdf8]" />
                                 )
                             ) : isArchived ? (
-                                <Archive size={15} className="shrink-0 text-[#7c3aed]" />
+                                <Archive size={18} className="shrink-0 text-[#a855f7]" />
                             ) : (
-                                <Inbox size={16} className="shrink-0 text-[#7c3aed]" />
+                                <FolderIcon size={18} className="shrink-0 text-[#a855f7]" />
                             )}
                             <span
-                                className={cn('text-sm font-bold text-white', !isFolder && 'text-zinc-300')}
+                                className="font-serif text-lg text-slate-100 font-normal tracking-wide"
                             >
                                 {title}
                             </span>
-                            <span className="ml-1 px-2 py-0.5 text-[10px] font-bold bg-[#1c1c1f] border border-[#232328] text-zinc-400 rounded-full">
-                                {count}
+                            <span className="ml-2 px-2.5 py-0.5 text-xs font-mono font-medium bg-[#161e30] text-slate-300 rounded-full border border-[#273552]">
+                                {count} {count === 1 ? 'AGENT' : 'AGENTS'}
                             </span>
                         </button>
                     </CollapsibleTrigger>
@@ -166,15 +166,15 @@ export function FolderSection({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 text-zinc-400 hover:text-white rounded-lg hover:bg-[#1c1c1f] cursor-pointer"
+                                    className="h-8 w-8 text-slate-400 hover:text-white rounded-lg hover:bg-[#1b253b] cursor-pointer"
                                     aria-label="Folder actions"
                                 >
                                     <MoreVertical size={15} />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-[#111113] border border-[#232328] text-zinc-300 rounded-xl p-1.5 shadow-2xl">
-                                <DropdownMenuItem onClick={() => setIsRenaming(true)} className="rounded-lg text-xs px-2.5 py-1.5 focus:bg-[#1c1c1f] focus:text-white cursor-pointer">
-                                    <Pencil size={13} className="mr-2 text-zinc-400" />
+                            <DropdownMenuContent align="end" className="bg-[#101726] border border-[#1b253b] text-slate-200 rounded-xl p-1.5 shadow-2xl">
+                                <DropdownMenuItem onClick={() => setIsRenaming(true)} className="rounded-lg text-xs px-2.5 py-1.5 focus:bg-[#1b253b] focus:text-white cursor-pointer">
+                                    <Pencil size={13} className="mr-2 text-slate-400" />
                                     Rename
                                 </DropdownMenuItem>
                                 <DropdownMenuItem

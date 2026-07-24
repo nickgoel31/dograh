@@ -99,17 +99,12 @@ async function PageContent() {
 
     return (
         <div className="px-6 py-6 page-enter max-w-[1600px] mx-auto w-full">
-            {/* Page header */}
-            <div className="flex items-end justify-between mb-8 pb-6 border-b border-[#1d1d22]/50">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-white">Voice Agents</h1>
-                    <p className="text-xs text-zinc-500 mt-1.5">Build and manage your AI conversational agents</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <UploadWorkflowButton />
-                    <CreateFolderButton />
-                    <CreateWorkflowButton />
-                </div>
+            {/* Page header matching reference design */}
+            <div className="mb-8 pb-6 border-b border-white/5 flex flex-col gap-1">
+                <h1 className="font-serif-heading text-[48px] text-on-surface tracking-tight leading-tight m-0">Voice Agents</h1>
+                <p className="text-on-surface-variant text-base max-w-2xl leading-relaxed">
+                    Manage your fleet of autonomous voice entities, fine-tune their behavior, and monitor real-time conversational performance across all channels.
+                </p>
             </div>
 
             {workflowList}
