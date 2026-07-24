@@ -250,26 +250,26 @@ export function AppSidebar() {
         asChild
         tooltip={{ children: <span className="notranslate">{item.title}</span> }}
         className={cn(
-          "relative transition-all duration-200 font-medium group",
+          "relative transition-all duration-300 border font-semibold",
           isCollapsed
-            ? "h-11 w-11 mx-auto rounded flex items-center justify-center"
-            : "h-10 w-full rounded flex items-center text-sm",
+            ? "h-12 w-12 mx-auto rounded-xl flex items-center justify-center"
+            : "h-10 w-full rounded-xl flex items-center text-xs",
           isItemActive
-            ? "text-primary bg-primary/10 border-r-2 border-primary active-nav-indicator"
-            : "text-slate-400 border border-transparent hover:text-white hover:bg-white/5 active:translate-x-1"
+            ? "bg-[#1f1f22] text-white border-[#2d2d30] shadow-[0_0_15px_rgba(255,255,255,0.05)]"
+            : "text-[#626266] border-transparent hover:text-white hover:bg-white/5"
         )}
       >
         <Link
           href={item.url}
           onClick={handleMobileNavClick}
-          className={cn("flex items-center gap-3 w-full", isCollapsed ? "justify-center p-0" : "px-3")}
+          className={cn("flex items-center gap-2.5 w-full", isCollapsed ? "justify-center p-0" : "px-3")}
           translate="no"
         >
           <Icon className={cn(
-            "h-[20px] w-[20px] shrink-0 stroke-[1.75] transition-transform duration-200",
-            isItemActive ? "text-[#a855f7] scale-105" : "text-slate-400 group-hover:text-white"
+            "h-[22px] w-[22px] shrink-0 stroke-[1.75] transition-transform duration-300",
+            isItemActive ? "text-white scale-105" : "text-[#626266] group-hover:text-white"
           )} />
-          <span className={cn("notranslate truncate text-xs", isCollapsed && "sr-only")} translate="no">
+          <span className={cn("notranslate truncate", isCollapsed && "sr-only")} translate="no">
             {item.title}
           </span>
           {showWarningDot && (
@@ -305,42 +305,71 @@ export function AppSidebar() {
 
         <div className={cn("flex items-center justify-between", isCollapsed ? "flex-col gap-3" : "w-full")}>
           {/* Logo */}
-          <div className={cn("flex items-center gap-2.5 min-w-0", isCollapsed && "hidden")}>
+          <div className={cn("flex items-center gap-2 min-w-0", isCollapsed && "hidden")}>
             <Link
               href="/"
-              className="notranslate flex items-center gap-3 hover:opacity-90 transition-opacity cursor-pointer"
+              className="notranslate flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer"
               translate="no"
             >
-              <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
-                <img
+              <div className="relative">
+                <Image
                   src="/logo.webp"
                   alt="Swarvo AI"
-                  className="w-5 h-5 rounded-sm object-cover dark:invert"
+                  width={36}
+                  height={36}
+                  className="rounded-xl object-cover dark:invert"
+                  unoptimized
                 />
               </div>
-              <div className="flex flex-col">
-                <span className="font-serif-heading text-[24px] text-primary leading-none">
-                  Swarvo AI
-                </span>
-                <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mt-1">
-                  Enterprise Platform
-                </span>
-              </div>
+              <span className="text-sm font-bold tracking-tight text-white">
+                Swarvo AI
+              </span>
             </Link>
+            {versionInfo && (
+              <span className="notranslate text-[10px] text-muted-foreground/60 font-mono" translate="no">
+                v{versionInfo.ui}
+              </span>
+            )}
+            {isBehind && latestRelease && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <a
+                    href="https://docs.dograh.com/deployment/update"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded border border-amber-400/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400 hover:opacity-80 transition-opacity"
+                  >
+                    <ArrowUpCircle className="h-2.5 w-2.5" />
+                    Update
+                  </a>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Latest: {latestRelease}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {isLatest && (
+              <span className="inline-flex items-center rounded border border-emerald-400/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                Latest
+              </span>
+            )}
           </div>
 
           {/* Collapsed: just the logo icon */}
-          <div className={cn("mx-auto cursor-pointer hover:opacity-90 transition-opacity", !isCollapsed && "hidden")}>
-            <Link href="/">
-              <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
-                <img
+          {isCollapsed && (
+            <div className="mx-auto cursor-pointer hover:opacity-90 transition-opacity">
+              <Link href="/">
+                <Image
                   src="/logo.webp"
                   alt="Swarvo AI"
-                  className="w-5 h-5 rounded-sm object-cover dark:invert"
+                  width={36}
+                  height={36}
+                  className="rounded-xl object-cover dark:invert"
+                  unoptimized
                 />
-              </div>
-            </Link>
-          </div>
+              </Link>
+            </div>
+          )}
 
           <SidebarTrigger className={cn("h-8 w-8 rounded-xl hover:bg-white/5 border border-transparent text-[#626266] hover:text-white transition-colors flex items-center justify-center", isCollapsed && "mx-auto mt-1")}>
             {isCollapsed ? (
@@ -406,15 +435,18 @@ export function AppSidebar() {
 
             return (
               <SidebarGroup key={section.label ?? "overview"} className={index === 0 ? "mt-1" : "mt-3"}>
+                {/* Section divider instead of label */}
                 {section.label && !isCollapsed && (
-                  <div className="mt-3 mb-1 px-3">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 notranslate" translate="no">
+                  <div className="mb-1 px-2 flex items-center gap-2">
+                    <div className="h-px flex-1 bg-border/60" />
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 notranslate" translate="no">
                       {section.label}
                     </span>
+                    <div className="h-px flex-1 bg-border/60" />
                   </div>
                 )}
                 {section.label && isCollapsed && (
-                  <div className="my-1.5 mx-auto w-4 h-px bg-[#141a29]" />
+                  <div className="mb-1 mx-auto w-4 h-px bg-border/60" />
                 )}
                 <SidebarMenu className="gap-0.5">
                   {filteredItems.map((item) => (
@@ -431,21 +463,9 @@ export function AppSidebar() {
 
       {/* ── Footer ── */}
       <SidebarFooter
-        className={cn("border-t border-[#1b253b] p-2 notranslate")}
+        className={cn("border-t border-border/40 p-2 notranslate")}
         translate="no"
       >
-        {!isCollapsed && (
-          <div className="mb-2 px-0.5">
-            <Button
-              className="w-full h-9 rounded-xl bg-[#201936] hover:bg-[#2a2147] text-[#c4b5fd] border border-[#3b2d5d] font-semibold text-xs flex items-center justify-center gap-2 shadow-[0_0_12px_rgba(139,92,246,0.15)] transition-all cursor-pointer"
-              onClick={() => router.push('/billing')}
-            >
-              <ArrowUpCircle className="h-4 w-4 text-[#a78bfa]" />
-              Upgrade Plan
-            </Button>
-          </div>
-        )}
-
         {/* Non-Stack provider footer */}
         {provider !== "stack" && (
           <div className={cn("flex items-center", isCollapsed ? "justify-center flex-col gap-2" : "justify-between gap-2")}>

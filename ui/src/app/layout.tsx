@@ -1,7 +1,7 @@
 import "./globals.css";
 
 import type { Metadata } from "next";
-import { Fira_Code, Instrument_Serif, Hanken_Grotesk } from "next/font/google";
+import { Fira_Code, Inter } from "next/font/google";
 import { Suspense } from "react";
 
 import AppLayout from "@/components/layout/AppLayout";
@@ -16,7 +16,7 @@ import { UserConfigProvider } from "@/context/UserConfigContext";
 import { AuthProvider } from "@/lib/auth";
 
 
-const sansFont = Hanken_Grotesk({
+const sansFont = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
   display: "swap",
@@ -24,14 +24,6 @@ const sansFont = Hanken_Grotesk({
 
 const monoFont = Fira_Code({
   variable: "--font-mono",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const serifFont = Instrument_Serif({
-  weight: "400",
-  style: "italic",
-  variable: "--font-serif",
   subsets: ["latin"],
   display: "swap",
 });
@@ -67,10 +59,9 @@ export default function RootLayout({
             `,
           }}
         />
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
       </head>
       <body
-        className={`${sansFont.variable} ${monoFont.variable} ${serifFont.variable} antialiased`}>
+        className={`${sansFont.variable} ${monoFont.variable} antialiased`}>
         <SentryErrorBoundary>
           <AuthProvider>
             <AppConfigProvider>
