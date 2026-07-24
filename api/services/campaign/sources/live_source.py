@@ -70,7 +70,8 @@ class LiveSourceSyncService(CampaignSourceSyncService):
                 campaign_id=campaign_id,
                 source_sync_status="failed",
                 source_sync_error=str(e),
-                source_sync_errors=list(set((campaign.source_sync_errors or []) + [str(e)]))
+                source_sync_errors=list(set((campaign.source_sync_errors or []) + [str(e)])),
+                source_last_synced_at=func.now()
             )
             raise e
 
@@ -84,8 +85,7 @@ class LiveSourceSyncService(CampaignSourceSyncService):
             return 0
 
         # Sourcing existing runs for deduplication
-        existing_runs = await db_client.get_queued_runs_for_campaign(campaign_id)
-        existing_uuids = {run.source_uuid for run in existing_runs if run.source_uuid}
+        existing_uuids = await db_client.get_queued_run_uuids_for_campaign(campaign_id)
 
         queued_runs = []
         for idx, contact in enumerate(contacts):

@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy import delete, func, text, update
 from sqlalchemy.future import select
+from sqlalchemy.dialects.postgresql import insert
 
 from api.db.base_client import BaseDBClient
 from api.db.filters import apply_workflow_run_filters, get_workflow_run_order_clause
@@ -407,8 +408,15 @@ class CampaignClient(BaseDBClient):
             result = await session.execute(query)
             return result.scalar_one_or_none()
 
+    async def get_queued_run_uuids_for_campaign(self, campaign_id: int) -> set[str]:
+        """Get all queued run UUIDs for a campaign (used for live sync deduplication)"""
+        async with self.async_session() as session:
+            query = select(QueuedRunModel.source_uuid).where(QueuedRunModel.campaign_id == campaign_id)
+            result = await session.execute(query)
+            return set(result.scalars().all())
+
     async def get_queued_runs_for_campaign(self, campaign_id: int) -> list[QueuedRunModel]:
-        """Get all queued runs for a campaign (used for live sync deduplication)"""
+        """Get all queued runs for a campaign"""
         async with self.async_session() as session:
             query = select(QueuedRunModel).where(QueuedRunModel.campaign_id == campaign_id)
             result = await session.execute(query)
@@ -568,10 +576,22 @@ class CampaignClient(BaseDBClient):
     # QueuedRun methods
     async def bulk_create_queued_runs(self, queued_runs_data: list[dict]) -> None:
         """Bulk create queued runs"""
+        if not queued_runs_data:
+            return
+            
         async with self.async_session() as session:
-            queued_runs = [QueuedRunModel(**data) for data in queued_runs_data]
-            session.add_all(queued_runs)
+            # Add missing created_at to avoid missing default issues with bulk insert
+            now = datetime.now(UTC)
+            for data in queued_runs_data:
+                if 'created_at' not in data:
+                    data['created_at'] = now
+                    
+            stmt = insert(QueuedRunModel).values(queued_runs_data)
+            stmt = stmt.on_conflict_do_nothing(
+                index_elements=['campaign_id', 'source_uuid', 'retry_count']
+            )
             try:
+                await session.execute(stmt)
                 await session.commit()
             except Exception as e:
                 await session.rollback()
