@@ -17,6 +17,7 @@ from api.services.telephony.status_processor import (
     StatusCallbackRequest,
     _process_status_update,
 )
+from api.utils.common import get_public_request_url
 
 router = APIRouter()
 
@@ -38,8 +39,9 @@ async def handle_twiml_webhook(
     provider = await get_telephony_provider_for_run(workflow_run, organization_id)
     callback_data = dict(await request.form())
 
+    public_url = await get_public_request_url(request)
     is_valid = await provider.verify_inbound_signature(
-        str(request.url),
+        public_url,
         callback_data,
         dict(request.headers),
     )
@@ -88,8 +90,9 @@ async def handle_twilio_status_callback(
         workflow_run, workflow.organization_id
     )
 
+    public_url = await get_public_request_url(request)
     is_valid = await provider.verify_inbound_signature(
-        str(request.url),
+        public_url,
         callback_data,
         dict(request.headers),
     )

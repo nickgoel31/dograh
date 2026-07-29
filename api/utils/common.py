@@ -5,6 +5,9 @@ Shared functions used across the application.
 
 import re
 
+from urllib.parse import urlparse, urlunparse
+
+from fastapi import Request
 from loguru import logger
 
 from api.constants import BACKEND_API_ENDPOINT
@@ -175,3 +178,27 @@ async def get_backend_endpoints() -> tuple[str, str]:
             "No tunnel URL available. Please set BACKEND_API_ENDPOINT environment "
             "variable or ensure cloudflared service is running."
         )
+
+
+async def get_public_request_url(request: Request) -> str:
+    """
+    Reconstruct the full public URL for a given request.
+    This replaces the internal scheme and host with the public BACKEND_API_ENDPOINT
+    so that webhook signature verification works when running behind a proxy that
+    doesn't forward the original host/scheme correctly.
+    """
+    backend_endpoint, _ = await get_backend_endpoints()
+    parsed_backend = urlparse(backend_endpoint)
+    parsed_request = urlparse(str(request.url))
+
+    external_url = urlunparse(
+        (
+            parsed_backend.scheme,
+            parsed_backend.netloc,
+            parsed_request.path,
+            parsed_request.params,
+            parsed_request.query,
+            parsed_request.fragment,
+        )
+    )
+    return external_url

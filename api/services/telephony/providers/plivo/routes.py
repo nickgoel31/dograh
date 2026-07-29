@@ -17,6 +17,7 @@ from api.services.telephony.status_processor import (
     StatusCallbackRequest,
     _process_status_update,
 )
+from api.utils.common import get_public_request_url
 
 router = APIRouter()
 
@@ -47,8 +48,9 @@ async def _handle_plivo_status_callback(
         workflow_run, workflow.organization_id
     )
 
+    public_url = await get_public_request_url(request)
     is_valid = await provider.verify_inbound_signature(
-        str(request.url),
+        public_url,
         callback_data,
         dict(request.headers),
     )
@@ -90,8 +92,9 @@ async def handle_plivo_xml_webhook(
     form_data = await request.form()
     callback_data = dict(form_data)
 
+    public_url = await get_public_request_url(request)
     is_valid = await provider.verify_inbound_signature(
-        str(request.url), callback_data, dict(request.headers)
+        public_url, callback_data, dict(request.headers)
     )
     if not is_valid:
         logger.warning(
