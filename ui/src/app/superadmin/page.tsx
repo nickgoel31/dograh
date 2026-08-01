@@ -62,8 +62,9 @@ interface Organization {
   monthly_minutes_limit?: number;
   monthly_minutes_start_year?: number;
   monthly_minutes_start_month?: number;
-  monthly_minutes_end_year?: number;
-  monthly_minutes_end_month?: number;
+  monthly_minutes_end_year?: number | null;
+  monthly_minutes_end_month?: number | null;
+  quota_reset_day?: number | null;
   whatsapp_enabled?: boolean;
   whatsapp_phone_number_id?: string;
   whatsapp_business_account_id?: string;
@@ -102,7 +103,9 @@ export default function SuperadminPage() {
     const [editMonthlyMinutesLimit, setEditMonthlyMinutesLimit] = useState<number>(0);
     const [editCycleYear, setEditCycleYear] = useState<number>(new Date().getFullYear());
     const [editCycleMonth, setEditCycleMonth] = useState<number>(new Date().getMonth() + 1);
-    const [editCustomMinutesUsed, setEditCustomMinutesUsed] = useState<string>("");
+    const [editCustomMinutesUsed, setEditCustomMinutesUsed] = useState<number | "">("");
+    const [editCycleTopupMinutes, setEditCycleTopupMinutes] = useState<number | "">("");
+    const [editQuotaResetDay, setEditQuotaResetDay] = useState<number>(1);
     const [editStartYear, setEditStartYear] = useState<number | "">("");
     const [editStartMonth, setEditStartMonth] = useState<number | "">("");
     const [editEndYear, setEditEndYear] = useState<number | "">("");
@@ -302,11 +305,13 @@ export default function SuperadminPage() {
                     monthly_minutes_end_month: editEndMonth !== "" ? Number(editEndMonth) : null,
                     cycle_year: editCycleYear,
                     cycle_month: editCycleMonth,
-                    custom_minutes_used: editCustomMinutesUsed === "" ? null : parseFloat(editCustomMinutesUsed),
+                    custom_minutes_used: editCustomMinutesUsed === "" ? null : editCustomMinutesUsed,
+                    cycle_topup_minutes: editCycleTopupMinutes === "" ? null : editCycleTopupMinutes,
                     whatsapp_enabled: editWhatsAppEnabled,
                     whatsapp_phone_number_id: editWhatsAppPhoneNumberId || null,
-                    whatsapp_access_token: editWhatsAppAccessToken || undefined,
+                    whatsapp_access_token: editWhatsAppAccessToken || null,
                     whatsapp_business_account_id: editWhatsAppBusinessAccountId || null,
+                    quota_reset_day: editQuotaResetDay,
                 }
             });
             toast.success("Wallet & Billing configuration updated");
@@ -539,6 +544,7 @@ export default function SuperadminPage() {
                                                                 setEditCycleYear(new Date().getFullYear());
                                                                 setEditCycleMonth(new Date().getMonth() + 1);
                                                                 setEditCustomMinutesUsed("");
+                                                                setEditCycleTopupMinutes("");
                                                                 setEditBalance(org.base_balance ?? org.balance ?? 0);
                                                                 setEditBillingRate(org.billing_rate ?? 0);
                                                                 setEditBillingPulse(org.billing_pulse ?? 60);
@@ -546,6 +552,7 @@ export default function SuperadminPage() {
                                                                 setEditStartMonth(org.monthly_minutes_start_month ?? "");
                                                                 setEditEndYear(org.monthly_minutes_end_year ?? "");
                                                                 setEditEndMonth(org.monthly_minutes_end_month ?? "");
+                                                                setEditQuotaResetDay(org.quota_reset_day ?? 1);
                                                                 setEditWhatsAppEnabled(org.whatsapp_enabled ?? false);
                                                                 setEditWhatsAppPhoneNumberId(org.whatsapp_phone_number_id ?? "");
                                                                 setEditWhatsAppAccessToken("");
@@ -707,6 +714,21 @@ export default function SuperadminPage() {
                                     Set monthly committed minutes. Set to 0 to disable minutes-based billing.
                                 </p>
                             </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="quotaResetDay">Billing Cycle Reset Day (1-28)</Label>
+                                <Input
+                                    id="quotaResetDay"
+                                    type="number"
+                                    min="1"
+                                    max="28"
+                                    value={editQuotaResetDay}
+                                    onChange={(e) => setEditQuotaResetDay(parseInt(e.target.value) || 1)}
+                                    required
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    The day of the month when the billing cycle resets.
+                                </p>
+                            </div>
                             <div className="border-t pt-4 space-y-4">
                                 <h4 className="text-sm font-semibold text-foreground">Active Contract Period</h4>
                                 <p className="text-xs text-muted-foreground">
@@ -802,7 +824,7 @@ export default function SuperadminPage() {
                                         </select>
                                     </div>
                                 </div>
-                                <div className="space-y-2">
+                                <div className="space-y-2 mt-4">
                                     <Label className="text-xs">Custom Minutes Used</Label>
                                     <div className="flex gap-2">
                                         <Input
@@ -811,7 +833,7 @@ export default function SuperadminPage() {
                                             step="0.1"
                                             min="0"
                                             value={editCustomMinutesUsed}
-                                            onChange={(e) => setEditCustomMinutesUsed(e.target.value)}
+                                            onChange={(e) => setEditCustomMinutesUsed(e.target.value === "" ? "" : parseFloat(e.target.value) || "")}
                                             placeholder="System Calculated"
                                         />
                                         <Button
@@ -827,11 +849,24 @@ export default function SuperadminPage() {
                                         Override system calculated minutes. Leave empty to use system calculation.
                                     </p>
                                 </div>
-                                <div className="border-t pt-4 space-y-4">
-                                    <h4 className="text-sm font-semibold text-foreground flex items-center justify-between">
-                                        <span>WhatsApp Follow-Up Integration</span>
-                                        <span className="text-[10px] text-muted-foreground font-normal">SuperAdmin Only</span>
-                                    </h4>
+                                <div className="space-y-2 mt-4">
+                                    <Label htmlFor="cycleTopupMinutes" className="text-xs">Top Up Minutes</Label>
+                                    <Input
+                                        id="cycleTopupMinutes"
+                                        type="number"
+                                        min="0"
+                                        step="0.1"
+                                        placeholder="Add one-time minutes"
+                                        value={editCycleTopupMinutes}
+                                        onChange={(e) => setEditCycleTopupMinutes(e.target.value === "" ? "" : parseFloat(e.target.value) || "")}
+                                    />
+                                    <p className="text-[10px] text-muted-foreground">Adds extra minutes to this cycle that carry forward forever.</p>
+                                </div>
+                            <div className="border-t pt-4 space-y-4">
+                                <h4 className="text-sm font-semibold text-foreground flex items-center justify-between">
+                                    <span>WhatsApp Follow-Up Integration</span>
+                                    <span className="text-[10px] text-muted-foreground font-normal">SuperAdmin Only</span>
+                                </h4>
                                     <div className="flex items-center space-x-2">
                                         <input
                                             id="whatsappEnabled"

@@ -596,7 +596,6 @@ export default function BillingPage() {
                 <th className="pb-3 text-right font-medium">Calls</th>
                 <th className="pb-3 text-right font-medium">Total Minutes</th>
                 <th className="pb-3 text-right font-medium">Billable Units</th>
-                <th className="pb-3 text-right font-medium">Avg/Call</th>
                 <th className="pb-3 text-right font-medium text-white">Billed Amount</th>
               </tr>
             </thead>
@@ -616,7 +615,6 @@ export default function BillingPage() {
                       <td className="py-3.5 text-right text-zinc-300">{b.calls.toLocaleString()}</td>
                       <td className="py-3.5 text-right text-zinc-300">{b.minutes.toFixed(1)}</td>
                       <td className="py-3.5 text-right text-zinc-300">{b.billableUnits.toLocaleString()}</td>
-                      <td className="py-3.5 text-right text-zinc-300">{formatCurrency(b.revenue / b.calls)}</td>
                       <td className="py-3.5 text-right font-bold text-white">{formatCurrency(b.revenue)}</td>
                     </tr>
                   ))}
@@ -625,13 +623,12 @@ export default function BillingPage() {
                     <td className="py-4 text-right text-zinc-200">{filteredRuns.length.toLocaleString()}</td>
                     <td className="py-4 text-right text-zinc-200">{totalMinutes.toFixed(1)}</td>
                     <td className="py-4 text-right text-zinc-200">{totalBillableUnits.toLocaleString()}</td>
-                    <td className="py-4 text-right text-zinc-200">{formatCurrency(avgRevenuePerCall)}</td>
                     <td className="py-4 text-right text-[#7c3aed]">{formatCurrency(totalRevenue)}</td>
                   </tr>
                 </>
               ) : (
                 <tr>
-                  <td colSpan={6} className="h-24 text-center text-zinc-500">
+                  <td colSpan={5} className="h-24 text-center text-zinc-500">
                     {isFetchingAll ? 'Loading breakdown...' : 'No calls recorded for this period'}
                   </td>
                 </tr>

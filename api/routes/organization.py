@@ -1283,6 +1283,7 @@ async def get_wallet(
 
         # 4. Chronologically compute carry-forward and used minutes
         carry_forward_to_next = 0.0
+        topup_balance_to_next = 0.0
         cycle_details = {}
 
         for c in cycles:
@@ -1297,7 +1298,9 @@ async def get_wallet(
             else:
                 c_used = (c.total_duration_seconds or 0) / 60.0
 
-            if not is_active:
+            c_topup = getattr(c, "topup_minutes", 0.0) or 0.0
+
+            if not is_active and carry_forward_to_next <= 0.0 and topup_balance_to_next <= 0.0 and c_topup <= 0.0:
                 cycle_details[c.id] = {
                     "carry_forward_minutes": 0.0,
                     "minutes_used": c_used,
@@ -1305,13 +1308,20 @@ async def get_wallet(
                     "balance": getattr(org, "balance", 0.0) or 0.0,
                 }
                 carry_forward_to_next = 0.0
+                topup_balance_to_next = 0.0
             else:
+                c_base_limit = getattr(org, "monthly_minutes_limit", 0.0) or 0.0 if is_active else 0.0
                 c_carry_forward = carry_forward_to_next
-                c_limit = getattr(org, "monthly_minutes_limit", 0.0) or 0.0
-                c_total_allowed = c_limit + c_carry_forward
+                c_topup_balance = topup_balance_to_next + c_topup
+                
+                c_total_allowed = c_base_limit + c_carry_forward + c_topup_balance
                 c_remaining = max(0.0, c_total_allowed - c_used)
-                remaining_base = max(0.0, c_limit - max(0.0, c_used - c_carry_forward))
-                carry_forward_to_next = remaining_base
+                
+                remaining_after_cf = max(0.0, c_used - c_carry_forward)
+                remaining_after_base = max(0.0, remaining_after_cf - c_base_limit)
+                
+                carry_forward_to_next = max(0.0, c_base_limit - remaining_after_cf)
+                topup_balance_to_next = max(0.0, c_topup_balance - remaining_after_base)
                 
                 base_balance = getattr(org, "balance", 0.0) or 0.0
                 billing_rate = getattr(org, "billing_rate", 0.0) or 0.0
@@ -1321,7 +1331,7 @@ async def get_wallet(
                     balance_val = base_balance
                 
                 cycle_details[c.id] = {
-                    "carry_forward_minutes": c_carry_forward,
+                    "carry_forward_minutes": c_carry_forward + c_topup_balance,
                     "minutes_used": c_used,
                     "minutes_remaining": c_remaining,
                     "balance": balance_val,
@@ -1333,16 +1343,19 @@ async def get_wallet(
         if not details:
             base_balance = getattr(org, "balance", 0.0) or 0.0
             billing_rate = getattr(org, "billing_rate", 0.0) or 0.0
-            limit = getattr(org, "monthly_minutes_limit", 0.0) or 0.0
             is_active = is_cycle_within_contract_period(
                 target_cycle.period_start if target_cycle.period_start.tzinfo else target_cycle.period_start.replace(tzinfo=timezone.utc)
             )
+            c_base_limit = getattr(org, "monthly_minutes_limit", 0.0) or 0.0 if is_active else 0.0
+            c_topup = getattr(target_cycle, "topup_minutes", 0.0) or 0.0
+            limit = c_base_limit + c_topup
+
             if target_cycle.custom_minutes_used is not None:
                 minutes_used = target_cycle.custom_minutes_used
             else:
                 minutes_used = (target_cycle.total_duration_seconds or 0) / 60.0
             
-            if base_balance == 0.0 and billing_rate > 0.0 and is_active:
+            if base_balance == 0.0 and billing_rate > 0.0:
                 balance_val = max(0.0, limit - minutes_used) * billing_rate
             else:
                 balance_val = base_balance

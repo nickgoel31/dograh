@@ -190,6 +190,7 @@ class CreateOrganizationRequest(BaseModel):
     monthly_minutes_start_month: Optional[int] = None
     monthly_minutes_end_year: Optional[int] = None
     monthly_minutes_end_month: Optional[int] = None
+    quota_reset_day: Optional[int] = 1
 
 class UpdateOrganizationRequest(BaseModel):
     name: Optional[str] = None
@@ -205,6 +206,8 @@ class UpdateOrganizationRequest(BaseModel):
     cycle_year: Optional[int] = None
     cycle_month: Optional[int] = None
     custom_minutes_used: Optional[float] = None
+    cycle_topup_minutes: Optional[float] = None
+    quota_reset_day: Optional[int] = None
     whatsapp_enabled: Optional[bool] = None
     whatsapp_phone_number_id: Optional[str] = None
     whatsapp_access_token: Optional[str] = None
@@ -252,6 +255,7 @@ async def create_organization(request: CreateOrganizationRequest, user: UserMode
             monthly_minutes_start_month=request.monthly_minutes_start_month,
             monthly_minutes_end_year=request.monthly_minutes_end_year,
             monthly_minutes_end_month=request.monthly_minutes_end_month,
+            quota_reset_day=request.quota_reset_day,
         )
         session.add(new_org)
         await session.commit()
@@ -271,6 +275,7 @@ async def create_organization(request: CreateOrganizationRequest, user: UserMode
             "monthly_minutes_start_month": new_org.monthly_minutes_start_month,
             "monthly_minutes_end_year": new_org.monthly_minutes_end_year,
             "monthly_minutes_end_month": new_org.monthly_minutes_end_month,
+            "quota_reset_day": new_org.quota_reset_day,
         }
 
 @router.get("/organizations")
@@ -471,9 +476,15 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
             if is_set:
                 setattr(org, f, val)
 
+        if request.quota_reset_day is not None:
+            if not (1 <= request.quota_reset_day <= 28):
+                raise HTTPException(status_code=400, detail="quota_reset_day must be between 1 and 28")
+            org.quota_reset_day = request.quota_reset_day
+
         if request.cycle_year is not None and request.cycle_month is not None:
             is_custom_minutes_set = "custom_minutes_used" in request.model_fields_set or (hasattr(request, "__fields_set__") and "custom_minutes_used" in request.__fields_set__)
-            if is_custom_minutes_set:
+            is_topup_set = "cycle_topup_minutes" in request.model_fields_set or (hasattr(request, "__fields_set__") and "cycle_topup_minutes" in request.__fields_set__)
+            if is_custom_minutes_set or is_topup_set:
                 if request.custom_minutes_used is not None and request.custom_minutes_used < 0:
                     raise HTTPException(
                         status_code=400,
@@ -505,11 +516,17 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
                         period_start=period_start,
                         period_end=period_end,
                         quota_dograh_tokens=getattr(org, "quota_dograh_tokens", 0) or 0,
-                        custom_minutes_used=request.custom_minutes_used
                     )
+                    if is_custom_minutes_set:
+                        cycle.custom_minutes_used = request.custom_minutes_used
+                    if is_topup_set:
+                        cycle.topup_minutes = request.cycle_topup_minutes
                     session.add(cycle)
                 else:
-                    cycle.custom_minutes_used = request.custom_minutes_used
+                    if is_custom_minutes_set:
+                        cycle.custom_minutes_used = request.custom_minutes_used
+                    if is_topup_set:
+                        cycle.topup_minutes = request.cycle_topup_minutes
             
         if request.whatsapp_enabled is not None:
             org.whatsapp_enabled = request.whatsapp_enabled
@@ -544,6 +561,7 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
             "monthly_minutes_start_month": getattr(org, "monthly_minutes_start_month", None),
             "monthly_minutes_end_year": getattr(org, "monthly_minutes_end_year", None),
             "monthly_minutes_end_month": getattr(org, "monthly_minutes_end_month", None),
+            "quota_reset_day": getattr(org, "quota_reset_day", 1),
             "whatsapp_enabled": getattr(org, "whatsapp_enabled", False),
             "whatsapp_phone_number_id": getattr(org, "whatsapp_phone_number_id", None),
             "whatsapp_business_account_id": getattr(org, "whatsapp_business_account_id", None),

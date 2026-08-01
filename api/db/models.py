@@ -637,6 +637,7 @@ class OrganizationUsageCycleModel(Base):
     used_amount_usd = Column(Float, nullable=True, default=0)
     quota_amount_usd = Column(Float, nullable=True)
     custom_minutes_used = Column(Float, nullable=True)
+    topup_minutes = Column(Float, nullable=True, default=0.0)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at = Column(
         DateTime(timezone=True),
