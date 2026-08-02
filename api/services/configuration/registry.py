@@ -810,13 +810,14 @@ class InworldRealtimeLLMConfiguration(BaseLLMConfiguration):
         },
     )
     language: str | None = Field(
-        default=None,
+        default="auto",
         description=(
-            "BCP-47 language code for STT transcription (e.g. 'en', 'es', 'fr', 'de', 'hi', 'ja'). "
-            "Auto-detects when omitted. Set this to improve accuracy for non-English speech."
+            "BCP-47 language code for STT transcription (e.g. 'auto', 'en', 'es', 'fr', 'de', 'hi', 'ja'). "
+            "'auto' enables multilingual auto-detection."
         ),
         json_schema_extra={
-            "examples": ["en", "es", "fr", "de", "hi", "ja", "zh", "pt", "it", "ko"],
+            "examples": ["auto", "en", "es", "fr", "de", "hi", "ja", "zh", "pt", "it", "ko"],
+            "allow_custom_input": True,
         },
     )
     turn_detection: str = Field(
@@ -860,8 +861,10 @@ class InworldRealtimeLLMConfiguration(BaseLLMConfiguration):
         ),
         json_schema_extra={
             "examples": [0.75, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0],
+            "allow_custom_input": True,
         },
     )
+
 
 
 REALTIME_PROVIDERS = {

@@ -1,5 +1,6 @@
 // Display names for language codes (Deepgram + Sarvam)
 export const LANGUAGE_DISPLAY_NAMES: Record<string, string> = {
+    "auto": "Multilingual (Auto-detect)",
     "multi": "Multilingual (Auto-detect)",
     // Arabic
     "ar": "Arabic",

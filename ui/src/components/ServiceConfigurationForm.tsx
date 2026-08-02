@@ -410,14 +410,29 @@ export function ServiceConfigurationForm({
         if (keys.length > 0) {
             config.api_key = mode === 'override' ? keys[0] : keys;
         }
+        const currentProvider = serviceProviders[service];
+        const providerSchema = schemas?.[service]?.[currentProvider];
+
         Object.entries(data).forEach(([property, value]) => {
             if (!property.startsWith(`${service}_`)) return;
             const field = property.slice(service.length + 1);
             if (field === "api_key" || field === "provider") return;
-            config[field] = value as string | number;
+
+            const schema = providerSchema?.properties?.[field];
+            const actualSchema = schema?.$ref && providerSchema?.$defs
+                ? providerSchema.$defs[schema.$ref.split('/').pop() || '']
+                : schema;
+
+            if (actualSchema?.type === "number" && value !== undefined && value !== null && value !== "") {
+                const num = Number(value);
+                config[field] = isNaN(num) ? (value as string | number) : num;
+            } else {
+                config[field] = value as string | number;
+            }
         });
         return config;
     };
+
 
     const onSubmit = async (data: FormValues) => {
         setApiError(null);
@@ -661,19 +676,22 @@ export function ServiceConfigurationForm({
 
         if (actualSchema?.allow_custom_input && actualSchema?.examples) {
             const fieldKey = `${service}_${field}`;
-            const currentValue = watch(fieldKey) as string || "";
+            const watchVal = watch(fieldKey);
+            const currentValue = watchVal !== undefined && watchVal !== null ? String(watchVal) : "";
             const options = actualSchema.examples;
 
             if (isCustomInput[fieldKey]) {
                 return (
                     <div className="space-y-2">
                         <Input
-                            type="text"
+                            type={actualSchema?.type === "number" ? "number" : "text"}
+                            {...(actualSchema?.type === "number" && { step: "any" })}
                             placeholder={`Enter ${field}`}
                             value={currentValue}
                             className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
                             onChange={(e) => {
-                                setValue(fieldKey, e.target.value, { shouldDirty: true });
+                                const val = actualSchema?.type === "number" ? (e.target.value === "" ? "" : Number(e.target.value)) : e.target.value;
+                                setValue(fieldKey, val, { shouldDirty: true });
                             }}
                         />
                         <div className="flex items-center space-x-2">
@@ -684,7 +702,9 @@ export function ServiceConfigurationForm({
                                 onCheckedChange={(checked) => {
                                     setIsCustomInput(prev => ({ ...prev, [fieldKey]: checked as boolean }));
                                     if (!checked && options.length > 0) {
-                                        setValue(fieldKey, options[0], { shouldDirty: true });
+                                        const defaultOption = options[0];
+                                        const parsedOption = actualSchema?.type === "number" ? Number(defaultOption) : defaultOption;
+                                        setValue(fieldKey, parsedOption, { shouldDirty: true });
                                     }
                                 }}
                             />
@@ -701,19 +721,23 @@ export function ServiceConfigurationForm({
                     <Select
                         value={currentValue}
                         onValueChange={(value) => {
-                            if (!value) return;
-                            setValue(fieldKey, value, { shouldDirty: true });
+                            if (value === undefined || value === null) return;
+                            const parsed = actualSchema?.type === "number" ? Number(value) : value;
+                            setValue(fieldKey, parsed, { shouldDirty: true });
                         }}
                     >
                         <SelectTrigger className="w-full bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all">
                             <SelectValue placeholder={`Select ${field}`} />
                         </SelectTrigger>
                         <SelectContent className="bg-[#111113] border border-[#1d1d22] text-white">
-                            {options.map((value: string) => (
-                                <SelectItem key={value} value={value}>
-                                    {value}
-                                </SelectItem>
-                            ))}
+                            {options.map((value: string | number) => {
+                                const strVal = String(value);
+                                return (
+                                    <SelectItem key={strVal} value={strVal}>
+                                        {field === "language" ? (LANGUAGE_DISPLAY_NAMES[strVal] || strVal) : strVal}
+                                    </SelectItem>
+                                );
+                            })}
                         </SelectContent>
                     </Select>
                     <div className="flex items-center space-x-2">
@@ -743,37 +767,46 @@ export function ServiceConfigurationForm({
         }
 
         if (dropdownOptions && dropdownOptions.length > 0) {
-            const getDisplayName = (value: string) => {
+            const getDisplayName = (value: string | number) => {
+                const strVal = String(value);
                 if (field === "language") {
-                    return LANGUAGE_DISPLAY_NAMES[value] || value;
+                    return LANGUAGE_DISPLAY_NAMES[strVal] || strVal;
                 }
                 if (field === "voice") {
-                    return VOICE_DISPLAY_NAMES[value] || value.charAt(0).toUpperCase() + value.slice(1);
+                    return VOICE_DISPLAY_NAMES[strVal] || (strVal.length > 0 ? strVal.charAt(0).toUpperCase() + strVal.slice(1) : strVal);
                 }
-                return value;
+                return strVal;
             };
+
+            const watchVal = watch(`${service}_${field}`);
+            const currentStrValue = watchVal !== undefined && watchVal !== null ? String(watchVal) : "";
 
             return (
                 <Select
-                    value={watch(`${service}_${field}`) as string || ""}
+                    value={currentStrValue}
                     onValueChange={(value) => {
-                        if (!value) return;
-                        setValue(`${service}_${field}`, value, { shouldDirty: true });
+                        if (value === undefined || value === null) return;
+                        const parsed = actualSchema?.type === "number" ? Number(value) : value;
+                        setValue(`${service}_${field}`, parsed, { shouldDirty: true });
                     }}
                 >
                     <SelectTrigger className="w-full bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all">
                         <SelectValue placeholder={`Select ${field}`} />
                     </SelectTrigger>
                     <SelectContent className="bg-[#111113] border border-[#1d1d22] text-white">
-                        {dropdownOptions.map((value: string) => (
-                            <SelectItem key={value} value={value}>
-                                {getDisplayName(value)}
-                            </SelectItem>
-                        ))}
+                        {dropdownOptions.map((value: string | number) => {
+                            const strVal = String(value);
+                            return (
+                                <SelectItem key={strVal} value={strVal}>
+                                    {getDisplayName(value)}
+                                </SelectItem>
+                            );
+                        })}
                     </SelectContent>
                 </Select>
             );
         }
+
 
         if (actualSchema?.multiline) {
             return (

@@ -83,12 +83,16 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
         llm_model = kwargs.pop("llm_model", None) or "google-ai-studio/gemini-2.5-flash-lite"
         voice = kwargs.pop("voice", None) or "Riya"
 
+        # Resolve STT language: "auto", None, or empty string disables explicit language
+        # parameter so Inworld STT performs multilingual auto-detection.
+        stt_lang = language if (language and language.lower() not in ("auto", "none", "null", "")) else None
+
         # Build InputTranscription with model, language, and vocabulary hint.
         # language and prompt are native fields on InputTranscription (added
         # to the pipecat submodule) and are serialized by model_dump(exclude_none=True).
         transcription = events.InputTranscription(
             model=stt_model,
-            language=language or None,
+            language=stt_lang,
             prompt=transcription_prompt or None,
         )
 
@@ -103,6 +107,8 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
             interrupt_response=True,
         )
 
+        parsed_speed = float(tts_speed) if tts_speed is not None else 1.1
+
         session_properties = events.SessionProperties(
             model=llm_model,
             output_modalities=["audio", "text"],
@@ -116,10 +122,11 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
                     format=events.PCMAudioFormat(rate=24000),
                     model=tts_model,
                     voice=voice,
-                    speed=tts_speed if tts_speed != 1.0 else None,
+                    speed=parsed_speed,
                 ),
             ),
         )
+
 
         super().__init__(
             llm_model=llm_model,
