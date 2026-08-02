@@ -790,8 +790,12 @@ class InworldRealtimeLLMConfiguration(BaseLLMConfiguration):
         },
     )
     stt_model: str = Field(
-        default="assemblyai/u3-rt-pro",
-        description="STT model for input transcription.",
+        default="inworld/inworld-stt-1",
+        description=(
+            "STT model for input transcription. 'inworld/inworld-stt-1' is the recommended "
+            "default (no third-party billing required). AssemblyAI, Soniox, and Deepgram models "
+            "require the corresponding provider to be enabled on your Inworld account."
+        ),
         json_schema_extra={
             "examples": INWORLD_REALTIME_STT_MODELS,
             "allow_custom_input": True,
@@ -803,6 +807,59 @@ class InworldRealtimeLLMConfiguration(BaseLLMConfiguration):
         json_schema_extra={
             "examples": INWORLD_REALTIME_TTS_MODELS,
             "allow_custom_input": True,
+        },
+    )
+    language: str | None = Field(
+        default=None,
+        description=(
+            "BCP-47 language code for STT transcription (e.g. 'en', 'es', 'fr', 'de', 'hi', 'ja'). "
+            "Auto-detects when omitted. Set this to improve accuracy for non-English speech."
+        ),
+        json_schema_extra={
+            "examples": ["en", "es", "fr", "de", "hi", "ja", "zh", "pt", "it", "ko"],
+        },
+    )
+    turn_detection: str = Field(
+        default="semantic_vad",
+        description=(
+            "Turn detection mode. 'semantic_vad' uses model-based semantic understanding "
+            "to detect when the user finishes speaking (recommended). 'server_vad' uses "
+            "energy-based voice activity detection (lower latency, less accurate)."
+        ),
+        json_schema_extra={
+            "examples": ["semantic_vad", "server_vad"],
+        },
+    )
+    stt_eagerness: str = Field(
+        default="low",
+        description=(
+            "How aggressively to detect end-of-turn (semantic_vad only). "
+            "'low' waits longer for the user to finish (fewer false ends, good for thoughtful speakers). "
+            "'medium' is balanced. 'high' commits to end-of-turn quickly (responsive, may cut off). "
+            "'auto' adapts automatically."
+        ),
+        json_schema_extra={
+            "examples": ["low", "medium", "high", "auto"],
+        },
+    )
+    transcription_prompt: str | None = Field(
+        default=None,
+        description=(
+            "Custom vocabulary hints for the STT model (e.g. brand names, technical terms, "
+            "domain-specific jargon). Helps the STT recognize unusual words correctly. "
+            "Example: 'Medical dictation. Terms: angioplasty, myocardial infarction.'"
+        ),
+    )
+    tts_speed: float = Field(
+        default=1.1,
+        ge=0.5,
+        le=2.0,
+        description=(
+            "TTS speaking rate multiplier. 1.0 is the natural model speed (tends to sound slow). "
+            "1.1–1.3 is recommended for most voice agents. 2.0 is double speed."
+        ),
+        json_schema_extra={
+            "examples": [0.75, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0],
         },
     )
 

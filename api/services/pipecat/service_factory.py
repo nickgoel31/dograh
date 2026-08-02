@@ -1000,8 +1000,13 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
             DograhInworldRealtimeLLMService,
         )
 
-        stt_model = getattr(realtime_config, "stt_model", None) or "assemblyai/u3-rt-pro"
+        stt_model = getattr(realtime_config, "stt_model", None) or "inworld/inworld-stt-1"
         tts_model = getattr(realtime_config, "tts_model", None) or "inworld-tts-1.5-mini"
+        language = getattr(realtime_config, "language", None)
+        turn_detection = getattr(realtime_config, "turn_detection", None) or "semantic_vad"
+        stt_eagerness = getattr(realtime_config, "stt_eagerness", None) or "low"
+        transcription_prompt = getattr(realtime_config, "transcription_prompt", None)
+        tts_speed = getattr(realtime_config, "tts_speed", None) or 1.1
 
         return DograhInworldRealtimeLLMService(
             api_key=api_key,
@@ -1009,6 +1014,11 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
             voice=voice or "Riya",
             tts_model=tts_model,
             stt_model=stt_model,
+            language=language,
+            turn_detection=turn_detection,
+            stt_eagerness=stt_eagerness,
+            transcription_prompt=transcription_prompt,
+            tts_speed=tts_speed,
         )
     else:
         raise HTTPException(

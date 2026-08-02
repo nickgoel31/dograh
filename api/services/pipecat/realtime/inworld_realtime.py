@@ -12,10 +12,12 @@ Adds:
   like user-idle checks, without mutating Dograh's local ``LLMContext``.
 - **finalized=True on TranscriptionFrame** because every Inworld
   transcription via the ``completed`` event is final by construction.
+- **STT language, vocabulary hints, turn-detection mode, and eagerness**
+  via Inworld's ``providerData.stt`` and ``audio.input.transcription``.
 """
 
 import json
-from typing import Any
+from typing import Any, Literal
 
 from loguru import logger
 
@@ -42,12 +44,99 @@ from pipecat.utils.time import time_now_iso8601
 class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
     """Inworld Realtime with Dograh engine integration quirks. See module docstring."""
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(
+        self,
+        *,
+        language: str | None = None,
+        turn_detection: Literal["semantic_vad", "server_vad"] = "semantic_vad",
+        stt_eagerness: Literal["low", "medium", "high", "auto"] = "low",
+        transcription_prompt: str | None = None,
+        tts_speed: float = 1.1,
+        **kwargs,
+    ):
+        """Initialize DograhInworldRealtimeLLMService.
+
+        Args:
+            language: BCP-47 language code for STT (e.g. ``"en"``, ``"es"``).
+                Auto-detects when ``None``.
+            turn_detection: Turn detection mode. ``"semantic_vad"`` (default)
+                uses model-based understanding; ``"server_vad"`` uses energy-based VAD.
+            stt_eagerness: How aggressively to detect end-of-turn for
+                ``semantic_vad``. One of ``"low"``, ``"medium"``, ``"high"``,
+                ``"auto"``. Lower eagerness waits longer before committing;
+                higher eagerness responds faster but may cut users off.
+            transcription_prompt: Custom vocabulary hint passed to the STT
+                model (e.g. brand names, technical jargon). Soft bias only —
+                not a strict whitelist.
+            tts_speed: TTS speaking rate multiplier. ``1.0`` is the model's
+                natural speed (tends to sound slow). ``1.1``–``1.3`` is
+                recommended for most voice agents. Range ``0.5``–``2.0``.
+            **kwargs: Remaining keyword arguments forwarded to
+                :class:`InworldRealtimeLLMService`, including ``api_key``,
+                ``llm_model``, ``voice``, ``tts_model``, ``stt_model``.
+        """
+        # Extract shorthand model params that the upstream service accepts
+        # directly; we'll rebuild a full SessionProperties so the upstream
+        # __init__ doesn't need to also set these.
+        stt_model = kwargs.pop("stt_model", None) or "inworld/inworld-stt-1"
+        tts_model = kwargs.pop("tts_model", None) or "inworld-tts-1.5-mini"
+        llm_model = kwargs.pop("llm_model", None) or "google-ai-studio/gemini-2.5-flash-lite"
+        voice = kwargs.pop("voice", None) or "Riya"
+
+        # Build InputTranscription with model, language, and vocabulary hint.
+        # language and prompt are native fields on InputTranscription (added
+        # to the pipecat submodule) and are serialized by model_dump(exclude_none=True).
+        transcription = events.InputTranscription(
+            model=stt_model,
+            language=language or None,
+            prompt=transcription_prompt or None,
+        )
+
+        # Build TurnDetection; eagerness is only meaningful for semantic_vad
+        # (ignored by server_vad). TurnDetection.eagerness accepts None, so
+        # passing None here is safe and results in the field being excluded via
+        # model_dump(exclude_none=True).
+        turn_det = events.TurnDetection(
+            type=turn_detection,
+            eagerness=stt_eagerness if turn_detection == "semantic_vad" else None,
+            create_response=True,
+            interrupt_response=True,
+        )
+
+        session_properties = events.SessionProperties(
+            model=llm_model,
+            output_modalities=["audio", "text"],
+            audio=events.AudioConfiguration(
+                input=events.AudioInput(
+                    format=events.PCMAudioFormat(rate=24000),
+                    transcription=transcription,
+                    turn_detection=turn_det,
+                ),
+                output=events.AudioOutput(
+                    format=events.PCMAudioFormat(rate=24000),
+                    model=tts_model,
+                    voice=voice,
+                    speed=tts_speed if tts_speed != 1.0 else None,
+                ),
+            ),
+        )
+
+        super().__init__(
+            llm_model=llm_model,
+            voice=voice,
+            tts_model=tts_model,
+            stt_model=stt_model,
+            settings=InworldRealtimeLLMService.Settings(
+                model=llm_model,
+                session_properties=session_properties,
+            ),
+            **kwargs,
+        )
         self._user_is_muted: bool = False
         self._handled_initial_context: bool = False
         self._bot_is_speaking: bool = False
         self._deferred_function_calls: list[FunctionCallFromLLM] = []
+
 
     # ------------------------------------------------------------------
     # Frame handling: mute, TTSSpeakFrame as greeting trigger
