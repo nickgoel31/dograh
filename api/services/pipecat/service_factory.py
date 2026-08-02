@@ -1000,13 +1000,24 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
             DograhInworldRealtimeLLMService,
         )
 
-        stt_model = getattr(realtime_config, "stt_model", None) or "inworld/inworld-stt-1"
-        tts_model = getattr(realtime_config, "tts_model", None) or "inworld-tts-1.5-mini"
-        language = getattr(realtime_config, "language", None)
-        turn_detection = getattr(realtime_config, "turn_detection", None) or "semantic_vad"
-        stt_eagerness = getattr(realtime_config, "stt_eagerness", None) or "low"
-        transcription_prompt = getattr(realtime_config, "transcription_prompt", None)
-        tts_speed = getattr(realtime_config, "tts_speed", None) or 1.1
+        def _get_attr(obj, key, default=None):
+            if isinstance(obj, dict):
+                val = obj.get(key)
+            else:
+                val = getattr(obj, key, default)
+            return val if val is not None else default
+
+        stt_model = _get_attr(realtime_config, "stt_model", "inworld/inworld-stt-1")
+        tts_model = _get_attr(realtime_config, "tts_model", "inworld-tts-2")
+        language = _get_attr(realtime_config, "language", "auto")
+        turn_detection = _get_attr(realtime_config, "turn_detection", "semantic_vad")
+        stt_eagerness = _get_attr(realtime_config, "stt_eagerness", "low")
+        transcription_prompt = _get_attr(realtime_config, "transcription_prompt", None)
+        raw_speed = _get_attr(realtime_config, "tts_speed", 1.1)
+        try:
+            tts_speed = float(raw_speed)
+        except (ValueError, TypeError):
+            tts_speed = 1.1
 
         return DograhInworldRealtimeLLMService(
             api_key=api_key,
@@ -1020,6 +1031,7 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
             transcription_prompt=transcription_prompt,
             tts_speed=tts_speed,
         )
+
     else:
         raise HTTPException(
             status_code=400, detail=f"Invalid realtime LLM provider {provider}"

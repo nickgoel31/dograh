@@ -109,6 +109,8 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
 
         parsed_speed = float(tts_speed) if tts_speed is not None else 1.1
 
+        tts_model = kwargs.pop("tts_model", None) or "inworld-tts-2"
+
         session_properties = events.SessionProperties(
             model=llm_model,
             output_modalities=["audio", "text"],
@@ -125,7 +127,13 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
                     speed=parsed_speed,
                 ),
             ),
+            provider_data={
+                "tts": {
+                    "speed": parsed_speed,
+                }
+            },
         )
+
 
 
         super().__init__(

@@ -802,13 +802,14 @@ class InworldRealtimeLLMConfiguration(BaseLLMConfiguration):
         },
     )
     tts_model: str = Field(
-        default="inworld-tts-1.5-mini",
+        default="inworld-tts-2",
         description="TTS model for output.",
         json_schema_extra={
             "examples": INWORLD_REALTIME_TTS_MODELS,
             "allow_custom_input": True,
         },
     )
+
     language: str | None = Field(
         default="auto",
         description=(

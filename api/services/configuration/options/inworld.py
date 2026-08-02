@@ -28,7 +28,8 @@ INWORLD_REALTIME_STT_MODELS = [
     "deepgram/flux-general-en",                     # Deepgram English with barge-in awareness
     "deepgram/flux-general-multi",                  # Deepgram multilingual (10 languages)
 ]
-INWORLD_REALTIME_TTS_MODELS = ["inworld-tts-1.5-mini", "inworld-tts-2"]
+INWORLD_REALTIME_TTS_MODELS = ["inworld-tts-2", "inworld-tts-1.5-mini"]
+
 
 INWORLD_TTS_MODELS = ["inworld-tts-2", "inworld-tts-1.5-mini"]
 INWORLD_TTS_VOICES = ["Sarah", "Riya"]
