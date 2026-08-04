@@ -232,8 +232,17 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
             if isinstance(event, SessionUpdateEvent):
                 sp = event.session
                 raw = sp.instructions or ""
-                if not raw.strip().startswith(tag):
+                if tag and not raw.strip().startswith(tag):
                     sp.instructions = f"{tag}\n{raw}" if raw else tag
+                base_pd = sp.provider_data or {}
+                sp.provider_data = {
+                    **base_pd,
+                    "tts": {
+                        **(base_pd.get("tts") or {}),
+                        "steering_handling": "emit_once",
+                    },
+                    "metadata": {"sdk": "pipecat-realtime"},
+                }
             await original_send(event)
 
         self.send_client_event = _intercept_send
