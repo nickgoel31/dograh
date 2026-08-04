@@ -44,6 +44,40 @@ from pipecat.utils.time import time_now_iso8601
 class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
     """Inworld Realtime with Dograh engine integration quirks. See module docstring."""
 
+    @staticmethod
+    def _speed_to_steering_tag(speed: float) -> str | None:
+        """Map a numeric speed multiplier to an inworld-tts-2 steering tag.
+
+        inworld-tts-2 does NOT honour ``audio.output.speed`` numerically —
+        speed is steered via natural-language bracket tags that the TTS model
+        interprets during synthesis. This method returns the appropriate tag
+        (or ``None`` for the natural-speed range) so it can be prepended to
+        every system instruction.
+
+        Speed → tag mapping:
+            ≤ 0.6   → ``[very slow]``
+            0.7–0.89 → ``[slow]``
+            0.9–1.1  → None (default / natural speed)
+            1.1–1.3  → ``[slightly fast]``
+            1.3–1.6  → ``[speak fast]``
+            1.6–1.85 → ``[very fast]``
+            > 1.85   → ``[extremely fast]``
+        """
+        if speed <= 0.6:
+            return "[very slow]"
+        elif speed <= 0.89:
+            return "[slow]"
+        elif speed <= 1.1:
+            return None  # natural/default speed — no tag needed
+        elif speed <= 1.3:
+            return "[slightly fast]"
+        elif speed <= 1.6:
+            return "[speak fast]"
+        elif speed <= 1.85:
+            return "[very fast]"
+        else:
+            return "[extremely fast]"
+
     def __init__(
         self,
         *,
@@ -51,7 +85,7 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
         turn_detection: Literal["semantic_vad", "server_vad"] = "semantic_vad",
         stt_eagerness: Literal["low", "medium", "high", "auto"] = "low",
         transcription_prompt: str | None = None,
-        tts_speed: float = 1.1,
+        tts_speed: float = 1.5,
         **kwargs,
     ):
         """Initialize DograhInworldRealtimeLLMService.
@@ -69,8 +103,11 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
                 model (e.g. brand names, technical jargon). Soft bias only —
                 not a strict whitelist.
             tts_speed: TTS speaking rate multiplier. ``1.0`` is the model's
-                natural speed (tends to sound slow). ``1.1``–``1.3`` is
+                natural speed. ``1.5`` (default) is noticeably faster and
                 recommended for most voice agents. Range ``0.5``–``2.0``.
+                For ``inworld-tts-2`` this maps to a steering tag injected
+                into the system instructions; ``audio.output.speed`` is also
+                set for non-TTS-2 model fallback.
             **kwargs: Remaining keyword arguments forwarded to
                 :class:`InworldRealtimeLLMService`, including ``api_key``,
                 ``llm_model``, ``voice``, ``tts_model``, ``stt_model``.
@@ -79,7 +116,7 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
         # directly; we'll rebuild a full SessionProperties so the upstream
         # __init__ doesn't need to also set these.
         stt_model = kwargs.pop("stt_model", None) or "inworld/inworld-stt-1"
-        tts_model = kwargs.pop("tts_model", None) or "inworld-tts-1.5-mini"
+        tts_model = kwargs.pop("tts_model", None) or "inworld-tts-2"
         llm_model = kwargs.pop("llm_model", None) or "google-ai-studio/gemini-2.5-flash-lite"
         voice = kwargs.pop("voice", None) or "Riya"
 
@@ -107,10 +144,13 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
             interrupt_response=True,
         )
 
-        parsed_speed = float(tts_speed) if tts_speed is not None else 1.1
+        parsed_speed = float(tts_speed) if tts_speed is not None else 1.5
 
-        tts_model = kwargs.pop("tts_model", None) or "inworld-tts-2"
-
+        # Build session properties.
+        # NOTE: audio.output.speed is set for OpenAI-compatible/legacy model
+        # support, but inworld-tts-2 ignores that field — it uses steering
+        # tags instead. The _speed_to_steering_tag() result is injected into
+        # the system instructions at _send_session_update() time.
         session_properties = events.SessionProperties(
             model=llm_model,
             output_modalities=["audio", "text"],
@@ -127,14 +167,17 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
                     speed=parsed_speed,
                 ),
             ),
+            # providerData.tts — note: 'speed' is NOT a valid providerData.tts
+            # field (Inworld ignores it silently). Valid fields are:
+            # segmenter_strategy, steering_handling, language, delivery_mode,
+            # conversational, user_turn_mode, timestamp_type,
+            # timestamp_transport_strategy.
             provider_data={
                 "tts": {
-                    "speed": parsed_speed,
+                    "steering_handling": "emit_once",
                 }
             },
         )
-
-
 
         super().__init__(
             llm_model=llm_model,
@@ -147,10 +190,57 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
             ),
             **kwargs,
         )
+        self._tts_speed = parsed_speed
+        self._tts_model = tts_model
         self._user_is_muted: bool = False
         self._handled_initial_context: bool = False
         self._bot_is_speaking: bool = False
         self._deferred_function_calls: list[FunctionCallFromLLM] = []
+
+
+    # ------------------------------------------------------------------
+    # Speed steering: inject tag into instructions before session.update
+    # ------------------------------------------------------------------
+
+    async def _send_session_update(self):
+        """Override to prepend TTS-2 speed steering tag to system instructions.
+
+        ``inworld-tts-2`` does not honour ``audio.output.speed`` \u2014 speech
+        speed is controlled via natural-language steering tags embedded in the
+        text. We inject the speed steering tag (e.g. ``[speak fast]``) into the
+        system instructions before the ``session.update`` event is sent so that
+        TTS-2 renders all responses at the configured rate.
+
+        The tag is written into the **working copy** of session_properties that
+        the parent creates inside ``_send_session_update``.  We achieve this by
+        temporarily patching ``send_client_event`` for the duration of the
+        parent's call so we can intercept the ``SessionUpdateEvent`` payload and
+        inject the tag into ``session.instructions`` right before transmission.
+        """
+        tag = self._speed_to_steering_tag(self._tts_speed)
+
+        if not (tag and self._tts_model and "tts-2" in self._tts_model.lower()):
+            await super()._send_session_update()
+            return
+
+        # Monkey-patch send_client_event for this one call so we can intercept
+        # the SessionUpdateEvent and inject the speed tag.
+        original_send = self.send_client_event
+
+        async def _intercept_send(event):
+            from pipecat.services.inworld.realtime.events import SessionUpdateEvent
+            if isinstance(event, SessionUpdateEvent):
+                sp = event.session
+                raw = sp.instructions or ""
+                if not raw.strip().startswith(tag):
+                    sp.instructions = f"{tag}\n{raw}" if raw else tag
+            await original_send(event)
+
+        self.send_client_event = _intercept_send
+        try:
+            await super()._send_session_update()
+        finally:
+            self.send_client_event = original_send
 
 
     # ------------------------------------------------------------------

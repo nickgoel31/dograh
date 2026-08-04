@@ -853,18 +853,21 @@ class InworldRealtimeLLMConfiguration(BaseLLMConfiguration):
         ),
     )
     tts_speed: float = Field(
-        default=1.1,
+        default=1.5,
         ge=0.5,
         le=2.0,
         description=(
-            "TTS speaking rate multiplier. 1.0 is the natural model speed (tends to sound slow). "
-            "1.1–1.3 is recommended for most voice agents. 2.0 is double speed."
+            "TTS speaking rate multiplier. 1.0 is the natural model speed. "
+            "1.5 (default) is noticeably faster and recommended for most voice agents. "
+            "For inworld-tts-2, speed is applied via steering tags ([speak fast], etc.). "
+            "2.0 is double speed."
         ),
         json_schema_extra={
             "examples": [0.75, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0],
             "allow_custom_input": True,
         },
     )
+
 
 
 

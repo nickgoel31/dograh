@@ -1013,11 +1013,11 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
         turn_detection = _get_attr(realtime_config, "turn_detection", "semantic_vad")
         stt_eagerness = _get_attr(realtime_config, "stt_eagerness", "low")
         transcription_prompt = _get_attr(realtime_config, "transcription_prompt", None)
-        raw_speed = _get_attr(realtime_config, "tts_speed", 1.1)
+        raw_speed = _get_attr(realtime_config, "tts_speed", 1.5)
         try:
             tts_speed = float(raw_speed)
         except (ValueError, TypeError):
-            tts_speed = 1.1
+            tts_speed = 1.5
 
         return DograhInworldRealtimeLLMService(
             api_key=api_key,
