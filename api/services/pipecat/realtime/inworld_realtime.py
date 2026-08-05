@@ -21,7 +21,10 @@ from typing import Any, Literal
 
 from loguru import logger
 
-from api.services.pipecat.pipeline_metrics_aggregator import STTUsageMetricsData
+from api.services.pipecat.pipeline_metrics_aggregator import (
+    STTUsageMetricsData,
+    TTSAudioSecondsMetricsData,
+)
 from pipecat.frames.frames import (
     BotStartedSpeakingFrame,
     BotStoppedSpeakingFrame,
@@ -507,53 +510,63 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
     # ------------------------------------------------------------------
 
     async def _handle_evt_response_done(self, evt):
-        """Override to extract TTS character counts and STT audio seconds."""
+        """Override to extract TTS character counts, audio seconds, and STT audio seconds."""
         await super()._handle_evt_response_done(evt)
 
-        raw_usage = getattr(evt, "_raw_usage", None)
-        if not raw_usage or not isinstance(raw_usage, dict):
-            return
+        try:
+            raw_usage = getattr(evt, "_raw_usage", None)
+            if not raw_usage or not isinstance(raw_usage, dict):
+                return
 
-        metrics_list = []
+            metrics_list = []
 
-        # 1. Extract TTS Usage (characters & accurate model & audio seconds)
-        tts_info = raw_usage.get("tts")
-        if isinstance(tts_info, dict):
-            tts_chars = tts_info.get("characters")
-            tts_seconds = tts_info.get("audio_seconds")
-            tts_model = (
-                tts_info.get("model")
-                or getattr(self, "_tts_model", None)
-                or "inworld-tts-2"
-            )
-            if isinstance(tts_chars, (int, float)) and tts_chars > 0:
-                tts_metric = TTSUsageMetricsData(
-                    processor=self.name,
-                    model=tts_model,
-                    value=int(tts_chars),
+            # 1. Extract TTS Usage (characters & accurate model)
+            tts_info = raw_usage.get("tts")
+            if isinstance(tts_info, dict):
+                tts_chars = tts_info.get("characters")
+                tts_seconds = tts_info.get("audio_seconds")
+                tts_model = (
+                    tts_info.get("model")
+                    or getattr(self, "_tts_model", None)
+                    or "inworld-tts-2"
                 )
-                if isinstance(tts_seconds, (int, float)) and tts_seconds > 0:
-                    setattr(tts_metric, "audio_seconds", float(tts_seconds))
-                metrics_list.append(tts_metric)
-
-        # 2. Extract STT Usage (audio seconds & accurate model)
-        stt_info = raw_usage.get("stt")
-        if isinstance(stt_info, dict):
-            stt_seconds = stt_info.get("audio_seconds")
-            stt_model = (
-                stt_info.get("model")
-                or getattr(self, "_stt_model", None)
-                or "inworld/inworld-stt-1"
-            )
-            if isinstance(stt_seconds, (int, float)) and stt_seconds > 0:
-                metrics_list.append(
-                    STTUsageMetricsData(
-                        processor=self.name,
-                        model=stt_model,
-                        value=float(stt_seconds),
+                if isinstance(tts_chars, (int, float)) and tts_chars > 0:
+                    metrics_list.append(
+                        TTSUsageMetricsData(
+                            processor=self.name,
+                            model=tts_model,
+                            value=int(tts_chars),
+                        )
                     )
-                )
+                if isinstance(tts_seconds, (int, float)) and tts_seconds > 0:
+                    metrics_list.append(
+                        TTSAudioSecondsMetricsData(
+                            processor=self.name,
+                            model=tts_model,
+                            value=float(tts_seconds),
+                        )
+                    )
 
-        if metrics_list:
-            await self.push_frame(MetricsFrame(data=metrics_list))
+            # 2. Extract STT Usage (audio seconds & accurate model)
+            stt_info = raw_usage.get("stt")
+            if isinstance(stt_info, dict):
+                stt_seconds = stt_info.get("audio_seconds")
+                stt_model = (
+                    stt_info.get("model")
+                    or getattr(self, "_stt_model", None)
+                    or "inworld/inworld-stt-1"
+                )
+                if isinstance(stt_seconds, (int, float)) and stt_seconds > 0:
+                    metrics_list.append(
+                        STTUsageMetricsData(
+                            processor=self.name,
+                            model=stt_model,
+                            value=float(stt_seconds),
+                        )
+                    )
+
+            if metrics_list:
+                await self.push_frame(MetricsFrame(data=metrics_list))
+        except Exception as exc:
+            logger.warning(f"Error extracting Inworld response usage metrics: {exc}")
 
