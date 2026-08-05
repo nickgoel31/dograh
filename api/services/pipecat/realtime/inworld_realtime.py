@@ -21,17 +21,20 @@ from typing import Any, Literal
 
 from loguru import logger
 
+from api.services.pipecat.pipeline_metrics_aggregator import STTUsageMetricsData
 from pipecat.frames.frames import (
     BotStartedSpeakingFrame,
     BotStoppedSpeakingFrame,
     Frame,
     LLMFullResponseStartFrame,
     LLMMessagesAppendFrame,
+    MetricsFrame,
     TranscriptionFrame,
     TTSSpeakFrame,
     UserMuteStartedFrame,
     UserMuteStoppedFrame,
 )
+from pipecat.metrics.metrics import TTSUsageMetricsData
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.services.llm_service import FunctionCallFromLLM
@@ -39,6 +42,25 @@ from pipecat.services.inworld.realtime import events
 from pipecat.services.inworld.realtime.llm import InworldRealtimeLLMService
 from pipecat.transcriptions.language import Language
 from pipecat.utils.time import time_now_iso8601
+
+# Patch events.parse_server_event to attach raw usage dict onto response.done events
+_orig_parse_server_event = events.parse_server_event
+
+
+def _dograh_parse_server_event(data: str):
+    evt = _orig_parse_server_event(data)
+    if evt and getattr(evt, "type", None) == "response.done":
+        try:
+            raw = json.loads(data)
+            usage_data = raw.get("usage") or raw.get("response", {}).get("usage")
+            if usage_data:
+                setattr(evt, "_raw_usage", usage_data)
+        except Exception:
+            pass
+    return evt
+
+
+events.parse_server_event = _dograh_parse_server_event
 
 
 class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
@@ -477,3 +499,49 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
             result=evt,
             finalized=True,
         )
+
+    # ------------------------------------------------------------------
+    # Usage metrics: extract TTS & STT modality metrics from response.done
+    # ------------------------------------------------------------------
+
+    async def _handle_evt_response_done(self, evt):
+        """Override to extract TTS character counts and STT audio seconds."""
+        await super()._handle_evt_response_done(evt)
+
+        raw_usage = getattr(evt, "_raw_usage", None)
+        if not raw_usage or not isinstance(raw_usage, dict):
+            return
+
+        metrics_list = []
+
+        # 1. Extract TTS Usage (characters)
+        tts_info = raw_usage.get("tts")
+        if isinstance(tts_info, dict):
+            tts_chars = tts_info.get("characters")
+            tts_model = tts_info.get("model") or getattr(self, "_tts_model", "inworld-tts-2")
+            if isinstance(tts_chars, (int, float)) and tts_chars > 0:
+                metrics_list.append(
+                    TTSUsageMetricsData(
+                        processor=self.name,
+                        model=tts_model,
+                        value=int(tts_chars),
+                    )
+                )
+
+        # 2. Extract STT Usage (audio seconds)
+        stt_info = raw_usage.get("stt")
+        if isinstance(stt_info, dict):
+            stt_seconds = stt_info.get("audio_seconds")
+            stt_model = stt_info.get("model") or "inworld/inworld-stt-1"
+            if isinstance(stt_seconds, (int, float)) and stt_seconds > 0:
+                metrics_list.append(
+                    STTUsageMetricsData(
+                        processor=self.name,
+                        model=stt_model,
+                        value=float(stt_seconds),
+                    )
+                )
+
+        if metrics_list:
+            await self.push_frame(MetricsFrame(data=metrics_list))
+
