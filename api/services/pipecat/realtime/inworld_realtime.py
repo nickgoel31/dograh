@@ -214,6 +214,8 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
         )
         self._tts_speed = parsed_speed
         self._tts_model = tts_model
+        self._stt_model = stt_model
+        self._llm_model = llm_model
         self._user_is_muted: bool = False
         self._handled_initial_context: bool = False
         self._bot_is_speaking: bool = False
@@ -514,11 +516,15 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
 
         metrics_list = []
 
-        # 1. Extract TTS Usage (characters)
+        # 1. Extract TTS Usage (characters & accurate model)
         tts_info = raw_usage.get("tts")
         if isinstance(tts_info, dict):
             tts_chars = tts_info.get("characters")
-            tts_model = tts_info.get("model") or getattr(self, "_tts_model", "inworld-tts-2")
+            tts_model = (
+                tts_info.get("model")
+                or getattr(self, "_tts_model", None)
+                or "inworld-tts-2"
+            )
             if isinstance(tts_chars, (int, float)) and tts_chars > 0:
                 metrics_list.append(
                     TTSUsageMetricsData(
@@ -528,11 +534,15 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
                     )
                 )
 
-        # 2. Extract STT Usage (audio seconds)
+        # 2. Extract STT Usage (audio seconds & accurate model)
         stt_info = raw_usage.get("stt")
         if isinstance(stt_info, dict):
             stt_seconds = stt_info.get("audio_seconds")
-            stt_model = stt_info.get("model") or "inworld/inworld-stt-1"
+            stt_model = (
+                stt_info.get("model")
+                or getattr(self, "_stt_model", None)
+                or "inworld/inworld-stt-1"
+            )
             if isinstance(stt_seconds, (int, float)) and stt_seconds > 0:
                 metrics_list.append(
                     STTUsageMetricsData(
