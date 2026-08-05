@@ -614,6 +614,7 @@ async def get_workflows(
             total_runs=run_counts.get(workflow.id, 0),
             folder_id=workflow.folder_id,
             workflow_uuid=workflow.workflow_uuid,
+            concurrency_limit=workflow.concurrency_limit,
         )
         for workflow in workflows
     ]
@@ -670,6 +671,7 @@ async def get_workflow(
         "version_number": active_def.version_number if active_def else None,
         "version_status": active_def.status if active_def else None,
         "workflow_uuid": workflow.workflow_uuid,
+        "concurrency_limit": workflow.concurrency_limit,
     }
 
 
@@ -1076,6 +1078,7 @@ async def update_workflow(
             "workflow_configurations": mask_workflow_configurations(workflow_configs),
             "version_number": active_def.version_number if active_def else None,
             "version_status": active_def.status if active_def else None,
+            "concurrency_limit": workflow.concurrency_limit,
         }
     except HTTPException:
         raise

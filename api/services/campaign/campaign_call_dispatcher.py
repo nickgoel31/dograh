@@ -8,7 +8,7 @@ from loguru import logger
 from api.constants import DEFAULT_ORG_CONCURRENCY_LIMIT
 from api.db import db_client
 from api.db.models import QueuedRunModel, WorkflowRunModel
-from api.enums import OrganizationConfigurationKey, WorkflowRunState
+from api.enums import CallType, OrganizationConfigurationKey, WorkflowRunState
 from api.services.campaign.circuit_breaker import circuit_breaker
 from api.services.campaign.errors import (
     ConcurrentSlotAcquisitionError,
@@ -53,6 +53,9 @@ class CampaignCallDispatcher:
     async def get_org_concurrent_limit(self, organization_id: int) -> int:
         """Get the concurrent call limit for an organization."""
         try:
+            org = await db_client.get_organization_by_id(organization_id)
+            if org and org.concurrency_limit is not None:
+                return org.concurrency_limit
             config = await db_client.get_configuration(
                 organization_id,
                 OrganizationConfigurationKey.CONCURRENT_CALL_LIMIT.value,
@@ -235,23 +238,14 @@ class CampaignCallDispatcher:
                 org_concurrent_limit = await self.get_org_concurrent_limit(queued_run.organization_id)
                 workflow_concurrent_limit = await self.get_workflow_concurrent_limit(queued_run.workflow_id)
 
-                slot_id = None
-                wait_start = time.time()
-                while True:
-                    slot_id = await rate_limiter.try_acquire_concurrent_slot(
-                        queued_run.organization_id, queued_run.workflow_id, org_concurrent_limit, workflow_concurrent_limit
+                slot_id = await rate_limiter.try_acquire_concurrent_slot(
+                    queued_run.organization_id, queued_run.workflow_id, org_concurrent_limit, workflow_concurrent_limit
+                )
+                if not slot_id:
+                    await self._return_unprocessed_claims(
+                        [queued_run], set(), reason="concurrency_limit_reached"
                     )
-                    if slot_id:
-                        break
-                    
-                    wait_time = time.time() - wait_start
-                    if wait_time > 10:  # 10 second timeout for generic calls
-                        raise ConcurrentSlotAcquisitionError(
-                            organization_id=queued_run.organization_id,
-                            campaign_id=-1,
-                            wait_time=wait_time,
-                        )
-                    await asyncio.sleep(1.0)
+                    continue
 
                 # Dispatch the call
                 workflow_run = await self.dispatch_generic_call(queued_run, slot_id)
@@ -368,7 +362,7 @@ class CampaignCallDispatcher:
                 workflow_id=queued_run.workflow_id,
                 mode=workflow_run_mode,
                 user_id=user_id,
-                call_type="outbound",
+                call_type=CallType.OUTBOUND,
                 initial_context=initial_context,
                 queued_run_id=queued_run.id,
             )
