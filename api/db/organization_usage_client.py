@@ -342,11 +342,20 @@ class OrganizationUsageClient(BaseDBClient):
                         dograh_tokens = round(
                             float(run.cost_info["total_cost_usd"]) * 100, 2
                         )
-                    # Get call duration
                     call_duration = run.cost_info.get("call_duration_seconds", 0)
+                    if not call_duration and run.usage_info:
+                        call_duration = (
+                            run.usage_info.get("call_duration_seconds")
+                            or run.usage_info.get("call_duration", 0)
+                        )
                 else:
                     dograh_tokens = 0
                     call_duration = 0
+                    if run.usage_info:
+                        call_duration = (
+                            run.usage_info.get("call_duration_seconds")
+                            or run.usage_info.get("call_duration", 0)
+                        )
                 total_tokens += dograh_tokens
                 total_duration_seconds += int(round(call_duration))
 

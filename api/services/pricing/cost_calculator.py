@@ -118,6 +118,8 @@ class CostCalculator:
         # Calculate TTS costs
         tts_usage = usage_info.get("tts", {})
         for key, character_count in tts_usage.items():
+            if isinstance(character_count, dict):
+                character_count = character_count.get("characters", 0)
             processor, model = self._parse_key(key)
             # Handle the case where model is "None" - infer from processor
             if model.lower() in ["none", "null", ""]:
@@ -131,6 +133,8 @@ class CostCalculator:
         # Calculate STT costs from explicit stt usage
         stt_usage = usage_info.get("stt", {})
         for key, seconds in stt_usage.items():
+            if isinstance(seconds, dict):
+                seconds = seconds.get("audio_seconds", 0.0)
             processor, model = self._parse_key(key)
             provider = self._infer_provider_from_model(model, "stt")
             cost = self.calculate_stt_cost(provider, model, seconds)

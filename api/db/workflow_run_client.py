@@ -325,12 +325,15 @@ class WorkflowRunClient(BaseDBClient):
                                 else 0
                             ),
                             "call_duration_seconds": int(
-                                round(run.cost_info.get("call_duration_seconds") or 0)
+                                round(
+                                    (run.cost_info.get("call_duration_seconds") if run.cost_info else None)
+                                    or (run.usage_info.get("call_duration_seconds") if run.usage_info else None)
+                                    or (run.usage_info.get("call_duration") if run.usage_info else None)
+                                    or 0
+                                )
                             )
-                            if run.cost_info
-                            else None,
                         }
-                        if run.cost_info
+                        if (run.cost_info or run.usage_info)
                         else None,
                         "definition_id": run.definition_id,
                         "initial_context": run.initial_context,
