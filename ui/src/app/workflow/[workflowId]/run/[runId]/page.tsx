@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Copy, ExternalLink, FileText, IndianRupee, Video, X } from 'lucide-react';
+import { Check, Copy, Cpu, ExternalLink, FileText, IndianRupee, Mic, Sparkles, Video, Volume2, X } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import posthog from 'posthog-js';
@@ -47,6 +47,18 @@ function getGeminiLiveUsageKey(usageInfo: WorkflowRunResponse['usage_info']): st
     return key ?? null;
 }
 
+/** Detect if a run used Inworld Realtime and return the first matching key. */
+function getInworldUsageKey(usageInfo: WorkflowRunResponse['usage_info']): string | null {
+    if (!usageInfo) return null;
+    const allKeys = [
+        ...Object.keys(usageInfo.llm || {}),
+        ...Object.keys(usageInfo.tts || {}),
+        ...Object.keys(usageInfo.stt || {}),
+    ];
+    const key = allKeys.find((k) => k.toLowerCase().includes('inworld'));
+    return key ?? null;
+}
+
 interface WorkflowRunResponse {
     mode: string;
     is_completed: boolean;
@@ -73,8 +85,8 @@ interface WorkflowRunResponse {
             text_output_tokens?: number;
             audio_output_tokens?: number;
         }>;
-        tts?: Record<string, number>;
-        stt?: Record<string, number>;
+        tts?: Record<string, number | { characters?: number; audio_seconds?: number }>;
+        stt?: Record<string, number | { audio_seconds?: number }>;
         call_duration_seconds?: number;
     } | null;
     initial_context: Record<string, string | number | boolean | object> | null;
@@ -253,6 +265,178 @@ function GeminiCostDialog({ usageInfo, costInfo }: {
     );
 }
 
+// ---------------------------------------------------------------------------
+// InworldUsageDialog — shown specifically for Inworld Realtime runs
+// ---------------------------------------------------------------------------
+function InworldUsageDialog({ usageInfo }: {
+    usageInfo: WorkflowRunResponse['usage_info'];
+}) {
+    const [open, setOpen] = useState(false);
+
+    const inworldKey = getInworldUsageKey(usageInfo);
+    if (!inworldKey || !usageInfo) return null;
+
+    // Find LLM entry for inworld
+    const llmEntryKey = Object.keys(usageInfo.llm || {}).find(k => k.toLowerCase().includes('inworld'))
+        || Object.keys(usageInfo.llm || {})[0];
+    const llmUsage = llmEntryKey ? usageInfo.llm?.[llmEntryKey] : null;
+
+    const llmModelName = llmEntryKey
+        ? (llmEntryKey.includes('|||') ? llmEntryKey.split('|||')[1] : llmEntryKey)
+        : 'Inworld Realtime LLM';
+
+    // Find TTS entry for inworld
+    const ttsEntryKey = Object.keys(usageInfo.tts || {}).find(k => k.toLowerCase().includes('inworld'))
+        || Object.keys(usageInfo.tts || {})[0];
+    const rawTtsVal = ttsEntryKey ? usageInfo.tts?.[ttsEntryKey] : null;
+    const ttsModelName = ttsEntryKey
+        ? (ttsEntryKey.includes('|||') ? ttsEntryKey.split('|||')[1] : ttsEntryKey)
+        : 'inworld-tts-2';
+
+    let ttsCharacters = 0;
+    let ttsAudioSeconds = 0;
+    if (typeof rawTtsVal === 'number') {
+        ttsCharacters = rawTtsVal;
+    } else if (typeof rawTtsVal === 'object' && rawTtsVal !== null) {
+        ttsCharacters = rawTtsVal.characters ?? 0;
+        ttsAudioSeconds = rawTtsVal.audio_seconds ?? 0;
+    }
+
+    // Find STT entry for inworld
+    const sttEntryKey = Object.keys(usageInfo.stt || {}).find(k => k.toLowerCase().includes('inworld'))
+        || Object.keys(usageInfo.stt || {})[0];
+    const rawSttVal = sttEntryKey ? usageInfo.stt?.[sttEntryKey] : null;
+    const sttModelName = sttEntryKey
+        ? (sttEntryKey.includes('|||') ? sttEntryKey.split('|||')[1] : sttEntryKey)
+        : 'inworld/inworld-stt-1';
+
+    let sttAudioSeconds = 0;
+    if (typeof rawSttVal === 'number') {
+        sttAudioSeconds = rawSttVal;
+    } else if (typeof rawSttVal === 'object' && rawSttVal !== null) {
+        sttAudioSeconds = rawSttVal.audio_seconds ?? 0;
+    }
+
+    const durationSeconds = usageInfo.call_duration_seconds ?? 0;
+    const fmtTokens = (n: number) => n.toLocaleString();
+
+    return (
+        <>
+            <Button
+                id="inworld-usage-button"
+                variant="outline"
+                size="sm"
+                className="gap-2 border-indigo-500/40 bg-indigo-500/5 text-indigo-600 hover:bg-indigo-500/10 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+                onClick={() => setOpen(true)}
+            >
+                <Sparkles className="h-4 w-4 text-indigo-500" />
+                Inworld Usage
+            </Button>
+
+            {open && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+                    onClick={() => setOpen(false)}
+                >
+                    <div
+                        id="inworld-usage-dialog"
+                        className="relative w-full max-w-lg rounded-xl border border-border bg-background shadow-2xl overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between border-b border-border px-5 py-4 bg-muted/30">
+                            <div className="flex items-center gap-2.5">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/15 border border-indigo-500/30">
+                                    <Sparkles className="h-4 w-4 text-indigo-500" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold">Inworld Realtime Session Usage</p>
+                                    <p className="text-xs text-muted-foreground">Speech-to-Speech Modality Metrics</p>
+                                </div>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setOpen(false)}>
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="space-y-4 p-5">
+                            {/* STT Section */}
+                            <div className="rounded-lg border border-border bg-card p-3.5 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Mic className="h-4 w-4 text-emerald-500" />
+                                        <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Speech-to-Text (STT)</span>
+                                    </div>
+                                    <span className="text-xs font-mono text-muted-foreground">{sttModelName}</span>
+                                </div>
+                                <div className="flex items-center justify-between pt-1 border-t border-border/50 text-sm">
+                                    <span className="text-muted-foreground text-xs">User Input Audio</span>
+                                    <span className="font-semibold tabular-nums">{sttAudioSeconds > 0 ? `${sttAudioSeconds}s` : 'Captured via VAD'}</span>
+                                </div>
+                            </div>
+
+                            {/* LLM Section */}
+                            <div className="rounded-lg border border-border bg-card p-3.5 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Cpu className="h-4 w-4 text-blue-500" />
+                                        <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">Language Model (LLM)</span>
+                                    </div>
+                                    <span className="text-xs font-mono text-muted-foreground">{llmModelName}</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 pt-1 border-t border-border/50 text-center">
+                                    <div className="bg-muted/40 rounded p-2">
+                                        <p className="text-[10px] text-muted-foreground uppercase font-medium">Prompt Tokens</p>
+                                        <p className="text-sm font-semibold tabular-nums">{fmtTokens(llmUsage?.prompt_tokens ?? 0)}</p>
+                                    </div>
+                                    <div className="bg-muted/40 rounded p-2">
+                                        <p className="text-[10px] text-muted-foreground uppercase font-medium">Completion Tokens</p>
+                                        <p className="text-sm font-semibold tabular-nums">{fmtTokens(llmUsage?.completion_tokens ?? 0)}</p>
+                                    </div>
+                                    <div className="bg-blue-500/10 border border-blue-500/20 rounded p-2">
+                                        <p className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-semibold">Total LLM Tokens</p>
+                                        <p className="text-sm font-bold text-blue-600 dark:text-blue-400 tabular-nums">{fmtTokens(llmUsage?.total_tokens ?? 0)}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* TTS Section */}
+                            <div className="rounded-lg border border-border bg-card p-3.5 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Volume2 className="h-4 w-4 text-purple-500" />
+                                        <span className="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">Text-to-Speech (TTS)</span>
+                                    </div>
+                                    <span className="text-xs font-mono text-muted-foreground">{ttsModelName}</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/50 text-center">
+                                    <div className="bg-muted/40 rounded p-2">
+                                        <p className="text-[10px] text-muted-foreground uppercase font-medium">Synthesized Characters</p>
+                                        <p className="text-sm font-semibold tabular-nums">{fmtTokens(ttsCharacters)} chars</p>
+                                    </div>
+                                    <div className="bg-muted/40 rounded p-2">
+                                        <p className="text-[10px] text-muted-foreground uppercase font-medium">TTS Audio Duration</p>
+                                        <p className="text-sm font-semibold tabular-nums">{ttsAudioSeconds > 0 ? `${ttsAudioSeconds}s` : 'Streamed'}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Session Summary Card */}
+                            {durationSeconds > 0 && (
+                                <div className="flex items-center justify-between text-xs px-3 py-2 bg-muted/30 rounded-lg border border-border text-muted-foreground">
+                                    <span>Total Session Duration</span>
+                                    <span className="font-semibold text-foreground">{durationSeconds} seconds</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+}
+
 const RUN_SHELL_HEIGHT_CLASS = "h-[calc(100svh-49px)] min-h-[calc(100svh-49px)] max-h-[calc(100svh-49px)]";
 
 function formatDuration(seconds?: number | null) {
@@ -367,8 +551,9 @@ export default function WorkflowRunPage() {
     const [isLoading, setIsLoading] = useState(true);
     const auth = useAuth();
     const [workflowRun, setWorkflowRun] = useState<WorkflowRunResponse | null>(null);
-    // Regenerate gemini key check when workflowRun changes
+    // Regenerate key checks when workflowRun changes
     const geminiUsageKey = getGeminiLiveUsageKey(workflowRun?.usage_info ?? null);
+    const inworldUsageKey = getInworldUsageKey(workflowRun?.usage_info ?? null);
     const { hasSeenTooltip, markTooltipSeen } = useOnboarding();
     const customizeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -467,11 +652,17 @@ export default function WorkflowRunPage() {
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                {/* Gemini Live cost button — only shown for Gemini Live runs */}
+                                 {/* Gemini Live cost button — only shown for Gemini Live runs */}
                                 {geminiUsageKey && (
                                     <GeminiCostDialog
                                         usageInfo={workflowRun?.usage_info ?? null}
                                         costInfo={workflowRun?.cost_info ?? null}
+                                    />
+                                )}
+                                {/* Inworld Realtime usage button — only shown for Inworld Realtime runs */}
+                                {inworldUsageKey && (
+                                    <InworldUsageDialog
+                                        usageInfo={workflowRun?.usage_info ?? null}
                                     />
                                 )}
                                 <Link href={`/workflow/${params.workflowId}`}>

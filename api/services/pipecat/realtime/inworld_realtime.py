@@ -516,23 +516,25 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
 
         metrics_list = []
 
-        # 1. Extract TTS Usage (characters & accurate model)
+        # 1. Extract TTS Usage (characters & accurate model & audio seconds)
         tts_info = raw_usage.get("tts")
         if isinstance(tts_info, dict):
             tts_chars = tts_info.get("characters")
+            tts_seconds = tts_info.get("audio_seconds")
             tts_model = (
                 tts_info.get("model")
                 or getattr(self, "_tts_model", None)
                 or "inworld-tts-2"
             )
             if isinstance(tts_chars, (int, float)) and tts_chars > 0:
-                metrics_list.append(
-                    TTSUsageMetricsData(
-                        processor=self.name,
-                        model=tts_model,
-                        value=int(tts_chars),
-                    )
+                tts_metric = TTSUsageMetricsData(
+                    processor=self.name,
+                    model=tts_model,
+                    value=int(tts_chars),
                 )
+                if isinstance(tts_seconds, (int, float)) and tts_seconds > 0:
+                    setattr(tts_metric, "audio_seconds", float(tts_seconds))
+                metrics_list.append(tts_metric)
 
         # 2. Extract STT Usage (audio seconds & accurate model)
         stt_info = raw_usage.get("stt")

@@ -45,6 +45,7 @@ class PipelineMetricsAggregator(FrameProcessor):
             lambda: defaultdict(int)
         )
         self._tts_usage_metrics: Dict[str, int] = defaultdict(int)
+        self._tts_audio_seconds: Dict[str, float] = defaultdict(float)
         self._stt_usage_metrics: Dict[str, float] = defaultdict(float)
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
@@ -126,12 +127,13 @@ class PipelineMetricsAggregator(FrameProcessor):
     async def _handle_tts_usage_metrics(self, data: TTSUsageMetricsData):
         key = f"{data.processor}|||{data.model}"
         self._tts_usage_metrics[key] += data.value
-        # logger.debug(f"TTS usage metrics: {self._tts_usage_metrics}")
+        sec = getattr(data, "audio_seconds", 0.0) or 0.0
+        if sec > 0:
+            self._tts_audio_seconds[key] += sec
 
     async def _handle_stt_usage_metrics(self, data: STTUsageMetricsData):
         key = f"{data.processor}|||{data.model}"
         self._stt_usage_metrics[key] += data.value
-        # logger.debug(f"STT usage metrics: {self._stt_usage_metrics}")
 
     def get_llm_usage_metrics(self) -> Dict[str, LLMTokenUsage]:
         """Get the aggregated LLM usage metrics grouped by processor|||model."""
@@ -175,10 +177,27 @@ class PipelineMetricsAggregator(FrameProcessor):
                 "audio_output_tokens": modality.get("audio_output_tokens", 0),
             }
 
+        serialized_tts = {}
+        for key, chars in self._tts_usage_metrics.items():
+            sec = self._tts_audio_seconds.get(key, 0.0)
+            if sec > 0:
+                serialized_tts[key] = {
+                    "characters": chars,
+                    "audio_seconds": round(sec, 2),
+                }
+            else:
+                serialized_tts[key] = chars
+
+        serialized_stt = {}
+        for key, seconds in self._stt_usage_metrics.items():
+            serialized_stt[key] = {
+                "audio_seconds": round(seconds, 2),
+            }
+
         return {
             "llm": serialized_llm,
-            "tts": dict(self._tts_usage_metrics),
-            "stt": dict(self._stt_usage_metrics),
+            "tts": serialized_tts,
+            "stt": serialized_stt,
             "call_duration_seconds": self.get_call_duration(),
         }
 
@@ -187,6 +206,7 @@ class PipelineMetricsAggregator(FrameProcessor):
         self._llm_usage_metrics.clear()
         self._llm_modality_metrics.clear()
         self._tts_usage_metrics.clear()
+        self._tts_audio_seconds.clear()
         self._stt_usage_metrics.clear()
         self._start_time = None
         self._stop_time = None
