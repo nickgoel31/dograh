@@ -279,6 +279,7 @@ async def create_organization(request: CreateOrganizationRequest, user: UserMode
             "monthly_minutes_end_year": new_org.monthly_minutes_end_year,
             "monthly_minutes_end_month": new_org.monthly_minutes_end_month,
             "quota_reset_day": new_org.quota_reset_day,
+            "concurrency_limit": new_org.concurrency_limit,
         }
 
 @router.get("/organizations")
@@ -429,6 +430,7 @@ async def list_all_organizations(user: UserModel = Depends(get_superuser)):
                 "whatsapp_business_account_id": getattr(o, "whatsapp_business_account_id", None),
                 "whatsapp_webhook_verify_token": getattr(o, "whatsapp_webhook_verify_token", None),
                 "whatsapp_has_access_token": bool(getattr(o, "whatsapp_access_token", None)),
+                "concurrency_limit": getattr(o, "concurrency_limit", None),
             })
             
     return result
@@ -573,6 +575,7 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
             "whatsapp_business_account_id": getattr(org, "whatsapp_business_account_id", None),
             "whatsapp_webhook_verify_token": getattr(org, "whatsapp_webhook_verify_token", None),
             "whatsapp_has_access_token": bool(getattr(org, "whatsapp_access_token", None)),
+            "concurrency_limit": getattr(org, "concurrency_limit", None),
         }
 
 @router.delete("/organizations/{org_id}")
