@@ -48,7 +48,7 @@ class PipelineMetricsAggregator(FrameProcessor):
         # For TTS: aggregated_metrics is int (total characters)
         # For STT: aggregated_metrics is float (total seconds)
 
-        self._start_time: Optional[float] = None
+        self._start_time: Optional[float] = time.time()
         self._stop_time: Optional[float] = None
         self._llm_usage_metrics: Dict[str, LLMTokenUsage] = {}
         self._llm_modality_metrics: Dict[str, Dict[str, int]] = defaultdict(
@@ -222,5 +222,5 @@ class PipelineMetricsAggregator(FrameProcessor):
         self._tts_usage_metrics.clear()
         self._tts_audio_seconds.clear()
         self._stt_usage_metrics.clear()
-        self._start_time = None
+        self._start_time = time.time()
         self._stop_time = None
