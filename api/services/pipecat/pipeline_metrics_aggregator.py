@@ -211,6 +211,7 @@ class PipelineMetricsAggregator(FrameProcessor):
             "llm": serialized_llm,
             "tts": serialized_tts,
             "stt": serialized_stt,
+            "call_duration": self.get_call_duration(),
             "call_duration_seconds": self.get_call_duration(),
         }
 

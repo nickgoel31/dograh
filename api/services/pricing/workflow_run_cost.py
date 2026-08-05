@@ -110,9 +110,12 @@ async def _build_usage_cost_snapshot(
     if organization is None and workflow_run is not None:
         organization = await _get_pricing_organization(workflow_run)
 
+    duration_seconds = usage_info.get("call_duration_seconds")
+    if duration_seconds is None:
+        duration_seconds = usage_info.get("call_duration", 0)
+
     charge_usd = None
     if organization and organization.price_per_second_usd:
-        duration_seconds = usage_info.get("call_duration_seconds", 0)
         charge_usd = float(
             Decimal(str(duration_seconds))
             * Decimal(str(organization.price_per_second_usd))
@@ -124,7 +127,7 @@ async def _build_usage_cost_snapshot(
         "dograh_token_usage": dograh_tokens,
         "calculated_at": calculated_at
         or (workflow_run.created_at.isoformat() if workflow_run is not None else None),
-        "call_duration_seconds": usage_info.get("call_duration_seconds", 0),
+        "call_duration_seconds": duration_seconds,
     }
 
     if charge_usd is not None:

@@ -317,7 +317,7 @@ function InworldUsageDialog({ usageInfo }: {
         sttAudioSeconds = rawSttVal.audio_seconds ?? 0;
     }
 
-    const durationSeconds = usageInfo.call_duration_seconds ?? 0;
+    const durationSeconds = usageInfo.call_duration_seconds ?? (usageInfo as any).call_duration ?? 0;
     const fmtTokens = (n: number) => n.toLocaleString();
 
     return (
