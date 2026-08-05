@@ -194,6 +194,7 @@ class WorkflowResponse(BaseModel):
     version_number: int | None = None
     version_status: str | None = None
     workflow_uuid: str | None = None
+    concurrency_limit: int | None = None
 
 
 class WorkflowListResponse(BaseModel):
@@ -206,6 +207,7 @@ class WorkflowListResponse(BaseModel):
     total_runs: int
     folder_id: int | None = None
     workflow_uuid: str | None = None
+    concurrency_limit: int | None = None
 
 
 class MoveWorkflowToFolderRequest(BaseModel):
@@ -245,6 +247,7 @@ class UpdateWorkflowRequest(BaseModel):
     workflow_definition: dict | None = None
     template_context_variables: dict | None = None
     workflow_configurations: dict | None = None
+    concurrency_limit: int | None = None
 
 
 class WorkflowVersionResponse(BaseModel):
@@ -1013,6 +1016,21 @@ async def update_workflow(
                         workflow_definition, e.trigger_paths
                     )
 
+        if request.concurrency_limit is not None and user.selected_organization_id:
+            org = await db_client.get_organization_by_id(user.selected_organization_id)
+            if org and org.concurrency_limit is not None:
+                workflows = await db_client.get_all_workflows(organization_id=user.selected_organization_id)
+                # sum concurrency limits of all other workflows
+                other_allocated = sum([
+                    w.concurrency_limit for w in workflows
+                    if w.concurrency_limit is not None and w.id != workflow_id
+                ])
+                if other_allocated + request.concurrency_limit > org.concurrency_limit:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Cannot set concurrency limit to {request.concurrency_limit}. Organization total limit ({org.concurrency_limit}) would be exceeded."
+                    )
+
         workflow = await db_client.update_workflow(
             workflow_id=workflow_id,
             name=request.name,
@@ -1020,6 +1038,7 @@ async def update_workflow(
             template_context_variables=request.template_context_variables,
             workflow_configurations=workflow_configurations,
             organization_id=user.selected_organization_id,
+            concurrency_limit=request.concurrency_limit,
         )
 
         # Sync agent triggers if workflow definition was updated

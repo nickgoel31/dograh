@@ -297,3 +297,18 @@ async def check_auto_sync(ctx: Dict) -> None:
             await session.rollback()
             logger.error(f"Failed to commit auto-sync update: {e}")
 
+async def process_generic_batch(ctx: Dict, batch_size: int = 10) -> None:
+    """
+    Processes a batch of generic queued runs (single outbound calls not tied to a campaign).
+    """
+    logger.info(f"Processing generic batch, batch_size={batch_size}")
+    try:
+        processed_count = await campaign_call_dispatcher.process_generic_batch(
+            batch_size=batch_size
+        )
+        if processed_count > 0:
+            logger.info(f"Generic batch completed: processed={processed_count}")
+    except Exception as e:
+        logger.error(f"Error processing generic batch: {e}")
+        raise
+

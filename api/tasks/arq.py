@@ -44,6 +44,7 @@ from api.tasks.campaign_tasks import (
     process_campaign_batch,
     sync_campaign_source,
     check_auto_sync,
+    process_generic_batch,
 )
 from api.tasks.knowledge_base_processing import process_knowledge_base_document
 from api.tasks.run_integrations import run_integrations_post_workflow_run
@@ -62,6 +63,7 @@ class WorkerSettings:
         process_campaign_batch,
         process_knowledge_base_document,
         check_auto_sync,
+        process_generic_batch,
     ]
     cron_jobs = [
         cron(check_auto_sync, minute=None)

@@ -542,7 +542,13 @@ class TwilioProvider(TelephonyProvider):
             error_type, TELEPHONY_ERROR_MESSAGES[TelephonyError.GENERAL_AUTH_FAILED]
         )
 
-        twiml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+        if error_type == TelephonyError.CONCURRENCY_EXCEEDED:
+            twiml_content = """<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Reject reason="busy"/>
+</Response>"""
+        else:
+            twiml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="alice">{message}</Say>
     <Hangup/>

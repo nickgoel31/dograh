@@ -65,6 +65,18 @@ class CampaignCallDispatcher:
             )
         return self.default_concurrent_limit
 
+    async def get_workflow_concurrent_limit(self, workflow_id: int) -> int:
+        """Get the concurrent call limit for an agent (workflow)."""
+        try:
+            workflow = await db_client.get_workflow_by_id(workflow_id)
+            if workflow and workflow.concurrency_limit is not None:
+                return workflow.concurrency_limit
+        except Exception as e:
+            logger.warning(
+                f"Error getting concurrent limit for workflow {workflow_id}: {e}"
+            )
+        return self.default_concurrent_limit
+
     async def process_batch(self, campaign_id: int, batch_size: int = 10) -> int:
         """
         Processes a batch of queued runs with priority for scheduled retries.
@@ -199,6 +211,82 @@ class CampaignCallDispatcher:
 
         return processed_count
 
+    async def process_generic_batch(self, batch_size: int = 10) -> int:
+        """Processes a batch of generic queued runs (non-campaign outbound calls)."""
+        queued_runs = await db_client.claim_generic_queued_runs_for_processing(
+            scheduled_before=datetime.now(UTC),
+            limit=batch_size,
+        )
+
+        if not queued_runs:
+            return 0
+
+        processed_count = 0
+        processed_run_ids: set[int] = set()
+
+        for i, queued_run in enumerate(queued_runs):
+            try:
+                # Apply rate limiting
+                await self.apply_rate_limit(
+                    queued_run.organization_id, 10  # default 10 per sec for generic
+                )
+
+                # Acquire concurrent slot
+                org_concurrent_limit = await self.get_org_concurrent_limit(queued_run.organization_id)
+                workflow_concurrent_limit = await self.get_workflow_concurrent_limit(queued_run.workflow_id)
+
+                slot_id = None
+                wait_start = time.time()
+                while True:
+                    slot_id = await rate_limiter.try_acquire_concurrent_slot(
+                        queued_run.organization_id, queued_run.workflow_id, org_concurrent_limit, workflow_concurrent_limit
+                    )
+                    if slot_id:
+                        break
+                    
+                    wait_time = time.time() - wait_start
+                    if wait_time > 10:  # 10 second timeout for generic calls
+                        raise ConcurrentSlotAcquisitionError(
+                            organization_id=queued_run.organization_id,
+                            campaign_id=-1,
+                            wait_time=wait_time,
+                        )
+                    await asyncio.sleep(1.0)
+
+                # Dispatch the call
+                workflow_run = await self.dispatch_generic_call(queued_run, slot_id)
+
+                # Update queued run as processed
+                await db_client.update_queued_run(
+                    queued_run_id=queued_run.id,
+                    state="processed",
+                    workflow_run_id=workflow_run.id,
+                    processed_at=datetime.now(UTC),
+                )
+
+                processed_count += 1
+                processed_run_ids.add(queued_run.id)
+
+            except asyncio.CancelledError:
+                await self._return_unprocessed_claims(
+                    queued_runs, processed_run_ids, reason="task_cancelled"
+                )
+                raise
+            except Exception as e:
+                logger.warning(f"Error processing generic queued run {queued_run.id}: {e}")
+                try:
+                    await db_client.update_queued_run(
+                        queued_run_id=queued_run.id,
+                        state="failed",
+                        processed_at=datetime.now(UTC),
+                    )
+                except Exception as update_error:
+                    logger.error(
+                        f"Failed to mark generic queued run {queued_run.id} as failed: {update_error}"
+                    )
+
+        return processed_count
+
     async def _return_unprocessed_claims(
         self,
         queued_runs: list[QueuedRunModel],
@@ -230,6 +318,139 @@ class CampaignCallDispatcher:
                 f"Failed to return claimed queued runs; reason={reason}; "
                 f"queued_run_ids={queued_run_ids}; error={revert_error}"
             )
+
+    async def dispatch_generic_call(
+        self, queued_run: "QueuedRunModel", slot_id: str
+    ) -> Optional["WorkflowRunModel"]:
+        """Creates workflow run and initiates generic outbound call. Requires a pre-acquired slot_id."""
+        from_number = None
+        workflow = await db_client.get_workflow_by_id(queued_run.workflow_id)
+        if not workflow:
+            await rate_limiter.release_concurrent_slot(queued_run.organization_id, queued_run.workflow_id, slot_id)
+            raise ValueError(f"Workflow {queued_run.workflow_id} not found")
+
+        phone_number = queued_run.context_variables.get("phone_number")
+        if not phone_number:
+            await rate_limiter.release_concurrent_slot(queued_run.organization_id, queued_run.workflow_id, slot_id)
+            raise ValueError(f"No phone number in queued run {queued_run.id}")
+
+        # Get provider
+        provider_name = queued_run.context_variables.get("provider", "twilio") # default fallback
+        from api.services.telephony.provider_factory import get_provider
+        provider = get_provider(provider_name)
+        workflow_run_mode = provider.PROVIDER_NAME
+
+        from_number = await self.acquire_from_number(
+            queued_run.organization_id,
+            telephony_configuration_id=queued_run.telephony_configuration_id,
+        )
+        if from_number is None:
+            await rate_limiter.release_concurrent_slot(queued_run.organization_id, queued_run.workflow_id, slot_id)
+            raise PhoneNumberPoolExhaustedError(organization_id=queued_run.organization_id)
+
+        user_id = queued_run.context_variables.get("user_id")
+
+        initial_context = {
+            **queued_run.context_variables,
+            "provider": provider.PROVIDER_NAME,
+            "source_uuid": queued_run.source_uuid,
+            "caller_number": from_number,
+            "called_number": phone_number,
+            "telephony_configuration_id": queued_run.telephony_configuration_id,
+        }
+
+        numeric_suffix = int(str(uuid.uuid4()).replace("-", "")[:8], 16) % 100000000
+        workflow_run_name = f"WR-GEN-OUT-{numeric_suffix:08d}"
+
+        try:
+            workflow_run = await db_client.create_workflow_run(
+                name=workflow_run_name,
+                workflow_id=queued_run.workflow_id,
+                mode=workflow_run_mode,
+                user_id=user_id,
+                call_type="outbound",
+                initial_context=initial_context,
+                queued_run_id=queued_run.id,
+            )
+
+            await rate_limiter.store_workflow_slot_mapping(
+                workflow_run.id, queued_run.organization_id, queued_run.workflow_id, slot_id
+            )
+
+            await rate_limiter.store_workflow_from_number_mapping(
+                workflow_run.id,
+                queued_run.organization_id,
+                from_number,
+                telephony_configuration_id=queued_run.telephony_configuration_id,
+            )
+        except Exception as e:
+            await rate_limiter.release_concurrent_slot(queued_run.organization_id, queued_run.workflow_id, slot_id)
+            if from_number:
+                await rate_limiter.release_from_number(
+                    queued_run.organization_id,
+                    from_number,
+                    telephony_configuration_id=queued_run.telephony_configuration_id,
+                )
+            raise
+
+        try:
+            backend_endpoint, _ = await get_backend_endpoints()
+            webhook_endpoint = provider.WEBHOOK_ENDPOINT
+            webhook_url = (
+                f"{backend_endpoint}/api/v1/telephony/{webhook_endpoint}"
+                f"?workflow_id={queued_run.workflow_id}"
+                f"&user_id={user_id}"
+                f"&workflow_run_id={workflow_run.id}"
+                f"&organization_id={queued_run.organization_id}"
+            )
+
+            call_result = await provider.initiate_call(
+                to_number=phone_number,
+                webhook_url=webhook_url,
+                workflow_run_id=workflow_run.id,
+                from_number=from_number,
+                workflow_id=queued_run.workflow_id,
+                user_id=user_id,
+            )
+
+            await db_client.update_workflow_run(
+                run_id=workflow_run.id,
+                gathered_context={
+                    "provider": provider.PROVIDER_NAME,
+                    **(call_result.provider_metadata or {}),
+                },
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to initiate call for workflow run {workflow_run.id}: {e}")
+            telephony_callback_logs = workflow_run.logs.get("telephony_status_callbacks", [])
+            telephony_callback_logs.append({
+                "status": "failed",
+                "timestamp": datetime.now(UTC).isoformat(),
+                "data": {"error": str(e)},
+            })
+            await db_client.update_workflow_run(
+                run_id=workflow_run.id,
+                is_completed=True,
+                state="completed", # WorkflowRunState.COMPLETED
+                gathered_context={"error": str(e)},
+                logs={"telephony_status_callbacks": telephony_callback_logs},
+            )
+            mapping = await rate_limiter.get_workflow_slot_mapping(workflow_run.id)
+            if mapping:
+                org_id, wf_id, s_id = mapping
+                await rate_limiter.release_concurrent_slot(org_id, wf_id, s_id)
+                await rate_limiter.delete_workflow_slot_mapping(workflow_run.id)
+
+            if from_number:
+                await rate_limiter.release_from_number(
+                    queued_run.organization_id,
+                    from_number,
+                    telephony_configuration_id=queued_run.telephony_configuration_id,
+                )
+            raise
+
+        return workflow_run
 
     async def dispatch_call(
         self, queued_run: QueuedRunModel, campaign: any, slot_id: str
@@ -306,7 +527,7 @@ class CampaignCallDispatcher:
 
             # Store slot_id mapping in Redis for cleanup later
             await rate_limiter.store_workflow_slot_mapping(
-                workflow_run.id, campaign.organization_id, slot_id
+                workflow_run.id, campaign.organization_id, campaign.workflow_id, slot_id
             )
 
             # Store from_number mapping for cleanup on call completion
@@ -413,8 +634,8 @@ class CampaignCallDispatcher:
             # Release concurrent slot on failure
             mapping = await rate_limiter.get_workflow_slot_mapping(workflow_run.id)
             if mapping:
-                org_id, slot_id = mapping
-                await rate_limiter.release_concurrent_slot(org_id, slot_id)
+                org_id, wf_id, s_id = mapping
+                await rate_limiter.release_concurrent_slot(org_id, wf_id, s_id)
                 await rate_limiter.delete_workflow_slot_mapping(workflow_run.id)
 
             # Release from_number on failure
@@ -481,6 +702,9 @@ class CampaignCallDispatcher:
         """
         # Get concurrent limit for organization
         org_concurrent_limit = await self.get_org_concurrent_limit(organization_id)
+        
+        # Get concurrent limit for workflow (agent)
+        workflow_concurrent_limit = await self.get_workflow_concurrent_limit(campaign.workflow_id)
 
         # Check for campaign-level max_concurrency in orchestrator_metadata
         campaign_max_concurrency = None
@@ -501,7 +725,7 @@ class CampaignCallDispatcher:
         # Wait until we can acquire a concurrent slot
         while True:
             slot_id = await rate_limiter.try_acquire_concurrent_slot(
-                organization_id, max_concurrent
+                organization_id, campaign.workflow_id, max_concurrent, workflow_concurrent_limit
             )
             if slot_id:
                 return slot_id
@@ -569,8 +793,8 @@ class CampaignCallDispatcher:
         slot_released = False
         mapping = await rate_limiter.get_workflow_slot_mapping(workflow_run_id)
         if mapping:
-            org_id, slot_id = mapping
-            success = await rate_limiter.release_concurrent_slot(org_id, slot_id)
+            org_id, wf_id, s_id = mapping
+            success = await rate_limiter.release_concurrent_slot(org_id, wf_id, s_id)
             if success:
                 await rate_limiter.delete_workflow_slot_mapping(workflow_run_id)
                 logger.info(

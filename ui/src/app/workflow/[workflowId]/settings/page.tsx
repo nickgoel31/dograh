@@ -252,14 +252,19 @@ function GeneralSection({
     workflowConfigurations,
     workflowName,
     workflowId,
+    initialConcurrencyLimit,
     onSave,
 }: {
     workflowConfigurations: WorkflowConfigurations;
     workflowName: string;
     workflowId: number;
-    onSave: (configurations: WorkflowConfigurations, workflowName: string) => Promise<void>;
+    initialConcurrencyLimit?: number | null;
+    onSave: (configurations: WorkflowConfigurations, workflowName: string, concurrencyLimit?: number | null) => Promise<void>;
 }) {
     const [name, setName] = useState(workflowName);
+    const [concurrencyLimit, setConcurrencyLimit] = useState<number | ''>(
+        initialConcurrencyLimit ?? ''
+    );
     const [ambientNoiseConfig, setAmbientNoiseConfig] = useState<AmbientNoiseConfiguration>(
         workflowConfigurations.ambient_noise_configuration || DEFAULT_AMBIENT_NOISE_CONFIG,
     );
@@ -278,6 +283,41 @@ function GeneralSection({
     const ambientFileInputRef = useRef<HTMLInputElement>(null);
     const { playingId, toggle: togglePlayback } = useAudioPlayback();
 
+    const { getAccessToken } = useAuth();
+    const [orgConcurrencyStatus, setOrgConcurrencyStatus] = useState<{
+        concurrency_limit: number | null;
+        allocated_concurrency: number;
+    } | null>(null);
+
+    useEffect(() => {
+        const fetchStatus = async () => {
+            try {
+                const token = await getAccessToken();
+                const res = await fetch('/api/v1/organizations/concurrency-status', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setOrgConcurrencyStatus(data);
+                }
+            } catch (err) {
+                logger.error("Failed to fetch organization concurrency status", err);
+            }
+        };
+        fetchStatus();
+    }, [getAccessToken]);
+
+    const isConcurrencyExceeded = useMemo(() => {
+        if (!orgConcurrencyStatus || orgConcurrencyStatus.concurrency_limit === null) return false;
+        
+        const numericLimit = concurrencyLimit === '' ? 0 : concurrencyLimit;
+        const initialLimit = initialConcurrencyLimit || 0;
+        
+        const otherAllocated = orgConcurrencyStatus.allocated_concurrency - initialLimit;
+        
+        return otherAllocated + numericLimit > orgConcurrencyStatus.concurrency_limit;
+    }, [orgConcurrencyStatus, concurrencyLimit, initialConcurrencyLimit]);
+
     const isDirty = useMemo(() => {
         const initAmbient = workflowConfigurations.ambient_noise_configuration || DEFAULT_AMBIENT_NOISE_CONFIG;
         return (
@@ -287,9 +327,10 @@ function GeneralSection({
             maxUserIdleTimeout !== (workflowConfigurations.max_user_idle_timeout || 10) ||
             smartTurnStopSecs !== (workflowConfigurations.smart_turn_stop_secs || 2) ||
             turnStopStrategy !== (workflowConfigurations.turn_stop_strategy || "transcription") ||
-            contextCompactionEnabled !== (workflowConfigurations.context_compaction_enabled ?? false)
+            contextCompactionEnabled !== (workflowConfigurations.context_compaction_enabled ?? false) ||
+            (concurrencyLimit === '' ? null : concurrencyLimit) !== (initialConcurrencyLimit ?? null)
         );
-    }, [name, workflowName, ambientNoiseConfig, maxCallDuration, maxUserIdleTimeout, smartTurnStopSecs, turnStopStrategy, contextCompactionEnabled, workflowConfigurations]);
+    }, [name, workflowName, ambientNoiseConfig, maxCallDuration, maxUserIdleTimeout, smartTurnStopSecs, turnStopStrategy, contextCompactionEnabled, workflowConfigurations, concurrencyLimit, initialConcurrencyLimit]);
 
     useUnsavedChanges("general", isDirty);
 
@@ -365,6 +406,7 @@ function GeneralSection({
                     context_compaction_enabled: contextCompactionEnabled,
                 },
                 name,
+                concurrencyLimit !== '' ? concurrencyLimit : null,
             );
         } catch (error) {
             console.error("Failed to save general settings:", error);
@@ -394,6 +436,30 @@ function GeneralSection({
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Enter Agent name"
                     />
+                </div>
+                
+                <div className="space-y-2">
+                    <Label htmlFor="concurrency_limit" className="text-sm font-medium">Concurrency Limit</Label>
+                    <div className="flex gap-4 items-center">
+                        <Input
+                            id="concurrency_limit"
+                            type="number"
+                            min="1"
+                            value={concurrencyLimit}
+                            onChange={(e) => setConcurrencyLimit(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                            placeholder="Leave empty for unlimited (up to org limit)"
+                        />
+                        {orgConcurrencyStatus && (
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                Org Limit: {orgConcurrencyStatus.concurrency_limit ?? 'Unlimited'}
+                            </span>
+                        )}
+                    </div>
+                    {isConcurrencyExceeded && (
+                        <p className="text-xs text-destructive">
+                            The sum of agent concurrency limits exceeds the total limit allocated for your organization ({orgConcurrencyStatus?.concurrency_limit}).
+                        </p>
+                    )}
                 </div>
 
                 <Separator />
@@ -1218,6 +1284,7 @@ function WorkflowSettingsInner({
                                 workflowConfigurations={workflowConfigurations}
                                 workflowName={workflowName || workflow.name}
                                 workflowId={workflowId}
+                                initialConcurrencyLimit={workflow.concurrency_limit}
                                 onSave={saveWorkflowConfigurations}
                             />
 

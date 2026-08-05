@@ -67,8 +67,11 @@ class CampaignOrchestrator:
             # Task 2: Periodically check for stale campaigns
             completion_task = asyncio.create_task(self._monitor_completion())
 
-            # Wait for both tasks
-            await asyncio.gather(event_task, completion_task)
+            # Task 3: Periodically process generic single-call queues
+            generic_queue_task = asyncio.create_task(self._process_generic_queue_loop())
+
+            # Wait for tasks
+            await asyncio.gather(event_task, completion_task, generic_queue_task)
 
         except asyncio.CancelledError:
             logger.info("Campaign Orchestrator cancelled")
@@ -99,7 +102,21 @@ class CampaignOrchestrator:
                             f"Failed to parse campaign event: {message['data']}"
                         )
                 except Exception as e:
-                    logger.error(f"Error handling campaign event: {e}")
+                    logger.error(f"Error handling event: {e}")
+
+    async def _process_generic_queue_loop(self):
+        """Periodically trigger the processing of generic (non-campaign) queues."""
+        from api.tasks.arq import enqueue_job
+        from api.tasks.function_names import FunctionNames
+
+        while self._running:
+            try:
+                await enqueue_job(FunctionNames.PROCESS_GENERIC_BATCH)
+            except Exception as e:
+                logger.error(f"Error enqueuing generic batch job: {e}")
+            
+            # Poll every 2 seconds
+            await asyncio.sleep(2)
 
     async def _handle_event(self, event):
         """Handle campaign events including retry events."""

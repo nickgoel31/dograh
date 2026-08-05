@@ -146,7 +146,44 @@ async def initiate_call(
 
     workflow_run_id = request.workflow_run_id
 
+    # Concurrency check
+    from api.services.campaign.campaign_call_dispatcher import campaign_call_dispatcher
+    from api.services.campaign.rate_limiter import rate_limiter
+
+    org_limit = await campaign_call_dispatcher.get_org_concurrent_limit(user.selected_organization_id)
+    wf_limit = await campaign_call_dispatcher.get_workflow_concurrent_limit(workflow.id)
+
     if not workflow_run_id:
+        slot_id = await rate_limiter.try_acquire_concurrent_slot(
+            user.selected_organization_id, workflow.id, org_limit, wf_limit
+        )
+
+        if not slot_id:
+            # Queue the call
+            import uuid
+            queued_run = await db_client.create_queued_run(
+                campaign_id=None,
+                source_uuid=str(uuid.uuid4()),
+                context_variables={
+                    "phone_number": phone_number,
+                    "user_id": execution_user_id,
+                    "provider": provider.PROVIDER_NAME,
+                    "telephony_configuration_id": telephony_configuration_id,
+                },
+                workflow_id=workflow.id,
+                organization_id=user.selected_organization_id,
+                telephony_configuration_id=telephony_configuration_id,
+            )
+            return JSONResponse(
+                status_code=202,
+                content={
+                    "status": "queued",
+                    "message": "Call queued due to concurrency limits",
+                    "queued_run_id": queued_run.id
+                }
+            )
+
+        # Proceed to inline dispatch (since we acquired the slot)
         # Merge template context variables (e.g. caller_number, called_number
         # set in workflow settings for testing pre-call data fetch).
         template_vars = workflow.template_context_variables or {}
@@ -170,6 +207,11 @@ async def initiate_call(
             organization_id=user.selected_organization_id,
         )
         workflow_run_id = workflow_run.id
+        
+        # Store slot mapping so it's released on completion
+        await rate_limiter.store_workflow_slot_mapping(
+            workflow_run_id, user.selected_organization_id, workflow.id, slot_id
+        )
     else:
         workflow_run = await db_client.get_workflow_run(
             workflow_run_id, organization_id=user.selected_organization_id
@@ -216,13 +258,23 @@ async def initiate_call(
         from_number = phone_row.address_normalized
 
     # Initiate call via provider
-    result = await provider.initiate_call(
-        to_number=phone_number,
-        webhook_url=webhook_url,
-        workflow_run_id=workflow_run_id,
-        from_number=from_number,
-        **keywords,
-    )
+    try:
+        result = await provider.initiate_call(
+            to_number=phone_number,
+            webhook_url=webhook_url,
+            workflow_run_id=workflow_run_id,
+            from_number=from_number,
+            **keywords,
+        )
+    except Exception as e:
+        logger.error(f"Error initiating call: {str(e)}")
+        # Release the slot if call initiation fails inline and we acquired it
+        if not request.workflow_run_id and slot_id:
+            await rate_limiter.release_concurrent_slot(user.selected_organization_id, workflow.id, slot_id)
+            await rate_limiter.delete_workflow_slot_mapping(workflow_run_id)
+        raise HTTPException(
+            status_code=500, detail=f"Failed to initiate call: {str(e)}"
+        )
 
     # Store provider metadata and caller_number in workflow run context
     gathered_context = {
@@ -620,12 +672,15 @@ async def _handle_telephony_websocket(
     except WebSocketDisconnect as e:
         logger.info(f"WebSocket disconnected: code={e.code}, reason={e.reason}")
     except Exception as e:
-        logger.error(f"Error in WebSocket connection: {e}")
-        try:
-            await websocket.close(1011, "Internal server error")
-        except RuntimeError:
-            # WebSocket already closed, ignore
-            pass
+        logger.error(f"Error initiating call: {str(e)}")
+        # Release the slot if call initiation fails inline and we acquired it
+        if not request.workflow_run_id and slot_id:
+            await rate_limiter.release_concurrent_slot(user.selected_organization_id, workflow.id, slot_id)
+            await rate_limiter.delete_workflow_slot_mapping(workflow_run_id)
+            
+        raise HTTPException(
+            status_code=500, detail=f"Failed to initiate call: {str(e)}"
+        )
 
 
 @router.post("/inbound/run")
@@ -748,6 +803,25 @@ async def handle_inbound_run(request: Request):
                 TelephonyError.QUOTA_EXCEEDED
             )
 
+        # 4.5. Concurrency check
+        from api.services.campaign.campaign_call_dispatcher import campaign_call_dispatcher
+        from api.services.campaign.rate_limiter import rate_limiter
+
+        org_limit = await campaign_call_dispatcher.get_org_concurrent_limit(config.organization_id)
+        wf_limit = await campaign_call_dispatcher.get_workflow_concurrent_limit(workflow_id)
+
+        slot_id = await rate_limiter.try_acquire_concurrent_slot(
+            config.organization_id, workflow_id, org_limit, wf_limit
+        )
+
+        if not slot_id:
+            logger.warning(
+                f"Inbound call rejected due to concurrency limits for org {config.organization_id}, workflow {workflow_id}"
+            )
+            return provider_class.generate_validation_error_response(
+                TelephonyError.CONCURRENCY_EXCEEDED
+            )
+
         # 5. Create workflow run + return provider-shaped response.
         workflow_run_id = await _create_inbound_workflow_run(
             workflow_id,
@@ -756,6 +830,11 @@ async def handle_inbound_run(request: Request):
             normalized_data,
             telephony_configuration_id=telephony_configuration_id,
             from_phone_number_id=phone_row.id,
+        )
+
+        # Store slot mapping so it's released on completion
+        await rate_limiter.store_workflow_slot_mapping(
+            workflow_run_id, config.organization_id, workflow_id, slot_id
         )
 
         backend_endpoint, wss_backend_endpoint = await get_backend_endpoints()

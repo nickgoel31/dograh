@@ -105,6 +105,7 @@ class OrganizationModel(Base):
     name = Column(String, nullable=True, index=True)
     slug = Column(String, unique=True, nullable=True, index=True)
     is_active = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    concurrency_limit = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     # Quota fields
@@ -437,6 +438,7 @@ class WorkflowModel(Base):
     )
     folder = relationship("FolderModel", back_populates="workflows")
     name = Column(String, index=True, nullable=False)
+    concurrency_limit = Column(Integer, nullable=True)
     status = Column(
         Enum(*[status.value for status in WorkflowStatus], name="workflow_status"),
         nullable=False,
@@ -777,7 +779,16 @@ class QueuedRunModel(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     campaign_id = Column(
-        Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False
+        Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=True
+    )
+    workflow_id = Column(
+        Integer, ForeignKey("workflows.id", ondelete="CASCADE"), nullable=True
+    )
+    organization_id = Column(
+        Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True
+    )
+    telephony_configuration_id = Column(
+        Integer, ForeignKey("telephony_configurations.id", ondelete="SET NULL"), nullable=True
     )
     source_uuid = Column(String, nullable=False)
     context_variables = Column(JSON, nullable=False, default=dict)
@@ -813,6 +824,13 @@ class QueuedRunModel(Base):
             "campaign_id",
             "state",
             postgresql_where=text("state = 'queued'"),
+        ),
+        # Index for checking generic queued runs efficiently
+        Index(
+            "idx_queued_runs_generic_state_optimized",
+            "state",
+            "created_at",
+            postgresql_where=text("campaign_id IS NULL AND state = 'queued'"),
         ),
         # Optimized index for scheduled retries
         Index(

@@ -15,6 +15,7 @@ class TelephonyError(Enum):
     PHONE_NUMBER_NOT_CONFIGURED = "PHONE_NUMBER_NOT_CONFIGURED"
     SIGNATURE_VALIDATION_FAILED = "SIGNATURE_VALIDATION_FAILED"
     QUOTA_EXCEEDED = "QUOTA_EXCEEDED"
+    CONCURRENCY_EXCEEDED = "CONCURRENCY_EXCEEDED"
     GENERAL_AUTH_FAILED = "GENERAL_AUTH_FAILED"
     VALID = "VALID"
 
@@ -27,5 +28,6 @@ TELEPHONY_ERROR_MESSAGES = {
     TelephonyError.PHONE_NUMBER_NOT_CONFIGURED: "Phone number not configured: This number is not set up for inbound calls in your account. Please add this number to your telephony configuration.",
     TelephonyError.SIGNATURE_VALIDATION_FAILED: "Security error: Webhook signature validation failed. Please verify your auth token configuration and ensure requests are coming from your telephony provider.",
     TelephonyError.QUOTA_EXCEEDED: "Service temporarily unavailable: Your account has exceeded usage limits. Please contact your administrator or upgrade your plan to continue receiving calls.",
+    TelephonyError.CONCURRENCY_EXCEEDED: "Service temporarily unavailable: Concurrency limits reached. Please try again later.",
     TelephonyError.GENERAL_AUTH_FAILED: "Authentication failed: Please check your webhook URL configuration and ensure your telephony provider settings match your dashboard configuration.",
 }

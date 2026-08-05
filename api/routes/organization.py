@@ -103,6 +103,32 @@ class TelephonyConfigWarningsResponse(BaseModel):
     telnyx_missing_webhook_public_key_count: int
 
 
+class OrganizationConcurrencyStatusResponse(BaseModel):
+    concurrency_limit: Optional[int]
+    allocated_concurrency: int
+
+
+@router.get(
+    "/concurrency-status",
+    response_model=OrganizationConcurrencyStatusResponse,
+)
+async def get_organization_concurrency_status(user: UserModel = Depends(require_role([UserRole.ADMIN]))):
+    if not user.selected_organization_id:
+        raise HTTPException(status_code=400, detail="No organization selected")
+        
+    org = await db_client.get_organization_by_id(user.selected_organization_id)
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+        
+    workflows = await db_client.get_all_workflows(organization_id=user.selected_organization_id)
+    allocated = sum([w.concurrency_limit for w in workflows if w.concurrency_limit is not None])
+    
+    return OrganizationConcurrencyStatusResponse(
+        concurrency_limit=org.concurrency_limit,
+        allocated_concurrency=allocated,
+    )
+
+
 @router.get(
     "/telephony-providers/metadata",
     response_model=TelephonyProvidersMetadataResponse,

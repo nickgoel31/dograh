@@ -70,6 +70,7 @@ interface Organization {
   whatsapp_business_account_id?: string;
   whatsapp_webhook_verify_token?: string;
   whatsapp_has_access_token?: boolean;
+  concurrency_limit?: number;
 }
 
 
@@ -100,6 +101,7 @@ export default function SuperadminPage() {
     const [editBalance, setEditBalance] = useState<number>(0);
     const [editBillingRate, setEditBillingRate] = useState<number>(0);
     const [editBillingPulse, setEditBillingPulse] = useState<number>(60);
+    const [editConcurrencyLimit, setEditConcurrencyLimit] = useState<number>(0);
     const [editMonthlyMinutesLimit, setEditMonthlyMinutesLimit] = useState<number>(0);
     const [editCycleYear, setEditCycleYear] = useState<number>(new Date().getFullYear());
     const [editCycleMonth, setEditCycleMonth] = useState<number>(new Date().getMonth() + 1);
@@ -298,6 +300,7 @@ export default function SuperadminPage() {
                     balance: editBalance,
                     billing_rate: editBillingRate,
                     billing_pulse: editBillingPulse,
+                    concurrency_limit: editConcurrencyLimit,
                     monthly_minutes_limit: editMonthlyMinutesLimit,
                     monthly_minutes_start_year: editStartYear !== "" ? Number(editStartYear) : null,
                     monthly_minutes_start_month: editStartMonth !== "" ? Number(editStartMonth) : null,
@@ -548,6 +551,7 @@ export default function SuperadminPage() {
                                                                 setEditBalance(org.base_balance ?? org.balance ?? 0);
                                                                 setEditBillingRate(org.billing_rate ?? 0);
                                                                 setEditBillingPulse(org.billing_pulse ?? 60);
+                                                                setEditConcurrencyLimit(org.concurrency_limit ?? 0);
                                                                 setEditStartYear(org.monthly_minutes_start_year ?? "");
                                                                 setEditStartMonth(org.monthly_minutes_start_month ?? "");
                                                                 setEditEndYear(org.monthly_minutes_end_year ?? "");
@@ -698,6 +702,20 @@ export default function SuperadminPage() {
                                 </select>
                                 <p className="text-xs text-muted-foreground">
                                     Calls will be rounded up and charged in increments of this pulse duration.
+                                </p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="concurrencyLimit">Concurrency Limit</Label>
+                                <Input
+                                    id="concurrencyLimit"
+                                    type="number"
+                                    min="0"
+                                    value={editConcurrencyLimit}
+                                    onChange={(e) => setEditConcurrencyLimit(parseInt(e.target.value) || 0)}
+                                    required
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Maximum number of concurrent calls for this organization. 0 means unlimited.
                                 </p>
                             </div>
                             <div className="space-y-2">

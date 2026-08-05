@@ -4503,6 +4503,10 @@ export type UpdateWorkflowRequest = {
     workflow_configurations?: {
         [key: string]: unknown;
     } | null;
+    /**
+     * Concurrency Limit
+     */
+    concurrency_limit?: number | null;
 };
 
 /**
@@ -5017,6 +5021,10 @@ export type WorkflowListResponse = {
      * Workflow Uuid
      */
     workflow_uuid?: string | null;
+    /**
+     * Concurrency Limit
+     */
+    concurrency_limit?: number | null;
 };
 
 /**
@@ -5092,6 +5100,10 @@ export type WorkflowResponse = {
      * Workflow Uuid
      */
     workflow_uuid?: string | null;
+    /**
+     * Concurrency Limit
+     */
+    concurrency_limit?: number | null;
 };
 
 /**

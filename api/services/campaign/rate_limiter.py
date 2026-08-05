@@ -94,36 +94,44 @@ class RateLimiter:
             return 1.0  # Default wait time on error
 
     async def try_acquire_concurrent_slot(
-        self, organization_id: int, max_concurrent: int = 20
+        self, organization_id: int, workflow_id: int, org_max_concurrent: int, agent_max_concurrent: int
     ) -> Optional[str]:
         """
         Try to acquire a concurrent call slot.
-        Returns a unique slot_id if successful, None if limit reached.
+        Returns a unique slot_id if successful, None if limit reached for either org or agent.
         """
         redis_client = await self._get_redis()
 
-        concurrent_key = f"concurrent_calls:{organization_id}"
+        org_concurrent_key = f"concurrent_calls:org:{organization_id}"
+        agent_concurrent_key = f"concurrent_calls:agent:{workflow_id}"
         now = time.time()
         stale_cutoff = now - self.stale_call_timeout
 
         # Lua script for atomic operation
         lua_script = """
-        local key = KEYS[1]
+        local org_key = KEYS[1]
+        local agent_key = KEYS[2]
         local now = tonumber(ARGV[1])
-        local max_concurrent = tonumber(ARGV[2])
-        local stale_cutoff = tonumber(ARGV[3])
-        local slot_id = ARGV[4]
+        local org_max = tonumber(ARGV[2])
+        local agent_max = tonumber(ARGV[3])
+        local stale_cutoff = tonumber(ARGV[4])
+        local slot_id = ARGV[5]
         
         -- Remove stale entries (older than 30 minutes)
-        redis.call('ZREMRANGEBYSCORE', key, 0, stale_cutoff)
+        redis.call('ZREMRANGEBYSCORE', org_key, 0, stale_cutoff)
+        redis.call('ZREMRANGEBYSCORE', agent_key, 0, stale_cutoff)
         
         -- Get current count
-        local current_count = redis.call('ZCARD', key)
+        local org_count = redis.call('ZCARD', org_key)
+        local agent_count = redis.call('ZCARD', agent_key)
         
-        if current_count < max_concurrent then
-            -- Add new slot
-            redis.call('ZADD', key, now, slot_id)
-            redis.call('EXPIRE', key, 3600)  -- Expire after 1 hour
+        if org_count < org_max and agent_count < agent_max then
+            -- Add new slot to both
+            redis.call('ZADD', org_key, now, slot_id)
+            redis.call('EXPIRE', org_key, 3600)  -- Expire after 1 hour
+            
+            redis.call('ZADD', agent_key, now, slot_id)
+            redis.call('EXPIRE', agent_key, 3600)
             return slot_id
         else
             return nil
@@ -136,10 +144,12 @@ class RateLimiter:
         try:
             result = await redis_client.eval(
                 lua_script,
-                1,
-                concurrent_key,
+                2,
+                org_concurrent_key,
+                agent_concurrent_key,
                 now,
-                max_concurrent,
+                org_max_concurrent,
+                agent_max_concurrent,
                 stale_cutoff,
                 slot_id,
             )
@@ -148,35 +158,40 @@ class RateLimiter:
             logger.error(f"Concurrent limiter error: {e}")
             return None
 
-    async def release_concurrent_slot(self, organization_id: int, slot_id: str) -> bool:
+    async def release_concurrent_slot(self, organization_id: int, workflow_id: int, slot_id: str) -> bool:
         """
         Release a concurrent call slot.
-        Returns True if slot was released, False otherwise.
+        Returns True if slot was released from org and agent pools, False otherwise.
         """
         if not slot_id:
             return False
 
         redis_client = await self._get_redis()
-        concurrent_key = f"concurrent_calls:{organization_id}"
+        org_concurrent_key = f"concurrent_calls:org:{organization_id}"
+        agent_concurrent_key = f"concurrent_calls:agent:{workflow_id}"
 
         try:
-            removed = await redis_client.zrem(concurrent_key, slot_id)
-            if removed:
+            removed_org = await redis_client.zrem(org_concurrent_key, slot_id)
+            removed_agent = await redis_client.zrem(agent_concurrent_key, slot_id)
+            if removed_org or removed_agent:
                 logger.debug(
-                    f"Released concurrent slot {slot_id} for org {organization_id}"
+                    f"Released concurrent slot {slot_id} for org {organization_id} and workflow {workflow_id}"
                 )
-            return bool(removed)
+            return bool(removed_org or removed_agent)
         except Exception as e:
             logger.error(f"Error releasing concurrent slot: {e}")
             return False
 
-    async def get_concurrent_count(self, organization_id: int) -> int:
+    async def get_concurrent_count(self, organization_id: int, workflow_id: int = None) -> int:
         """
-        Get current number of active concurrent calls for an organization.
+        Get current number of active concurrent calls for an organization or workflow.
         Automatically cleans up stale entries.
         """
         redis_client = await self._get_redis()
-        concurrent_key = f"concurrent_calls:{organization_id}"
+        if workflow_id:
+            concurrent_key = f"concurrent_calls:agent:{workflow_id}"
+        else:
+            concurrent_key = f"concurrent_calls:org:{organization_id}"
 
         try:
             # Clean up stale entries first
@@ -191,7 +206,7 @@ class RateLimiter:
             return 0
 
     async def store_workflow_slot_mapping(
-        self, workflow_run_id: int, organization_id: int, slot_id: str
+        self, workflow_run_id: int, organization_id: int, workflow_id: int, slot_id: str
     ) -> bool:
         """
         Store the mapping between workflow_run_id and its concurrent slot.
@@ -203,7 +218,7 @@ class RateLimiter:
         try:
             # Store as a hash with TTL
             await redis_client.hset(
-                mapping_key, mapping={"org_id": organization_id, "slot_id": slot_id}
+                mapping_key, mapping={"org_id": organization_id, "workflow_id": workflow_id, "slot_id": slot_id}
             )
             # Set expiry to match stale timeout
             await redis_client.expire(mapping_key, self.stale_call_timeout)
@@ -214,10 +229,10 @@ class RateLimiter:
 
     async def get_workflow_slot_mapping(
         self, workflow_run_id: int
-    ) -> Optional[tuple[int, str]]:
+    ) -> Optional[tuple[int, int, str]]:
         """
         Get the concurrent slot mapping for a workflow run.
-        Returns (organization_id, slot_id) tuple or None if not found.
+        Returns (organization_id, workflow_id, slot_id) tuple or None if not found.
         """
         redis_client = await self._get_redis()
         mapping_key = f"workflow_slot_mapping:{workflow_run_id}"
@@ -225,7 +240,7 @@ class RateLimiter:
         try:
             mapping = await redis_client.hgetall(mapping_key)
             if mapping and "org_id" in mapping and "slot_id" in mapping:
-                return (int(mapping["org_id"]), mapping["slot_id"])
+                return (int(mapping["org_id"]), int(mapping.get("workflow_id", 0)), mapping["slot_id"])
             return None
         except Exception as e:
             logger.error(f"Error getting workflow slot mapping: {e}")

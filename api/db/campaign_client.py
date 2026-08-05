@@ -754,7 +754,7 @@ class CampaignClient(BaseDBClient):
 
     async def create_queued_run(
         self,
-        campaign_id: int,
+        campaign_id: Optional[int],
         source_uuid: str,
         context_variables: dict,
         state: str = "queued",
@@ -762,6 +762,9 @@ class CampaignClient(BaseDBClient):
         parent_queued_run_id: Optional[int] = None,
         scheduled_for: Optional[datetime] = None,
         retry_reason: Optional[str] = None,
+        workflow_id: Optional[int] = None,
+        organization_id: Optional[int] = None,
+        telephony_configuration_id: Optional[int] = None,
     ) -> QueuedRunModel:
         """Create a single queued run with retry support"""
         async with self.async_session() as session:
@@ -769,6 +772,9 @@ class CampaignClient(BaseDBClient):
                 campaign_id=campaign_id,
                 source_uuid=source_uuid,
                 context_variables=context_variables,
+                workflow_id=workflow_id,
+                organization_id=organization_id,
+                telephony_configuration_id=telephony_configuration_id,
                 state=state,
                 retry_count=retry_count,
                 parent_queued_run_id=parent_queued_run_id,
@@ -911,6 +917,72 @@ class CampaignClient(BaseDBClient):
                 raise e
 
             # Refresh to get updated state
+            for run in claimed_runs:
+                await session.refresh(run)
+
+            return claimed_runs
+
+    async def claim_generic_queued_runs_for_processing(
+        self,
+        scheduled_before: datetime,
+        limit: int = 10,
+    ) -> list[QueuedRunModel]:
+        """
+        Atomically claim generic queued runs (campaign_id IS NULL) for processing.
+        """
+        async with self.async_session() as session:
+            claimed_runs = []
+
+            # First, get scheduled retries that are due (with lock)
+            scheduled_query = (
+                select(QueuedRunModel)
+                .where(
+                    QueuedRunModel.campaign_id.is_(None),
+                    QueuedRunModel.state == "queued",
+                    QueuedRunModel.scheduled_for.isnot(None),
+                    QueuedRunModel.scheduled_for <= scheduled_before,
+                )
+                .order_by(QueuedRunModel.scheduled_for)
+                .limit(limit)
+                .with_for_update(skip_locked=True)
+            )
+
+            scheduled_result = await session.execute(scheduled_query)
+            scheduled_runs = list(scheduled_result.scalars().all())
+
+            for run in scheduled_runs:
+                run.state = "processing"
+                claimed_runs.append(run)
+
+            remaining_slots = limit - len(scheduled_runs)
+
+            # Then get regular queued runs if we have remaining slots
+            if remaining_slots > 0:
+                regular_query = (
+                    select(QueuedRunModel)
+                    .where(
+                        QueuedRunModel.campaign_id.is_(None),
+                        QueuedRunModel.state == "queued",
+                        QueuedRunModel.scheduled_for.is_(None),
+                    )
+                    .order_by(QueuedRunModel.id.asc())
+                    .limit(remaining_slots)
+                    .with_for_update(skip_locked=True)
+                )
+
+                regular_result = await session.execute(regular_query)
+                regular_runs = list(regular_result.scalars().all())
+
+                for run in regular_runs:
+                    run.state = "processing"
+                    claimed_runs.append(run)
+
+            try:
+                await session.commit()
+            except Exception as e:
+                await session.rollback()
+                raise e
+
             for run in claimed_runs:
                 await session.refresh(run)
 

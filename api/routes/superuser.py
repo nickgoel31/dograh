@@ -191,6 +191,7 @@ class CreateOrganizationRequest(BaseModel):
     monthly_minutes_end_year: Optional[int] = None
     monthly_minutes_end_month: Optional[int] = None
     quota_reset_day: Optional[int] = 1
+    concurrency_limit: Optional[int] = None
 
 class UpdateOrganizationRequest(BaseModel):
     name: Optional[str] = None
@@ -212,6 +213,7 @@ class UpdateOrganizationRequest(BaseModel):
     whatsapp_phone_number_id: Optional[str] = None
     whatsapp_access_token: Optional[str] = None
     whatsapp_business_account_id: Optional[str] = None
+    concurrency_limit: Optional[int] = None
 
 
 class AssignUserRequest(BaseModel):
@@ -256,6 +258,7 @@ async def create_organization(request: CreateOrganizationRequest, user: UserMode
             monthly_minutes_end_year=request.monthly_minutes_end_year,
             monthly_minutes_end_month=request.monthly_minutes_end_month,
             quota_reset_day=request.quota_reset_day,
+            concurrency_limit=request.concurrency_limit,
         )
         session.add(new_org)
         await session.commit()
@@ -462,6 +465,9 @@ async def update_organization(org_id: int, request: UpdateOrganizationRequest, u
 
         if request.monthly_minutes_limit is not None:
             org.monthly_minutes_limit = request.monthly_minutes_limit
+            
+        if request.concurrency_limit is not None:
+            org.concurrency_limit = request.concurrency_limit
 
         # Handle updating start/end contract periods, including explicit setting to None (nullification)
         fields_to_check = [
