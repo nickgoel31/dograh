@@ -374,6 +374,7 @@ class WorkflowClient(BaseDBClient):
                     WorkflowModel.created_at,
                     WorkflowModel.folder_id,
                     WorkflowModel.workflow_uuid,
+                    WorkflowModel.concurrency_limit,
                 )
             )
 
