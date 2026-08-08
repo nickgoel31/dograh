@@ -54,6 +54,18 @@ def test_initiate_call_executes_as_workflow_owner_for_shared_org_workflow():
     with (
         patch("api.routes.telephony.db_client") as mock_db,
         patch(
+            "api.services.campaign.rate_limiter.rate_limiter.try_acquire_concurrent_slot",
+            new=AsyncMock(return_value="slot-123"),
+        ),
+        patch(
+            "api.services.campaign.campaign_call_dispatcher.campaign_call_dispatcher.get_org_concurrent_limit",
+            new=AsyncMock(return_value=10),
+        ),
+        patch(
+            "api.services.campaign.campaign_call_dispatcher.campaign_call_dispatcher.get_workflow_concurrent_limit",
+            new=AsyncMock(return_value=5),
+        ),
+        patch(
             "api.routes.telephony.check_dograh_quota_by_user_id",
             new=quota_mock,
         ),
@@ -117,6 +129,18 @@ def test_initiate_call_rejects_existing_run_for_different_workflow():
 
     with (
         patch("api.routes.telephony.db_client") as mock_db,
+        patch(
+            "api.services.campaign.rate_limiter.rate_limiter.try_acquire_concurrent_slot",
+            new=AsyncMock(return_value="slot-123"),
+        ),
+        patch(
+            "api.services.campaign.campaign_call_dispatcher.campaign_call_dispatcher.get_org_concurrent_limit",
+            new=AsyncMock(return_value=10),
+        ),
+        patch(
+            "api.services.campaign.campaign_call_dispatcher.campaign_call_dispatcher.get_workflow_concurrent_limit",
+            new=AsyncMock(return_value=5),
+        ),
         patch(
             "api.routes.telephony.check_dograh_quota_by_user_id",
             new=quota_mock,

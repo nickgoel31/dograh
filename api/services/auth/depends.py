@@ -147,7 +147,7 @@ async def get_user(
         org = await db_client.get_organization_by_id(user.selected_organization_id)
         if org and not getattr(org, 'is_active', True):
             # Bypass the check for super admins so they can still manage deactivated orgs if impersonating
-            if not user.is_superuser and getattr(user, 'role', '') != UserRole.SUPER_ADMIN.value:
+            if not getattr(user, 'is_superuser', False) and getattr(user, 'role', '') != UserRole.SUPER_ADMIN.value:
                 raise HTTPException(status_code=403, detail="Your organization has been deactivated. Contact support.")
 
     return user
@@ -309,7 +309,7 @@ async def get_superuser(
     """
     user = await get_user(authorization, x_api_key)
 
-    if not user.is_superuser and user.role != UserRole.SUPER_ADMIN.value:
+    if not getattr(user, 'is_superuser', False) and getattr(user, 'role', None) != UserRole.SUPER_ADMIN.value:
         raise HTTPException(
             status_code=403, detail="Access denied. Superuser privileges required."
         )
@@ -327,7 +327,7 @@ def require_role(allowed_roles: list[UserRole]):
     ) -> UserModel:
         user_role = getattr(user, 'role', None) or UserRole.ADMIN.value
         
-        if user.is_superuser or user_role == UserRole.SUPER_ADMIN.value:
+        if getattr(user, 'is_superuser', False) or user_role == UserRole.SUPER_ADMIN.value:
             return user
         if user_role not in [role.value for role in allowed_roles]:
             raise HTTPException(

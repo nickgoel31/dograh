@@ -14,6 +14,7 @@ from fastapi import (
     Request,
     WebSocket,
 )
+from fastapi.responses import JSONResponse
 from loguru import logger
 from pipecat.utils.run_context import set_current_run_id
 from pydantic import BaseModel
@@ -160,7 +161,6 @@ async def initiate_call(
 
         if not slot_id:
             # Queue the call
-            import uuid
             queued_run = await db_client.create_queued_run(
                 campaign_id=None,
                 source_uuid=str(uuid.uuid4()),
