@@ -1,5 +1,6 @@
 import asyncio
 import time
+import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Optional
 
@@ -329,9 +330,22 @@ class CampaignCallDispatcher:
             raise ValueError(f"No phone number in queued run {queued_run.id}")
 
         # Get provider
-        provider_name = queued_run.context_variables.get("provider", "twilio") # default fallback
-        from api.services.telephony.provider_factory import get_provider
-        provider = get_provider(provider_name)
+        from api.services.telephony.factory import (
+            get_default_telephony_provider,
+            get_telephony_provider_by_id,
+        )
+
+        try:
+            if queued_run.telephony_configuration_id:
+                provider = await get_telephony_provider_by_id(
+                    queued_run.telephony_configuration_id, queued_run.organization_id
+                )
+            else:
+                provider = await get_default_telephony_provider(queued_run.organization_id)
+        except Exception as e:
+            await rate_limiter.release_concurrent_slot(queued_run.organization_id, queued_run.workflow_id, slot_id)
+            raise ValueError(f"Failed to load telephony provider for queued run {queued_run.id}: {e}") from e
+
         workflow_run_mode = provider.PROVIDER_NAME
 
         from_number = await self.acquire_from_number(
