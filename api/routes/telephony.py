@@ -811,6 +811,7 @@ async def handle_inbound_run(request: Request):
         org_limit = await campaign_call_dispatcher.get_org_concurrent_limit(config.organization_id)
         wf_limit = await campaign_call_dispatcher.get_workflow_concurrent_limit(workflow_id)
 
+        slot_id = None
         slot_id = await rate_limiter.try_acquire_concurrent_slot(
             config.organization_id, workflow_id, org_limit, wf_limit
         )
@@ -852,9 +853,13 @@ async def handle_inbound_run(request: Request):
         )
 
     except ValueError as e:
+        if slot_id:
+            await rate_limiter.release_concurrent_slot(config.organization_id, workflow_id, slot_id)
         logger.error(f"/inbound/run request parsing error: {e}")
         return generic_hangup_response()
     except Exception as e:
+        if slot_id:
+            await rate_limiter.release_concurrent_slot(config.organization_id, workflow_id, slot_id)
         logger.error(f"/inbound/run unexpected error: {e}")
         return generic_hangup_response()
 
