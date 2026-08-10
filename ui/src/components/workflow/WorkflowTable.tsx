@@ -121,21 +121,28 @@ export function WorkflowTable({
     );
 
     return (
-        <div className="space-y-4">
+        <div
+            className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-4"
+            style={{ backgroundColor: '#1C1E1A' }}
+        >
             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                 <input
                     type="text"
                     placeholder="Search agents..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-white dark:bg-[#161715] border border-gray-200 dark:border-[#282b26] rounded-xl pl-9 pr-4 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-hidden focus:border-gray-300 dark:focus:border-gray-500 transition-colors"
+                    className="w-full border border-gray-200 dark:border-[#282b26] rounded-xl pl-9 pr-4 py-2 text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-hidden focus:border-gray-300 dark:focus:border-gray-500 transition-colors"
+                    style={{ backgroundColor: '#161715' }}
                 />
             </div>
             
-            <div className="bg-white dark:bg-[#161715] border border-gray-100 dark:border-[#282b26] rounded-2xl overflow-hidden">
+            <div
+                className="border border-gray-200/80 dark:border-[#282b26] rounded-xl overflow-hidden"
+                style={{ backgroundColor: '#161715' }}
+            >
                 {/* Table Header */}
-                <div className="grid grid-cols-[1fr_auto] items-center px-4 py-3 border-b border-gray-100 dark:border-[#282b26] bg-gray-50/50 dark:bg-[#1c1e1a]/60 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                <div className="grid grid-cols-[1fr_auto] items-center px-4 py-3 border-b border-gray-100 dark:border-[#282b26] bg-gray-50/50 dark:bg-[#161715] text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     <div>Agent</div>
                     <div className="w-[120px] text-right">Last edited</div>
                 </div>
@@ -143,7 +150,7 @@ export function WorkflowTable({
                 {/* Table Body */}
                 <div className="divide-y divide-gray-100 dark:divide-[#282b26]">
                     {filteredWorkflows.length === 0 ? (
-                        <div className="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                        <div className="p-8 text-center text-xs text-gray-500 dark:text-gray-400">
                             No agents found.
                         </div>
                     ) : (
@@ -151,7 +158,7 @@ export function WorkflowTable({
                             <div 
                                 key={workflow.id} 
                                 onClick={() => handleEdit(workflow.id)}
-                                className={`group grid grid-cols-[1fr_auto] items-center px-4 py-3.5 hover:bg-gray-50/70 dark:hover:bg-[#1f2119] transition-colors cursor-pointer ${showArchived ? 'opacity-65' : ''}`}
+                                className={`group grid grid-cols-[1fr_auto] items-center px-4 py-3.5 hover:bg-gray-100/60 dark:hover:bg-[#232621] transition-colors cursor-pointer ${showArchived ? 'opacity-65' : ''}`}
                             >
                                 <div className="flex items-center gap-3 overflow-hidden pr-4">
                                     <div className="w-8 h-8 rounded-lg bg-[#bcf0da] dark:bg-[#082117] border border-[#a2e8c9] dark:border-[#113a29] p-1 flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -163,10 +170,10 @@ export function WorkflowTable({
                                         </svg>
                                     </div>
                                     <div className="flex flex-col truncate">
-                                        <span className="font-semibold text-sm text-gray-900 dark:text-white truncate">
+                                        <span className="font-semibold text-xs text-gray-900 dark:text-white truncate">
                                             {workflow.name}
                                         </span>
-                                        <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                        <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
                                             owner@example.com
                                         </span>
                                     </div>
@@ -212,13 +219,13 @@ export function WorkflowTable({
                                                         )}
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-52 bg-white dark:bg-[#111113] border border-gray-200 dark:border-[#232328] text-gray-900 dark:text-zinc-300 rounded-xl p-1.5 shadow-xl">
+                                                <DropdownMenuContent align="end" className="w-52 border border-gray-200 dark:border-[#282b26] text-gray-900 dark:text-zinc-300 rounded-xl p-1.5 shadow-xl" style={{ backgroundColor: '#1C1E1A' }}>
                                                     <DropdownMenuLabel className="text-xs font-bold text-gray-500 dark:text-zinc-400 px-2 py-1.5">Move to folder</DropdownMenuLabel>
-                                                    <DropdownMenuSeparator className="bg-gray-100 dark:bg-[#1d1d22]" />
+                                                    <DropdownMenuSeparator className="bg-gray-100 dark:bg-[#282b26]" />
                                                     <DropdownMenuItem
                                                         disabled={currentFolderId === null}
                                                         onClick={() => handleMove(workflow.id, null)}
-                                                        className="rounded-lg text-xs px-2 py-1.5 focus:bg-gray-100 dark:focus:bg-[#1c1c1f] focus:text-gray-900 dark:focus:text-white cursor-pointer"
+                                                        className="rounded-lg text-xs px-2 py-1.5 focus:bg-gray-100 dark:focus:bg-[#161715] focus:text-gray-900 dark:focus:text-white cursor-pointer"
                                                     >
                                                         <Inbox size={13} className="mr-2 text-gray-400 dark:text-zinc-400" />
                                                         Uncategorized
@@ -231,7 +238,7 @@ export function WorkflowTable({
                                                             key={folder.id}
                                                             disabled={folder.id === currentFolderId}
                                                             onClick={() => handleMove(workflow.id, folder.id)}
-                                                            className="rounded-lg text-xs px-2 py-1.5 focus:bg-gray-100 dark:focus:bg-[#1c1c1f] focus:text-gray-900 dark:focus:text-white cursor-pointer"
+                                                            className="rounded-lg text-xs px-2 py-1.5 focus:bg-gray-100 dark:focus:bg-[#161715] focus:text-gray-900 dark:focus:text-white cursor-pointer"
                                                         >
                                                             <FolderIcon size={13} className="mr-2 text-gray-400 dark:text-zinc-400" />
                                                             <span className="truncate">{folder.name}</span>

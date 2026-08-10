@@ -1,3 +1,5 @@
+import { ChevronLeft } from 'lucide-react';
+import Link from 'next/link';
 import { Suspense } from 'react';
 
 import { getWorkflowsApiV1WorkflowFetchGet, listFoldersApiV1FolderGet } from '@/client/sdk.gen';
@@ -16,7 +18,7 @@ import WorkflowLayout from './WorkflowLayout';
 
 export const dynamic = 'force-dynamic';
 
-async function WorkflowDataSection() {
+async function WorkflowDataSection({ selectedFolderId }: { selectedFolderId?: number | null }) {
     const authProvider = await getServerAuthProvider();
     const accessToken = await getServerAccessToken();
 
@@ -65,7 +67,13 @@ async function WorkflowDataSection() {
             logger.error(`Error fetching folders: ${folderErr}`);
         }
 
-        const folderIds = new Set(folders.map(f => f.id));
+        const activeFolder = selectedFolderId
+            ? folders.find(f => f.id === selectedFolderId)
+            : null;
+
+        const displayedWorkflows = selectedFolderId
+            ? activeWorkflows.filter((w: WorkflowListResponse) => w.folder_id === selectedFolderId)
+            : activeWorkflows;
 
         return (
             <>
@@ -88,6 +96,7 @@ async function WorkflowDataSection() {
                                         key={folder.id}
                                         folder={folder}
                                         workflows={folderWorkflows}
+                                        isSelected={selectedFolderId === folder.id}
                                     />
                                 );
                             })}
@@ -95,20 +104,45 @@ async function WorkflowDataSection() {
                     </div>
                 )}
 
-                {/* Recents section */}
-                {activeWorkflows.length > 0 && (
-                    <div className="space-y-4">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white px-1">Recents</h3>
-                        <WorkflowTable
-                            workflows={activeWorkflows}
-                            showArchived={false}
-                            folders={folders}
-                        />
+                {/* Recents / Folder Agents section */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                        <div className="flex items-center gap-2">
+                            {activeFolder ? (
+                                <>
+                                    <Link
+                                        href="/workflow"
+                                        className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 hover:underline font-semibold cursor-pointer"
+                                    >
+                                        <ChevronLeft className="w-3.5 h-3.5" />
+                                        <span>All Agents</span>
+                                    </Link>
+                                    <span className="text-xs text-gray-400 dark:text-gray-600">•</span>
+                                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                                        Folder: {activeFolder.name}
+                                    </h3>
+                                </>
+                            ) : (
+                                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Recents</h3>
+                            )}
+                        </div>
+                        {activeFolder && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500">
+                                {displayedWorkflows.length} agent{displayedWorkflows.length !== 1 ? 's' : ''}
+                            </span>
+                        )}
                     </div>
-                )}
+
+                    <WorkflowTable
+                        workflows={displayedWorkflows}
+                        showArchived={false}
+                        folders={folders}
+                        currentFolderId={selectedFolderId}
+                    />
+                </div>
 
                 {/* Archived */}
-                {archivedWorkflows.length > 0 && (
+                {archivedWorkflows.length > 0 && !selectedFolderId && (
                     <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-[#282b26]">
                         <FolderSection kind="archived" workflows={archivedWorkflows} />
                     </div>
@@ -147,11 +181,18 @@ function WorkflowsLoading() {
     );
 }
 
-export default function WorkflowPage() {
+export default async function WorkflowPage({
+    searchParams,
+}: {
+    searchParams?: Promise<{ folder?: string }>;
+}) {
+    const resolvedParams = searchParams ? await searchParams : {};
+    const selectedFolderId = resolvedParams.folder ? parseInt(resolvedParams.folder, 10) : null;
+
     return (
         <WorkflowLayout showFeaturesNav={true}>
             {/* Sticky sub-header: 'Agents' title + action buttons */}
-            <header className="px-8 pt-6 pb-3 flex items-center justify-between sticky top-0 z-20 border-b border-[#282b26]" style={{backgroundColor: '#161715'}}>
+            <header className="px-8 pt-6 pb-3 flex items-center justify-between sticky top-0 z-20 border-b border-[#282b26]" style={{ backgroundColor: '#161715' }}>
                 <h1 className="text-base font-semibold text-gray-900 dark:text-white tracking-tight">
                     Agents
                 </h1>
@@ -169,7 +210,7 @@ export default function WorkflowPage() {
 
                 {/* Real data: Folders + Recents + Archived */}
                 <Suspense fallback={<WorkflowsLoading />}>
-                    <WorkflowDataSection />
+                    <WorkflowDataSection selectedFolderId={selectedFolderId} />
                 </Suspense>
             </div>
         </WorkflowLayout>
