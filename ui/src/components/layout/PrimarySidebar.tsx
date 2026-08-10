@@ -38,7 +38,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
   const router = useRouter();
   const { toggleTheme, isDark } = useTheme();
   const { logout, user } = useAuth();
-  const { isSuperadmin, email, selectedOrgId, selectedOrgName } = useCurrentUserRole();
+  const { role, isSuperadmin, email, selectedOrgId, selectedOrgName } = useCurrentUserRole();
   
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showOrgDropdown, setShowOrgDropdown] = useState(false);
@@ -71,7 +71,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
   const activeCategory = categories.find((c) => pathname?.startsWith(c.path)) || categories[0];
 
   const displayOrgName = selectedOrgName || "My Organisation";
-  const displayUserEmail = email || user?.email || "Account";
+  const displayUserEmail = email || "Account";
 
   return (
     <div
