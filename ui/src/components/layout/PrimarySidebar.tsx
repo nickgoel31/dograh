@@ -10,9 +10,12 @@ import {
   Moon,
   Settings,
   LogOut,
+  Shield,
 } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/lib/auth";
+import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
+import { OrgSwitcherDropdown } from "./OrgSwitcherDropdown";
 import {
   OrgGearIcon,
   AiVoiceAgentsIcon,
@@ -35,9 +38,15 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
   const router = useRouter();
   const { toggleTheme, isDark } = useTheme();
   const { logout, user } = useAuth();
+  const { isSuperadmin, email, selectedOrgId, selectedOrgName } = useCurrentUserRole();
   
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showOrgDropdown, setShowOrgDropdown] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const isImpersonating =
+    typeof window !== "undefined" &&
+    !!sessionStorage.getItem("impersonation_token");
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -49,13 +58,20 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isClientUser = role === "client" && !isSuperadmin;
+
   const categories = [
     { id: "ai-voice-agents", name: "AI voice agents", icon: AiVoiceAgentsIcon, path: "/workflow" },
     { id: "ai-chatbots", name: "AI Chatbots", icon: AiChatbotsIcon, path: "/overview" },
-    { id: "developers", name: "Developers", icon: DevelopersIcon, path: "/api-keys" },
+    ...(!isClientUser
+      ? [{ id: "developers", name: "Developers", icon: DevelopersIcon, path: "/api-keys" }]
+      : []),
   ];
 
   const activeCategory = categories.find((c) => pathname?.startsWith(c.path)) || categories[0];
+
+  const displayOrgName = selectedOrgName || "My Organisation";
+  const displayUserEmail = email || user?.email || "Account";
 
   return (
     <div
@@ -71,34 +87,62 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
         }`}
       >
         {/* Top Org Section */}
-        <div className="flex flex-col gap-6 w-full">
+        <div className="flex flex-col gap-6 w-full relative">
           {!isHovered ? (
             <div className="flex justify-center w-full">
               <button
-                className="w-10 h-10 rounded-xl border border-gray-200/90 dark:border-[#2e312b] shadow-2xs flex items-center justify-center bg-white dark:bg-[#1a1c18] hover:bg-gray-50 dark:hover:bg-[#232621] transition-colors"
-                title="Workspace"
+                onClick={() => setShowOrgDropdown(!showOrgDropdown)}
+                className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-colors relative ${
+                  isImpersonating
+                    ? "border-amber-500/50 bg-amber-500/10 text-amber-500"
+                    : "border-gray-200/90 dark:border-[#2e312b] bg-white dark:bg-[#1a1c18] hover:bg-gray-50 dark:hover:bg-[#232621]"
+                }`}
+                title={displayOrgName}
               >
                 <OrgGearIcon className="w-5 h-5 text-gray-700 dark:text-[#c8ccc5]" />
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-between px-1.5 py-1 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group">
+            <div
+              onClick={() => setShowOrgDropdown(!showOrgDropdown)}
+              className="flex items-center justify-between px-1.5 py-1 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer group select-none"
+            >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl border border-gray-200/90 dark:border-[#2e312b] shadow-2xs flex items-center justify-center bg-white dark:bg-[#1a1c18] flex-shrink-0">
+                <div
+                  className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 ${
+                    isImpersonating
+                      ? "border-amber-500/50 bg-amber-500/10"
+                      : "border-gray-200/90 dark:border-[#2e312b] bg-white dark:bg-[#1a1c18]"
+                  }`}
+                >
                   <OrgGearIcon className="w-5 h-5 text-gray-700 dark:text-[#c8ccc5]" />
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-semibold text-gray-900 dark:text-[#f2f4f0] truncate leading-tight">
-                    Harsh's Organisation
+                  <span className="text-sm font-semibold text-gray-900 dark:text-[#f2f4f0] truncate leading-tight flex items-center gap-1.5">
+                    <span className="truncate">{displayOrgName}</span>
+                    {isImpersonating && (
+                      <span className="text-[9px] font-extrabold uppercase px-1 py-0.2 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300">
+                        View
+                      </span>
+                    )}
                   </span>
                   <span className="text-xs text-gray-400 dark:text-[#9ca39a] truncate">
-                    Harsh's Workspace
+                    {isImpersonating ? "Switched Workspace" : "Workspace"}
                   </span>
                 </div>
               </div>
               <ChevronDown className="w-4 h-4 text-gray-400 dark:text-[#9ca39a]" />
             </div>
           )}
+
+          {/* Org Switcher Dropdown */}
+          <OrgSwitcherDropdown
+            isOpen={showOrgDropdown}
+            onClose={() => setShowOrgDropdown(false)}
+            currentOrgName={displayOrgName}
+            currentOrgId={selectedOrgId}
+            isSuperadmin={isSuperadmin}
+          />
 
           {/* Navigation Categories */}
           <nav className="flex flex-col gap-1.5 w-full">
@@ -164,6 +208,15 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
 
                 {showProfileMenu && (
                   <div className="absolute left-12 bottom-0 w-52 bg-white dark:bg-[#1c1e1a] border border-gray-200 dark:border-[#282b26] rounded-2xl shadow-xl p-1.5 z-50 space-y-0.5">
+                    {isSuperadmin && (
+                      <button
+                        onClick={() => { setShowProfileMenu(false); router.push("/superadmin"); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-xl transition-colors text-left"
+                      >
+                        <Shield className="w-4 h-4 text-amber-500" />
+                        <span>Superadmin Portal</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => { setShowProfileMenu(false); router.push("/settings"); }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-[#c8ccc5] hover:bg-gray-100 dark:hover:bg-white/8 rounded-xl transition-colors text-left"
@@ -209,7 +262,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                   <div className="flex items-center gap-2.5 min-w-0">
                     <UserAvatar size="w-7 h-7" />
                     <span className="text-xs font-semibold text-gray-800 dark:text-[#c8ccc5] truncate">
-                      Harsh Goel (Nick)
+                      {displayUserEmail}
                     </span>
                   </div>
                   <ChevronUp className="w-4 h-4 text-gray-400" />
@@ -217,6 +270,15 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
 
                 {showProfileMenu && (
                   <div className="absolute left-0 bottom-12 w-full bg-white dark:bg-[#1c1e1a] border border-gray-200 dark:border-[#282b26] rounded-2xl shadow-xl p-1.5 z-50 space-y-0.5">
+                    {isSuperadmin && (
+                      <button
+                        onClick={() => { setShowProfileMenu(false); router.push("/superadmin"); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-xl transition-colors text-left"
+                      >
+                        <Shield className="w-4 h-4 text-amber-500" />
+                        <span>Superadmin Portal</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => { setShowProfileMenu(false); router.push("/settings"); }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-[#c8ccc5] hover:bg-gray-100 dark:hover:bg-white/8 rounded-xl transition-colors text-left"
@@ -241,3 +303,4 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
     </div>
   );
 };
+

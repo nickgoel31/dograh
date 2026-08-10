@@ -19,6 +19,8 @@ import { useAppConfig } from '@/context/AppConfigContext';
 import { useAuth } from '@/lib/auth';
 import logger from '@/lib/logger';
 
+import { ClientAccessGuard } from '@/components/layout/ClientAccessGuard';
+
 export default function APIKeysPage() {
     const { user, getAccessToken, redirectToLogin, loading } = useAuth();
     const { config } = useAppConfig();
@@ -282,7 +284,8 @@ export default function APIKeysPage() {
     const showServiceKeyArchiveControls = !isOSS;
 
     return (
-        <div className="flex flex-col h-full text-gray-900 dark:text-white font-sans select-none relative" style={{ backgroundColor: '#161715' }}>
+        <ClientAccessGuard featureName="API Keys">
+            <div className="flex flex-col h-full text-gray-900 dark:text-white font-sans select-none relative" style={{ backgroundColor: '#161715' }}>
             {/* Top Page Header matching demo styling */}
             <header className="px-8 pt-6 pb-3 flex items-center justify-between sticky top-0 z-20 border-b border-gray-100 dark:border-[#282b26]" style={{ backgroundColor: '#161715' }}>
                 <div className="space-y-0.5">
@@ -751,5 +754,6 @@ export default function APIKeysPage() {
                 </DialogContent>
             </Dialog>
         </div>
+        </ClientAccessGuard>
     );
 }

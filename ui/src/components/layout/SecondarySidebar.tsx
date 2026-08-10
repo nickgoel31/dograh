@@ -36,6 +36,8 @@ export const SecondarySidebar: React.FC<SecondarySidebarProps> = ({
   const router = useRouter();
   const { role, isSuperadmin } = useCurrentUserRole();
 
+  const isClientUser = role === "client" && !isSuperadmin;
+
   // Navigation schema mapping existing app routes
   const navigationGroups = [
     {
@@ -43,18 +45,26 @@ export const SecondarySidebar: React.FC<SecondarySidebarProps> = ({
       items: [
         { label: "Voice agents", path: "/workflow", icon: Bot },
         { label: "Campaigns", path: "/campaigns", icon: Megaphone },
-        { label: "Models", path: "/model-configurations", icon: Cpu },
-        { label: "Tools", path: "/tools", icon: Wrench },
-        { label: "Files", path: "/files", icon: Folder },
-        { label: "Recordings", path: "/recordings", icon: Radio },
+        ...(!isClientUser
+          ? [
+              { label: "Models", path: "/model-configurations", icon: Cpu },
+              { label: "Tools", path: "/tools", icon: Wrench },
+              { label: "Files", path: "/files", icon: Folder },
+              { label: "Recordings", path: "/recordings", icon: Radio },
+            ]
+          : []),
       ],
     },
-    {
-      heading: "TELEPHONY",
-      items: [
-        { label: "Telephony", path: "/telephony-configurations", icon: Phone },
-      ],
-    },
+    ...(!isClientUser
+      ? [
+          {
+            heading: "TELEPHONY",
+            items: [
+              { label: "Telephony", path: "/telephony-configurations", icon: Phone },
+            ],
+          },
+        ]
+      : []),
     {
       heading: "MANAGE",
       items: [
@@ -78,10 +88,12 @@ export const SecondarySidebar: React.FC<SecondarySidebarProps> = ({
 
   if (pathname?.startsWith("/api-keys") || pathname?.startsWith("/developers")) {
     navigationGroups.length = 0;
-    navigationGroups.push({
-      heading: "API & ACCESS",
-      items: [{ label: "API Keys", path: "/api-keys", icon: Key }],
-    });
+    if (!isClientUser) {
+      navigationGroups.push({
+        heading: "API & ACCESS",
+        items: [{ label: "API Keys", path: "/api-keys", icon: Key }],
+      });
+    }
   }
 
   const getHeaderTitle = () => {

@@ -703,6 +703,12 @@ async def switch_org(request: SwitchOrgRequest, user: UserModel = Depends(get_su
         if not getattr(org, 'is_active', True):
             raise HTTPException(status_code=400, detail="Organization is deactivated")
             
+        # Update user's selected_organization_id in DB
+        db_user = await session.get(UserModel, user.id)
+        if db_user:
+            db_user.selected_organization_id = org.id
+            await session.commit()
+
         # Create scoped JWT
         from datetime import timedelta
         payload = {

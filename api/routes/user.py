@@ -25,10 +25,13 @@ from api.services.mps_service_key_client import mps_service_key_client
 router = APIRouter(prefix="/user")
 
 
-class AuthUserResponse(TypedDict):
+class AuthUserResponse(TypedDict, total=False):
     id: int
     is_superuser: bool
     role: str
+    email: Optional[str]
+    selected_organization_id: Optional[int]
+    selected_organization_name: Optional[str]
 
 
 class DefaultConfigurationsResponse(TypedDict):
@@ -72,11 +75,21 @@ async def get_default_configurations() -> DefaultConfigurationsResponse:
 async def get_auth_user(
     user: UserModel = Depends(get_user),
 ) -> AuthUserResponse:
+    org_name = None
+    if user.selected_organization_id:
+        org = await db_client.get_organization_by_id(user.selected_organization_id)
+        if org:
+            org_name = org.name
+
     return {
         "id": user.id,
-        "is_superuser": user.is_superuser,
+        "is_superuser": getattr(user, "is_superuser", False) or getattr(user, "role", "") == UserRole.SUPER_ADMIN.value,
         "role": user.role,
+        "email": user.email,
+        "selected_organization_id": user.selected_organization_id,
+        "selected_organization_name": org_name,
     }
+
 
 
 class UserConfigurationRequestResponseSchema(BaseModel):

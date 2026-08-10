@@ -7,6 +7,9 @@ export function useCurrentUserRole() {
   const { getAccessToken, isAuthenticated } = useAuth();
   const [role, setRole] = useState<string | null>(null);
   const [isSuperadmin, setIsSuperadmin] = useState<boolean>(false);
+  const [email, setEmail] = useState<string | null>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
+  const [selectedOrgName, setSelectedOrgName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -14,6 +17,9 @@ export function useCurrentUserRole() {
       if (!isAuthenticated) {
         setRole(null);
         setIsSuperadmin(false);
+        setEmail(null);
+        setSelectedOrgId(null);
+        setSelectedOrgName(null);
         setLoading(false);
         return;
       }
@@ -34,6 +40,9 @@ export function useCurrentUserRole() {
         if (response.data) {
           setRole(response.data.role || "admin");
           setIsSuperadmin(response.data.is_superuser || false);
+          setEmail((response.data as any).email || null);
+          setSelectedOrgId((response.data as any).selected_organization_id || null);
+          setSelectedOrgName((response.data as any).selected_organization_name || null);
         }
       } catch (err) {
         console.error("Failed to fetch user role", err);
@@ -45,5 +54,6 @@ export function useCurrentUserRole() {
     fetchRole();
   }, [isAuthenticated, getAccessToken]);
 
-  return { role, isSuperadmin, loading };
+  return { role, isSuperadmin, email, selectedOrgId, selectedOrgName, loading };
 }
+

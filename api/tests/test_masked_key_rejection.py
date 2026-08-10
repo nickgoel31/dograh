@@ -21,6 +21,7 @@ def _make_test_app():
     mock_user = MagicMock()
     mock_user.id = 1
     mock_user.is_superuser = False
+    mock_user.role = "admin"
     mock_user.selected_organization_id = None
 
     app.dependency_overrides[get_user] = lambda: mock_user
