@@ -13,24 +13,13 @@ import { DailyUsageTable } from '@/components/DailyUsageTable';
 import { FilterBuilder } from '@/components/filters/FilterBuilder';
 import { MediaPreviewButton, MediaPreviewDialog } from '@/components/MediaPreviewDialog';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useUserConfig } from '@/context/UserConfigContext';
 import { useAuth } from '@/lib/auth';
 import { usageFilterAttributes } from '@/lib/filterAttributes';
 import { decodeFiltersFromURL, encodeFiltersToURL } from '@/lib/filters';
 import { ActiveFilter, DateRangeValue } from '@/types/filters';
 
-// Get local timezone
 const getLocalTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export default function UsagePage() {
@@ -39,11 +28,9 @@ export default function UsagePage() {
     const { userConfig, saveUserConfig, loading: userConfigLoading, organizationPricing } = useUserConfig();
     const auth = useAuth();
 
-    // MPS credits state
     const [mpsCredits, setMpsCredits] = useState<MpsCreditsResponse | null>(null);
     const [isLoadingCredits, setIsLoadingCredits] = useState(true);
 
-    // Usage history state
     const [usageHistory, setUsageHistory] = useState<UsageHistoryResponse | null>(null);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [currentPage, setCurrentPage] = useState(() => {
@@ -53,13 +40,9 @@ export default function UsagePage() {
     const [isExecutingFilters, setIsExecutingFilters] = useState(false);
     const [isDownloadingReport, setIsDownloadingReport] = useState(false);
 
-    // Daily usage breakdown state (only for paid orgs)
     const [dailyUsage, setDailyUsage] = useState<DailyUsageBreakdownResponse | null>(null);
     const [isLoadingDaily, setIsLoadingDaily] = useState(false);
 
-    // Initialize filters from URL. `activeFilters` tracks the in-progress
-    // edits in the FilterBuilder; `appliedFilters` is what's actually been
-    // committed via Apply (and what drives fetching + the download button).
     const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>(() => {
         return decodeFiltersFromURL(searchParams, usageFilterAttributes);
     });
@@ -67,16 +50,13 @@ export default function UsagePage() {
         return decodeFiltersFromURL(searchParams, usageFilterAttributes);
     });
 
-    // Media preview dialog
     const mediaPreview = MediaPreviewDialog();
 
-    // Timezone state - initialize with empty string to avoid hydration mismatch
     const localTimezone = getLocalTimezone();
     const [selectedTimezone, setSelectedTimezone] = useState<ITimezoneOption | string>('');
     const [savingTimezone, setSavingTimezone] = useState(false);
-    const timezoneSelectId = useId(); // Stable ID for react-select to prevent hydration mismatch
+    const timezoneSelectId = useId();
 
-    // Fetch MPS credits
     const fetchMpsCredits = useCallback(async () => {
         if (!auth.isAuthenticated) return;
         try {
@@ -91,9 +71,6 @@ export default function UsagePage() {
         }
     }, [auth.isAuthenticated]);
 
-    // Translate the FilterBuilder state into the query-param shape the
-    // backend expects. Shared between the listing fetch and the CSV export
-    // so they stay in lockstep.
     const buildUsageQueryParams = (filters?: ActiveFilter[]) => {
         let filterParam: string | undefined;
         let startDate = '';
@@ -125,7 +102,6 @@ export default function UsagePage() {
         };
     };
 
-    // Fetch usage history
     const fetchUsageHistory = useCallback(async (page: number, filters?: ActiveFilter[]) => {
         if (!auth.isAuthenticated) return;
         setIsLoadingHistory(true);
@@ -148,7 +124,6 @@ export default function UsagePage() {
         }
     }, [auth.isAuthenticated]);
 
-    // Fetch daily usage breakdown
     const fetchDailyUsage = useCallback(async () => {
         if (!auth.isAuthenticated || !organizationPricing?.price_per_second_usd) return;
 
@@ -168,7 +143,6 @@ export default function UsagePage() {
         }
     }, [auth.isAuthenticated, organizationPricing]);
 
-    // Download a CSV of all runs matching the current filters.
     const handleDownloadReport = async () => {
         if (!auth.isAuthenticated) return;
         setIsDownloadingReport(true);
@@ -199,7 +173,6 @@ export default function UsagePage() {
         }
     };
 
-    // Handle timezone change
     const handleTimezoneChange = async (timezone: ITimezoneOption | string) => {
         setSelectedTimezone(timezone);
         setSavingTimezone(true);
@@ -208,7 +181,6 @@ export default function UsagePage() {
             await saveUserConfig({ timezone: tzValue });
         } catch (error) {
             console.error('Failed to save timezone:', error);
-            // Revert to previous timezone on error
             const prevTz = userConfig?.timezone || localTimezone;
             setSelectedTimezone(prevTz);
         } finally {
@@ -216,20 +188,16 @@ export default function UsagePage() {
         }
     };
 
-    // Update timezone when userConfig loads
     useEffect(() => {
         if (!userConfigLoading) {
-            // Config has loaded - set the timezone
             if (userConfig?.timezone) {
                 setSelectedTimezone(userConfig.timezone);
             } else {
-                // No saved timezone, use local
                 setSelectedTimezone(localTimezone);
             }
         }
     }, [userConfig, userConfigLoading, localTimezone]);
 
-    // Initial load - fetch when auth becomes available
     useEffect(() => {
         if (auth.isAuthenticated) {
             fetchMpsCredits();
@@ -237,14 +205,12 @@ export default function UsagePage() {
         }
     }, [auth.isAuthenticated, currentPage, appliedFilters, fetchUsageHistory, fetchMpsCredits]);
 
-    // Fetch daily usage when organizationPricing becomes available
     useEffect(() => {
         if (auth.isAuthenticated && organizationPricing?.price_per_second_usd) {
             fetchDailyUsage();
         }
     }, [auth.isAuthenticated, organizationPricing, fetchDailyUsage]);
 
-    // Update URL with query parameters
     const updateUrlParams = useCallback((params: { page?: number; filters?: ActiveFilter[] }) => {
         const newParams = new URLSearchParams();
 
@@ -252,7 +218,6 @@ export default function UsagePage() {
             newParams.set('page', params.page.toString());
         }
 
-        // Add filters to URL if present
         if (params.filters && params.filters.length > 0) {
             const filterString = encodeFiltersToURL(params.filters);
             if (filterString) {
@@ -266,7 +231,7 @@ export default function UsagePage() {
 
     const handleApplyFilters = useCallback(async () => {
         setIsExecutingFilters(true);
-        setCurrentPage(1); // Reset to first page when applying filters
+        setCurrentPage(1);
         setAppliedFilters(activeFilters);
         updateUrlParams({ page: 1, filters: activeFilters });
         await fetchUsageHistory(1, activeFilters);
@@ -282,28 +247,24 @@ export default function UsagePage() {
         setCurrentPage(1);
         setActiveFilters([]);
         setAppliedFilters([]);
-        updateUrlParams({ page: 1, filters: [] }); // Clear filters from URL
-        await fetchUsageHistory(1, []); // Fetch all runs without filters
+        updateUrlParams({ page: 1, filters: [] });
+        await fetchUsageHistory(1, []);
         setIsExecutingFilters(false);
     }, [fetchUsageHistory, updateUrlParams]);
 
-    // Handle page change
     const handlePageChange = (newPage: number) => {
         setCurrentPage(newPage);
         updateUrlParams({ page: newPage, filters: appliedFilters });
         fetchUsageHistory(newPage, appliedFilters);
     };
 
-    // Handle row click to navigate to workflow run
     const handleRowClick = (run: WorkflowRunUsageResponse) => {
         router.push(`/workflow/${run.workflow_id}/run/${run.id}`);
     };
 
-    // Format datetime for display with timezone support
     const formatDateTime = (dateString: string) => {
         const date = new Date(dateString);
         const tzValue = typeof selectedTimezone === 'string' ? selectedTimezone : selectedTimezone.value;
-        // Use local timezone if none selected (during loading)
         const effectiveTz = tzValue || localTimezone;
         return date.toLocaleString('en-US', {
             timeZone: effectiveTz,
@@ -316,7 +277,6 @@ export default function UsagePage() {
         });
     };
 
-    // Format duration for display
     const formatDuration = (seconds: number) => {
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
@@ -326,234 +286,284 @@ export default function UsagePage() {
     };
 
     return (
-        <div className="max-w-[1600px] mx-auto w-full p-6 space-y-6 animate-fade-in">
-            <div>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#1d1d22]/50 pb-6 mb-6">
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
-                            <Database className="h-6 w-6 text-[#7c3aed]" />
+        <div className="flex flex-col h-full text-gray-900 dark:text-white font-sans select-none relative" style={{ backgroundColor: '#161715' }}>
+            {/* Top Sub-Header matching demo styling */}
+            <header className="px-8 pt-6 pb-3 flex items-center justify-between sticky top-0 z-20 border-b border-gray-100 dark:border-[#282b26]" style={{ backgroundColor: '#161715' }}>
+                <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                        <Database className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                        <h1 className="text-base font-semibold text-gray-900 dark:text-white tracking-tight">
                             Agent Runs
                         </h1>
-                        <p className="text-xs text-zinc-500 mt-1">See all your Agent Runs across all Voice Agents. You can use filters to find specific runs.</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-zinc-500" />
-                        <div className="w-[300px]">
-                            <TimezoneSelect
-                                instanceId={timezoneSelectId}
-                                value={selectedTimezone}
-                                onChange={handleTimezoneChange}
-                                isDisabled={savingTimezone || userConfigLoading}
-                                placeholder={userConfigLoading ? "Loading..." : "Select timezone"}
-                                styles={{
-                                    control: (base, state) => ({
-                                        ...base,
-                                        minHeight: '36px',
-                                        fontSize: '12px',
-                                        backgroundColor: '#08080a',
-                                        borderColor: state.isFocused ? '#2c2c35' : '#1d1d22',
-                                        borderRadius: '0.75rem',
-                                        boxShadow: 'none',
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                        See all your Agent Runs across all Voice Agents. You can use filters to find specific runs.
+                    </p>
+                </div>
+
+                {/* Timezone Selector */}
+                <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
+                    <div className="w-[280px]">
+                        <TimezoneSelect
+                            instanceId={timezoneSelectId}
+                            value={selectedTimezone}
+                            onChange={handleTimezoneChange}
+                            isDisabled={savingTimezone || userConfigLoading}
+                            placeholder={userConfigLoading ? "Loading..." : "Select timezone"}
+                            styles={{
+                                control: (base, state) => ({
+                                    ...base,
+                                    minHeight: '34px',
+                                    height: '34px',
+                                    fontSize: '12px',
+                                    backgroundColor: '#161715',
+                                    borderColor: state.isFocused ? '#383c35' : '#282b26',
+                                    borderRadius: '9999px',
+                                    boxShadow: 'none',
+                                    color: '#ffffff',
+                                    '&:hover': {
+                                        borderColor: '#383c35',
+                                    },
+                                }),
+                                menu: (base) => ({
+                                    ...base,
+                                    zIndex: 9999,
+                                    backgroundColor: '#1C1E1A',
+                                    border: '1px solid #282b26',
+                                    borderRadius: '0.75rem',
+                                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)',
+                                }),
+                                menuList: (base) => ({
+                                    ...base,
+                                    backgroundColor: '#1C1E1A',
+                                    padding: '4px',
+                                }),
+                                option: (base, state) => ({
+                                    ...base,
+                                    backgroundColor: state.isSelected
+                                        ? '#282b26'
+                                        : state.isFocused
+                                        ? '#161715'
+                                        : '#1C1E1A',
+                                    color: '#ffffff',
+                                    fontSize: '12px',
+                                    borderRadius: '0.5rem',
+                                    cursor: 'pointer',
+                                    '&:active': {
+                                        backgroundColor: '#282b26',
+                                    },
+                                }),
+                                singleValue: (base) => ({
+                                    ...base,
+                                    color: '#ffffff',
+                                }),
+                                input: (base) => ({
+                                    ...base,
+                                    color: '#ffffff',
+                                }),
+                                placeholder: (base) => ({
+                                    ...base,
+                                    color: '#71717a',
+                                }),
+                                indicatorSeparator: (base) => ({
+                                    ...base,
+                                    display: 'none',
+                                }),
+                                dropdownIndicator: (base) => ({
+                                    ...base,
+                                    color: '#71717a',
+                                    padding: '4px',
+                                    '&:hover': {
                                         color: '#ffffff',
-                                        '&:hover': {
-                                            borderColor: '#2c2c35',
-                                        },
-                                    }),
-                                    menu: (base) => ({
-                                        ...base,
-                                        zIndex: 9999,
-                                        backgroundColor: '#111113',
-                                        border: '1px solid #1d1d22',
-                                        borderRadius: '0.75rem',
-                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
-                                    }),
-                                    menuList: (base) => ({
-                                        ...base,
-                                        backgroundColor: '#111113',
-                                        padding: '4px',
-                                    }),
-                                    option: (base, state) => ({
-                                        ...base,
-                                        backgroundColor: state.isSelected
-                                            ? '#1c1c1f'
-                                            : state.isFocused
-                                            ? '#1a1a1f'
-                                            : '#111113',
-                                        color: '#ffffff',
-                                        fontSize: '12px',
-                                        borderRadius: '0.5rem',
-                                        cursor: 'pointer',
-                                        '&:active': {
-                                            backgroundColor: '#1c1c1f',
-                                        },
-                                    }),
-                                    singleValue: (base) => ({
-                                        ...base,
-                                        color: '#ffffff',
-                                    }),
-                                    input: (base) => ({
-                                        ...base,
-                                        color: '#ffffff',
-                                    }),
-                                    placeholder: (base) => ({
-                                        ...base,
-                                        color: '#71717a',
-                                    }),
-                                    indicatorSeparator: (base) => ({
-                                        ...base,
-                                        backgroundColor: '#1d1d22',
-                                    }),
-                                    dropdownIndicator: (base) => ({
-                                        ...base,
-                                        color: '#71717a',
-                                        '&:hover': {
-                                            color: '#ffffff',
-                                        },
-                                    }),
-                                }}
-                            />
-                        </div>
+                                    },
+                                }),
+                            }}
+                        />
                     </div>
                 </div>
-            </div>
+            </header>
 
-            {/* Daily Usage Table - Only for paid organizations */}
-            {organizationPricing?.price_per_second_usd && (
-                <div className="mb-6 fade-in-up" style={{ animationDelay: '0.2s' }}>
-                    <DailyUsageTable
-                        data={dailyUsage}
-                        isLoading={isLoadingDaily}
-                    />
-                </div>
-            )}
-
-            {/* Filter Builder */}
-            <div className="mb-6 space-y-3 fade-in-up" style={{ animationDelay: '0.3s' }}>
-                <FilterBuilder
-                    availableAttributes={usageFilterAttributes}
-                    activeFilters={activeFilters}
-                    onFiltersChange={handleFiltersChange}
-                    onApplyFilters={handleApplyFilters}
-                    onClearFilters={handleClearFilters}
-                    isExecuting={isExecutingFilters}
-                />
-                {appliedFilters.length > 0 && (
-                    <div className="flex justify-end">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleDownloadReport}
-                            disabled={isDownloadingReport}
-                            className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white rounded-xl text-xs font-bold px-3.5 py-1.5 h-8 transition-all cursor-pointer"
-                        >
-                            <Download className="h-3.5 w-3.5 mr-1.5" />
-                            {isDownloadingReport ? 'Preparing...' : 'Download Filtered Results'}
-                        </Button>
+            {/* Main Content Workspace Container */}
+            <div className="max-w-6xl w-full mx-auto px-8 pt-6 pb-16 flex flex-col gap-6">
+                {/* Daily Usage Table - Paid Orgs */}
+                {organizationPricing?.price_per_second_usd && (
+                    <div className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs" style={{ backgroundColor: '#1C1E1A' }}>
+                        <DailyUsageTable
+                            data={dailyUsage}
+                            isLoading={isLoadingDaily}
+                        />
                     </div>
                 )}
-            </div>
 
-            {/* Usage History */}
-            <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl shadow-none overflow-hidden p-0 fade-in-up" style={{ animationDelay: '0.4s' }}>
-                <CardHeader className="border-b border-[#1d1d22]/50 p-6 pb-5 mb-5">
-                    <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                            <CardTitle className="text-base font-bold text-white">All Runs</CardTitle>
-                            <CardDescription className="text-xs text-zinc-500 mt-1">
-                                Every agent run across your organization, with usage details
-                            </CardDescription>
+                {/* Filter Workflow Runs Card Container */}
+                <div
+                    className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-4"
+                    style={{ backgroundColor: '#1C1E1A' }}
+                >
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <h2 className="text-xl font-normal text-gray-900 dark:text-white font-serif tracking-tight">
+                                Filter Workflow Runs
+                            </h2>
+                            <p className="text-xs text-gray-400 dark:text-gray-500">
+                                Build custom filters to find specific workflow runs
+                            </p>
                         </div>
+
+                        {appliedFilters.length > 0 && (
+                            <button
+                                onClick={handleDownloadReport}
+                                disabled={isDownloadingReport}
+                                className="flex items-center gap-1.5 px-4 py-1.5 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cd] text-white dark:text-[#082117] text-xs font-semibold rounded-full shadow-xs transition-all cursor-pointer"
+                            >
+                                <Download className="w-3.5 h-3.5" />
+                                <span>{isDownloadingReport ? 'Preparing...' : 'Download Report'}</span>
+                            </button>
+                        )}
                     </div>
-                </CardHeader>
-                <CardContent className="p-6 pt-0">
+
+                    <FilterBuilder
+                        availableAttributes={usageFilterAttributes}
+                        activeFilters={activeFilters}
+                        onFiltersChange={handleFiltersChange}
+                        onApplyFilters={handleApplyFilters}
+                        onClearFilters={handleClearFilters}
+                        isExecuting={isExecutingFilters}
+                    />
+                </div>
+
+                {/* All Runs Table Card */}
+                <div
+                    className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-5"
+                    style={{ backgroundColor: '#1C1E1A' }}
+                >
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <h2 className="text-xl font-normal text-gray-900 dark:text-white font-serif tracking-tight">
+                                All Runs
+                            </h2>
+                            <p className="text-xs text-gray-400 dark:text-gray-500">
+                                Every agent run across your organization, with usage details
+                            </p>
+                        </div>
+
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 dark:bg-[#161715] text-gray-700 dark:text-gray-300 border border-gray-200/50 dark:border-[#282b26]">
+                            {usageHistory?.total_count ?? 0} runs
+                        </span>
+                    </div>
+
+                    {/* Runs Table */}
                     {isLoadingHistory ? (
-                        <div className="animate-pulse space-y-3">
-                            {[...Array(5)].map((_, i) => (
-                                <div key={i} className="h-12 bg-muted rounded"></div>
+                        <div className="space-y-3 py-4">
+                            {[...Array(4)].map((_, i) => (
+                                <Skeleton key={i} className="h-12 w-full rounded-xl bg-gray-100 dark:bg-[#161715]" />
                             ))}
                         </div>
                     ) : usageHistory && usageHistory.runs.length > 0 ? (
                         <>
-                            <div className="rounded-2xl border border-[#1d1d22] overflow-hidden shadow-none">
-                                <Table className="w-full text-left text-xs border-collapse">
-                                    <TableHeader className="bg-[#18181b]/20 border-b border-[#1d1d22]">
-                                        <TableRow className="border-none hover:bg-transparent">
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Run ID</TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Agent Name</TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Call Type</TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Phone Number</TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Disposition</TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Date</TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11 text-right">Duration</TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11 text-right">
-                                                {organizationPricing?.price_per_second_usd ? 'Cost (USD)' : 'Tokens'}
-                                            </TableHead>
-                                            <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody className="divide-y divide-[#1d1d22]/50">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                    <thead>
+                                        <tr className="border-b border-gray-100 dark:border-[#282b26] text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wider text-[10.5px]">
+                                            <th className="pb-3 px-2">RUN ID</th>
+                                            <th className="pb-3 px-2">AGENT NAME</th>
+                                            <th className="pb-3 px-2">CALL TYPE</th>
+                                            <th className="pb-3 px-2">PHONE NUMBER</th>
+                                            <th className="pb-3 px-2">DISPOSITION</th>
+                                            <th className="pb-3 px-2">DATE</th>
+                                            <th className="pb-3 px-2">DURATION</th>
+                                            <th className="pb-3 px-2">
+                                                {organizationPricing?.price_per_second_usd ? 'COST (USD)' : 'TOKENS'}
+                                            </th>
+                                            <th className="pb-3 px-2 text-right">ACTIONS</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-[#282b26]">
                                         {usageHistory.runs.map((run) => (
-                                            <TableRow
+                                            <tr
                                                 key={run.id}
-                                                className="hover:bg-[#1a1a1f]/60 transition-colors border-b border-[#1d1d22]/50"
+                                                onClick={() => handleRowClick(run)}
+                                                className="hover:bg-gray-50/70 dark:hover:bg-[#161715]/70 transition-colors group cursor-pointer"
                                             >
-                                                <TableCell
-                                                    className="font-mono text-xs cursor-pointer hover:underline text-zinc-500 hover:text-white py-3.5"
-                                                    onClick={() => handleRowClick(run)}
-                                                >
+                                                {/* RUN ID */}
+                                                <td className="py-4 px-2 font-mono font-semibold text-gray-600 dark:text-gray-400 group-hover:text-black dark:group-hover:text-white">
                                                     #{run.id}
-                                                </TableCell>
-                                                <TableCell className="text-white font-semibold py-3.5">{run.workflow_name || 'Unknown'}</TableCell>
-                                                <TableCell className="py-3.5">
+                                                </td>
+
+                                                {/* AGENT NAME */}
+                                                <td className="py-4 px-2 font-bold text-gray-900 dark:text-white max-w-[220px] truncate">
+                                                    {run.workflow_name || 'Unknown'}
+                                                </td>
+
+                                                {/* CALL TYPE */}
+                                                <td className="py-4 px-2">
                                                     <CallTypeCell mode={run.mode} callType={run.call_type} />
-                                                </TableCell>
-                                                <TableCell className="text-zinc-300 text-xs py-3.5">
+                                                </td>
+
+                                                {/* PHONE NUMBER */}
+                                                <td className="py-4 px-2 font-mono text-gray-700 dark:text-gray-300">
                                                     {(run.call_type === 'inbound'
                                                         ? run.caller_number
                                                         : run.called_number) || '-'}
-                                                </TableCell>
-                                                <TableCell className="py-3.5">
+                                                </td>
+
+                                                {/* DISPOSITION */}
+                                                <td className="py-4 px-2">
                                                     {run.disposition ? (
-                                                        <Badge variant="outline" className="bg-[#1c1c1f] text-zinc-400 border border-zinc-700/50 text-[10px] font-semibold px-2.5 py-0.5 rounded-full">
+                                                        <span className="px-2.5 py-0.5 bg-gray-100 dark:bg-[#161715] text-gray-600 dark:text-gray-300 border border-gray-200/80 dark:border-[#282b26] rounded-full font-mono text-[11px] font-medium">
                                                             {run.disposition}
-                                                        </Badge>
+                                                        </span>
                                                     ) : (
-                                                        <span className="text-xs text-zinc-500">-</span>
+                                                        <span className="text-gray-400 dark:text-gray-500">-</span>
                                                     )}
-                                                </TableCell>
-                                                <TableCell className="text-zinc-400 text-xs py-3.5">{formatDateTime(run.created_at)}</TableCell>
-                                                <TableCell className="text-right text-zinc-300 text-xs py-3.5 font-semibold">
+                                                </td>
+
+                                                {/* DATE */}
+                                                <td className="py-4 px-2 text-gray-500 dark:text-gray-400 font-medium">
+                                                    {formatDateTime(run.created_at)}
+                                                </td>
+
+                                                {/* DURATION */}
+                                                <td className="py-4 px-2 text-gray-800 dark:text-gray-200 font-semibold font-mono">
                                                     {formatDuration(run.call_duration_seconds)}
-                                                </TableCell>
-                                                <TableCell className="text-right font-medium text-white py-3.5">
+                                                </td>
+
+                                                {/* TOKENS / COST */}
+                                                <td className="py-4 px-2 font-mono font-bold text-gray-900 dark:text-white">
                                                     {organizationPricing?.price_per_second_usd && run.charge_usd !== undefined && run.charge_usd !== null
                                                         ? `$${run.charge_usd.toFixed(2)}`
                                                         : run.dograh_token_usage.toLocaleString()
                                                     }
-                                                </TableCell>
-                                                <TableCell className="py-3.5">
+                                                </td>
+
+                                                {/* ACTIONS */}
+                                                <td className="py-4 px-2 text-right" onClick={(e) => e.stopPropagation()}>
                                                     <MediaPreviewButton
                                                         recordingUrl={run.recording_url}
                                                         transcriptUrl={run.transcript_url}
                                                         runId={run.id}
                                                         onOpenPreview={mediaPreview.openPreview}
                                                     />
-                                                </TableCell>
-                                            </TableRow>
+                                                </td>
+                                            </tr>
                                         ))}
-                                    </TableBody>
-                                </Table>
+                                    </tbody>
+                                </table>
                             </div>
 
                             {/* Summary */}
                             {appliedFilters.length > 0 && (
-                                <div className="mt-4 p-4 bg-[#08080a] border border-[#1d1d22] rounded-xl text-xs">
-                                    <p className="text-xs text-zinc-400">
-                                        Total for filtered period: <span className="font-bold text-white">
+                                <div
+                                    className="p-4 border border-gray-200 dark:border-[#282b26] rounded-xl text-xs"
+                                    style={{ backgroundColor: '#161715' }}
+                                >
+                                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                                        Total for filtered period: <span className="font-bold text-gray-900 dark:text-white">
                                             {usageHistory.total_dograh_tokens.toLocaleString()} Tokens
                                         </span>
                                         {' • '}
-                                        <span className="font-bold text-white">
+                                        <span className="font-bold text-gray-900 dark:text-white">
                                             {formatDuration(usageHistory.total_duration_seconds)}
                                         </span>
                                     </p>
@@ -562,40 +572,36 @@ export default function UsagePage() {
 
                             {/* Pagination */}
                             {usageHistory.total_pages > 1 && (
-                                <div className="flex items-center justify-between mt-6">
-                                    <p className="text-xs text-zinc-500">
+                                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-[#282b26]">
+                                    <p className="text-xs text-gray-400 dark:text-gray-500">
                                         Page {usageHistory.page} of {usageHistory.total_pages} ({usageHistory.total_count} total runs)
                                     </p>
                                     <div className="flex gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
+                                        <button
                                             onClick={() => handlePageChange(currentPage - 1)}
                                             disabled={currentPage === 1}
-                                            className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white rounded-xl text-xs font-bold px-3 py-1.5 h-8 transition-all cursor-pointer"
+                                            className="px-3 py-1.5 bg-gray-100 dark:bg-[#161715] hover:bg-gray-200 dark:hover:bg-[#232621] disabled:opacity-50 text-gray-700 dark:text-gray-300 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1"
                                         >
-                                            <ChevronLeft className="h-3.5 w-3.5 mr-1" />
-                                            Previous
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
+                                            <ChevronLeft className="h-3.5 w-3.5" />
+                                            <span>Previous</span>
+                                        </button>
+                                        <button
                                             onClick={() => handlePageChange(currentPage + 1)}
                                             disabled={currentPage === usageHistory.total_pages}
-                                            className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white rounded-xl text-xs font-bold px-3 py-1.5 h-8 transition-all cursor-pointer"
+                                            className="px-3 py-1.5 bg-gray-100 dark:bg-[#161715] hover:bg-gray-200 dark:hover:bg-[#232621] disabled:opacity-50 text-gray-700 dark:text-gray-300 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1"
                                         >
-                                            Next
-                                            <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                                        </Button>
+                                            <span>Next</span>
+                                            <ChevronRight className="h-3.5 w-3.5" />
+                                        </button>
                                     </div>
                                 </div>
                             )}
                         </>
                     ) : (
-                        <p className="text-center py-8 text-xs text-zinc-500">No runs found</p>
+                        <p className="text-center py-12 text-xs text-gray-400 dark:text-gray-500">No agent runs found</p>
                     )}
-                </CardContent>
-            </Card>
+                </div>
+            </div>
 
             {/* Media Preview Dialog */}
             {mediaPreview.dialog}

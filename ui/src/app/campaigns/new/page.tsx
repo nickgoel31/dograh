@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronRight, Sliders } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -14,18 +14,7 @@ import {
     listTelephonyConfigurationsApiV1OrganizationsTelephonyConfigsGet
 } from '@/client/sdk.gen';
 import type { TelephonyConfigurationListItem, WorkflowSummaryResponse } from '@/client/types.gen';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { useAuth } from '@/lib/auth';
 
 import CampaignAdvancedSettings, { getTimezoneValue, type TimeSlot } from '../CampaignAdvancedSettings';
@@ -168,7 +157,6 @@ export default function NewCampaignPage() {
                 } | null }).last_campaign_settings;
 
                 if (last) {
-                    // Pre-populate from last campaign
                     if (last.retry_config) {
                         setRetryEnabled(last.retry_config.enabled);
                         setMaxRetries(String(last.retry_config.max_retries));
@@ -200,7 +188,6 @@ export default function NewCampaignPage() {
                         setCircuitBreakerMinCalls(String(last.circuit_breaker.min_calls_in_window));
                     }
                 } else {
-                    // No previous campaign — use defaults
                     const retryConfig = response.data.default_retry_config;
                     setRetryEnabled(retryConfig.enabled);
                     setMaxRetries(String(retryConfig.max_retries));
@@ -224,15 +211,6 @@ export default function NewCampaignPage() {
         }
     }, [fetchWorkflows, fetchCampaignDefaults, fetchTelephonyConfigs, user]);
 
-    // Phone-number count for the selected telephony config drives concurrency
-    // bounds. Falls back to the campaign-defaults endpoint's count (org default
-    // config) until the configs list resolves.
-    const selectedTelephonyConfig = telephonyConfigs.find(
-        (c) => String(c.id) === selectedTelephonyConfigId,
-    );
-    const availableFromNumbersCount = selectedTelephonyConfig?.phone_number_count ?? fromNumbersCount;
-
-    // Effective concurrency limit is now the org limit itself
     const effectiveLimit = orgConcurrentLimit;
 
     // Handle form submission
@@ -245,7 +223,6 @@ export default function NewCampaignPage() {
             return;
         }
 
-        // Validate max_concurrency if provided
         const maxConcurrencyValue = maxConcurrency ? parseInt(maxConcurrency) : null;
         if (maxConcurrencyValue !== null) {
             if (isNaN(maxConcurrencyValue) || maxConcurrencyValue < 1 || maxConcurrencyValue > orgConcurrentLimit) {
@@ -268,7 +245,6 @@ export default function NewCampaignPage() {
                 retry_on_voicemail: retryOnVoicemail,
             };
 
-            // Build schedule_config if enabled
             const timezoneValue = getTimezoneValue(scheduleTimezone);
             const scheduleConfig = scheduleEnabled && timeSlots.length > 0
                 ? {
@@ -278,14 +254,12 @@ export default function NewCampaignPage() {
                 }
                 : undefined;
 
-            // Build circuit_breaker config
             const circuitBreakerConfig = {
                 enabled: circuitBreakerEnabled,
                 failure_threshold: (parseInt(circuitBreakerFailureThreshold) || 50) / 100,
                 window_seconds: parseInt(circuitBreakerWindowSeconds) || 120,
                 min_calls_in_window: parseInt(circuitBreakerMinCalls) || 5,
             };
-
 
             const response = await createCampaignApiV1CampaignCreatePost({
                 body: {
@@ -309,7 +283,6 @@ export default function NewCampaignPage() {
             });
 
             if (response.error) {
-                // Extract error message from API response
                 const errorDetail = (response.error as { detail?: string })?.detail;
                 const errorMessage = errorDetail || 'Failed to create campaign';
                 setCreateError(errorMessage);
@@ -330,229 +303,256 @@ export default function NewCampaignPage() {
             setIsSubmitting(false);
         }
     };
-    // Handle back navigation
+
     const handleBack = () => {
         router.push('/campaigns');
     };
 
     return (
-        <div className="min-h-screen bg-[#08080a] p-6 max-w-3xl mx-auto w-full page-enter">
-            <div>
-                <Button
-                    variant="ghost"
-                    onClick={handleBack}
-                    className="mb-6 border border-[#1d1d22] text-zinc-400 hover:text-white hover:bg-[#1a1a1f] text-xs font-semibold rounded-xl h-10 px-4"
-                >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Campaigns
-                </Button>
-                <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Create New Campaign</h1>
-                <p className="text-xs text-zinc-500">Set up a new campaign to execute workflows at scale</p>
-            </div>
-
-            <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl shadow-none mt-6">
-                <CardHeader className="p-6 pb-4 border-b border-[#1d1d22]/50">
-                    <CardTitle className="text-base font-bold text-white">Campaign Details</CardTitle>
-                    <CardDescription className="text-xs text-zinc-500">
-                        Configure your campaign settings
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="campaign-name" className="text-xs font-semibold text-zinc-300">Campaign Name</Label>
-                            <Input
-                                id="campaign-name"
-                                placeholder="Enter campaign name"
-                                value={campaignName}
-                                onChange={(e) => setCampaignName(e.target.value)}
-                                maxLength={255}
-                                required
-                                className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus-visible:ring-[#7c3aed]"
-                            />
-                            <p className="text-[11px] text-zinc-500">
-                                Choose a descriptive name for your campaign
-                            </p>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="workflow" className="text-xs font-semibold text-zinc-300">Workflow</Label>
-                            <Select
-                                value={selectedWorkflowId}
-                                onValueChange={setSelectedWorkflowId}
-                                required
-                            >
-                                <SelectTrigger id="workflow" className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus:ring-[#7c3aed]">
-                                    <SelectValue placeholder="Select a workflow" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-[#111113] border-[#1d1d22] text-white">
-                                    {isLoadingWorkflows ? (
-                                        <SelectItem value="loading" disabled className="text-xs">
-                                            Loading workflows...
-                                        </SelectItem>
-                                    ) : workflows.length === 0 ? (
-                                        <SelectItem value="none" disabled className="text-xs">
-                                            No workflows found
-                                        </SelectItem>
-                                    ) : (
-                                        workflows.map((workflow) => (
-                                            <SelectItem
-                                                key={workflow.id}
-                                                value={workflow.id.toString()}
-                                                className="text-xs"
-                                            >
-                                                {workflow.name} (#{workflow.id})
-                                            </SelectItem>
-                                        ))
-                                    )}
-                                </SelectContent>
-                            </Select>
-                            <p className="text-[11px] text-zinc-500">
-                                Select the workflow to execute for each row in the data source
-                            </p>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="telephony-config" className="text-xs font-semibold text-zinc-300">Telephony Configuration</Label>
-                            {!isLoadingTelephonyConfigs && telephonyConfigs.length === 0 ? (
-                                <div className="rounded-xl border border-dashed border-[#1d1d22] p-4 text-xs text-zinc-500 bg-[#08080a]/50">
-                                    No telephony configurations yet.{' '}
-                                    <Link
-                                        href="/telephony-configurations"
-                                        className="underline text-white font-medium"
-                                    >
-                                        Add one
-                                    </Link>{' '}
-                                    to create a campaign.
-                                </div>
-                            ) : (
-                                <Select
-                                    value={selectedTelephonyConfigId}
-                                    onValueChange={setSelectedTelephonyConfigId}
-                                    required
-                                >
-                                    <SelectTrigger id="telephony-config" className="bg-[#08080a] border-[#1d1d22] text-xs text-white rounded-xl h-10 focus:ring-[#7c3aed]">
-                                        <SelectValue placeholder="Select a telephony configuration" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-[#111113] border-[#1d1d22] text-white">
-                                        {isLoadingTelephonyConfigs ? (
-                                            <SelectItem value="loading" disabled className="text-xs">
-                                                Loading configurations...
-                                            </SelectItem>
-                                        ) : (
-                                            telephonyConfigs.map((config) => (
-                                                <SelectItem
-                                                    key={config.id}
-                                                    value={config.id.toString()}
-                                                    className="text-xs"
-                                                >
-                                                    {config.name} ({config.provider})
-                                                    {config.is_default_outbound ? ' — default' : ''}
-                                                </SelectItem>
-                                            ))
-                                        )}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                            <p className="text-[11px] text-zinc-500">
-                                Outbound calls for this campaign will use this configuration&apos;s caller IDs
-                            </p>
-                        </div>
-
-                        <ContactSourceSelector
-                            sourceType={sourceType}
-                            onSourceTypeChange={setSourceType}
-                            sourceId={sourceId}
-                            onSourceIdChange={setSourceId}
-                            sourceConfig={sourceConfig}
-                            onSourceConfigChange={setSourceConfig}
-                            autoSyncEnabled={autoSyncEnabled}
-                            onAutoSyncEnabledChange={setAutoSyncEnabled}
-                            autoSyncIntervalMinutes={autoSyncIntervalMinutes}
-                            onAutoSyncIntervalMinutesChange={setAutoSyncIntervalMinutes}
-                            autoSyncOnlyNew={autoSyncOnlyNew}
-                            onAutoSyncOnlyNewChange={setAutoSyncOnlyNew}
-                            getAccessToken={getAccessToken}
-                        />
-
-                        {/* Advanced Settings */}
-                        <Collapsible
-                            open={showAdvancedSettings}
-                            onOpenChange={setShowAdvancedSettings}
-                            className="border border-[#1d1d22] rounded-xl overflow-hidden bg-[#08080a]/30"
+        <div className="flex flex-col h-full text-gray-900 dark:text-white font-sans select-none relative" style={{ backgroundColor: '#161715' }}>
+            {/* Top Sub-Header matching demo styling */}
+            <header className="px-8 pt-6 pb-3 flex items-center justify-between sticky top-0 z-20 border-b border-gray-100 dark:border-[#282b26]" style={{ backgroundColor: '#161715' }}>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleBack}
+                        className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-[#232621] hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
+                        title="Back to Campaigns"
+                    >
+                        <ArrowLeft className="w-4 h-4 stroke-[2.2]" />
+                    </button>
+                    <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-400 font-medium">
+                        <span
+                            onClick={handleBack}
+                            className="hover:text-gray-900 dark:hover:text-white cursor-pointer transition-colors"
                         >
-                            <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-[#111113]/50 hover:bg-[#1a1a1f] transition-colors text-white font-semibold text-xs">
-                                <span>Advanced Settings</span>
-                                {showAdvancedSettings ? (
-                                    <ChevronDown className="h-4 w-4 text-zinc-400" />
-                                ) : (
-                                    <ChevronRight className="h-4 w-4 text-zinc-400" />
-                                )}
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="px-4 pb-4 bg-[#111113]">
-                                <CampaignAdvancedSettings
-                                    maxConcurrency={maxConcurrency}
-                                    onMaxConcurrencyChange={setMaxConcurrency}
-                                    effectiveLimit={effectiveLimit}
-                                    orgConcurrentLimit={orgConcurrentLimit}
-                                    fromNumbersCount={fromNumbersCount}
-                                    retryEnabled={retryEnabled}
-                                    onRetryEnabledChange={setRetryEnabled}
-                                    maxRetries={maxRetries}
-                                    onMaxRetriesChange={setMaxRetries}
-                                    retryDelaySeconds={retryDelaySeconds}
-                                    onRetryDelaySecondsChange={setRetryDelaySeconds}
-                                    retryOnBusy={retryOnBusy}
-                                    onRetryOnBusyChange={setRetryOnBusy}
-                                    retryOnNoAnswer={retryOnNoAnswer}
-                                    onRetryOnNoAnswerChange={setRetryOnNoAnswer}
-                                    retryOnVoicemail={retryOnVoicemail}
-                                    onRetryOnVoicemailChange={setRetryOnVoicemail}
-                                    scheduleEnabled={scheduleEnabled}
-                                    onScheduleEnabledChange={setScheduleEnabled}
-                                    scheduleTimezone={scheduleTimezone}
-                                    onScheduleTimezoneChange={setScheduleTimezone}
-                                    timeSlots={timeSlots}
-                                    onTimeSlotsChange={setTimeSlots}
-                                    circuitBreakerEnabled={circuitBreakerEnabled}
-                                    onCircuitBreakerEnabledChange={setCircuitBreakerEnabled}
-                                    circuitBreakerFailureThreshold={circuitBreakerFailureThreshold}
-                                    onCircuitBreakerFailureThresholdChange={setCircuitBreakerFailureThreshold}
-                                    circuitBreakerWindowSeconds={circuitBreakerWindowSeconds}
-                                    onCircuitBreakerWindowSecondsChange={setCircuitBreakerWindowSeconds}
-                                    circuitBreakerMinCalls={circuitBreakerMinCalls}
-                                    onCircuitBreakerMinCallsChange={setCircuitBreakerMinCalls}
-                                />
-                            </CollapsibleContent>
-                        </Collapsible>
+                            Outbound campaigns
+                        </span>
+                        <span>/</span>
+                        <span className="text-gray-900 dark:text-white font-semibold">New Campaign</span>
+                    </div>
+                </div>
 
-                        {createError && (
-                            <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-400 font-semibold">
-                                {createError}
+                <button
+                    onClick={handleBack}
+                    className="px-4 py-2 bg-gray-100 dark:bg-[#1c1e1a] hover:bg-gray-200 dark:hover:bg-[#232621] text-gray-800 dark:text-gray-200 text-xs font-semibold rounded-full transition-all cursor-pointer"
+                >
+                    Cancel
+                </button>
+            </header>
+
+            {/* Scrollable Form Workspace Container */}
+            <div className="max-w-3xl w-full mx-auto px-8 pt-8 pb-16 flex flex-col gap-8">
+                {/* Title Section */}
+                <div className="space-y-1">
+                    <h1 className="text-3xl font-normal text-gray-900 dark:text-white tracking-tight font-serif">
+                        Campaign Details
+                    </h1>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Configure your campaign settings and data source for automated outbound calling.
+                    </p>
+                </div>
+
+                {/* Form Card */}
+                <form
+                    onSubmit={handleSubmit}
+                    className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-7 shadow-xs space-y-6"
+                    style={{ backgroundColor: '#1C1E1A' }}
+                >
+                    {/* 1. Campaign Name */}
+                    <div className="space-y-2">
+                        <label htmlFor="campaign-name" className="text-xs font-bold text-gray-900 dark:text-white tracking-wide block">
+                            Campaign Name
+                        </label>
+                        <input
+                            id="campaign-name"
+                            type="text"
+                            placeholder="Enter campaign name"
+                            value={campaignName}
+                            onChange={(e) => setCampaignName(e.target.value)}
+                            maxLength={255}
+                            required
+                            className="w-full px-4 py-2.5 bg-gray-50/70 dark:bg-[#1c1e1a] border border-gray-200 dark:border-[#282b26] rounded-xl text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:bg-white dark:focus:bg-[#1c1e1a] focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 transition-all font-normal"
+                        />
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                            Choose a descriptive name for your campaign
+                        </p>
+                    </div>
+
+                    {/* 2. Workflow Selector */}
+                    <div className="space-y-2">
+                        <label htmlFor="workflow" className="text-xs font-bold text-gray-900 dark:text-white tracking-wide block">
+                            Workflow
+                        </label>
+                        <div className="relative">
+                            <select
+                                id="workflow"
+                                value={selectedWorkflowId}
+                                onChange={(e) => setSelectedWorkflowId(e.target.value)}
+                                required
+                                className="w-full px-4 py-2.5 bg-gray-50/70 dark:bg-[#1c1e1a] border border-gray-200 dark:border-[#282b26] rounded-xl text-xs text-gray-900 dark:text-white appearance-none focus:bg-white dark:focus:bg-[#1c1e1a] focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 transition-all cursor-pointer"
+                            >
+                                <option value="" disabled className="bg-white dark:bg-[#1c1e1a] text-gray-400">
+                                    {isLoadingWorkflows ? 'Loading workflows...' : 'Select a workflow'}
+                                </option>
+                                {workflows.map((workflow) => (
+                                    <option key={workflow.id} value={workflow.id.toString()} className="bg-white dark:bg-[#1c1e1a] text-gray-900 dark:text-white">
+                                        {workflow.name} (#{workflow.id})
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                            Select the workflow to execute for each row in the data source
+                        </p>
+                    </div>
+
+                    {/* 3. Telephony Configuration */}
+                    <div className="space-y-2">
+                        <label htmlFor="telephony-config" className="text-xs font-bold text-gray-900 dark:text-white tracking-wide block">
+                            Telephony Configuration
+                        </label>
+                        {!isLoadingTelephonyConfigs && telephonyConfigs.length === 0 ? (
+                            <div className="rounded-xl border border-dashed border-gray-200 dark:border-[#282b26] p-4 text-xs text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-[#1c1e1a]">
+                                No telephony configurations yet.{' '}
+                                <Link
+                                    href="/telephony-configurations"
+                                    className="underline text-gray-900 dark:text-white font-medium"
+                                >
+                                    Add one
+                                </Link>{' '}
+                                to create a campaign.
+                            </div>
+                        ) : (
+                            <div className="relative">
+                                <select
+                                    id="telephony-config"
+                                    value={selectedTelephonyConfigId}
+                                    onChange={(e) => setSelectedTelephonyConfigId(e.target.value)}
+                                    required
+                                    className="w-full px-4 py-2.5 bg-gray-50/70 dark:bg-[#1c1e1a] border border-gray-200 dark:border-[#282b26] rounded-xl text-xs text-gray-900 dark:text-white appearance-none focus:bg-white dark:focus:bg-[#1c1e1a] focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 transition-all cursor-pointer"
+                                >
+                                    <option value="" disabled className="bg-white dark:bg-[#1c1e1a] text-gray-400">
+                                        {isLoadingTelephonyConfigs ? 'Loading configurations...' : 'Select a telephony configuration'}
+                                    </option>
+                                    {telephonyConfigs.map((config) => (
+                                        <option key={config.id} value={config.id.toString()} className="bg-white dark:bg-[#1c1e1a] text-gray-900 dark:text-white">
+                                            {config.name} ({config.provider}){config.is_default_outbound ? ' — default' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                             </div>
                         )}
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                            Outbound calls for this campaign will use this configuration&apos;s caller IDs
+                        </p>
+                    </div>
 
-                        <div className="flex gap-4 pt-4">
-                            <Button
-                                type="submit"
-                                disabled={isSubmitting || !campaignName || !selectedWorkflowId || !sourceId || !selectedTelephonyConfigId}
-                                className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs h-10 px-6 rounded-xl transition-all shadow-lg cursor-pointer"
-                            >
-                                {isSubmitting ? 'Creating...' : 'Create Campaign'}
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={handleBack}
-                                disabled={isSubmitting}
-                                className="border border-[#1d1d22] hover:bg-[#1a1a1f] text-white font-semibold text-xs h-10 px-6 rounded-xl transition-all"
-                            >
-                                Cancel
-                            </Button>
+                    {/* 4. Contact Data Source Selector */}
+                    <ContactSourceSelector
+                        sourceType={sourceType}
+                        onSourceTypeChange={setSourceType}
+                        sourceId={sourceId}
+                        onSourceIdChange={setSourceId}
+                        sourceConfig={sourceConfig}
+                        onSourceConfigChange={setSourceConfig}
+                        autoSyncEnabled={autoSyncEnabled}
+                        onAutoSyncEnabledChange={setAutoSyncEnabled}
+                        autoSyncIntervalMinutes={autoSyncIntervalMinutes}
+                        onAutoSyncIntervalMinutesChange={setAutoSyncIntervalMinutes}
+                        autoSyncOnlyNew={autoSyncOnlyNew}
+                        onAutoSyncOnlyNewChange={setAutoSyncOnlyNew}
+                        getAccessToken={getAccessToken}
+                    />
+
+                    {/* 5. Advanced Settings Accordion */}
+                    <Collapsible
+                        open={showAdvancedSettings}
+                        onOpenChange={setShowAdvancedSettings}
+                        className="border border-gray-200/70 dark:border-[#282b26] rounded-xl overflow-hidden"
+                    >
+                        <CollapsibleTrigger
+                            className="w-full px-4 py-3 flex items-center justify-between text-xs font-bold text-gray-900 dark:text-white transition-colors cursor-pointer hover:brightness-110"
+                            style={{ backgroundColor: '#1C1E1A' }}
+                        >
+                            <div className="flex items-center gap-2">
+                                <Sliders className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                                <span>Advanced Settings</span>
+                            </div>
+                            <ChevronRight
+                                className={`w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${
+                                    showAdvancedSettings ? "rotate-90" : ""
+                                }`}
+                            />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent
+                            className="p-4 border-t border-gray-200/70 dark:border-[#282b26]"
+                            style={{ backgroundColor: '#1C1E1A' }}
+                        >
+                            <CampaignAdvancedSettings
+                                maxConcurrency={maxConcurrency}
+                                onMaxConcurrencyChange={setMaxConcurrency}
+                                effectiveLimit={effectiveLimit}
+                                orgConcurrentLimit={orgConcurrentLimit}
+                                fromNumbersCount={fromNumbersCount}
+                                retryEnabled={retryEnabled}
+                                onRetryEnabledChange={setRetryEnabled}
+                                maxRetries={maxRetries}
+                                onMaxRetriesChange={setMaxRetries}
+                                retryDelaySeconds={retryDelaySeconds}
+                                onRetryDelaySecondsChange={setRetryDelaySeconds}
+                                retryOnBusy={retryOnBusy}
+                                onRetryOnBusyChange={setRetryOnBusy}
+                                retryOnNoAnswer={retryOnNoAnswer}
+                                onRetryOnNoAnswerChange={setRetryOnNoAnswer}
+                                retryOnVoicemail={retryOnVoicemail}
+                                onRetryOnVoicemailChange={setRetryOnVoicemail}
+                                scheduleEnabled={scheduleEnabled}
+                                onScheduleEnabledChange={setScheduleEnabled}
+                                scheduleTimezone={scheduleTimezone}
+                                onScheduleTimezoneChange={setScheduleTimezone}
+                                timeSlots={timeSlots}
+                                onTimeSlotsChange={setTimeSlots}
+                                circuitBreakerEnabled={circuitBreakerEnabled}
+                                onCircuitBreakerEnabledChange={setCircuitBreakerEnabled}
+                                circuitBreakerFailureThreshold={circuitBreakerFailureThreshold}
+                                onCircuitBreakerFailureThresholdChange={setCircuitBreakerFailureThreshold}
+                                circuitBreakerWindowSeconds={circuitBreakerWindowSeconds}
+                                onCircuitBreakerWindowSecondsChange={setCircuitBreakerWindowSeconds}
+                                circuitBreakerMinCalls={circuitBreakerMinCalls}
+                                onCircuitBreakerMinCallsChange={setCircuitBreakerMinCalls}
+                            />
+                        </CollapsibleContent>
+                    </Collapsible>
+
+                    {createError && (
+                        <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-600 dark:text-red-400 font-semibold">
+                            {createError}
                         </div>
-                    </form>
-                </CardContent>
-            </Card>
+                    )}
+
+                    {/* Footer Submit & Cancel */}
+                    <div className="pt-4 border-t border-gray-100 dark:border-[#282b26] flex items-center gap-3">
+                        <button
+                            type="submit"
+                            disabled={isSubmitting || !campaignName || !selectedWorkflowId || !sourceId || !selectedTelephonyConfigId}
+                            className="px-6 py-2.5 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cd] text-white dark:text-[#082117] text-xs font-bold rounded-full shadow-xs transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isSubmitting ? 'Creating...' : 'Create Campaign'}
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={handleBack}
+                            disabled={isSubmitting}
+                            className="px-5 py-2.5 bg-gray-100 dark:bg-[#1c1e1a] hover:bg-gray-200 dark:hover:bg-[#232621] text-gray-800 dark:text-gray-200 text-xs font-semibold rounded-full transition-all cursor-pointer"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }

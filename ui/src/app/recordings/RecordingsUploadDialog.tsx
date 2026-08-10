@@ -9,25 +9,8 @@ import {
     transcribeAudioApiV1WorkflowRecordingsTranscribePost,
 } from "@/client";
 import type { RecordingUploadResponseSchema } from "@/client/types.gen";
-import { Button } from "@/components/ui/button";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { LANGUAGE_DISPLAY_NAMES } from "@/constants/languages";
+
 interface RecordingsUploadDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -178,7 +161,7 @@ export const RecordingsUploadDialog = ({
 
                 const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType });
                 if (blob.size > MAX_FILE_SIZE) {
-                    setError(`Recording (${(blob.size / (1024 * 1024)).toFixed(1)}MB) exceeds the maximum allowed size of 5MB.`);
+                    setError(`Recording (${(blob.size / (1024 * 1024)).toFixed(1)}MB) exceeds maximum limit of 5MB.`);
                     resetRecordingState();
                     return;
                 }
@@ -207,7 +190,8 @@ export const RecordingsUploadDialog = ({
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
-    const handleUpload = async () => {
+    const handleUpload = async (e: React.FormEvent) => {
+        e.preventDefault();
         const ready = pendingFiles.filter((p) => p.transcript.trim() && !p.isTranscribing);
         if (ready.length === 0) return;
 
@@ -279,30 +263,50 @@ export const RecordingsUploadDialog = ({
     const readyCount = pendingFiles.filter((p) => p.transcript.trim() && !p.isTranscribing).length;
     const isBusy = uploading || isRecording || anyTranscribing;
 
+    if (!open) return null;
+
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 text-white max-h-[85vh] overflow-y-auto">
-                <DialogHeader className="space-y-1">
-                    <DialogTitle className="text-lg font-bold text-white">Upload Recordings</DialogTitle>
-                    <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
-                        Upload or record audio files. Use{" "}
-                        <code className="text-xs bg-[#1c1c1f] border border-[#232328] px-1 py-0.5 rounded text-zinc-300 font-mono">@</code> in
-                        prompt fields to insert them into your agents.
-                    </DialogDescription>
-                </DialogHeader>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div
+                className="border border-gray-200 dark:border-[#282b26] rounded-2xl p-6 w-full max-w-lg shadow-2xl space-y-6 text-gray-900 dark:text-white max-h-[85vh] overflow-y-auto"
+                style={{ backgroundColor: '#1C1E1A' }}
+            >
+                <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-[#282b26]">
+                    <div className="space-y-0.5">
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                            Upload Recordings
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                            <span>Upload or record audio files. Use</span>
+                            <code className="px-1 py-0.5 bg-gray-100 dark:bg-[#282b26] font-mono text-gray-800 dark:text-gray-200 rounded text-[10px]">
+                                @
+                            </code>
+                            <span>in prompt fields to insert them into your agents.</span>
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={() => onOpenChange(false)}
+                        className="p-1 text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg transition-colors cursor-pointer"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
 
                 {error && (
-                    <div className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 font-semibold">
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-600 dark:text-red-400 text-xs font-semibold">
                         {error}
                     </div>
                 )}
 
-                {/* Upload Section */}
-                <div className="space-y-4">
-                    {/* Audio source: file picker or record */}
-                    <div className="space-y-1.5">
-                        <Label className="text-xs font-bold text-zinc-300 block">Audio Files</Label>
-                        <div className="flex gap-2">
+                <form onSubmit={handleUpload} className="space-y-5">
+                    {/* Audio Files Section */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-900 dark:text-white block">
+                            Audio Files
+                        </label>
+
+                        <div className="flex items-center gap-3">
                             <input
                                 ref={fileInputRef}
                                 type="file"
@@ -311,52 +315,72 @@ export const RecordingsUploadDialog = ({
                                 onChange={(e) => handleFileSelect(e.target.files)}
                                 className="hidden"
                             />
-                            <Button
-                                type="button"
+
+                            {/* Choose Audio Files Button */}
+                            <label
                                 onClick={() => fileInputRef.current?.click()}
-                                disabled={isBusy}
-                                className="flex-1 bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3.5 py-2.5 rounded-xl text-xs text-zinc-400 transition-colors cursor-pointer justify-start font-normal"
+                                className="flex-1 px-4 py-2.5 border border-gray-200 dark:border-[#282b26] rounded-xl text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer flex items-center justify-center gap-2 transition-all hover:bg-gray-100 dark:hover:bg-[#232621]"
+                                style={{ backgroundColor: '#161715' }}
                             >
-                                <Upload className="w-4 h-4 mr-2 shrink-0 inline" />
-                                <span>Choose audio files (max 5MB each)</span>
-                            </Button>
+                                <Upload className="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" />
+                                <span className="truncate">
+                                    {pendingFiles.length > 0
+                                        ? `${pendingFiles.length} file(s) selected`
+                                        : "Choose audio files (max 5MB each)"}
+                                </span>
+                            </label>
+
+                            {/* Record Button */}
                             {recordingStep === "idle" && (
-                                <Button
+                                <button
                                     type="button"
                                     onClick={() => setRecordingStep("naming")}
                                     disabled={uploading || anyTranscribing}
-                                    className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3.5 py-2.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors cursor-pointer"
+                                    className="px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all bg-gray-100 dark:bg-[#161715] hover:bg-gray-200 dark:hover:bg-[#232621] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#282b26] cursor-pointer"
                                 >
-                                    <Mic className="w-4 h-4 mr-1 inline" />
-                                    Record
-                                </Button>
+                                    <Mic className="w-4 h-4" />
+                                    <span>Record</span>
+                                </button>
                             )}
                         </div>
                     </div>
 
-                    {/* Recording: filename + start/stop */}
+                    {/* Recording Name + Recording Control */}
                     {(recordingStep === "naming" || isRecording) && (
-                        <div className="space-y-3 rounded-xl border border-dashed border-[#1d1d22] p-4 bg-[#08080a]/50">
+                        <div className="space-y-3 rounded-xl border border-dashed border-gray-300 dark:border-[#282b26] p-4 bg-gray-50/50 dark:bg-[#161715]">
                             {recordingStep === "naming" && (
                                 <>
                                     <div className="space-y-1">
-                                        <Label className="text-xs font-bold text-zinc-300 block mb-1">Recording Name</Label>
-                                        <Input
+                                        <label className="text-xs font-bold text-gray-900 dark:text-white block">
+                                            Recording Name
+                                        </label>
+                                        <input
+                                            type="text"
                                             placeholder="e.g. greeting, hold-message"
                                             value={recordingFilename}
                                             onChange={(e) => setRecordingFilename(e.target.value)}
-                                            className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
+                                            className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-[#282b26] rounded-xl text-xs text-gray-900 dark:text-white focus:outline-hidden"
+                                            style={{ backgroundColor: '#1C1E1A' }}
                                             autoFocus
                                         />
                                     </div>
                                     <div className="flex gap-2">
-                                        <Button onClick={startRecording} disabled={!recordingFilename.trim()} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-lg cursor-pointer">
-                                            <Mic className="w-4 h-4 mr-1 inline" />
-                                            Start Recording
-                                        </Button>
-                                        <Button onClick={resetRecordingState} className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-2 rounded-xl text-xs text-zinc-300 transition-colors cursor-pointer">
+                                        <button
+                                            type="button"
+                                            onClick={startRecording}
+                                            disabled={!recordingFilename.trim()}
+                                            className="px-4 py-2 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cd] text-white dark:text-[#082117] font-bold text-xs rounded-full shadow-xs cursor-pointer flex items-center gap-1.5"
+                                        >
+                                            <Mic className="w-3.5 h-3.5" />
+                                            <span>Start Recording</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={resetRecordingState}
+                                            className="px-4 py-2 bg-gray-100 dark:bg-[#282b26] text-gray-700 dark:text-gray-300 text-xs font-semibold rounded-full cursor-pointer"
+                                        >
                                             Cancel
-                                        </Button>
+                                        </button>
                                     </div>
                                 </>
                             )}
@@ -366,18 +390,18 @@ export const RecordingsUploadDialog = ({
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
                                         <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
                                     </span>
-                                    <span className="text-sm font-mono text-zinc-200">
+                                    <span className="text-xs font-mono text-gray-900 dark:text-white">
                                         {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, "0")}
                                     </span>
-                                    <span className="text-xs text-zinc-400 truncate">{recordingFilename}</span>
-                                    <Button
-                                        variant="destructive"
+                                    <span className="text-xs text-gray-500 truncate">{recordingFilename}</span>
+                                    <button
+                                        type="button"
                                         onClick={() => stopRecording()}
-                                        className="ml-auto bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
+                                        className="ml-auto px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-full cursor-pointer flex items-center gap-1.5"
                                     >
-                                        <Square className="w-4 h-4 mr-1 inline" />
-                                        Stop
-                                    </Button>
+                                        <Square className="w-3.5 h-3.5" />
+                                        <span>Stop</span>
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -386,75 +410,94 @@ export const RecordingsUploadDialog = ({
                     {/* Pending files list */}
                     {pendingFiles.length > 0 && (
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold text-zinc-300 block">
+                            <label className="text-xs font-bold text-gray-900 dark:text-white block">
                                 Pending ({pendingFiles.length} file{pendingFiles.length !== 1 ? "s" : ""})
-                            </Label>
+                            </label>
                             {pendingFiles.map((pf) => (
-                                <div key={pf.id} className="rounded-xl border border-[#1d1d22] p-3 space-y-2.5 bg-[#08080a]/50">
-                                    <div className="flex items-center gap-2">
-                                        <code className="text-xs bg-[#1c1c1f] border border-[#232328] px-1.5 py-0.5 rounded font-mono truncate flex-1 text-zinc-300">
+                                <div
+                                    key={pf.id}
+                                    className="rounded-xl border border-gray-200 dark:border-[#282b26] p-3 space-y-2.5"
+                                    style={{ backgroundColor: '#161715' }}
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <code className="text-xs font-mono text-gray-800 dark:text-gray-200 truncate">
                                             {pf.file.name} ({(pf.file.size / (1024 * 1024)).toFixed(1)}MB)
                                         </code>
-                                        {pf.isTranscribing && (
-                                            <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-500 shrink-0" />
-                                        )}
-                                        <Button
-                                            className="h-6 w-6 p-0 shrink-0 bg-transparent border-none text-zinc-500 hover:text-zinc-300 rounded hover:bg-white/5"
-                                            onClick={() => removePendingFile(pf.id)}
-                                            disabled={uploading}
-                                        >
-                                            <X className="w-3.5 h-3.5" />
-                                        </Button>
+                                        <div className="flex items-center gap-2">
+                                            {pf.isTranscribing && (
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => removePendingFile(pf.id)}
+                                                className="p-1 text-gray-400 hover:text-red-500 cursor-pointer"
+                                                disabled={uploading}
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </div>
                                     {pf.error && (
-                                        <p className="text-xs text-rose-400">{pf.error}</p>
+                                        <p className="text-[11px] text-rose-500">{pf.error}</p>
                                     )}
-                                    <Textarea
-                                        placeholder={pf.isTranscribing ? "Transcribing..." : "What does this recording say?"}
+                                    <textarea
+                                        placeholder={pf.isTranscribing ? "Transcribing audio..." : "What does this recording say?"}
                                         value={pf.transcript}
                                         onChange={(e) => updateTranscript(pf.id, e.target.value)}
                                         disabled={pf.isTranscribing}
                                         rows={2}
-                                        className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2 px-3 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all resize-none w-full"
+                                        className="w-full p-2.5 border border-gray-200 dark:border-[#282b26] rounded-xl text-xs text-gray-900 dark:text-white font-normal focus:outline-hidden resize-none"
+                                        style={{ backgroundColor: '#1C1E1A' }}
                                     />
                                 </div>
                             ))}
                         </div>
                     )}
 
-                    {/* Language */}
-                    <div className="space-y-1">
-                        <Label className="text-xs font-bold text-zinc-300 block mb-1">Language</Label>
-                        <Select value={language} onValueChange={setLanguage}>
-                            <SelectTrigger className="w-full bg-[#08080a] border border-[#1d1d22] rounded-xl py-2 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all h-10">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#111113] border border-[#1d1d22] text-white">
-                                {Object.entries(LANGUAGE_DISPLAY_NAMES).map(([code, name]) => (
-                                    <SelectItem key={code} value={code}>
-                                        {name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    {/* Language Selector */}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-900 dark:text-white block">
+                            Language
+                        </label>
+                        <select
+                            value={language}
+                            onChange={(e) => setLanguage(e.target.value)}
+                            className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-[#282b26] rounded-xl text-xs text-gray-900 dark:text-white font-medium focus:outline-hidden transition-all cursor-pointer"
+                            style={{ backgroundColor: '#161715' }}
+                        >
+                            <option value="multi" className="bg-white dark:bg-[#1c1e1a] text-gray-900 dark:text-white">Multilingual (Auto-detect)</option>
+                            {Object.entries(LANGUAGE_DISPLAY_NAMES).map(([code, name]) => (
+                                <option key={code} value={code} className="bg-white dark:bg-[#1c1e1a] text-gray-900 dark:text-white">
+                                    {name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
-                    <Button
-                        onClick={handleUpload}
-                        disabled={readyCount === 0 || isBusy}
-                        className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer w-full mt-2"
-                    >
-                        {uploading ? (
-                            <Loader2 className="w-4 h-4 mr-1 animate-spin inline" />
-                        ) : (
-                            <Upload className="w-4 h-4 mr-1 inline" />
-                        )}
-                        {uploading
-                            ? "Uploading..."
-                            : `Upload ${readyCount} Recording${readyCount !== 1 ? "s" : ""}`}
-                    </Button>
-                </div>
-            </DialogContent>
-        </Dialog>
+                    {/* Action Submit Button */}
+                    <div className="pt-2 flex items-center justify-end gap-3">
+                        <button
+                            type="button"
+                            onClick={() => onOpenChange(false)}
+                            className="px-5 py-2.5 bg-gray-100 dark:bg-[#161715] hover:bg-gray-200 dark:hover:bg-[#232621] text-gray-800 dark:text-gray-200 text-xs font-semibold rounded-full transition-all cursor-pointer"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={readyCount === 0 || isBusy}
+                            className="flex-1 py-3 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cd] disabled:opacity-50 text-white dark:text-[#082117] text-xs font-bold rounded-full shadow-xs transition-all active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                            {uploading ? (
+                                <Loader2 className="w-4 h-4 animate-spin stroke-[2.5]" />
+                            ) : (
+                                <Upload className="w-4 h-4 stroke-[2]" />
+                            )}
+                            <span>{uploading ? "Uploading..." : `Upload ${readyCount} Recording${readyCount !== 1 ? "s" : ""}`}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     );
 };

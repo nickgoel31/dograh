@@ -1,7 +1,7 @@
 import "./globals.css";
 
 import type { Metadata } from "next";
-import { Fira_Code, Inter } from "next/font/google";
+import { Fira_Code, Inter, Instrument_Serif } from "next/font/google";
 import { Suspense } from "react";
 
 import AppLayout from "@/components/layout/AppLayout";
@@ -24,6 +24,14 @@ const sansFont = Inter({
 
 const monoFont = Fira_Code({
   variable: "--font-mono",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  weight: "400",
+  style: ["normal", "italic"],
   subsets: ["latin"],
   display: "swap",
 });
@@ -61,7 +69,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${sansFont.variable} ${monoFont.variable} antialiased`}>
+        className={`${sansFont.variable} ${monoFont.variable} ${instrumentSerif.variable} antialiased`}>
         <SentryErrorBoundary>
           <AuthProvider>
             <AppConfigProvider>

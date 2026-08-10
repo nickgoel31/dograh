@@ -1,17 +1,16 @@
 "use client";
 
-import { AlertTriangle, Menu, RefreshCw, Search } from "lucide-react";
+import { AlertTriangle, RefreshCw, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
-import { SidebarInset, SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { useAppConfig } from "@/context/AppConfigContext";
 
 import { AppSidebar } from "./AppSidebar";
-import { WalletBalance } from "./WalletBalance";
+import { DualSidebarLayout } from "./DualSidebarLayout";
 
 // Map pathnames to human-readable page names for breadcrumb display
 const PAGE_NAMES: Record<string, string> = {
@@ -43,24 +42,13 @@ function getPageName(pathname: string): string {
 }
 
 function NeuralHeader() {
-  const { toggleSidebar } = useSidebar();
   const pathname = usePathname();
   const pageName = getPageName(pathname);
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 items-center justify-between px-6 pb-6 pt-6 mb-4 border-b border-[#1d1d22] bg-[#08080a] transition-all duration-300">
+    <header className="sticky top-0 z-50 flex h-16 items-center justify-between px-6 pb-6 pt-6 mb-4 border-b border-gray-100 dark:border-[#282b26] bg-white dark:bg-[#161715] transition-all duration-300">
       {/* Left: mobile menu + page name */}
       <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleSidebar}
-          aria-label="Open menu"
-          className="md:hidden h-8 w-8 rounded-xl hover:bg-white/5 border border-transparent text-[#626266] hover:text-white"
-        >
-          <Menu className="h-4 w-4" />
-        </Button>
-
         {/* Mobile logo */}
         <Link href="/" className="flex items-center gap-2 text-sm font-bold md:hidden">
           <Image
@@ -95,8 +83,6 @@ function NeuralHeader() {
           <kbd className="ml-1 rounded border border-[#232328] px-1 font-mono text-[9px] text-zinc-600">⌘K</kbd>
         </button>
 
-        <div className="h-4 w-px bg-[#1d1d22] hidden md:block" />
-        <WalletBalance />
       </div>
     </header>
   );
@@ -158,51 +144,46 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   const shouldShowSidebar = pathname !== "/" && !pathname.startsWith("/handler") && !pathname.startsWith("/auth");
   const isWorkflowEditor = /^\/workflow\/\d+$/.test(pathname);
 
+  if (!shouldShowSidebar) {
+    return (
+      <div className="flex-1 w-full bg-background">
+        <BackendStatusBanner />
+        {children}
+      </div>
+    );
+  }
+
   return (
-    <SidebarProvider defaultOpen>
-      {shouldShowSidebar ? (
-        <div className="flex min-h-screen w-full bg-background">
-          <div className="relative z-20 flex-shrink-0">
-            <AppSidebar />
+    <DualSidebarLayout>
+      <BackendStatusBanner />
+      {!isWorkflowEditor && pathname !== '/workflow' && !pathname.startsWith('/campaigns') && pathname !== '/model-configurations' && pathname !== '/tools' && pathname !== '/files' && pathname !== '/recordings' && !pathname.startsWith('/telephony-configurations') && pathname !== '/usage' && pathname !== '/reports' && pathname !== '/billing' && pathname !== '/api-keys' && <NeuralHeader />}
+
+      {headerActions && (
+        <header className="neural-header sticky top-0 z-50 w-full">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-center justify-center">
+              {headerActions}
+            </div>
           </div>
+        </header>
+      )}
 
-          <SidebarInset className="relative z-10 flex-1 flex flex-col min-w-0 border-l border-border/30">
-            <BackendStatusBanner />
-            {!isWorkflowEditor && <NeuralHeader />}
-
-            {headerActions && (
-              <header className="neural-header sticky top-0 z-50 w-full">
-                <div className="container mx-auto px-4 py-3">
-                  <div className="flex items-center justify-center">
-                    {headerActions}
-                  </div>
-                </div>
-              </header>
-            )}
-
-            {stickyTabs && (
-              <div className="neural-header sticky top-11 z-40">
-                <div className="container mx-auto px-4">
-                  <div className="flex items-center justify-center py-2">
-                    {stickyTabs}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <main className="relative z-10 flex-1 page-enter">
-              {children}
-            </main>
-          </SidebarInset>
-        </div>
-      ) : (
-        <div className="flex-1 w-full bg-background">
-          <BackendStatusBanner />
-          {children}
+      {stickyTabs && (
+        <div className="neural-header sticky top-11 z-40">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-center py-2">
+              {stickyTabs}
+            </div>
+          </div>
         </div>
       )}
-    </SidebarProvider>
+
+      <div className="relative z-10 flex-1 h-full page-enter" style={{backgroundColor: '#161715'}}>
+        {children}
+      </div>
+    </DualSidebarLayout>
   );
 };
+
 
 export default AppLayout;

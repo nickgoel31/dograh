@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -9,25 +10,6 @@ import {
   updatePhoneNumberApiV1OrganizationsTelephonyConfigsConfigIdPhoneNumbersPhoneNumberIdPut,
 } from "@/client/sdk.gen";
 import type { PhoneNumberResponse } from "@/client/types.gen";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
 
@@ -41,10 +23,6 @@ interface PhoneNumberDialogProps {
 
 const NO_WORKFLOW = "__none__";
 
-// Mirrors api/schemas/telephony_phone_number.py::_validate_address_shape and
-// api/utils/telephony_address.py — keep in sync. Returns an error message
-// when the address would normalize to a broken canonical form, or null when
-// the input is acceptable.
 const ADDRESS_FORMAT_STRIP_RE = /[\s\-()]/g;
 const ADDRESS_E164_RE = /^\+\d{8,15}$/;
 const ADDRESS_BARE_DIGITS_RE = /^\d{8,15}$/;
@@ -81,7 +59,6 @@ export function PhoneNumberDialog({
   const [submitting, setSubmitting] = useState(false);
   const [addressTouched, setAddressTouched] = useState(false);
 
-  // Reset form when the dialog opens.
   useEffect(() => {
     if (!open) return;
     setAddress(existing?.address ?? "");
@@ -95,10 +72,8 @@ export function PhoneNumberDialog({
     setAddressTouched(false);
   }, [open, existing]);
 
-  // Only validate the address on create — edits keep the immutable address.
   const addressError = isEdit ? null : validateAddress(address, countryCode);
 
-  // Load workflows for the inbound dropdown.
   useEffect(() => {
     if (!open || !user) return;
     let cancelled = false;
@@ -117,7 +92,8 @@ export function PhoneNumberDialog({
     };
   }, [open, user, getAccessToken]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!isEdit) {
       const err = validateAddress(address, countryCode);
       if (err) {
@@ -184,124 +160,132 @@ export function PhoneNumberDialog({
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 text-white">
-        <DialogHeader className="space-y-1">
-          <DialogTitle className="text-lg font-bold text-white">
-            {isEdit ? "Edit phone number" : "Add phone number"}
-          </DialogTitle>
-          <DialogDescription className="text-xs text-zinc-500 leading-relaxed">
-            PSTN numbers (E.164), SIP URIs (sip:user@host), and SIP extensions are all supported.
-          </DialogDescription>
-        </DialogHeader>
+  if (!open) return null;
 
-        <div className="space-y-4">
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+      <div
+        className="border border-gray-200 dark:border-[#282b26] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-5 text-gray-900 dark:text-white"
+        style={{ backgroundColor: '#1C1E1A' }}
+      >
+        <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-[#282b26]">
+          <h3 className="text-base font-bold text-gray-900 dark:text-white">
+            {isEdit ? "Edit phone number" : "Add phone number"}
+          </h3>
+          <button
+            onClick={() => onOpenChange(false)}
+            className="p-1 text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Address */}
           <div className="space-y-1">
-            <Label htmlFor="pn-address" className="text-xs font-bold text-zinc-300 block mb-1.5">Address</Label>
-            <Input
-              id="pn-address"
-              placeholder="+19781899185, sip:101@asterisk.local, or 101"
+            <label className="text-xs font-bold text-gray-900 dark:text-white block">Phone Address</label>
+            <input
+              type="text"
+              placeholder="e.g. +1 800-555-0199 or sip:101@host"
               value={address}
-              className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
               onChange={(e) => setAddress(e.target.value)}
               onBlur={() => setAddressTouched(true)}
               disabled={isEdit}
-              aria-invalid={addressTouched && !!addressError}
+              required={!isEdit}
+              autoFocus={!isEdit}
+              className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-[#282b26] rounded-xl text-xs font-mono text-gray-900 dark:text-white focus:outline-hidden"
+              style={{ backgroundColor: '#161715' }}
             />
             {!isEdit && addressTouched && addressError && (
-              <p className="text-xs text-red-400 font-semibold">{addressError}</p>
-            )}
-            {isEdit && (
-              <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
-                Address cannot be changed. Delete this number and create a new one to change it.
-              </p>
-            )}
-            {isEdit && (
-              <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
-                Stored as <code>{existing?.address_normalized}</code> ({existing?.address_type})
-              </p>
+              <p className="text-[11px] text-red-500 font-semibold mt-0.5">{addressError}</p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label htmlFor="pn-country" className="text-xs font-bold text-zinc-300 block mb-1.5">Country (ISO-2)</Label>
-              <Input
-                id="pn-country"
+              <label className="text-xs font-bold text-gray-900 dark:text-white block">Country (ISO-2)</label>
+              <input
+                type="text"
                 placeholder="US"
                 maxLength={2}
                 value={countryCode}
-                className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
                 onChange={(e) => setCountryCode(e.target.value.toUpperCase())}
+                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-[#282b26] rounded-xl text-xs text-gray-900 dark:text-white uppercase focus:outline-hidden"
+                style={{ backgroundColor: '#161715' }}
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="pn-label" className="text-xs font-bold text-zinc-300 block mb-1.5">Label</Label>
-              <Input
-                id="pn-label"
-                placeholder="e.g. Boston caller ID"
+              <label className="text-xs font-bold text-gray-900 dark:text-white block">Label</label>
+              <input
+                type="text"
+                placeholder="e.g. US Support Line"
                 value={label}
-                className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
                 onChange={(e) => setLabel(e.target.value)}
+                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-[#282b26] rounded-xl text-xs text-gray-900 dark:text-white focus:outline-hidden"
+                style={{ backgroundColor: '#161715' }}
               />
             </div>
           </div>
 
+          {/* Inbound workflow */}
           <div className="space-y-1">
-            <Label htmlFor="pn-workflow" className="text-xs font-bold text-zinc-300 block mb-1.5">Inbound workflow</Label>
-            <Select value={inboundWorkflowId} onValueChange={setInboundWorkflowId}>
-              <SelectTrigger id="pn-workflow" className="w-full bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 transition-all">
-                <SelectValue placeholder="(none)" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#111113] border border-[#1d1d22] text-white">
-                <SelectItem value={NO_WORKFLOW}>(none)</SelectItem>
-                {workflows.map((w) => (
-                  <SelectItem key={w.id} value={String(w.id)}>
-                    #{w.id} - {w.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
-              Used when per-number inbound routing is enabled. Today, inbound calls still route by the workflow_id in the webhook URL.
-            </p>
+            <label className="text-xs font-bold text-gray-900 dark:text-white block">Inbound workflow</label>
+            <select
+              value={inboundWorkflowId}
+              onChange={(e) => setInboundWorkflowId(e.target.value)}
+              className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-[#282b26] rounded-xl text-xs text-gray-900 dark:text-white font-medium focus:outline-hidden cursor-pointer"
+              style={{ backgroundColor: '#161715' }}
+            >
+              <option value={NO_WORKFLOW} className="bg-white dark:bg-[#1c1e1a] text-gray-900 dark:text-white">(none)</option>
+              {workflows.map((w) => (
+                <option key={w.id} value={String(w.id)} className="bg-white dark:bg-[#1c1e1a] text-gray-900 dark:text-white">
+                  #{w.id} - {w.name}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-[#1d1d22] bg-[#08080a] p-4">
-            <Label className="text-xs font-bold text-zinc-300 block mb-1.5">Active</Label>
-            <Switch checked={isActive} onCheckedChange={setIsActive} />
-          </div>
-
-          {!isEdit && (
-            <div className="flex items-center justify-between rounded-xl border border-[#1d1d22] bg-[#08080a] p-4">
-              <div>
-                <Label className="text-xs font-bold text-zinc-300 block mb-1.5">Default caller ID for this configuration</Label>
-                <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
-                  Used as the from-number for test calls when set.
-                </p>
-              </div>
-              <Switch
-                checked={isDefaultCallerId}
-                onCheckedChange={setIsDefaultCallerId}
-              />
-            </div>
-          )}
-        </div>
-
-        <DialogFooter className="flex gap-3 justify-end pt-2 border-t border-[#1d1d22]/50">
-          <Button className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors cursor-pointer" onClick={() => onOpenChange(false)} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button
-            className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer"
-            onClick={handleSubmit}
-            disabled={submitting || (!isEdit && !!addressError)}
+          {/* Active Switch */}
+          <div
+            className="p-3 border border-gray-200 dark:border-[#282b26] rounded-xl flex items-center justify-between"
+            style={{ backgroundColor: '#161715' }}
           >
-            {submitting ? "Saving..." : isEdit ? "Save changes" : "Add"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <label className="text-xs font-bold text-gray-900 dark:text-white">Active</label>
+            <button
+              type="button"
+              onClick={() => setIsActive(!isActive)}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
+                isActive ? "bg-black dark:bg-[#bcf0da]" : "bg-gray-300 dark:bg-[#282b26]"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-[#082117] shadow-md transition duration-200 ${
+                  isActive ? "translate-x-4" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Submit Buttons */}
+          <div className="pt-2 border-t border-gray-100 dark:border-[#282b26] flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              disabled={submitting}
+              className="px-4 py-2 rounded-full text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#232621] cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || (!isEdit && !!addressError)}
+              className="px-5 py-2.5 rounded-full text-xs font-bold bg-black dark:bg-[#bcf0da] text-white dark:text-[#082117] hover:bg-gray-800 dark:hover:bg-[#a5e9cd] shadow-xs cursor-pointer"
+            >
+              {submitting ? "Saving..." : isEdit ? "Save changes" : "Save Phone Number"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

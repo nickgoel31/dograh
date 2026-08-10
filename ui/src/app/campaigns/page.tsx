@@ -1,48 +1,12 @@
 "use client";
 
-import { ArrowRight, Megaphone, Plus, Trash2 } from 'lucide-react';
+import { ArrowRight, Plus, Search, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { getCampaignsApiV1CampaignGet } from '@/client/sdk.gen';
 import type { CampaignsResponse } from '@/client/types.gen';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth';
-import { cn } from '@/lib/utils';
-
-const STATE_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string }> = {
-    created:   { label: 'Created',   dot: 'bg-zinc-500', bg: 'bg-zinc-500/10 border-zinc-500/20',          text: 'text-zinc-400' },
-    running:   { label: 'Running',   dot: 'bg-[#7c3aed] animate-pulse',  bg: 'bg-[#7c3aed]/10 border-[#7c3aed]/20',         text: 'text-[#a78bfa]' },
-    paused:    { label: 'Paused',    dot: 'bg-amber-500', bg: 'bg-amber-500/10 border-amber-500/20',       text: 'text-amber-400' },
-    completed: { label: 'Completed', dot: 'bg-emerald-500',   bg: 'bg-emerald-500/10 border-emerald-500/20',     text: 'text-emerald-400' },
-    failed:    { label: 'Failed',    dot: 'bg-red-500',    bg: 'bg-red-500/10 border-red-500/20',     text: 'text-red-400' },
-};
-
-function StateBadge({ state }: { state: string }) {
-    const cfg = STATE_CONFIG[state] ?? STATE_CONFIG.created;
-    return (
-        <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold border", cfg.bg, cfg.text)}>
-            <span className={cn("w-1.5 h-1.5 rounded-full", cfg.dot)} />
-            {cfg.label}
-        </span>
-    );
-}
-
-function ProgressBar({ done, total }: { done: number; total: number }) {
-    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-    return (
-        <div className="flex items-center gap-3 min-w-0">
-            <div className="flex-1 h-2 rounded-full bg-[#08080a] border border-[#1d1d22] overflow-hidden">
-                <div
-                    className="h-full rounded-full bg-[#7c3aed] transition-all duration-500"
-                    style={{ width: `${pct}%` }}
-                />
-            </div>
-            <span className="text-xs text-zinc-400 tabular-nums shrink-0 font-medium">{done}/{total}</span>
-        </div>
-    );
-}
 
 export default function CampaignsPage() {
     const { user, getAccessToken, redirectToLogin, loading } = useAuth();
@@ -50,6 +14,7 @@ export default function CampaignsPage() {
 
     const [campaignsData, setCampaignsData] = useState<CampaignsResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
     const hasFetched = useRef(false);
 
     useEffect(() => {
@@ -78,129 +43,227 @@ export default function CampaignsPage() {
         fetchCampaigns();
     }, [loading, user, getAccessToken]);
 
-    const formatDate = (dateString: string) =>
-        new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const handleDelete = async (e: React.MouseEvent, id: string | number) => {
+        e.stopPropagation();
+        if (window.confirm('Delete this campaign? This cannot be undone.')) {
+            try {
+                const accessToken = await getAccessToken();
+                const res = await fetch(`/api/v1/campaign/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                if (res.ok) {
+                    setCampaignsData(prev => prev ? {
+                        ...prev,
+                        campaigns: prev.campaigns.filter(c => c.id !== id)
+                    } : prev);
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+    };
+
+    const campaignsList = campaignsData?.campaigns || [];
+    const filteredCampaigns = campaignsList.filter(c =>
+        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (c.workflow_name && c.workflow_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
 
     return (
-        <div className="min-h-screen bg-[#08080a] p-6 max-w-[1600px] mx-auto w-full page-enter">
-            {/* Page header */}
-            <div className="border-b border-[#1d1d22]/50 pb-6 mb-6">
-                <div className="flex items-end justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-white">Campaigns</h1>
-                        <p className="text-xs text-zinc-500 mt-1">Manage bulk outbound voice campaigns</p>
-                    </div>
-                    <Button onClick={() => router.push('/campaigns/new')} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer">
-                        <Plus className="h-4 w-4 mr-2 inline" />
-                        New Campaign
-                    </Button>
-                </div>
-            </div>
+        <div className="w-full text-[#f2f4f0] font-sans select-none relative" style={{backgroundColor: '#161715'}}>
+            {/* Top Sub-Header matching demo styling */}
+            <header className="px-8 pt-6 pb-4 flex items-center justify-between sticky top-0 z-20 border-b border-[#282b26]" style={{backgroundColor: '#161715'}}>
+                <h1 className="text-base font-semibold text-gray-900 dark:text-white tracking-tight">
+                    Outbound campaigns
+                </h1>
 
-            <div className="space-y-6">
-                {isLoading ? (
-                    <div className="space-y-3">
-                        {[...Array(5)].map((_, i) => (
-                            <div key={i} className="h-16 rounded-xl bg-[#111113] border border-[#1d1d22] shimmer" style={{ animationDelay: `${i * 0.06}s` }} />
-                        ))}
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => router.push('/api-keys')}
+                        className="px-4 py-2 bg-white dark:bg-[#1c1e1a] border border-gray-200 dark:border-[#282b26] hover:bg-gray-50 dark:hover:bg-[#232621] text-gray-900 dark:text-white text-xs font-semibold rounded-full shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                        <span>Build with API</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                    </button>
+
+                    <button
+                        onClick={() => router.push('/campaigns/new')}
+                        className="px-4 py-2 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cd] text-white dark:text-[#082117] text-xs font-semibold rounded-full shadow-xs flex items-center gap-1 transition-all active:scale-[0.98] cursor-pointer"
+                    >
+                        <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                        <span>Create campaign</span>
+                    </button>
+                </div>
+            </header>
+
+            {/* Main Content Body */}
+            <div className="max-w-5xl w-full mx-auto px-8 pt-6 pb-12 flex flex-col gap-10">
+                    {/* Hero Section matching demo */}
+                    <div className="flex flex-col items-center text-center space-y-6 pt-2">
+                        {/* Orange Pixelated Megaphone/Arrow Graphic */}
+                        <div className="w-20 h-20 flex items-center justify-center">
+                            <svg viewBox="0 0 60 60" fill="none" className="w-16 h-16">
+                                <rect x="10" y="10" width="10" height="40" fill="#f97316" />
+                                <rect x="20" y="15" width="10" height="30" fill="#fdba74" />
+                                <rect x="30" y="20" width="10" height="20" fill="#fb923c" />
+                                <rect x="40" y="25" width="10" height="10" fill="#ea580c" />
+                                <rect x="20" y="20" width="5" height="5" fill="#ffffff" opacity="0.6" />
+                                <rect x="30" y="25" width="5" height="5" fill="#ffffff" opacity="0.4" />
+                            </svg>
+                        </div>
+
+                        <div className="space-y-2 max-w-lg">
+                            <h2 className="text-3xl sm:text-4xl font-normal text-gray-900 dark:text-white tracking-tight font-serif">
+                                Reach thousands of customers by phone
+                            </h2>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                                Upload a contact list, pick an agent, and launch automated outbound calls.
+                            </p>
+                        </div>
+
+                        {/* Center Action Buttons */}
+                        <div className="flex items-center justify-center gap-3 pt-2">
+                            <button
+                                onClick={() => router.push('/api-keys')}
+                                className="px-4 py-2 bg-white dark:bg-[#1c1e1a] border border-gray-200 dark:border-[#282b26] hover:bg-gray-50 dark:hover:bg-[#232621] text-gray-900 dark:text-white text-xs font-semibold rounded-full shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
+                            >
+                                <span>Build with API</span>
+                                <ArrowRight className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                            </button>
+
+                            <button
+                                onClick={() => router.push('/campaigns/new')}
+                                className="px-4 py-2 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cd] text-white dark:text-[#082117] text-xs font-semibold rounded-full shadow-xs flex items-center gap-1 transition-all active:scale-[0.98] cursor-pointer"
+                            >
+                                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                                <span>Create campaign</span>
+                            </button>
+                        </div>
                     </div>
-                ) : campaignsData && campaignsData.campaigns.length > 0 ? (
-                    <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl shadow-none">
-                        <CardHeader className="p-6 pb-4 border-b border-[#1d1d22]/50">
-                            <CardTitle className="text-base font-bold text-white">Active Campaigns</CardTitle>
-                            <CardDescription className="text-xs text-zinc-500">
-                                Monitor progress and actions for outbound calling runs
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            {/* Table header */}
-                            <div className="grid grid-cols-[1.5fr_1fr_1.5fr_1fr] gap-4 px-6 py-3 border-b border-[#1d1d22]/50 bg-[#08080a]/50">
-                                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Name</span>
-                                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 text-center">Status</span>
-                                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Progress</span>
-                                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 text-right">Actions</span>
+
+                    {/* Campaigns Grid / List */}
+                    <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-[#282b26]">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Active Campaigns</h3>
+                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-[#282b26] text-gray-700 dark:text-gray-300">
+                                    {filteredCampaigns.length}
+                                </span>
                             </div>
 
-                            {/* Rows */}
-                            <div className="divide-y divide-[#1d1d22]/50 bg-[#111113]">
-                                {campaignsData.campaigns.map((campaign) => (
-                                    <div
-                                        key={campaign.id}
-                                        className="grid grid-cols-[1.5fr_1fr_1.5fr_1fr] gap-4 items-center px-6 py-4 hover:bg-[#1a1a1f] transition-colors cursor-pointer"
-                                        onClick={() => router.push(`/campaigns/${campaign.id}`)}
-                                    >
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-semibold text-white truncate">{campaign.name}</p>
-                                            <p className="text-xs text-zinc-500 mt-1 truncate">
-                                                {campaign.workflow_name} · {formatDate(campaign.created_at)}
-                                            </p>
-                                        </div>
-                                        <div className="flex justify-center">
-                                            <StateBadge state={campaign.state} />
-                                        </div>
-                                        <div className="pr-4">
-                                            <ProgressBar done={campaign.executed_count ?? 0} total={campaign.total_queued_count ?? 0} />
-                                        </div>
-                                        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 px-3 text-xs font-semibold text-white bg-[#1c1c1f] hover:bg-[#27272a] rounded-lg border border-[#232328]"
-                                                onClick={() => router.push(`/campaigns/${campaign.id}`)}
-                                            >
-                                                View
-                                                <ArrowRight className="h-3 w-3 ml-1.5" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
-                                                onClick={async () => {
-                                                    if (window.confirm('Delete this campaign? This cannot be undone.')) {
-                                                        try {
-                                                            const accessToken = await getAccessToken();
-                                                            const res = await fetch(`/api/v1/campaign/${campaign.id}`, {
-                                                                method: 'DELETE',
-                                                                headers: { 'Authorization': `Bearer ${accessToken}` }
-                                                            });
-                                                            if (res.ok) {
-                                                                setCampaignsData(prev => prev ? {
-                                                                    ...prev,
-                                                                    campaigns: prev.campaigns.filter(c => c.id !== campaign.id)
-                                                                } : prev);
-                                                            }
-                                                        } catch (error) {
-                                                            console.error(error);
-                                                        }
-                                                    }
-                                                }}
-                                            >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                            </Button>
-                                        </div>
-                                    </div>
+                            {/* Search Filter */}
+                            <div className="relative w-64">
+                                <Search className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Search campaigns..."
+                                    className="w-full pl-9 pr-4 py-1.5 bg-gray-50/70 dark:bg-[#1c1e1a] border border-gray-200 dark:border-[#282b26] rounded-full text-xs text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:bg-white dark:focus:bg-[#1c1e1a] focus:outline-hidden transition-all"
+                                />
+                            </div>
+                        </div>
+
+                        {isLoading ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {[1, 2].map((i) => (
+                                    <div key={i} className="h-48 rounded-2xl bg-gray-100 dark:bg-[#1c1e1a] shimmer" />
                                 ))}
                             </div>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    // Empty state
-                    <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-12 text-center max-w-xl mx-auto mt-12">
-                        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#7c3aed]/10 border border-[#7c3aed]/20">
-                            <Megaphone className="h-6 w-6 text-[#a78bfa]" />
-                        </div>
-                        <h3 className="text-base font-semibold text-white mb-2">No campaigns yet</h3>
-                        <p className="text-xs text-zinc-500 mb-6 max-w-xs mx-auto">
-                            Create a campaign to run bulk outbound calls using your voice agents.
-                        </p>
-                        <Button onClick={() => router.push('/campaigns/new')} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer">
-                            <Plus className="h-3.5 w-3.5 mr-1.5" />
-                            Create Campaign
-                        </Button>
+                        ) : filteredCampaigns.length === 0 ? (
+                            <div className="bg-gray-50/50 dark:bg-[#161715] border border-gray-200/60 dark:border-[#282b26] rounded-2xl p-12 text-center">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">No active campaigns found.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {filteredCampaigns.map((camp) => {
+                                    const executed = camp.executed_count ?? 0;
+                                    const total = camp.total_queued_count ?? 0;
+                                    const pct = total > 0 ? Math.round((executed / total) * 100) : 0;
+                                    const statusLabel = (camp.state || 'created').charAt(0).toUpperCase() + (camp.state || 'created').slice(1);
+                                    const isRunning = camp.state === 'running';
+
+                                    return (
+                                        <div
+                                            key={camp.id}
+                                            onClick={() => router.push(`/campaigns/${camp.id}`)}
+                                            className="bg-gray-50/70 dark:bg-[#1c1e1a] hover:bg-gray-100/70 dark:hover:bg-[#232621] border border-gray-200/70 dark:border-[#282b26] rounded-2xl p-5 flex flex-col justify-between gap-5 transition-all cursor-pointer group relative"
+                                        >
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="space-y-1 min-w-0 flex-1">
+                                                    <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider block truncate">
+                                                        Agent: {camp.workflow_name || 'Voice Agent'}
+                                                    </span>
+                                                    <h4 className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors truncate">
+                                                        {camp.name}
+                                                    </h4>
+                                                </div>
+
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <span
+                                                        className={`px-2.5 py-0.5 text-[11px] font-semibold rounded-full flex items-center gap-1.5 ${
+                                                            isRunning
+                                                                ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40"
+                                                                : "bg-blue-100 dark:bg-blue-950/40 text-blue-800 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40"
+                                                        }`}
+                                                    >
+                                                        <span
+                                                            className={`w-1.5 h-1.5 rounded-full ${
+                                                                isRunning ? "bg-emerald-600 dark:bg-emerald-400 animate-pulse" : "bg-blue-600 dark:bg-blue-400"
+                                                            }`}
+                                                        />
+                                                        {statusLabel}
+                                                    </span>
+
+                                                    <button
+                                                        onClick={(e) => handleDelete(e, camp.id)}
+                                                        className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-md transition-colors"
+                                                        title="Delete campaign"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Progress Bar */}
+                                            <div className="space-y-1.5">
+                                                <div className="flex justify-between text-xs font-medium text-gray-500 dark:text-gray-400">
+                                                    <span>
+                                                        Progress: {executed} / {total} calls
+                                                    </span>
+                                                    <span className="font-semibold text-gray-900 dark:text-white">
+                                                        {pct}%
+                                                    </span>
+                                                </div>
+
+                                                <div className="h-2 w-full bg-gray-200 dark:bg-[#282b26] rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
+                                                        style={{ width: `${pct}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Footer Metrics */}
+                                            <div className="pt-3 border-t border-gray-200/60 dark:border-[#282b26] flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                                                <div className="flex items-center gap-4">
+                                                    <span>
+                                                        Total Queued: <strong className="text-gray-900 dark:text-white">{total}</strong>
+                                                    </span>
+                                                </div>
+
+                                                <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                                                    {new Date(camp.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
-                )}
-            </div>
+                </div>
         </div>
     );
 }
-

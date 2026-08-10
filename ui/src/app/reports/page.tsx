@@ -1,8 +1,8 @@
 'use client';
 
 import { addDays, format, subDays } from 'date-fns';
-import { BarChart3, Calendar, ChevronLeft, ChevronRight, Download } from 'lucide-react';
-import { useEffect,useState } from 'react';
+import { BarChart3, Calendar, ChevronDown, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import {
   getDailyReportApiV1OrganizationsReportsDailyGet,
@@ -10,11 +10,8 @@ import {
   getWorkflowOptionsApiV1OrganizationsReportsWorkflowsGet
 } from '@/client/sdk.gen';
 import type { WorkflowRunDetail } from '@/client/types.gen';
-import { Button } from '@/components/ui/button';
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
-import { Card } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUserConfig } from '@/context/UserConfigContext';
 import { useAuth } from '@/lib/auth';
@@ -62,14 +59,12 @@ export default function ReportsPage() {
 
   const timezone = userConfig?.timezone || 'America/New_York';
 
-  // Fetch workflows on mount
   useEffect(() => {
     const fetchWorkflows = async () => {
       if (!auth.isAuthenticated) return;
 
       try {
-        const response = await getWorkflowOptionsApiV1OrganizationsReportsWorkflowsGet({
-        });
+        const response = await getWorkflowOptionsApiV1OrganizationsReportsWorkflowsGet({});
         if (response.data) {
           setWorkflows(response.data);
         }
@@ -80,7 +75,6 @@ export default function ReportsPage() {
     fetchWorkflows();
   }, [auth.isAuthenticated]);
 
-  // Fetch report data when date or workflow changes
   useEffect(() => {
     const fetchReport = async () => {
       if (!auth.isAuthenticated) return;
@@ -129,7 +123,6 @@ export default function ReportsPage() {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       const workflowId = selectedWorkflow === 'all' ? undefined : parseInt(selectedWorkflow);
 
-      // Fetch detailed runs data
       const response = await getDailyRunsDetailApiV1OrganizationsReportsDailyRunsGet({
         query: {
           date: dateStr,
@@ -139,7 +132,6 @@ export default function ReportsPage() {
       });
 
       if (response.data && response.data.length > 0) {
-        // Prepare CSV content
         const headers = ['Phone Number', 'Disposition', 'Duration (seconds)', 'Workflow Run URL'];
         const rows = response.data.map((run: WorkflowRunDetail) => {
           const url = `${window.location.origin}/workflow/${run.workflow_id}/run/${run.run_id}`;
@@ -151,13 +143,11 @@ export default function ReportsPage() {
           ];
         });
 
-        // Create CSV content
         const csvContent = [
           headers.join(','),
           ...rows.map((row: string[]) => row.map((cell: string) => `"${cell}"`).join(','))
         ].join('\n');
 
-        // Create blob and download
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
@@ -184,156 +174,144 @@ export default function ReportsPage() {
   const isToday = format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
 
   return (
-    <div className="max-w-[1600px] mx-auto w-full p-6 space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="border-b border-[#1d1d22]/50 pb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
-            <BarChart3 className="h-6 w-6 text-[#7c3aed]" />
-            Daily Reports
-          </h1>
-          <p className="text-xs text-zinc-500 mt-1">Analytics and breakdown of daily voice agent performance.</p>
+    <div className="flex flex-col h-full text-gray-900 dark:text-white font-sans select-none relative" style={{ backgroundColor: '#161715' }}>
+      {/* Top Page Header matching demo styling */}
+      <header className="px-8 pt-6 pb-3 flex items-center justify-between sticky top-0 z-20 border-b border-gray-100 dark:border-[#282b26]" style={{ backgroundColor: '#161715' }}>
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <h1 className="text-base font-semibold text-gray-900 dark:text-white tracking-tight">
+              Daily Reports
+            </h1>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Analytics and breakdown of daily voice agent performance.
+          </p>
         </div>
 
-        {/* Date Navigation & Workflow Selector */}
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-          {/* Workflow Selector */}
-          <Select value={selectedWorkflow} onValueChange={setSelectedWorkflow}>
-            <SelectTrigger className="w-[200px] bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] text-zinc-300 rounded-xl text-xs h-10">
-              <SelectValue placeholder="Select workflow" />
-            </SelectTrigger>
-            <SelectContent className="bg-[#111113] border border-[#1d1d22] text-zinc-300 rounded-xl">
-              <SelectItem value="all" className="hover:bg-[#1a1a1f] focus:bg-[#1a1a1f] text-xs">All Workflows</SelectItem>
-              {workflows.map((workflow) => (
-                <SelectItem key={workflow.id} value={workflow.id.toString()} className="hover:bg-[#1a1a1f] focus:bg-[#1a1a1f] text-xs">
-                  {workflow.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Date Navigation */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handlePreviousDay}
-              className="h-10 w-10 bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] text-zinc-400 hover:text-white rounded-xl"
+        {/* Top Controls */}
+        <div className="flex items-center gap-3">
+          {/* Workflow selector */}
+          <div className="relative">
+            <select
+              value={selectedWorkflow}
+              onChange={(e) => setSelectedWorkflow(e.target.value)}
+              className="px-3.5 py-1.5 border border-gray-200 dark:border-[#282b26] rounded-full text-xs font-semibold text-gray-800 dark:text-gray-200 appearance-none pr-8 cursor-pointer focus:outline-hidden"
+              style={{ backgroundColor: '#161715' }}
             >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+              <option value="all" className="bg-white dark:bg-[#1c1e1a] text-gray-900 dark:text-white">All Workflows</option>
+              {workflows.map((workflow) => (
+                <option key={workflow.id} value={workflow.id.toString()} className="bg-white dark:bg-[#1c1e1a] text-gray-900 dark:text-white">
+                  {workflow.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
+          {/* Date Navigator */}
+          <div className="flex items-center gap-1 border border-gray-200 dark:border-[#282b26] rounded-full px-2 py-1" style={{ backgroundColor: '#161715' }}>
+            <button
+              onClick={handlePreviousDay}
+              className="p-1 text-gray-500 hover:text-black dark:hover:text-white cursor-pointer"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
 
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-[180px] bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] text-zinc-300 rounded-xl text-xs h-10 justify-start"
-                >
-                  <Calendar className="mr-2 h-4 w-4 text-zinc-500" />
-                  {format(selectedDate, 'MMM dd, yyyy')}
-                </Button>
+                <button className="flex items-center gap-1.5 text-xs font-semibold text-gray-800 dark:text-gray-200 px-1 cursor-pointer">
+                  <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                  <span>{format(selectedDate, 'MMM dd, yyyy')}</span>
+                </button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-[#111113] border border-[#1d1d22] rounded-xl">
+              <PopoverContent className="w-auto p-0 border border-gray-200 dark:border-[#282b26] rounded-xl" style={{ backgroundColor: '#1C1E1A' }}>
                 <CalendarPicker
                   mode="single"
                   selected={selectedDate}
                   onSelect={(date) => date && setSelectedDate(date)}
                   disabled={(date) => date > new Date()}
-                  className="bg-[#111113] text-zinc-300 rounded-xl"
+                  className="text-gray-900 dark:text-white"
                 />
               </PopoverContent>
             </Popover>
 
-            <Button
-              variant="outline"
-              size="icon"
+            <button
               onClick={handleNextDay}
               disabled={isToday}
-              className="h-10 w-10 bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] text-zinc-400 hover:text-white rounded-xl"
+              className="p-1 text-gray-500 hover:text-black dark:hover:text-white disabled:opacity-30 cursor-pointer"
             >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Timezone Display and Download Button */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="text-xs text-zinc-500">
-          Showing data for <span className="font-semibold text-zinc-300">{timezone}</span> timezone
-          {selectedWorkflow !== 'all' && (
-            <span> • Filtered by: <span className="font-semibold text-zinc-300">{workflows.find(w => w.id.toString() === selectedWorkflow)?.name}</span></span>
+      {/* Main Workspace Container */}
+      <div className="max-w-6xl w-full mx-auto px-8 pt-6 pb-16 flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+            Showing data for <strong className="text-gray-700 dark:text-gray-300">{timezone}</strong> timezone
+            {selectedWorkflow !== 'all' && (
+              <span> • Filtered by: <strong className="text-gray-700 dark:text-gray-300">{workflows.find(w => w.id.toString() === selectedWorkflow)?.name}</strong></span>
+            )}
+          </p>
+
+          {/* Download CSV Button */}
+          {!loading && report && report.metrics.total_runs > 0 && (
+            <button
+              onClick={handleDownloadCSV}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cd] text-white dark:text-[#082117] text-xs font-bold rounded-full shadow-xs transition-all cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 stroke-[2]" />
+              <span>Download CSV</span>
+            </button>
           )}
         </div>
 
-        {/* Download CSV Button */}
-        {!loading && report && report.metrics.total_runs > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownloadCSV}
-            className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] text-zinc-300 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 h-9"
-          >
-            <Download className="h-4 w-4" />
-            Download CSV
-          </Button>
+        {/* Loading State */}
+        {loading && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Skeleton className="h-28 rounded-2xl border border-gray-200 dark:border-[#282b26]" style={{ backgroundColor: '#1C1E1A' }} />
+              <Skeleton className="h-28 rounded-2xl border border-gray-200 dark:border-[#282b26]" style={{ backgroundColor: '#1C1E1A' }} />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Skeleton className="h-64 rounded-2xl border border-gray-200 dark:border-[#282b26]" style={{ backgroundColor: '#1C1E1A' }} />
+              <Skeleton className="h-64 rounded-2xl border border-gray-200 dark:border-[#282b26]" style={{ backgroundColor: '#1C1E1A' }} />
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="p-4 border border-red-500/20 bg-red-500/10 rounded-2xl text-center text-red-500 text-xs font-semibold">
+            {error}
+          </div>
+        )}
+
+        {/* Report Content */}
+        {report && !loading && !error && (
+          <>
+            {/* Stat Cards (Row 1) */}
+            <MetricsCards metrics={report.metrics} />
+
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <DispositionChart data={report.disposition_distribution} />
+              <DurationChart data={report.call_duration_distribution} />
+            </div>
+
+            {/* Bottom Summary Banner */}
+            <div
+              className="border border-gray-200/80 dark:border-[#282b26] rounded-2xl p-4 text-center text-xs font-semibold text-gray-600 dark:text-gray-300"
+              style={{ backgroundColor: '#1C1E1A' }}
+            >
+              {report.metrics.total_runs} workflow run{report.metrics.total_runs !== 1 ? 's' : ''} found for {format(selectedDate, 'MMMM dd, yyyy')}
+            </div>
+          </>
         )}
       </div>
-
-      {/* Loading State */}
-      {loading && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 h-[120px]">
-              <Skeleton className="h-4 w-28 bg-[#1c1c1f] mb-3" />
-              <Skeleton className="h-8 w-20 bg-[#1c1c1f]" />
-            </div>
-            <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 h-[120px]">
-              <Skeleton className="h-4 w-28 bg-[#1c1c1f] mb-3" />
-              <Skeleton className="h-8 w-20 bg-[#1c1c1f]" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 h-[340px]">
-              <Skeleton className="h-4 w-40 bg-[#1c1c1f] mb-6" />
-              <Skeleton className="h-full w-full bg-[#1c1c1f]" />
-            </div>
-            <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 h-[340px]">
-              <Skeleton className="h-4 w-40 bg-[#1c1c1f] mb-6" />
-              <Skeleton className="h-full w-full bg-[#1c1c1f]" />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && !loading && (
-        <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 text-center text-rose-400 text-xs">
-          {error}
-        </div>
-      )}
-
-      {/* Report Content */}
-      {report && !loading && !error && (
-        <>
-          {/* Metrics Cards */}
-          <MetricsCards metrics={report.metrics} />
-
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <DispositionChart data={report.disposition_distribution} />
-            <DurationChart data={report.call_duration_distribution} />
-          </div>
-
-          {/* No Data Message */}
-          {report.metrics.total_runs === 0 && (
-            <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-8 text-center text-zinc-500 text-xs">
-              No workflow runs found for <span className="font-semibold text-zinc-400">{format(selectedDate, 'MMMM dd, yyyy')}</span>
-              {selectedWorkflow !== 'all' && ' for the selected workflow'}
-            </div>
-          )}
-        </>
-      )}
     </div>
   );
 }

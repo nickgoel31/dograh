@@ -9,25 +9,23 @@ import {
   processDocumentApiV1KnowledgeBaseProcessDocumentPost,
 } from '@/client/sdk.gen';
 import type { DocumentUploadResponseSchema } from '@/client/types.gen';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAppConfig } from '@/context/AppConfigContext';
 import logger from '@/lib/logger';
 
 interface DocumentUploadProps {
   onUploadSuccess: () => void;
+  onClose?: () => void;
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_FILE_TYPES = ['.pdf', '.docx', '.doc', '.txt', '.json'];
 
-export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
+export default function DocumentUpload({ onUploadSuccess, onClose }: DocumentUploadProps) {
   const { config } = useAppConfig();
   const isOSS = config?.deploymentMode === 'oss';
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [retrievalMode, setRetrievalMode] = useState<string>('full_document');
+  const [retrievalMode, setRetrievalMode] = useState<'full_document' | 'chunked'>('chunked');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
@@ -75,13 +73,14 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
 
   const clearSelectedFile = () => {
     setSelectedFile(null);
-    setRetrievalMode('full_document');
+    setRetrievalMode('chunked');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  const uploadFile = async () => {
+  const uploadFile = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!selectedFile) return;
 
     setUploading(true);
@@ -174,76 +173,8 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
     }
   };
 
-  const handleButtonClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  // Step 2: File selected — show retrieval mode choice
-  if (selectedFile && !uploading) {
-    return (
-      <div className="space-y-4">
-        {ossNotice}
-        {/* Selected file info */}
-        <div className="flex items-center gap-3 p-4 bg-[#08080a] border border-[#1d1d22] rounded-xl">
-          <FileText className="w-8 h-8 text-purple-400 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-zinc-200 truncate">{selectedFile.name}</p>
-            <p className="text-[10px] text-zinc-500 mt-0.5">
-              {(selectedFile.size / 1024).toFixed(1)} KB
-            </p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={clearSelectedFile} className="p-1 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-[#1a1a1f] transition-all bg-transparent">
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-
-        {/* Retrieval mode selection */}
-        <div className="space-y-3">
-          <Label className="text-xs font-bold text-zinc-300 block mb-1.5">How should the agent use this document?</Label>
-          <RadioGroup value={retrievalMode} onValueChange={setRetrievalMode} className="space-y-3">
-            <label
-              htmlFor="full_document"
-              className={`flex items-start gap-3 p-4 bg-[#08080a] border rounded-xl cursor-pointer transition-colors ${
-                retrievalMode === 'full_document' ? 'border-[#7c3aed]' : 'border-[#1d1d22] hover:border-zinc-700'
-              }`}
-            >
-              <RadioGroupItem value="full_document" id="full_document" className="mt-0.5 border-[#232328] text-[#7c3aed]" />
-              <div>
-                <p className="font-bold text-xs text-zinc-200">Full Document</p>
-                <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
-                  The entire document is provided to the agent on each retrieval.
-                  Best for menus, price lists, FAQs, and other small reference documents.
-                </p>
-              </div>
-            </label>
-            <label
-              htmlFor="chunked"
-              className={`flex items-start gap-3 p-4 bg-[#08080a] border rounded-xl cursor-pointer transition-colors ${
-                retrievalMode === 'chunked' ? 'border-[#7c3aed]' : 'border-[#1d1d22] hover:border-zinc-700'
-              }`}
-            >
-              <RadioGroupItem value="chunked" id="chunked" className="mt-0.5 border-[#232328] text-[#7c3aed]" />
-              <div>
-                <p className="font-bold text-xs text-zinc-200">Chunked Search</p>
-                <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
-                  The document is split into chunks and the most relevant ones are retrieved.
-                  Better for large documents like manuals or policies.
-                </p>
-              </div>
-            </label>
-          </RadioGroup>
-        </div>
-
-        {/* Upload button */}
-        <Button onClick={uploadFile} className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer w-full">
-          Upload & Process
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4">
+    <form onSubmit={uploadFile} className="space-y-5">
       {ossNotice}
       <input
         ref={fileInputRef}
@@ -254,54 +185,155 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
         disabled={uploading}
       />
 
-      {/* Drag and Drop Area */}
-      <div
-        className={`
-          border-2 border-dashed rounded-xl p-8 text-center transition-colors
-          ${dragActive ? 'border-[#7c3aed] bg-[#7c3aed]/5' : 'border-[#1d1d22]'}
-          ${uploading ? 'opacity-50 pointer-events-none' : 'cursor-pointer hover:border-zinc-700 hover:bg-[#08080a]/50'}
-        `}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-        onClick={handleButtonClick}
-      >
-        <Upload className="w-12 h-12 mx-auto mb-4 text-zinc-600" />
-        <p className="text-sm font-semibold mb-1 text-zinc-200">
-          {uploading ? 'Uploading...' : 'Drop your document here'}
-        </p>
-        <p className="text-xs text-zinc-500 mb-4">
-          or click to browse
-        </p>
-        <p className="text-[10px] text-zinc-500">
-          Supported formats: {ACCEPTED_FILE_TYPES.join(', ')} (Max 5MB)
-        </p>
+      {/* Selected File Card or Drag & Drop Zone */}
+      {selectedFile ? (
+        <div
+          className="flex items-center justify-between p-3.5 border border-gray-200 dark:border-[#282b26] rounded-xl"
+          style={{ backgroundColor: '#161715' }}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 rounded-lg bg-rose-100/80 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                {selectedFile.name}
+              </span>
+              <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                {(selectedFile.size / 1024).toFixed(1)} KB
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={clearSelectedFile}
+            className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      ) : (
+        <label
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition-colors space-y-2 ${
+            dragActive
+              ? 'border-black dark:border-[#bcf0da] bg-gray-100/50 dark:bg-white/5'
+              : 'border-gray-200 dark:border-[#282b26] hover:border-gray-400 dark:hover:border-gray-500'
+          }`}
+          style={{ backgroundColor: '#161715' }}
+        >
+          <Upload className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+            Click to browse PDF or Document file
+          </span>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">
+            Supported formats: {ACCEPTED_FILE_TYPES.join(', ')} (Max 5MB)
+          </span>
+          <input
+            type="file"
+            accept={ACCEPTED_FILE_TYPES.join(',')}
+            onChange={handleFileSelect}
+            className="hidden"
+            disabled={uploading}
+          />
+        </label>
+      )}
+
+      {/* Usage Radio Options matching demo */}
+      <div className="space-y-3 pt-1">
+        <label className="text-xs font-bold text-gray-900 dark:text-white block">
+          How should the agent use this document?
+        </label>
+
+        {/* Option 1: Full Document */}
+        <div
+          onClick={() => setRetrievalMode('full_document')}
+          className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+            retrievalMode === 'full_document'
+              ? 'border-black dark:border-[#bcf0da] ring-1 ring-black dark:ring-[#bcf0da]'
+              : 'border-gray-200 dark:border-[#282b26] hover:border-gray-300 dark:hover:border-[#383c35]'
+          }`}
+          style={{ backgroundColor: '#161715' }}
+        >
+          <input
+            type="radio"
+            name="retrievalMode"
+            checked={retrievalMode === 'full_document'}
+            onChange={() => setRetrievalMode('full_document')}
+            className="mt-0.5 accent-black dark:accent-[#bcf0da] cursor-pointer"
+          />
+          <div className="space-y-1">
+            <h4 className="text-xs font-bold text-gray-900 dark:text-white">
+              Full Document
+            </h4>
+            <p className="text-[11.5px] text-gray-500 dark:text-gray-400 leading-relaxed">
+              The entire document is provided to the agent on each retrieval. Best for menus, price lists, FAQs, and other small reference documents.
+            </p>
+          </div>
+        </div>
+
+        {/* Option 2: Chunked Search */}
+        <div
+          onClick={() => setRetrievalMode('chunked')}
+          className={`p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+            retrievalMode === 'chunked'
+              ? 'border-black dark:border-[#bcf0da] ring-1 ring-black dark:ring-[#bcf0da]'
+              : 'border-gray-200 dark:border-[#282b26] hover:border-gray-300 dark:hover:border-[#383c35]'
+          }`}
+          style={{ backgroundColor: '#161715' }}
+        >
+          <input
+            type="radio"
+            name="retrievalMode"
+            checked={retrievalMode === 'chunked'}
+            onChange={() => setRetrievalMode('chunked')}
+            className="mt-0.5 accent-black dark:accent-[#bcf0da] cursor-pointer"
+          />
+          <div className="space-y-1">
+            <h4 className="text-xs font-bold text-gray-900 dark:text-white">
+              Chunked Search
+            </h4>
+            <p className="text-[11.5px] text-gray-500 dark:text-gray-400 leading-relaxed">
+              The document is split into chunks and the most relevant ones are retrieved. Better for large documents like manuals or policies.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Upload Progress */}
       {uploading && (
         <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Uploading...</span>
+          <div className="flex justify-between text-xs font-semibold text-gray-700 dark:text-gray-300">
+            <span>Uploading & Processing...</span>
             <span>{uploadProgress}%</span>
           </div>
-          <Progress value={uploadProgress} className="h-2 bg-[#08080a] border border-[#1d1d22] rounded-full [&>div]:bg-[#7c3aed]" />
+          <Progress value={uploadProgress} className="h-2 bg-gray-200 dark:bg-[#161715] rounded-full [&>div]:bg-black dark:[&>div]:bg-[#bcf0da]" />
         </div>
       )}
 
-      {/* Manual Upload Button */}
-      {!uploading && (
-        <div className="flex justify-center">
-          <Button
+      {/* Submit Button */}
+      <div className="pt-2 flex items-center justify-end gap-3">
+        {onClose && (
+          <button
             type="button"
-            onClick={handleButtonClick}
-            className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-4 py-2 rounded-xl text-xs text-zinc-300 font-medium transition-colors cursor-pointer"
+            onClick={onClose}
+            className="px-5 py-2.5 bg-gray-100 dark:bg-[#161715] hover:bg-gray-200 dark:hover:bg-[#232621] text-gray-800 dark:text-gray-200 text-xs font-semibold rounded-full transition-all cursor-pointer"
           >
-            Choose File
-          </Button>
-        </div>
-      )}
-    </div>
+            Cancel
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={!selectedFile || uploading}
+          className="flex-1 py-3 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cd] disabled:opacity-50 text-white dark:text-[#082117] text-xs font-bold rounded-full shadow-xs transition-all active:scale-[0.99] text-center cursor-pointer"
+        >
+          {uploading ? 'Processing...' : 'Upload & Process'}
+        </button>
+      </div>
+    </form>
   );
 }

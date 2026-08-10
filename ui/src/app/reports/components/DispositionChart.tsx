@@ -11,8 +11,6 @@ import {
   YAxis,
 } from 'recharts';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
 interface DispositionData {
   disposition: string;
   count: number;
@@ -24,75 +22,63 @@ interface DispositionChartProps {
 }
 
 const COLORS = [
-  '#7c3aed', // accent-purple
-  '#2563eb', // accent-blue
-  '#10b981', // accent-green
-  '#fbbf24', // warning-amber
-  '#f87171', // danger-rose
-  '#71717a', // text-subtle
+  'bg-amber-500',
+  'bg-emerald-500',
+  'bg-blue-500',
+  'bg-rose-400',
+  'bg-purple-500',
+  'bg-gray-400',
+];
+
+const HEX_COLORS = [
+  '#f59e0b',
+  '#10b981',
+  '#3b82f6',
+  '#fb7185',
+  '#a855f7',
+  '#9ca3af',
 ];
 
 export function DispositionChart({ data }: DispositionChartProps) {
   const chartData = data.map((item, index) => ({
     ...item,
-    fill: COLORS[index % COLORS.length],
+    colorClass: COLORS[index % COLORS.length],
+    fill: HEX_COLORS[index % HEX_COLORS.length],
   }));
 
-  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: DispositionData & { fill: string } }> }) => {
-    if (active && payload && payload[0]) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-[#121214] border border-[#262629] rounded-xl shadow-2xl p-3 text-xs">
-          <p className="font-semibold text-white mb-1">{data.disposition}</p>
-          <p className="text-zinc-300">Count: <span className="font-medium text-white">{data.count}</span></p>
-          <p className="text-zinc-400 mt-0.5">{data.percentage}% of total</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
-    <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
-      <div className="flex justify-between items-center mb-6">
-        <span className="text-sm font-semibold text-zinc-200">Disposition Distribution</span>
-      </div>
-      <div>
-        {data.length === 0 ? (
-          <div className="h-[300px] flex items-center justify-center text-zinc-500 text-xs">
-            No disposition data available
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart
-              data={chartData}
-              layout="horizontal"
-              margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1d1d22" opacity={0.5} />
-              <XAxis
-                dataKey="disposition"
-                angle={-45}
-                textAnchor="end"
-                height={80}
-                interval={0}
-                tick={{ fontSize: 10, fill: '#71717a' }}
-                stroke="#1d1d22"
-              />
-              <YAxis
-                tick={{ fontSize: 10, fill: '#71717a' }}
-                stroke="#1d1d22"
-              />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.02)' }} />
-              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </div>
+    <div
+      className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-4"
+      style={{ backgroundColor: '#1C1E1A' }}
+    >
+      <h3 className="text-xl font-normal text-gray-900 dark:text-white font-serif tracking-tight">
+        Disposition Distribution
+      </h3>
+
+      {data.length === 0 ? (
+        <div className="h-[240px] flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs">
+          No disposition data available
+        </div>
+      ) : (
+        <div className="space-y-4 pt-2">
+          {chartData.map((item, idx) => (
+            <div key={idx} className="space-y-1.5">
+              <div className="flex justify-between text-xs font-semibold text-gray-700 dark:text-gray-300">
+                <span className="font-mono">{item.disposition}</span>
+                <span>
+                  {item.count} ({item.percentage}%)
+                </span>
+              </div>
+              <div className="h-2.5 w-full bg-gray-100 dark:bg-[#161715] rounded-full overflow-hidden border border-gray-200/50 dark:border-[#282b26]">
+                <div
+                  className={`h-full ${item.colorClass} rounded-full transition-all duration-500`}
+                  style={{ width: `${Math.min(100, Math.max(2, item.percentage))}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,9 @@
 
 import {
   ArrowLeft,
+  Check,
   Copy,
+  Edit2,
   ExternalLink,
   Pencil,
   Plus,
@@ -27,34 +29,7 @@ import type {
 } from "@/client/types.gen";
 import { ConfigFormDialog } from "@/components/telephony/ConfigFormDialog";
 import { PhoneNumberDialog } from "@/components/telephony/PhoneNumberDialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
 
@@ -77,14 +52,11 @@ export default function TelephonyConfigurationDetailPage() {
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumberResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [editConfigOpen, setEditConfigOpen] = useState(false);
+  const [copiedWebhook, setCopiedWebhook] = useState(false);
 
   const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
-  const [phoneEditTarget, setPhoneEditTarget] = useState<PhoneNumberResponse | null>(
-    null,
-  );
-  const [phoneDeleteTarget, setPhoneDeleteTarget] = useState<PhoneNumberResponse | null>(
-    null,
-  );
+  const [phoneEditTarget, setPhoneEditTarget] = useState<PhoneNumberResponse | null>(null);
+  const [phoneDeleteTarget, setPhoneDeleteTarget] = useState<PhoneNumberResponse | null>(null);
 
   const fetchAll = useCallback(async () => {
     if (authLoading || !user || !configId) return;
@@ -175,246 +147,283 @@ export default function TelephonyConfigurationDetailPage() {
     }
   };
 
+  const handleCopyWebhook = () => {
+    const url = getInboundWebhookUrl();
+    navigator.clipboard.writeText(url);
+    setCopiedWebhook(true);
+    setTimeout(() => setCopiedWebhook(false), 2000);
+  };
+
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 space-y-3">
-        <Skeleton className="h-10 w-1/3" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-64 w-full" />
+      <div className="w-full py-16 flex items-center justify-center">
+        <div className="space-y-4">
+          <Skeleton className="h-12 w-64" />
+          <Skeleton className="h-64 w-96" />
+        </div>
       </div>
     );
   }
 
   if (!config) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Button variant="ghost" onClick={() => router.push("/telephony-configurations")}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back
-        </Button>
-        <p className="mt-4 text-muted-foreground">Configuration not found.</p>
+      <div className="p-8 max-w-5xl mx-auto space-y-4">
+        <button
+          onClick={() => router.push("/telephony-configurations")}
+          className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> Back
+        </button>
+        <p className="text-sm text-gray-400">Configuration not found.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#08080a] p-6 max-w-[1600px] mx-auto w-full page-enter space-y-6">
-      <div>
-        <Link
-          href="/telephony-configurations"
-          className="inline-flex items-center text-xs text-zinc-400 hover:text-white transition-colors"
+    <div className="flex flex-col h-full text-gray-900 dark:text-white font-sans select-none relative" style={{ backgroundColor: '#161715' }}>
+      {/* Top Header */}
+      <header className="px-8 pt-6 pb-2 flex items-center justify-between sticky top-0 z-20 border-b border-gray-100 dark:border-[#282b26]" style={{ backgroundColor: '#161715' }}>
+        <button
+          onClick={() => router.push("/telephony-configurations")}
+          className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
         >
-          <ArrowLeft className="h-4 w-4 mr-1" /> All configurations
-        </Link>
-      </div>
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>All configurations</span>
+        </button>
+      </header>
 
-      <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 shadow-none">
-        <CardHeader className="flex flex-row items-start justify-between gap-4 p-0 pb-6 mb-6 border-b border-[#1d1d22]/50">
-          <div className="space-y-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <CardTitle className="truncate text-lg font-bold text-white">{config.name}</CardTitle>
-              <span className="bg-[#1c1c1f] text-zinc-400 border border-zinc-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">{config.provider}</span>
-              {config.is_default_outbound && (
-                <span className="bg-blue-500/15 text-blue-400 text-[9px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                  <Star className="h-3 w-3 fill-current" />
-                  Default
+      <div className="max-w-5xl w-full mx-auto px-8 pt-6 pb-16 flex flex-col gap-6">
+        {/* Top Config Header Card */}
+        <div
+          className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-6"
+          style={{ backgroundColor: '#1C1E1A' }}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {config.name}
+                </h2>
+                <span className="px-2 py-0.5 bg-gray-100 dark:bg-[#282b26] text-gray-700 dark:text-gray-300 font-mono text-[10px] font-bold rounded uppercase">
+                  {config.provider}
                 </span>
-              )}
+                {config.is_default_outbound && (
+                  <span className="px-2.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-[11px] font-bold rounded-full flex items-center gap-1">
+                    <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                    Default
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Updated {new Date(config.updated_at).toLocaleString()} • Configuration ID: {config.id}
+              </p>
             </div>
-            <CardDescription className="text-xs text-zinc-500">
-              Updated {new Date(config.updated_at).toLocaleString()}
-            </CardDescription>
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard
-                  .writeText(String(config.id))
-                  .then(() => toast.success("Configuration ID copied"))
-                  .catch(() => toast.error("Failed to copy ID"));
-              }}
-              title="Click to copy"
-              className="inline-flex items-center gap-1 self-start rounded font-mono text-[9px] text-zinc-500 hover:text-zinc-300 transition-colors mt-1"
-            >
-              <span className="truncate">Configuration ID: {config.id}</span>
-              <Copy className="h-3 w-3 shrink-0" />
-            </button>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {!config.is_default_outbound && (
-              <Button className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors cursor-pointer" onClick={onSetDefaultOutbound}>
-                <Star className="h-4 w-4 mr-2" /> Set as default
-              </Button>
-            )}
-            <Button className="bg-[#1c1c1f] hover:bg-[#27272a] text-xs font-semibold py-2 px-4 rounded-xl text-zinc-300 transition-colors border border-zinc-700/50 cursor-pointer" onClick={() => setEditConfigOpen(true)}>
-              <Pencil className="h-4 w-4 mr-2" /> Edit credentials
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4 p-0">
-          <div className="bg-[#08080a] border border-[#1d1d22] rounded-xl p-4">
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
-              {Object.entries(config.credentials ?? {}).map(([k, v]) => (
-                <div key={k} className="flex justify-between gap-3 border-b border-[#1d1d22]/50 pb-1.5 last:border-0 last:pb-0">
-                  <dt className="text-zinc-400 font-medium">{k}</dt>
-                  <dd className="font-mono text-right text-white truncate max-w-[60%]">
-                    {String(v ?? "")}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] text-zinc-500 mt-1 leading-snug">Inbound webhook URL</p>
-            <button
-              type="button"
-              onClick={() => {
-                const url = getInboundWebhookUrl();
-                navigator.clipboard
-                  .writeText(url)
-                  .then(() => toast.success("Inbound webhook URL copied"))
-                  .catch(() => toast.error("Failed to copy URL"));
-              }}
-              title="Click to copy inbound webhook URL"
-              aria-label="Copy inbound webhook URL"
-              className="inline-flex items-center gap-1 self-start rounded font-mono text-xs text-zinc-400 hover:text-white transition-colors"
-            >
-              <span className="truncate">{getInboundWebhookUrl()}</span>
-              <Copy className="h-3 w-3 shrink-0" />
-            </button>
-          </div>
-        </CardContent>
-      </Card>
 
-      <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 shadow-none">
-        <CardHeader className="flex flex-row items-start justify-between gap-4 p-0 pb-6 mb-6 border-b border-[#1d1d22]/50">
-          <div className="space-y-1">
-            <CardTitle className="text-lg font-bold text-white">Phone numbers</CardTitle>
-            <CardDescription className="text-xs text-zinc-500 leading-relaxed">
-              Numbers used as caller ID for outbound and accepted for inbound matching.
-              SIP URIs and extensions are supported alongside PSTN numbers.{" "}
-              <a
-                href="https://docs.dograh.com/integrations/telephony/inbound"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:underline inline-flex items-center gap-0.5"
+            <div className="flex items-center gap-2">
+              {!config.is_default_outbound && (
+                <button
+                  onClick={onSetDefaultOutbound}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 dark:bg-[#161715] hover:bg-gray-200 dark:hover:bg-[#232621] text-gray-900 dark:text-gray-200 text-xs font-semibold rounded-full transition-all cursor-pointer"
+                >
+                  <Star className="w-3.5 h-3.5" />
+                  <span>Set as default</span>
+                </button>
+              )}
+              <button
+                onClick={() => setEditConfigOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 dark:bg-[#161715] hover:bg-gray-200 dark:hover:bg-[#232621] text-gray-900 dark:text-gray-200 text-xs font-semibold rounded-full transition-all cursor-pointer"
               >
-                Inbound docs <ExternalLink className="h-3 w-3 inline" />
-              </a>
-            </CardDescription>
+                <Edit2 className="w-3.5 h-3.5" />
+                <span>Edit credentials</span>
+              </button>
+            </div>
           </div>
-          <Button
-            className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer"
-            onClick={() => {
-              setPhoneEditTarget(null);
-              setPhoneDialogOpen(true);
-            }}
+
+          {/* Credentials Box */}
+          <div
+            className="border border-gray-200/70 dark:border-[#282b26] rounded-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs"
+            style={{ backgroundColor: '#161715' }}
           >
-            <Plus className="h-4 w-4 mr-2 inline" /> Add phone number
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0">
+            {Object.entries(config.credentials ?? {}).map(([k, v]) => (
+              <div key={k}>
+                <span className="text-gray-400 dark:text-gray-500 font-mono text-[11px]">{k}</span>
+                <p className="font-mono font-bold text-gray-800 dark:text-gray-200 pt-0.5 truncate">
+                  {String(v ?? "")}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Inbound Webhook URL */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+              Inbound webhook URL
+            </label>
+            <div
+              className="flex items-center justify-between p-3 border border-gray-200 dark:border-[#282b26] rounded-xl"
+              style={{ backgroundColor: '#161715' }}
+            >
+              <span className="font-mono text-xs text-gray-800 dark:text-gray-200 truncate">
+                {getInboundWebhookUrl()}
+              </span>
+              <button
+                onClick={handleCopyWebhook}
+                className="flex items-center gap-1 text-xs font-semibold text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors ml-2 flex-shrink-0 cursor-pointer"
+              >
+                {copiedWebhook ? (
+                  <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Phone Numbers Section Card */}
+        <div
+          className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-6"
+          style={{ backgroundColor: '#1C1E1A' }}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                Phone numbers
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xl leading-relaxed">
+                Numbers used as caller ID for outbound and accepted for inbound matching. SIP URIs and extensions are supported alongside PSTN numbers.{" "}
+                <a
+                  href="https://docs.dograh.com/integrations/telephony/inbound"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-amber-700 dark:text-amber-400 hover:underline"
+                >
+                  Inbound docs
+                </a>
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setPhoneEditTarget(null);
+                setPhoneDialogOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cd] text-white dark:text-[#082117] text-xs font-bold rounded-full shadow-xs transition-all active:scale-[0.98] w-fit flex-shrink-0 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Add phone number</span>
+            </button>
+          </div>
+
+          {/* Phone Numbers Table */}
           {phoneNumbers.length === 0 ? (
-            <p className="text-xs text-zinc-400">
-              No phone numbers yet. Add one to start placing or receiving calls on this
-              configuration.
+            <p className="text-xs text-gray-400 dark:text-gray-500 py-4">
+              No phone numbers yet. Add one to start placing or receiving calls on this configuration.
             </p>
           ) : (
-            <Table className="w-full text-left text-xs border-collapse">
-              <TableHeader>
-                <TableRow className="border-b border-[#1d1d22] text-zinc-500 font-medium">
-                  <TableHead className="pb-3 font-medium">Address</TableHead>
-                  <TableHead className="pb-3 font-medium">Type</TableHead>
-                  <TableHead className="pb-3 font-medium">Label</TableHead>
-                  <TableHead className="pb-3 font-medium">Status</TableHead>
-                  <TableHead className="pb-3 font-medium">Inbound workflow</TableHead>
-                  <TableHead className="pb-3 font-medium text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="divide-y divide-[#1d1d22]/50">
-                {phoneNumbers.map((n) => (
-                  <TableRow key={n.id} className="group hover:bg-white/1 transition-colors">
-                    <TableCell className="py-3.5 font-mono text-zinc-300">{n.address}</TableCell>
-                    <TableCell className="py-3.5">
-                      <span className="bg-[#1c1c1f] text-zinc-400 border border-zinc-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">{n.address_type}</span>
-                    </TableCell>
-                    <TableCell className="py-3.5 text-zinc-400">
-                      {n.label ?? "-"}
-                    </TableCell>
-                    <TableCell className="py-3.5">
-                      <div className="flex flex-wrap gap-1">
-                        {n.is_active ? (
-                          <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 text-[10px] font-semibold px-2.5 py-0.5 rounded-full">Active</span>
-                        ) : (
-                          <span className="bg-zinc-800 text-zinc-400 border border-zinc-700/50 text-[10px] font-semibold px-2.5 py-0.5 rounded-full">Inactive</span>
-                        )}
-                        {n.is_default_caller_id && (
-                          <span className="bg-blue-500/15 text-blue-400 text-[9px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                            <Star className="h-3 w-3 fill-current" /> Default caller
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-3.5 text-zinc-400">
-                      {n.inbound_workflow_id ? (
-                        <Link
-                          href={`/workflow/${n.inbound_workflow_id}`}
-                          className="inline-flex items-center gap-1 hover:underline hover:text-white transition-colors"
-                        >
-                          <span>#{n.inbound_workflow_id}</span>
-                          {n.inbound_workflow_name && (
-                            <span
-                              className="truncate max-w-[160px] text-zinc-500"
-                              title={n.inbound_workflow_name}
-                            >
-                              {n.inbound_workflow_name.length > 24
-                                ? `${n.inbound_workflow_name.slice(0, 24)}…`
-                                : n.inbound_workflow_name}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-[#282b26] text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wider text-[10.5px]">
+                    <th className="pb-3 px-2">Address</th>
+                    <th className="pb-3 px-2">Type</th>
+                    <th className="pb-3 px-2">Label</th>
+                    <th className="pb-3 px-2">Status</th>
+                    <th className="pb-3 px-2">Inbound workflow</th>
+                    <th className="pb-3 px-2 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-[#282b26]">
+                  {phoneNumbers.map((num) => (
+                    <tr key={num.id} className="hover:bg-gray-50/60 dark:hover:bg-[#161715]/60 transition-colors">
+                      <td className="py-3.5 px-2 font-semibold font-mono text-gray-900 dark:text-white">
+                        {num.address}
+                      </td>
+                      <td className="py-3.5 px-2">
+                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-[#282b26] font-bold text-[10px] text-gray-700 dark:text-gray-300 rounded uppercase">
+                          {num.address_type}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-2 text-gray-700 dark:text-gray-300 font-medium">
+                        {num.label ?? "-"}
+                      </td>
+                      <td className="py-3.5 px-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {num.is_active ? (
+                            <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-400 font-bold text-[10.5px] rounded-full">
+                              Active
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-gray-200 dark:bg-[#282b26] text-gray-700 dark:text-gray-400 font-bold text-[10.5px] rounded-full">
+                              Inactive
                             </span>
                           )}
-                        </Link>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell className="py-3.5 text-right">
-                      <div className="flex justify-end gap-1.5">
-                        {!n.is_default_caller_id && n.is_active && (
-                          <Button
-                            variant="ghost"
-                            className="p-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-white transition-colors cursor-pointer bg-transparent"
-                            onClick={() => onSetDefaultCaller(n)}
-                            title="Set as default caller ID"
+                          {num.is_default_caller_id && (
+                            <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-[10.5px] font-bold rounded-full flex items-center gap-1">
+                              <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                              Default caller
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-2 text-gray-400 dark:text-gray-500">
+                        {num.inbound_workflow_id ? (
+                          <Link
+                            href={`/workflow/${num.inbound_workflow_id}`}
+                            className="inline-flex items-center gap-1 hover:underline hover:text-amber-700 dark:hover:text-amber-400 transition-colors"
                           >
-                            <Star className="h-4 w-4" />
-                          </Button>
+                            <span>#{num.inbound_workflow_id}</span>
+                            {num.inbound_workflow_name && (
+                              <span
+                                className="truncate max-w-[160px] text-gray-400"
+                                title={num.inbound_workflow_name}
+                              >
+                                ({num.inbound_workflow_name})
+                              </span>
+                            )}
+                          </Link>
+                        ) : (
+                          "-"
                         )}
-                        <Button
-                          variant="ghost"
-                          className="p-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-white transition-colors cursor-pointer bg-transparent"
-                          onClick={() => {
-                            setPhoneEditTarget(n);
-                            setPhoneDialogOpen(true);
-                          }}
-                          title="Edit"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className="p-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-rose-400 transition-colors cursor-pointer bg-transparent"
-                          onClick={() => setPhoneDeleteTarget(n)}
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      </td>
+                      <td className="py-3.5 px-2 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {!num.is_default_caller_id && num.is_active && (
+                            <button
+                              onClick={() => onSetDefaultCaller(num)}
+                              className="p-1 text-gray-400 hover:text-amber-500 cursor-pointer"
+                              title="Set as default caller ID"
+                            >
+                              <Star className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              setPhoneEditTarget(num);
+                              setPhoneDialogOpen(true);
+                            }}
+                            className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 cursor-pointer"
+                            title="Edit"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setPhoneDeleteTarget(num)}
+                            className="p-1 text-gray-400 hover:text-red-600 cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <ConfigFormDialog
         open={editConfigOpen}
@@ -431,24 +440,37 @@ export default function TelephonyConfigurationDetailPage() {
         onSaved={fetchAll}
       />
 
-      <AlertDialog
-        open={!!phoneDeleteTarget}
-        onOpenChange={(o) => !o && setPhoneDeleteTarget(null)}
-      >
-        <AlertDialogContent className="bg-[#111113] border border-[#2c2c35] rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-6 text-white">
-          <AlertDialogHeader className="space-y-1">
-            <AlertDialogTitle className="text-lg font-bold text-white">Delete phone number?</AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-zinc-500 leading-relaxed">
-              <strong className="text-zinc-200">{phoneDeleteTarget?.address}</strong> will no longer accept inbound calls or be
-              available as a caller ID for this configuration.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex gap-3 justify-end pt-2 border-t border-[#1d1d22]/50">
-            <AlertDialogCancel className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors">Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer" onClick={onConfirmDeletePhone}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Delete Phone Number Confirmation Modal */}
+      {phoneDeleteTarget && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div
+            className="border border-gray-200 dark:border-[#282b26] rounded-2xl p-6 w-full max-w-lg shadow-2xl space-y-6 text-gray-900 dark:text-white"
+            style={{ backgroundColor: '#1C1E1A' }}
+          >
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">Delete phone number?</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                <strong className="text-gray-900 dark:text-white">{phoneDeleteTarget.address}</strong> will no longer accept inbound calls or be
+                available as a caller ID for this configuration.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100 dark:border-[#282b26]">
+              <button
+                onClick={() => setPhoneDeleteTarget(null)}
+                className="px-4 py-2 bg-gray-100 dark:bg-[#161715] text-gray-700 dark:text-gray-300 text-xs font-semibold rounded-full cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onConfirmDeletePhone}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-full shadow-xs cursor-pointer"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,14 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');
 @import "tailwindcss";
 
 @plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));
 
+/* Global background fix — ensure #161715 is always the dark page bg */
+.dark body,
+.dark main,
+.dark #__next,
+.dark [data-nextjs-scroll-focus-boundary] {
+  background-color: #161715 !important;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
+  --font-serif: var(--font-instrument-serif), 'Instrument Serif', Georgia, serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -50,7 +60,7 @@
 :root {
   --radius: 0.625rem;
 
-  --background: oklch(0.97 0.004 250);
+  --background: #ffffff;
   --foreground: oklch(0.12 0.012 260);
 
   --card: oklch(1 0 0);
@@ -99,7 +109,7 @@
 .dark {
   --radius: 0.625rem;
 
-  --background: oklch(0.07 0.012 260);
+  --background: #161715;
   --foreground: oklch(0.94 0.006 260);
 
   --card: oklch(0.10 0.014 260);
@@ -151,7 +161,7 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-white dark:bg-[#161715] text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
@@ -501,3 +511,133 @@
 .logo-glow {
   filter: drop-shadow(0 0 6px oklch(from var(--primary) l c h / 40%));
 }
+
+.font-serif {
+  font-family: var(--font-instrument-serif), 'Instrument Serif', Georgia, serif !important;
+}
+
+/* =====================================================
+   DEMO DESIGN OVERRIDES & DARK MODE STYLING
+   ===================================================== */
+
+html.dark {
+  --sidebar-bg: #111210;
+  --input-bg: #1a1c18;
+  --input-border: #2e312b;
+}
+
+/* --- Dark Mode Blanket Overrides --- */
+html.dark .bg-white {
+  background-color: var(--card) !important;
+}
+
+html.dark header.bg-white {
+  background-color: var(--background) !important;
+}
+
+html.dark .bg-gray-50 {
+  background-color: #232621 !important;
+}
+html.dark .bg-gray-100 {
+  background-color: #1f2119 !important;
+}
+html.dark .bg-gray-200 {
+  background-color: #282b26 !important;
+}
+
+html.dark .bg-gray-50\/80,
+html.dark .bg-gray-50\/70 {
+  background-color: rgba(35,38,33,0.85) !important;
+}
+html.dark .bg-gray-100\/80,
+html.dark .bg-gray-100\/70 {
+  background-color: rgba(31,33,25,0.9) !important;
+}
+
+/* --- Text colors --- */
+html.dark .text-gray-900 { color: #f2f4f0 !important; }
+html.dark .text-gray-800 { color: #e5e8e2 !important; }
+html.dark .text-gray-700 { color: #c8ccc5 !important; }
+html.dark .text-gray-600 { color: #b0b5ad !important; }
+html.dark .text-gray-500 { color: #9ca39a !important; }
+html.dark .text-gray-400 { color: #7c8279 !important; }
+
+html.dark .placeholder-gray-400::placeholder { color: #5e6660 !important; }
+
+/* --- Borders --- */
+html.dark .border-gray-100 { border-color: #242722 !important; }
+html.dark .border-gray-200 { border-color: #2e312b !important; }
+html.dark .border-gray-200\/90 { border-color: rgba(46,49,43,0.9) !important; }
+html.dark .border-gray-200\/80 { border-color: rgba(46,49,43,0.8) !important; }
+html.dark .border-gray-100\/80 { border-color: rgba(36,39,34,0.8) !important; }
+
+/* --- Inputs / Selects / Textareas --- */
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark select,
+html.dark textarea {
+  background-color: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--foreground) !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #5e6660 !important;
+}
+
+html.dark select option {
+  background-color: var(--input-bg) !important;
+  color: var(--foreground) !important;
+}
+
+/* --- Sidebars & Outer scroll wrappers --- */
+html.dark .w-\[280px\].bg-white,
+html.dark .w-\[68px\].bg-white,
+html.dark .w-\[270px\].bg-white {
+  background-color: var(--sidebar-bg) !important;
+}
+
+html.dark .overflow-y-auto.bg-white {
+  background-color: var(--background) !important;
+}
+
+/* --- Primary CTA buttons (bg-black) → Mint --- */
+html.dark .bg-black {
+  background-color: #bcf0da !important;
+  color: #082117 !important;
+}
+html.dark .bg-black:hover {
+  background-color: #a5e9cc !important;
+}
+html.dark .bg-black svg,
+html.dark .bg-black span {
+  color: #082117 !important;
+}
+
+html.dark .hover\:bg-gray-800:hover {
+  background-color: #a5e9cc !important;
+}
+
+/* --- Neutral-colored buttons/badges --- */
+html.dark .bg-neutral-900,
+html.dark .bg-neutral-800 {
+  background-color: #1e201c !important;
+  color: #e5e8e2 !important;
+}
+
+/* --- Sidebar active pill --- */
+html.dark .bg-gray-200\/80 {
+  background-color: rgba(255,255,255,0.10) !important;
+  color: #ffffff !important;
+}
+html.dark .bg-gray-200\/70 {
+  background-color: rgba(255,255,255,0.08) !important;
+}
+
+/* --- Hover states on list items / nav items --- */
+html.dark .hover\:bg-gray-100:hover { background-color: rgba(255,255,255,0.06) !important; }
+html.dark .hover\:bg-gray-50:hover  { background-color: rgba(255,255,255,0.04) !important; }
+
+/* --- Section labels / uppercase headings --- */
+html.dark .uppercase.text-gray-400 { color: #5e6660 !important; }
+

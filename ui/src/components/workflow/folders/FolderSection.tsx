@@ -125,38 +125,40 @@ export function FolderSection({
     return (
         <div className="mb-4">
             <Collapsible open={open} onOpenChange={setOpen}>
-                <div className="flex items-center gap-1.5 bg-[#111113]/40 border border-[#1d1d22]/40 rounded-xl p-1 mb-2">
+                <div className="flex items-center justify-between p-3.5 bg-gray-50/70 dark:bg-[#1c1e1a] hover:bg-gray-100/70 dark:hover:bg-[#232621] border border-gray-200/60 dark:border-[#282b26] rounded-xl transition-all mb-2 cursor-pointer group">
                     <CollapsibleTrigger asChild>
                         <button
-                            className="group flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-left transition-all hover:bg-[#1a1a1f] cursor-pointer"
+                            className="flex-1 flex items-center justify-between text-left cursor-pointer"
                             aria-label={`Toggle ${title}`}
                         >
-                            <ChevronRight
-                                size={14}
-                                className={cn(
-                                    'shrink-0 text-zinc-500 transition-transform duration-200 group-hover:text-zinc-300',
-                                    open && 'rotate-90',
-                                )}
-                            />
-                            {isFolder ? (
-                                open ? (
-                                    <FolderOpen size={16} className="shrink-0 text-amber-500" />
-                                ) : (
-                                    <FolderIcon size={16} className="shrink-0 text-amber-500" />
-                                )
-                            ) : isArchived ? (
-                                <Archive size={15} className="shrink-0 text-[#7c3aed]" />
-                            ) : (
-                                <Inbox size={16} className="shrink-0 text-[#7c3aed]" />
-                            )}
-                            <span
-                                className={cn('text-sm font-bold text-white', !isFolder && 'text-zinc-300')}
-                            >
-                                {title}
-                            </span>
-                            <span className="ml-1 px-2 py-0.5 text-[10px] font-bold bg-[#1c1c1f] border border-[#232328] text-zinc-400 rounded-full">
-                                {count}
-                            </span>
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="p-2 rounded-lg bg-amber-100/80 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 group-hover:bg-amber-200/80 transition-colors">
+                                    {isFolder ? (
+                                        <FolderIcon className="w-4 h-4 fill-amber-500/20" />
+                                    ) : isArchived ? (
+                                        <Archive className="w-4 h-4 text-purple-400" />
+                                    ) : (
+                                        <Inbox className="w-4 h-4 text-purple-400" />
+                                    )}
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                    <span className="text-xs font-semibold text-gray-900 dark:text-white truncate">
+                                        {title}
+                                    </span>
+                                    <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                                        {count} agent{count === 1 ? '' : 's'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <ChevronRight
+                                    size={14}
+                                    className={cn(
+                                        'shrink-0 text-gray-400 dark:text-gray-500 transition-transform duration-200 group-hover:text-gray-600 dark:group-hover:text-gray-300',
+                                        open && 'rotate-90',
+                                    )}
+                                />
+                            </div>
                         </button>
                     </CollapsibleTrigger>
 

@@ -492,10 +492,10 @@ export default function CampaignDetailPage() {
 
     if (isLoadingCampaign) {
         return (
-            <div className="min-h-screen bg-[#08080a] flex items-center justify-center">
+            <div className="w-full py-16 flex items-center justify-center">
                 <div className="space-y-4">
-                    <div className="h-8 bg-[#111113] rounded-xl w-64 animate-pulse"></div>
-                    <div className="h-64 bg-[#111113] rounded-xl w-96 animate-pulse"></div>
+                    <div className="h-8 bg-gray-100 dark:bg-[#1c1e1a] rounded-xl w-64 animate-pulse"></div>
+                    <div className="h-64 bg-gray-100 dark:bg-[#1c1e1a] rounded-xl w-96 animate-pulse"></div>
                 </div>
             </div>
         );
@@ -503,14 +503,14 @@ export default function CampaignDetailPage() {
 
     if (!campaign) {
         return (
-            <div className="min-h-screen bg-[#08080a] flex items-center justify-center">
+            <div className="w-full py-16 flex items-center justify-center">
                 <p className="text-center text-zinc-500 text-xs font-semibold">Campaign not found</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#08080a] p-6 max-w-[1600px] mx-auto w-full page-enter">
+        <div className="w-full p-6 max-w-5xl mx-auto page-enter">
             <div>
                 <Button
                     variant="ghost"

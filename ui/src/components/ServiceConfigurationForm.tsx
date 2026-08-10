@@ -1,19 +1,10 @@
 "use client";
 
-import { ExternalLink, Plus, X } from "lucide-react";
+import { CheckCircle2, ExternalLink, Key, Plus, Save, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { getDefaultConfigurationsApiV1UserConfigurationsDefaultsGet } from '@/client/sdk.gen';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { VoiceSelector } from "@/components/VoiceSelector";
 import { LANGUAGE_DISPLAY_NAMES } from "@/constants/languages";
 import { useUserConfig } from "@/context/UserConfigContext";
@@ -90,6 +81,8 @@ export interface ServiceConfigurationFormProps {
     onSave: (config: Record<string, unknown>) => Promise<void>;
     /** Text for the submit button. Defaults to "Save Configuration". */
     submitLabel?: string;
+    /** Optional documentation URL */
+    docsUrl?: string;
 }
 
 function getProviderDisplayName(
@@ -117,11 +110,15 @@ export function ServiceConfigurationForm({
     currentOverrides,
     onSave,
     submitLabel,
+    docsUrl,
 }: ServiceConfigurationFormProps) {
     const [apiError, setApiError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [savedSuccess, setSavedSuccess] = useState(false);
     const [isRealtime, setIsRealtime] = useState(false);
+    const [activeTab, setActiveTab] = useState<ServiceSegment>("llm");
     const { userConfig } = useUserConfig();
+
     const [schemas, setSchemas] = useState<Record<ServiceSegment, Record<string, ProviderSchema>>>({
         llm: {},
         tts: {},
@@ -145,7 +142,7 @@ export function ServiceConfigurationForm({
     });
     const [isCustomInput, setIsCustomInput] = useState<Record<string, boolean>>({});
 
-    // Override-specific state: which services have the override toggle enabled
+    // Override-specific state
     const [enabledOverrides, setEnabledOverrides] = useState<Record<string, boolean>>({
         llm: false,
         tts: false,
@@ -156,17 +153,15 @@ export function ServiceConfigurationForm({
     const {
         register,
         handleSubmit,
-        formState: { },
         reset,
         getValues,
         setValue,
         watch
     } = useForm();
 
-    // Build effective config source: overlay overrides onto global config
+    // Build effective config source
     const configSource = useMemo(() => {
         if (mode === 'global' || !currentOverrides) return userConfig;
-        // Merge overrides onto global config for form initialization
         const merged = { ...userConfig } as Record<string, unknown>;
         const overrideServices: (keyof ModelOverrides)[] = ["llm", "tts", "stt", "realtime"];
         for (const svc of overrideServices) {
@@ -206,6 +201,9 @@ export function ServiceConfigurationForm({
             const configData = configSource as Record<string, unknown> | null;
             if (configData?.is_realtime) {
                 setIsRealtime(true);
+                setActiveTab("realtime");
+            } else {
+                setActiveTab("llm");
             }
 
             const defaultValues: Record<string, string | number | boolean> = {};
@@ -243,7 +241,6 @@ export function ServiceConfigurationForm({
                     Object.entries(src).forEach(([field, value]) => {
                         if (field === "api_key") {
                             if (mode === 'override') {
-                                // In override mode, only load API keys from the override itself
                                 const overrideVal = currentOverrides?.[service as keyof ModelOverrides];
                                 const overrideApiKey = overrideVal && typeof overrideVal === "object"
                                     ? (overrideVal as Record<string, unknown>).api_key
@@ -320,7 +317,6 @@ export function ServiceConfigurationForm({
                 });
             });
 
-            // Initialize override toggles
             if (mode === 'override') {
                 setEnabledOverrides({
                     llm: !!currentOverrides?.llm,
@@ -336,10 +332,9 @@ export function ServiceConfigurationForm({
             setIsCustomInput(detectedCustomInput);
         };
         fetchConfigurations();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [reset, configSource]);
+    }, [reset, configSource, mode, currentOverrides]);
 
-    // Reset voice when TTS model changes if the provider has model-dependent voice options
+    // Reset voice when TTS model changes
     const ttsModel = watch("tts_model");
     useEffect(() => {
         const voiceSchema = schemas?.tts?.[serviceProviders.tts]?.properties?.voice;
@@ -353,7 +348,7 @@ export function ServiceConfigurationForm({
         }
     }, [ttsModel, serviceProviders.tts, setValue, getValues, schemas]);
 
-    // Reset language when STT model changes if the provider has model-dependent language options
+    // Reset language when STT model changes
     const sttModel = watch("stt_model");
     useEffect(() => {
         const languageSchema = schemas?.stt?.[serviceProviders.stt]?.properties?.language;
@@ -433,14 +428,12 @@ export function ServiceConfigurationForm({
         return config;
     };
 
-
     const onSubmit = async (data: FormValues) => {
         setApiError(null);
         setIsSaving(true);
 
         try {
             if (mode === 'override') {
-                // Build model_overrides for enabled services only
                 const modelOverrides: Record<string, unknown> = {};
                 const services = isRealtime ? ["realtime", "llm"] : ["llm", "tts", "stt"];
                 for (const svc of services) {
@@ -448,7 +441,6 @@ export function ServiceConfigurationForm({
                         modelOverrides[svc] = buildServiceConfig(svc as ServiceSegment, data);
                     }
                 }
-                // Include is_realtime if it differs from global
                 const globalIsRealtime = !!(userConfig as Record<string, unknown> | null)?.is_realtime;
                 if (isRealtime !== globalIsRealtime) {
                     modelOverrides.is_realtime = isRealtime;
@@ -457,7 +449,6 @@ export function ServiceConfigurationForm({
                     model_overrides: Object.keys(modelOverrides).length > 0 ? modelOverrides : undefined,
                 });
             } else {
-                // Global mode: save all services
                 const saveConfig: Record<string, unknown> = {
                     llm: buildServiceConfig("llm", data),
                     tts: buildServiceConfig("tts", data),
@@ -474,6 +465,8 @@ export function ServiceConfigurationForm({
                 await onSave(saveConfig);
             }
             setApiError(null);
+            setSavedSuccess(true);
+            setTimeout(() => setSavedSuccess(false), 3000);
         } catch (error: unknown) {
             if (error instanceof Error) {
                 setApiError(error.message);
@@ -494,131 +487,6 @@ export function ServiceConfigurationForm({
         );
     };
 
-    const renderServiceFields = (service: ServiceSegment) => {
-        const currentProvider = serviceProviders[service];
-        const providerSchema = schemas?.[service]?.[currentProvider];
-        const availableProviders = schemas?.[service] ? Object.keys(schemas[service]) : [];
-        const configFields = getConfigFields(service);
-
-        return (
-            <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label className="text-xs font-bold text-zinc-300 block mb-1.5">Provider</Label>
-                        <Select
-                            value={currentProvider}
-                            onValueChange={(providerName) => {
-                                handleProviderChange(service, providerName);
-                            }}
-                        >
-                            <SelectTrigger className="w-full bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all">
-                                <SelectValue placeholder="Select provider" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#111113] border border-[#1d1d22] text-white">
-                                {availableProviders.map((provider) => (
-                                    <SelectItem key={provider} value={provider}>
-                                        {getProviderDisplayName(provider, schemas?.[service]?.[provider])}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        {(providerSchema?.description || providerSchema?.provider_docs_url) && (
-                            <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
-                                {providerSchema?.description}{" "}
-                                {providerSchema?.provider_docs_url && (
-                                    <a
-                                        href={providerSchema.provider_docs_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-0.5 text-blue-400 hover:underline"
-                                    >
-                                        Learn more <ExternalLink className="h-3 w-3 inline" />
-                                    </a>
-                                )}
-                            </p>
-                        )}
-                    </div>
-
-                    {currentProvider && providerSchema && configFields[0] && (
-                        <div className="space-y-2">
-                            <Label className="capitalize text-xs font-bold text-zinc-300 block mb-1.5">{configFields[0].replace(/_/g, ' ')}</Label>
-                            {renderField(service, configFields[0], providerSchema)}
-                        </div>
-                    )}
-                </div>
-
-                {currentProvider && providerSchema && configFields.length > 1 && (
-                    <div className="grid grid-cols-2 gap-4">
-                        {configFields.slice(1).map((field) => {
-                            const fieldSchema = providerSchema.properties[field];
-                            const actualFieldSchema = fieldSchema?.$ref && providerSchema.$defs
-                                ? providerSchema.$defs[fieldSchema.$ref.split('/').pop() || '']
-                                : fieldSchema;
-                            const fullWidth = actualFieldSchema?.multiline;
-                            return (
-                                <div key={field} className={`space-y-2 ${fullWidth ? "col-span-2" : ""}`}>
-                                    <Label className="capitalize text-xs font-bold text-zinc-300 block mb-1.5">{field.replace(/_/g, ' ')}</Label>
-                                    {renderField(service, field, providerSchema)}
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-
-                {currentProvider && providerSchema && providerSchema.properties.api_key && (
-                    <div className="space-y-2">
-                        <Label className="text-xs font-bold text-zinc-300 block mb-1.5">{mode === 'override' ? 'API Key (leave empty to use global)' : 'API Key(s)'}</Label>
-                        {renderFieldDescription("api_key", providerSchema)}
-                        {apiKeys[service].map((key, index) => (
-                            <div key={index} className="flex gap-2 mt-1">
-                                <Input
-                                    type="text"
-                                    placeholder="Enter API key"
-                                    value={key}
-                                    className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all font-mono"
-                                    onChange={(e) => {
-                                        const newKeys = [...apiKeys[service]];
-                                        newKeys[index] = e.target.value;
-                                        setApiKeys(prev => ({ ...prev, [service]: newKeys }));
-                                    }}
-                                />
-                                {apiKeys[service].length > 1 && (
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        className="p-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-rose-400 transition-colors shrink-0"
-                                        onClick={() => {
-                                            setApiKeys(prev => ({
-                                                ...prev,
-                                                [service]: prev[service].filter((_, i) => i !== index),
-                                            }));
-                                        }}
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </Button>
-                                )}
-                            </div>
-                        ))}
-                        {mode !== 'override' && (
-                            <Button
-                                type="button"
-                                className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 font-medium transition-colors mt-2"
-                                onClick={() => {
-                                    setApiKeys(prev => ({
-                                        ...prev,
-                                        [service]: [...prev[service], ""],
-                                    }));
-                                }}
-                            >
-                                <Plus className="h-4 w-4 mr-1 inline" /> Add API Key
-                            </Button>
-                        )}
-                    </div>
-                )}
-            </div>
-        );
-    };
-
     const renderFieldDescription = (field: string, providerSchema: ProviderSchema) => {
         const schema = providerSchema.properties[field];
         if (!schema) return null;
@@ -627,28 +495,19 @@ export function ServiceConfigurationForm({
             : schema;
         if (!actualSchema?.description && !actualSchema?.docs_url) return null;
         return (
-            <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-snug">
                 {actualSchema?.description}{" "}
                 {actualSchema?.docs_url && (
                     <a
                         href={actualSchema.docs_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-0.5 text-blue-400 hover:underline"
+                        className="inline-flex items-center gap-0.5 text-amber-700 dark:text-amber-400 hover:underline"
                     >
                         Supported languages <ExternalLink className="h-3 w-3 inline" />
                     </a>
                 )}
             </p>
-        );
-    };
-
-    const renderField = (service: ServiceSegment, field: string, providerSchema: ProviderSchema) => {
-        return (
-            <>
-                {renderFieldInput(service, field, providerSchema)}
-                {renderFieldDescription(field, providerSchema)}
-            </>
         );
     };
 
@@ -683,24 +542,26 @@ export function ServiceConfigurationForm({
             if (isCustomInput[fieldKey]) {
                 return (
                     <div className="space-y-2">
-                        <Input
+                        <input
                             type={actualSchema?.type === "number" ? "number" : "text"}
                             {...(actualSchema?.type === "number" && { step: "any" })}
                             placeholder={`Enter ${field}`}
                             value={currentValue}
-                            className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
+                            className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-[#282b26] rounded-xl text-xs text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 transition-all font-medium"
+                            style={{ backgroundColor: '#161715' }}
                             onChange={(e) => {
                                 const val = actualSchema?.type === "number" ? (e.target.value === "" ? "" : Number(e.target.value)) : e.target.value;
                                 setValue(fieldKey, val, { shouldDirty: true });
                             }}
                         />
-                        <div className="flex items-center space-x-2">
-                            <Checkbox
-                                id={`custom-input-${fieldKey}`}
+                        <label className="flex items-center gap-2 pt-1 cursor-pointer">
+                            <input
+                                type="checkbox"
                                 checked={true}
-                                className="rounded bg-[#08080a] border-[#1d1d22] text-[#6366f1] focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5"
-                                onCheckedChange={(checked) => {
-                                    setIsCustomInput(prev => ({ ...prev, [fieldKey]: checked as boolean }));
+                                className="rounded border-gray-300 dark:border-[#282b26] text-black dark:text-[#bcf0da] focus:ring-black dark:focus:ring-[#bcf0da]"
+                                onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    setIsCustomInput(prev => ({ ...prev, [fieldKey]: checked }));
                                     if (!checked && options.length > 0) {
                                         const defaultOption = options[0];
                                         const parsedOption = actualSchema?.type === "number" ? Number(defaultOption) : defaultOption;
@@ -708,51 +569,49 @@ export function ServiceConfigurationForm({
                                     }
                                 }}
                             />
-                            <Label htmlFor={`custom-input-${fieldKey}`} className="text-xs text-zinc-300 cursor-pointer">
+                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                                 Enter Custom Value
-                            </Label>
-                        </div>
+                            </span>
+                        </label>
                     </div>
                 );
             }
 
             return (
                 <div className="space-y-2">
-                    <Select
+                    <select
                         value={currentValue}
-                        onValueChange={(value) => {
+                        onChange={(e) => {
+                            const value = e.target.value;
                             if (value === undefined || value === null) return;
                             const parsed = actualSchema?.type === "number" ? Number(value) : value;
                             setValue(fieldKey, parsed, { shouldDirty: true });
                         }}
+                        className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-[#282b26] rounded-xl text-xs text-gray-900 dark:text-white appearance-none focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 transition-all cursor-pointer font-medium"
+                        style={{ backgroundColor: '#161715' }}
                     >
-                        <SelectTrigger className="w-full bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all">
-                            <SelectValue placeholder={`Select ${field}`} />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#111113] border border-[#1d1d22] text-white">
-                            {options.map((value: string | number) => {
-                                const strVal = String(value);
-                                return (
-                                    <SelectItem key={strVal} value={strVal}>
-                                        {field === "language" ? (LANGUAGE_DISPLAY_NAMES[strVal] || strVal) : strVal}
-                                    </SelectItem>
-                                );
-                            })}
-                        </SelectContent>
-                    </Select>
-                    <div className="flex items-center space-x-2">
-                        <Checkbox
-                            id={`custom-input-${fieldKey}-dropdown`}
+                        {options.map((value: string | number) => {
+                            const strVal = String(value);
+                            return (
+                                <option key={strVal} value={strVal} className="bg-white dark:bg-[#1c1e1a] text-gray-900 dark:text-white">
+                                    {field === "language" ? (LANGUAGE_DISPLAY_NAMES[strVal] || strVal) : strVal}
+                                </option>
+                            );
+                        })}
+                    </select>
+                    <label className="flex items-center gap-2 pt-1 cursor-pointer">
+                        <input
+                            type="checkbox"
                             checked={false}
-                            className="rounded bg-[#08080a] border-[#1d1d22] text-[#6366f1] focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5"
-                            onCheckedChange={(checked) => {
-                                setIsCustomInput(prev => ({ ...prev, [fieldKey]: checked as boolean }));
+                            className="rounded border-gray-300 dark:border-[#282b26] text-black dark:text-[#bcf0da] focus:ring-black dark:focus:ring-[#bcf0da]"
+                            onChange={(e) => {
+                                setIsCustomInput(prev => ({ ...prev, [fieldKey]: e.target.checked }));
                             }}
                         />
-                        <Label htmlFor={`custom-input-${fieldKey}-dropdown`} className="text-xs text-zinc-300 cursor-pointer">
+                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                             Enter Custom Value
-                        </Label>
-                    </div>
+                        </span>
+                    </label>
                 </div>
             );
         }
@@ -782,37 +641,34 @@ export function ServiceConfigurationForm({
             const currentStrValue = watchVal !== undefined && watchVal !== null ? String(watchVal) : "";
 
             return (
-                <Select
+                <select
                     value={currentStrValue}
-                    onValueChange={(value) => {
+                    onChange={(e) => {
+                        const value = e.target.value;
                         if (value === undefined || value === null) return;
                         const parsed = actualSchema?.type === "number" ? Number(value) : value;
                         setValue(`${service}_${field}`, parsed, { shouldDirty: true });
                     }}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-[#282b26] rounded-xl text-xs text-gray-900 dark:text-white appearance-none focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 transition-all cursor-pointer font-medium"
+                    style={{ backgroundColor: '#161715' }}
                 >
-                    <SelectTrigger className="w-full bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all">
-                        <SelectValue placeholder={`Select ${field}`} />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#111113] border border-[#1d1d22] text-white">
-                        {dropdownOptions.map((value: string | number) => {
-                            const strVal = String(value);
-                            return (
-                                <SelectItem key={strVal} value={strVal}>
-                                    {getDisplayName(value)}
-                                </SelectItem>
-                            );
-                        })}
-                    </SelectContent>
-                </Select>
+                    {dropdownOptions.map((value: string | number) => {
+                        const strVal = String(value);
+                        return (
+                            <option key={strVal} value={strVal} className="bg-white dark:bg-[#1c1e1a] text-gray-900 dark:text-white">
+                                {getDisplayName(value)}
+                            </option>
+                        );
+                    })}
+                </select>
             );
         }
 
-
         if (actualSchema?.multiline) {
             return (
-                <Textarea
+                <textarea
                     rows={6}
-                    className="bg-[#08080a] border border-[#1d1d22] rounded-xl p-2.5 text-[10px] text-zinc-400 leading-relaxed resize-none focus:outline-none focus:border-zinc-700 font-mono"
+                    className="w-full p-3 bg-gray-50 dark:bg-[#161715] border border-gray-200 dark:border-[#282b26] rounded-xl text-[11px] text-gray-900 dark:text-gray-200 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 font-mono"
                     placeholder={`Enter ${field}`}
                     {...register(`${service}_${field}`, {
                         required: service !== "embeddings" && providerSchema.required?.includes(field),
@@ -822,16 +678,160 @@ export function ServiceConfigurationForm({
         }
 
         return (
-            <Input
+            <input
                 type={actualSchema?.type === "number" ? "number" : "text"}
                 {...(actualSchema?.type === "number" && { step: "any" })}
                 placeholder={`Enter ${field}`}
-                className="bg-[#08080a] border border-[#1d1d22] rounded-xl py-2.5 px-4 text-xs text-white focus:outline-none focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 transition-all"
+                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-[#282b26] rounded-xl text-xs text-gray-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 transition-all font-medium"
+                style={{ backgroundColor: '#161715' }}
                 {...register(`${service}_${field}`, {
                     required: service !== "embeddings" && providerSchema.required?.includes(field),
                     valueAsNumber: actualSchema?.type === "number"
                 })}
             />
+        );
+    };
+
+    const renderField = (service: ServiceSegment, field: string, providerSchema: ProviderSchema) => {
+        return (
+            <>
+                {renderFieldInput(service, field, providerSchema)}
+                {renderFieldDescription(field, providerSchema)}
+            </>
+        );
+    };
+
+    const renderServiceFields = (service: ServiceSegment) => {
+        const currentProvider = serviceProviders[service];
+        const providerSchema = schemas?.[service]?.[currentProvider];
+        const availableProviders = schemas?.[service] ? Object.keys(schemas[service]) : [];
+        const configFields = getConfigFields(service);
+
+        return (
+            <div className="space-y-6 pt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Provider */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-900 dark:text-white tracking-wide block">
+                            Provider
+                        </label>
+                        <select
+                            value={currentProvider}
+                            onChange={(e) => handleProviderChange(service, e.target.value)}
+                            className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-[#282b26] rounded-xl text-xs text-gray-900 dark:text-white appearance-none focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 transition-all cursor-pointer font-medium"
+                            style={{ backgroundColor: '#161715' }}
+                        >
+                            {availableProviders.map((provider) => (
+                                <option key={provider} value={provider} className="bg-white dark:bg-[#1c1e1a] text-gray-900 dark:text-white">
+                                    {getProviderDisplayName(provider, schemas?.[service]?.[provider])}
+                                </option>
+                            ))}
+                        </select>
+                        {(providerSchema?.description || providerSchema?.provider_docs_url) && (
+                            <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-snug">
+                                {providerSchema?.description}{" "}
+                                {providerSchema?.provider_docs_url && (
+                                    <a
+                                        href={providerSchema.provider_docs_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-0.5 text-amber-700 dark:text-amber-400 hover:underline"
+                                    >
+                                        Learn more <ExternalLink className="h-3 w-3 inline" />
+                                    </a>
+                                )}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* First config field */}
+                    {currentProvider && providerSchema && configFields[0] && (
+                        <div className="space-y-2">
+                            <label className="capitalize text-xs font-bold text-gray-900 dark:text-white tracking-wide block">
+                                {configFields[0].replace(/_/g, ' ')}
+                            </label>
+                            {renderField(service, configFields[0], providerSchema)}
+                        </div>
+                    )}
+                </div>
+
+                {/* Additional config fields */}
+                {currentProvider && providerSchema && configFields.length > 1 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {configFields.slice(1).map((field) => {
+                            const fieldSchema = providerSchema.properties[field];
+                            const actualFieldSchema = fieldSchema?.$ref && providerSchema.$defs
+                                ? providerSchema.$defs[fieldSchema.$ref.split('/').pop() || '']
+                                : fieldSchema;
+                            const fullWidth = actualFieldSchema?.multiline;
+                            return (
+                                <div key={field} className={`space-y-2 ${fullWidth ? "col-span-full" : ""}`}>
+                                    <label className="capitalize text-xs font-bold text-gray-900 dark:text-white tracking-wide block">
+                                        {field.replace(/_/g, ' ')}
+                                    </label>
+                                    {renderField(service, field, providerSchema)}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* API Key(s) */}
+                {currentProvider && providerSchema && providerSchema.properties.api_key && (
+                    <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-[#282b26]">
+                        <label className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <Key className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                            <span>{mode === 'override' ? 'API Key (leave empty to use global)' : 'API Key(s)'}</span>
+                        </label>
+                        {renderFieldDescription("api_key", providerSchema)}
+                        {apiKeys[service].map((key, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Enter API key"
+                                    value={key}
+                                    onChange={(e) => {
+                                        const newKeys = [...apiKeys[service]];
+                                        newKeys[index] = e.target.value;
+                                        setApiKeys(prev => ({ ...prev, [service]: newKeys }));
+                                    }}
+                                    className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-[#282b26] rounded-xl text-xs font-mono text-gray-800 dark:text-gray-200 focus:outline-hidden focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10"
+                                    style={{ backgroundColor: '#161715' }}
+                                />
+                                {apiKeys[service].length > 1 && (
+                                    <button
+                                        type="button"
+                                        className="p-2 rounded-xl text-gray-400 hover:text-rose-500 hover:bg-gray-100 dark:hover:bg-[#232621] transition-colors shrink-0"
+                                        onClick={() => {
+                                            setApiKeys(prev => ({
+                                                ...prev,
+                                                [service]: prev[service].filter((_, i) => i !== index),
+                                            }));
+                                        }}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                        {mode !== 'override' && (
+                            <button
+                                type="button"
+                                className="px-4 py-2 bg-gray-100 dark:bg-[#161715] hover:bg-gray-200 dark:hover:bg-[#232621] text-gray-900 dark:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                                onClick={() => {
+                                    setApiKeys(prev => ({
+                                        ...prev,
+                                        [service]: [...prev[service], ""],
+                                    }));
+                                }}
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Add API Key</span>
+                            </button>
+                        )}
+                    </div>
+                )}
+            </div>
         );
     };
 
@@ -846,22 +846,31 @@ export function ServiceConfigurationForm({
         const globalProviderSchema = globalProvider ? schemas?.[service]?.[globalProvider] : undefined;
 
         return (
-            <div className="flex items-center justify-between p-4 bg-[#08080a] border border-[#1d1d22] rounded-xl mb-4">
+            <div className="flex items-center justify-between p-4 bg-gray-50/70 dark:bg-[#161715] border border-gray-200 dark:border-[#282b26] rounded-xl mb-4">
                 <div className="space-y-0.5">
-                    <Label htmlFor={`override-${service}`} className="text-sm cursor-pointer font-semibold text-zinc-200">
+                    <label htmlFor={`override-${service}`} className="text-xs cursor-pointer font-bold text-gray-900 dark:text-white">
                         Override {label}
-                    </Label>
+                    </label>
                     {!isEnabled && (
-                        <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-snug">
                             Using global: {getGlobalSummary(globalVal, globalProviderSchema)}
                         </p>
                     )}
                 </div>
-                <Switch
+                <button
+                    type="button"
                     id={`override-${service}`}
-                    checked={isEnabled}
-                    onCheckedChange={(checked) => handleOverrideToggle(service, checked)}
-                />
+                    onClick={() => handleOverrideToggle(service, !isEnabled)}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                        isEnabled ? "bg-black dark:bg-[#bcf0da]" : "bg-gray-300 dark:bg-[#282b26]"
+                    }`}
+                >
+                    <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white dark:bg-[#082117] shadow-md ring-0 transition duration-200 ease-in-out ${
+                            isEnabled ? "translate-x-5" : "translate-x-0"
+                        }`}
+                    />
+                </button>
             </div>
         );
     };
@@ -874,53 +883,144 @@ export function ServiceConfigurationForm({
     };
 
     const visibleTabs = getVisibleTabs();
-    const defaultTab = isRealtime ? "realtime" : "llm";
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)}>
-            {/* Realtime toggle */}
-            <div className="flex items-center justify-between mb-6 p-6 bg-[#111113] border border-[#1d1d22] rounded-2xl">
-                <div>
-                    <Label htmlFor="realtime-toggle" className="text-sm font-semibold text-zinc-200">
-                        Realtime Mode
-                    </Label>
-                    <p className="text-[10px] text-zinc-500 mt-1 leading-snug">
-                        Uses a single speech-to-speech model (no separate STT/TTS). An LLM is still required for variable extraction and QA.
-                    </p>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full text-gray-900 dark:text-white font-sans select-none relative" style={{ backgroundColor: '#161715' }}>
+            {/* Top Sub-Header matching demo styling when in global page mode */}
+            {mode === 'global' && (
+                <header className="px-8 pt-6 pb-3 flex items-center justify-between sticky top-0 z-20 border-b border-gray-100 dark:border-[#282b26]" style={{ backgroundColor: '#161715' }}>
+                    <div className="space-y-0.5">
+                        <h1 className="text-base font-semibold text-gray-900 dark:text-white tracking-tight">
+                            Models & Services
+                        </h1>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                            <span>Configure AI model, voice, and transcription services.</span>
+                            {docsUrl && (
+                                <a
+                                    href={docsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-0.5 font-medium"
+                                >
+                                    <span>Learn more</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                </a>
+                            )}
+                        </p>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={isSaving}
+                        className="flex items-center gap-1.5 px-5 py-2 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cd] text-white dark:text-[#082117] text-xs font-bold rounded-full shadow-xs transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50"
+                    >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{isSaving ? "Saving..." : (submitLabel || "Save Configuration")}</span>
+                    </button>
+                </header>
+            )}
+
+            {/* Scrollable Form Workspace Container */}
+            <div className={`${mode === 'global' ? 'max-w-4xl w-full mx-auto px-8 pt-6 pb-16' : 'w-full'} flex flex-col gap-6`}>
+                {/* Success Alert Banner */}
+                {savedSuccess && (
+                    <div className="flex items-center justify-between px-4 py-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-emerald-800 dark:text-emerald-300 rounded-xl text-xs font-semibold animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            <span>Model configuration saved successfully!</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Realtime Mode Toggle Banner Card */}
+                <div
+                    className="border border-gray-200/80 dark:border-[#282b26] rounded-2xl p-5 flex items-center justify-between shadow-2xs"
+                    style={{ backgroundColor: '#1C1E1A' }}
+                >
+                    <div className="space-y-1 max-w-xl">
+                        <div className="flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                            <h3 className="text-sm font-bold text-gray-900 dark:text-white">Realtime Mode</h3>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                            Uses a single speech-to-speech model (no separate STT/TTS). An LLM is still required for variable extraction and QA.
+                        </p>
+                    </div>
+
+                    {/* Toggle Switch */}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            const nextState = !isRealtime;
+                            setIsRealtime(nextState);
+                            if (nextState) {
+                                setActiveTab("realtime");
+                            } else if (activeTab === "realtime") {
+                                setActiveTab("llm");
+                            }
+                        }}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                            isRealtime ? "bg-black dark:bg-[#bcf0da]" : "bg-gray-300 dark:bg-[#282b26]"
+                        }`}
+                    >
+                        <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white dark:bg-[#082117] shadow-md ring-0 transition duration-200 ease-in-out ${
+                                isRealtime ? "translate-x-5" : "translate-x-0"
+                            }`}
+                        />
+                    </button>
                 </div>
-                <Switch
-                    id="realtime-toggle"
-                    checked={isRealtime}
-                    onCheckedChange={setIsRealtime}
-                />
-            </div>
 
-            <Card className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 shadow-none">
-                <CardContent className="p-0">
-                    <Tabs key={defaultTab} defaultValue={defaultTab} className="w-full">
-                        <TabsList className="grid w-full mb-6 bg-[#08080a] border border-[#1d1d22] p-1 rounded-xl flex gap-1 h-auto" style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, 1fr)` }}>
-                            {visibleTabs.map(({ key, label }) => (
-                                <TabsTrigger key={key} value={key} className="data-[state=active]:bg-[#1f1f24] data-[state=active]:text-white text-zinc-500 hover:text-[#d4d4d8] py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer">
+                {/* Configurations Card */}
+                <div
+                    className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-6"
+                    style={{ backgroundColor: '#1C1E1A' }}
+                >
+                    {/* Sub-Tabs Nav Pill Switcher */}
+                    <div
+                        className="p-1 rounded-xl flex items-center gap-1 overflow-x-auto border border-gray-200/50 dark:border-[#282b26]"
+                        style={{ backgroundColor: '#161715' }}
+                    >
+                        {visibleTabs.map(({ key, label }) => {
+                            const isActive = activeTab === key;
+                            return (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => setActiveTab(key)}
+                                    className={`flex-1 min-w-[100px] py-2 px-3 rounded-lg text-xs font-bold transition-all text-center cursor-pointer ${
+                                        isActive
+                                            ? "text-gray-900 dark:text-white shadow-2xs font-bold"
+                                            : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                                    }`}
+                                    style={isActive ? { backgroundColor: '#282b26' } : undefined}
+                                >
                                     {label}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
+                                </button>
+                            );
+                        })}
+                    </div>
 
-                        {visibleTabs.map(({ key, label }) => (
-                            <TabsContent key={key} value={key} className="mt-0">
-                                {mode === 'override' && renderOverrideToggle(key, label)}
-                                {(mode === 'global' || enabledOverrides[key]) && renderServiceFields(key)}
-                            </TabsContent>
-                        ))}
-                    </Tabs>
-                </CardContent>
-            </Card>
+                    {/* Active Tab Content */}
+                    <div>
+                        {mode === 'override' && renderOverrideToggle(activeTab, visibleTabs.find(t => t.key === activeTab)?.label || activeTab)}
+                        {(mode === 'global' || enabledOverrides[activeTab]) && renderServiceFields(activeTab)}
+                    </div>
+                </div>
 
-            {apiError && <p className="text-red-400 mt-4 text-xs font-semibold">{apiError}</p>}
+                {apiError && <p className="text-red-600 dark:text-red-400 text-xs font-semibold">{apiError}</p>}
 
-            <Button type="submit" className="w-full mt-6 bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg cursor-pointer" disabled={isSaving}>
-                {isSaving ? "Saving..." : (submitLabel || "Save Configuration")}
-            </Button>
+                {/* Bottom Save Button */}
+                <div className="pt-2">
+                    <button
+                        type="submit"
+                        disabled={isSaving}
+                        className="w-full py-3 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cd] text-white dark:text-[#082117] text-xs font-bold rounded-full shadow-xs transition-all active:scale-[0.99] text-center cursor-pointer disabled:opacity-50"
+                    >
+                        {isSaving ? "Saving..." : (submitLabel || "Save Configuration")}
+                    </button>
+                </div>
+            </div>
         </form>
     );
 }

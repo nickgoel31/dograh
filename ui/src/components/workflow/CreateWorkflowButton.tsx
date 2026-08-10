@@ -84,25 +84,39 @@ export function CreateWorkflowButton() {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button disabled={isCreating}>
-                    <PlusIcon className="w-4 h-4" />
-                    {isCreating ? 'Creating...' : 'Create Agent'}
-                    <ChevronDown className="w-4 h-4" />
+                <Button 
+                    disabled={isCreating}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-[#1f2119] dark:hover:bg-[#282b26] dark:text-white text-xs font-bold rounded-xl border border-gray-200 dark:border-[#2e312b] shadow-2xs transition-all active:scale-[0.98] h-9 cursor-pointer"
+                >
+                    <PlusIcon className="w-4 h-4 stroke-[2.5]" />
+                    <span>{isCreating ? 'Creating...' : 'Create Agent'}</span>
+                    <ChevronDown className="w-3.5 h-3.5 stroke-[2.5]" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleAgentBuilder} className="cursor-pointer">
-                    <Bot className="w-4 h-4 mr-2" />
-                    <div>
-                        <div className="font-medium">Use Agent Builder</div>
-                        <div className="text-xs text-muted-foreground">AI generates a workflow from your description</div>
+            <DropdownMenuContent align="end" className="w-72 bg-neutral-900 border border-neutral-800 text-white rounded-2xl p-2 shadow-2xl z-50 flex flex-col gap-1">
+                <DropdownMenuItem 
+                    onClick={handleAgentBuilder} 
+                    className="flex items-start gap-3 p-3 rounded-xl hover:bg-neutral-800 focus:bg-neutral-800 text-left transition-colors cursor-pointer group focus:text-white"
+                >
+                    <div className="p-2 rounded-lg bg-neutral-800 text-neutral-300 group-hover:text-white group-hover:bg-neutral-700 transition-colors">
+                        <Bot className="w-4 h-4" />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-xs font-bold text-white">Use Agent Builder</span>
+                        <span className="text-[11px] text-neutral-400 leading-snug">AI generates a workflow from your description</span>
                     </div>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleBlankCanvas} disabled={isCreating} className="cursor-pointer">
-                    <LayoutTemplate className="w-4 h-4 mr-2" />
-                    <div>
-                        <div className="font-medium">Blank Canvas</div>
-                        <div className="text-xs text-muted-foreground">Start from scratch with an empty workflow</div>
+                <DropdownMenuItem 
+                    onClick={handleBlankCanvas} 
+                    disabled={isCreating} 
+                    className="flex items-start gap-3 p-3 rounded-xl hover:bg-neutral-800 focus:bg-neutral-800 text-left transition-colors cursor-pointer group focus:text-white"
+                >
+                    <div className="p-2 rounded-lg bg-neutral-800 text-neutral-300 group-hover:text-white group-hover:bg-neutral-700 transition-colors">
+                        <LayoutTemplate className="w-4 h-4" />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-xs font-bold text-white">Blank Canvas</span>
+                        <span className="text-[11px] text-neutral-400 leading-snug">Start from scratch with an empty workflow</span>
                     </div>
                 </DropdownMenuItem>
             </DropdownMenuContent>

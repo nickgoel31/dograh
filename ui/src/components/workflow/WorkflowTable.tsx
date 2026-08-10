@@ -8,6 +8,7 @@ import {
     Inbox,
     Pencil,
     RotateCcw,
+    Search
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
@@ -27,19 +28,13 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+
 interface Workflow {
     id: number;
     name: string;
     status: string;
     created_at: string;
+    updated_at?: string;
     total_runs?: number | null;
     folder_id?: number | null;
 }
@@ -47,12 +42,7 @@ interface Workflow {
 interface WorkflowTableProps {
     workflows: Workflow[];
     showArchived: boolean;
-    /**
-     * When provided, each row gets a "Move to folder" action listing these
-     * folders. Omit it (e.g. for the archived list) to hide the control.
-     */
     folders?: FolderResponse[];
-    /** The folder this table is rendered under; null means "Uncategorized". */
     currentFolderId?: number | null;
 }
 
@@ -66,6 +56,7 @@ export function WorkflowTable({
     const [isPending, startTransition] = useTransition();
     const [loadingWorkflowId, setLoadingWorkflowId] = useState<number | null>(null);
     const [movingWorkflowId, setMovingWorkflowId] = useState<number | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const handleEdit = (id: number) => {
         router.push(`/workflow/${id}`);
@@ -125,135 +116,161 @@ export function WorkflowTable({
         }
     };
 
+    const filteredWorkflows = workflows.filter(w => 
+        w.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
-        <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl overflow-hidden shadow-none">
-            <Table>
-                <TableHeader className="bg-[#18181b]/20 border-b border-[#1d1d22]">
-                    <TableRow className="border-none hover:bg-transparent">
-                        <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">ID</TableHead>
-                        <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Agent Name</TableHead>
-                        <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11">Created At</TableHead>
-                        <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11 text-center">Total Runs</TableHead>
-                        <TableHead className="font-bold text-zinc-400 text-xs uppercase tracking-wider h-11 text-right">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {workflows.map((workflow) => (
-                        <TableRow
-                            key={workflow.id}
-                            className={`hover:bg-[#1a1a1f]/60 transition-colors border-b border-[#1d1d22]/50 ${showArchived ? 'opacity-65' : ''}`}
-                        >
-                            <TableCell className="text-zinc-600 font-mono text-xs py-3.5">
-                                #{workflow.id}
-                            </TableCell>
-                            <TableCell className="font-bold text-white text-sm py-3.5">
-                                {workflow.name}
-                            </TableCell>
-                            <TableCell className="text-zinc-400 text-xs py-3.5">
-                                {new Date(workflow.created_at).toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'short',
-                                    day: 'numeric',
-                                })}
-                            </TableCell>
-                            <TableCell className="text-center py-3.5">
-                                <span className="inline-flex items-center justify-center min-w-[2rem] px-2.5 py-0.5 text-xs font-bold bg-[#08080a] border border-[#1d1d22] text-[#a78bfa] rounded-full">
-                                    {workflow.total_runs || 0}
-                                </span>
-                            </TableCell>
-                            <TableCell className="text-right py-3.5">
-                                <div className="flex justify-end gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleEdit(workflow.id)}
-                                        className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 h-8"
-                                    >
-                                        <Pencil size={13} className="text-zinc-400" />
-                                        Edit
-                                    </Button>
-                                    {folders && (
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    disabled={movingWorkflowId === workflow.id || isPending}
-                                                    className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 h-8"
-                                                >
-                                                    {movingWorkflowId === workflow.id ? (
-                                                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
-                                                    ) : (
-                                                        <FolderInput size={13} className="text-zinc-400" />
-                                                    )}
-                                                    Move
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-52 bg-[#111113] border border-[#232328] text-zinc-300 rounded-xl p-1.5 shadow-2xl">
-                                                <DropdownMenuLabel className="text-xs font-bold text-zinc-400 px-2 py-1.5">Move to folder</DropdownMenuLabel>
-                                                <DropdownMenuSeparator className="bg-[#1d1d22]" />
-                                                <DropdownMenuItem
-                                                    disabled={currentFolderId === null}
-                                                    onClick={() => handleMove(workflow.id, null)}
-                                                    className="rounded-lg text-xs px-2 py-1.5 focus:bg-[#1c1c1f] focus:text-white cursor-pointer"
-                                                >
-                                                    <Inbox size={13} className="mr-2 text-zinc-400" />
-                                                    Uncategorized
-                                                    {currentFolderId === null && (
-                                                        <Check size={13} className="ml-auto text-[#7c3aed]" />
-                                                    )}
-                                                </DropdownMenuItem>
-                                                {folders.map((folder) => (
-                                                    <DropdownMenuItem
-                                                        key={folder.id}
-                                                        disabled={folder.id === currentFolderId}
-                                                        onClick={() => handleMove(workflow.id, folder.id)}
-                                                        className="rounded-lg text-xs px-2 py-1.5 focus:bg-[#1c1c1f] focus:text-white cursor-pointer"
+        <div className="space-y-4">
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+                <input
+                    type="text"
+                    placeholder="Search agents..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-white dark:bg-[#161715] border border-gray-200 dark:border-[#282b26] rounded-xl pl-9 pr-4 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-hidden focus:border-gray-300 dark:focus:border-gray-500 transition-colors"
+                />
+            </div>
+            
+            <div className="bg-white dark:bg-[#161715] border border-gray-100 dark:border-[#282b26] rounded-2xl overflow-hidden">
+                {/* Table Header */}
+                <div className="grid grid-cols-[1fr_auto] items-center px-4 py-3 border-b border-gray-100 dark:border-[#282b26] bg-gray-50/50 dark:bg-[#1c1e1a]/60 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                    <div>Agent</div>
+                    <div className="w-[120px] text-right">Last edited</div>
+                </div>
+                
+                {/* Table Body */}
+                <div className="divide-y divide-gray-100 dark:divide-[#282b26]">
+                    {filteredWorkflows.length === 0 ? (
+                        <div className="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                            No agents found.
+                        </div>
+                    ) : (
+                        filteredWorkflows.map((workflow) => (
+                            <div 
+                                key={workflow.id} 
+                                onClick={() => handleEdit(workflow.id)}
+                                className={`group grid grid-cols-[1fr_auto] items-center px-4 py-3.5 hover:bg-gray-50/70 dark:hover:bg-[#1f2119] transition-colors cursor-pointer ${showArchived ? 'opacity-65' : ''}`}
+                            >
+                                <div className="flex items-center gap-3 overflow-hidden pr-4">
+                                    <div className="w-8 h-8 rounded-lg bg-[#bcf0da] dark:bg-[#082117] border border-[#a2e8c9] dark:border-[#113a29] p-1 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                        <svg viewBox="0 0 16 16" className="w-full h-full text-[#082117] dark:text-[#bcf0da]">
+                                            <rect x="2" y="2" width="4" height="4" fill="currentColor" />
+                                            <rect x="10" y="2" width="4" height="4" fill="currentColor" />
+                                            <rect x="6" y="6" width="4" height="4" fill="currentColor" opacity="0.8" />
+                                            <rect x="4" y="10" width="8" height="3" fill="currentColor" opacity="0.9" />
+                                        </svg>
+                                    </div>
+                                    <div className="flex flex-col truncate">
+                                        <span className="font-semibold text-sm text-gray-900 dark:text-white truncate">
+                                            {workflow.name}
+                                        </span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                            owner@example.com
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex items-center justify-end w-[120px]">
+                                    {/* Default view: Date */}
+                                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400 group-hover:hidden text-right w-full">
+                                        {new Date(workflow.updated_at || workflow.created_at).toLocaleDateString('en-US', {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            year: 'numeric'
+                                        })}
+                                    </div>
+                                    
+                                    {/* Hover view: Actions */}
+                                    <div className="hidden group-hover:flex items-center justify-end gap-1.5 w-full" onClick={(e) => e.stopPropagation()}>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleEdit(workflow.id);
+                                            }}
+                                            className="h-7 w-7 text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-[#282b26] rounded-md transition-colors"
+                                        >
+                                            <Pencil size={13} />
+                                        </Button>
+                                        
+                                        {folders && (
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        disabled={movingWorkflowId === workflow.id || isPending}
+                                                        className="h-7 w-7 text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-[#282b26] rounded-md transition-colors"
                                                     >
-                                                        <FolderIcon size={13} className="mr-2 text-zinc-400" />
-                                                        <span className="truncate">{folder.name}</span>
-                                                        {folder.id === currentFolderId && (
-                                                            <Check size={13} className="ml-auto shrink-0 text-[#7c3aed]" />
+                                                        {movingWorkflowId === workflow.id ? (
+                                                            <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                                        ) : (
+                                                            <FolderInput size={13} />
+                                                        )}
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-52 bg-white dark:bg-[#111113] border border-gray-200 dark:border-[#232328] text-gray-900 dark:text-zinc-300 rounded-xl p-1.5 shadow-xl">
+                                                    <DropdownMenuLabel className="text-xs font-bold text-gray-500 dark:text-zinc-400 px-2 py-1.5">Move to folder</DropdownMenuLabel>
+                                                    <DropdownMenuSeparator className="bg-gray-100 dark:bg-[#1d1d22]" />
+                                                    <DropdownMenuItem
+                                                        disabled={currentFolderId === null}
+                                                        onClick={() => handleMove(workflow.id, null)}
+                                                        className="rounded-lg text-xs px-2 py-1.5 focus:bg-gray-100 dark:focus:bg-[#1c1c1f] focus:text-gray-900 dark:focus:text-white cursor-pointer"
+                                                    >
+                                                        <Inbox size={13} className="mr-2 text-gray-400 dark:text-zinc-400" />
+                                                        Uncategorized
+                                                        {currentFolderId === null && (
+                                                            <Check size={13} className="ml-auto text-[#7c3aed]" />
                                                         )}
                                                     </DropdownMenuItem>
-                                                ))}
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    )}
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleArchiveToggle(workflow.id, workflow.status)}
-                                        disabled={loadingWorkflowId === workflow.id || isPending}
-                                        className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 text-xs px-3.5 py-1.5 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 h-8"
-                                    >
-                                        {loadingWorkflowId === workflow.id ? (
-                                            <>
-                                                <div className="h-3 w-3 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
-                                                {showArchived ? 'Restoring...' : 'Archiving...'}
-                                            </>
-                                        ) : (
-                                            <>
-                                                {showArchived ? (
-                                                    <>
-                                                        <RotateCcw size={13} className="text-zinc-400" />
-                                                        Restore
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Archive size={13} className="text-zinc-400" />
-                                                        Archive
-                                                    </>
-                                                )}
-                                            </>
+                                                    {folders.map((folder) => (
+                                                        <DropdownMenuItem
+                                                            key={folder.id}
+                                                            disabled={folder.id === currentFolderId}
+                                                            onClick={() => handleMove(workflow.id, folder.id)}
+                                                            className="rounded-lg text-xs px-2 py-1.5 focus:bg-gray-100 dark:focus:bg-[#1c1c1f] focus:text-gray-900 dark:focus:text-white cursor-pointer"
+                                                        >
+                                                            <FolderIcon size={13} className="mr-2 text-gray-400 dark:text-zinc-400" />
+                                                            <span className="truncate">{folder.name}</span>
+                                                            {folder.id === currentFolderId && (
+                                                                <Check size={13} className="ml-auto shrink-0 text-[#7c3aed]" />
+                                                            )}
+                                                        </DropdownMenuItem>
+                                                    ))}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         )}
-                                    </Button>
+                                        
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleArchiveToggle(workflow.id, workflow.status);
+                                            }}
+                                            disabled={loadingWorkflowId === workflow.id || isPending}
+                                            className="h-7 w-7 text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-[#282b26] rounded-md transition-colors"
+                                        >
+                                            {loadingWorkflowId === workflow.id ? (
+                                                <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                            ) : (
+                                                showArchived ? (
+                                                    <RotateCcw size={13} />
+                                                ) : (
+                                                    <Archive size={13} />
+                                                )
+                                            )}
+                                        </Button>
+                                    </div>
                                 </div>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
         </div>
     );
 }

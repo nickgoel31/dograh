@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, IndianRupee } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, IndianRupee } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -10,12 +10,8 @@ import {
   getWorkflowsSummaryApiV1WorkflowSummaryGet
 } from '@/client/sdk.gen';
 import type { WorkflowRunUsageResponse, WorkflowSummaryResponse } from '@/client/types.gen';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/lib/auth';
 import { getBillingConfig } from '@/lib/billing-api';
 import {
@@ -33,35 +29,26 @@ import {
 export default function BillingPage() {
   const auth = useAuth();
 
-  // Date / Month state
   const [currentDate, setCurrentDate] = useState(new Date());
-
-  // Billing mode (per_minute | per_30s)
   const [billingMode, setBillingMode] = useState<BillingMode>('per_minute');
   const [isModeLoaded, setIsModeLoaded] = useState(false);
 
-  // Custom wallet billing settings
   const [wallet, setWallet] = useState<any | null>(null);
 
-  // Billing Config
   const [billingConfig, setBillingConfig] = useState<BillingConfiguration>({
     tiers: DEFAULT_TIER_THRESHOLDS,
     prices: DEFAULT_PRICES
   });
 
-  // Agents / Workflows
   const [workflows, setWorkflows] = useState<WorkflowSummaryResponse[]>([]);
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
 
-  // Runs
   const [isLoadingRuns, setIsLoadingRuns] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Initialize billing mode from local storage
   useEffect(() => {
     if (auth.isAuthenticated && auth.user) {
-      // Use org ID or user ID for the storage key
       const orgId = (auth.user as any)?.orgId || 'default';
       const stored = localStorage.getItem(`billing_config_${orgId}`);
       if (stored === 'per_minute' || stored === 'per_30s') {
@@ -71,7 +58,6 @@ export default function BillingPage() {
     }
   }, [auth.isAuthenticated, auth.user]);
 
-  // Handle billing mode change
   const handleBillingModeChange = (val: string) => {
     const newMode = val as BillingMode;
     setBillingMode(newMode);
@@ -81,7 +67,6 @@ export default function BillingPage() {
     }
   };
 
-  // Fetch workflows for dropdown
   useEffect(() => {
     async function fetchWorkflows() {
       if (!auth.isAuthenticated) return;
@@ -95,7 +80,6 @@ export default function BillingPage() {
     fetchWorkflows();
   }, [auth.isAuthenticated]);
 
-  // Fetch billing config
   useEffect(() => {
     async function fetchConfig() {
       if (!auth.isAuthenticated) return;
@@ -111,13 +95,12 @@ export default function BillingPage() {
     fetchConfig();
   }, [auth.isAuthenticated]);
 
-  // Fetch organization wallet details
   useEffect(() => {
     async function fetchWallet() {
       if (!auth.isAuthenticated) return;
       try {
         const year = currentDate.getFullYear();
-        const month = currentDate.getMonth() + 1; // 1-indexed for backend
+        const month = currentDate.getMonth() + 1;
         const res = await client.request({
           method: "GET",
           url: `/api/v1/organizations/wallet?year=${year}&month=${month}`,
@@ -132,9 +115,6 @@ export default function BillingPage() {
     fetchWallet();
   }, [auth.isAuthenticated, currentDate]);
 
-  // Fetch all runs for the month (to calculate tier)
-  // We need to fetch *all* runs for the month, but API is paginated.
-  // The user requested: "Fetch ALL pages if total_pages > 1 by looping through with the page param."
   const [allMonthRuns, setAllMonthRuns] = useState<WorkflowRunUsageResponse[]>([]);
   const [isFetchingAll, setIsFetchingAll] = useState(true);
 
@@ -148,9 +128,7 @@ export default function BillingPage() {
 
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
-      // start of month UTC
       const start = new Date(Date.UTC(year, month, 1, 0, 0, 0)).toISOString();
-      // end of month UTC
       const end = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999)).toISOString();
 
       let allFetchedRuns: WorkflowRunUsageResponse[] = [];
@@ -159,7 +137,6 @@ export default function BillingPage() {
 
       try {
         while (morePages && !isCancelled) {
-          // No agent filter here, we want the org-wide total to calculate the tier correctly
           const res = await getUsageHistoryApiV1OrganizationsUsageRunsGet({
             query: {
               start_date: start,
@@ -199,17 +176,14 @@ export default function BillingPage() {
     return () => { isCancelled = true; };
   }, [currentDate, auth.isAuthenticated]);
 
-  // Filter runs by selected agents
   const unsortedFilteredRuns = selectedAgentIds.length === 0
     ? allMonthRuns
     : allMonthRuns.filter(r => selectedAgentIds.includes(r.workflow_id?.toString() || 'unknown'));
 
-  // Explicitly sort descending by created_at
   const filteredRuns = [...unsortedFilteredRuns].sort((a, b) =>
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
 
-  // Pagination for Call Log Table
   const ITEMS_PER_PAGE = 25;
   useEffect(() => {
     setTotalPages(Math.max(1, Math.ceil(filteredRuns.length / ITEMS_PER_PAGE)));
@@ -221,7 +195,6 @@ export default function BillingPage() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Month navigation
   const goToPrevMonth = () => {
     setCurrentDate(prev => {
       const newDate = new Date(prev);
@@ -276,14 +249,13 @@ export default function BillingPage() {
   const calculateRunCharge = (durationSeconds: number) => {
     if (wallet && wallet.billing_rate > 0) {
       const pulse = wallet.billing_pulse || 60;
-      const rate = wallet.billing_rate; // per minute
+      const rate = wallet.billing_rate;
       const pulses = Math.ceil(durationSeconds / pulse);
       return pulses * ((rate / 60) * pulse);
     }
     return calculateCallCharge(durationSeconds, tier, billingMode, billingConfig.prices);
   };
 
-  // Computations
   const orgTotalCalls = allMonthRuns.length;
   const tier = getTier(orgTotalCalls, billingConfig.tiers);
   const nextTier = getNextTier(orgTotalCalls, billingConfig.tiers);
@@ -291,13 +263,11 @@ export default function BillingPage() {
     ? (wallet.billing_rate / 60) * (wallet.billing_pulse || 60)
     : getPricePerUnit(tier, billingMode, billingConfig.prices);
 
-  // Summary Card computations based on filtered runs
   const totalMinutes = filteredRuns.reduce((acc, run) => acc + (run.call_duration_seconds / 60), 0);
   const totalBillableUnits = filteredRuns.reduce((acc, run) => acc + getRunBillableUnits(run.call_duration_seconds), 0);
   const totalRevenue = filteredRuns.reduce((acc, run) => acc + calculateRunCharge(run.call_duration_seconds), 0);
   const avgRevenuePerCall = filteredRuns.length > 0 ? totalRevenue / filteredRuns.length : 0;
 
-  // Per-Agent breakdown computation
   const breakdownByAgent = new Map<string, {
     name: string,
     calls: number,
@@ -322,7 +292,6 @@ export default function BillingPage() {
   const breakdownArray = Array.from(breakdownByAgent.values())
     .sort((a, b) => b.revenue - a.revenue);
 
-  // Formatting helpers
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -352,60 +321,64 @@ export default function BillingPage() {
   if (!isModeLoaded) return null;
 
   return (
-    <div className="max-w-[1600px] mx-auto w-full p-6 space-y-6 animate-fade-in">
-      {/* Header & Settings Bar */}
-      <div className="border-b border-[#1d1d22]/50 pb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
-          <IndianRupee className="h-6 w-6 text-[#7c3aed]" />
-          Billing & Usage
-        </h1>
-        <p className="text-xs text-zinc-500 mt-1">Manage client billing and pricing tiers.</p>
-      </div>
+    <div className="flex flex-col h-full text-gray-900 dark:text-white font-sans select-none relative" style={{ backgroundColor: '#161715' }}>
+      {/* Top Page Header matching demo styling */}
+      <header className="px-8 pt-6 pb-3 flex items-center justify-between sticky top-0 z-20 border-b border-gray-100 dark:border-[#282b26]" style={{ backgroundColor: '#161715' }}>
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <IndianRupee className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <h1 className="text-base font-semibold text-gray-900 dark:text-white tracking-tight">
+              Billing & Usage
+            </h1>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Manage client billing and pricing tiers.
+          </p>
+        </div>
 
-      {/* Settings Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+        {/* Top Right Filters */}
         <div className="flex items-center gap-3">
-          {/* Month Navigator */}
-          <div className="flex items-center gap-2 bg-[#111113] border border-[#1d1d22] p-1.5 rounded-xl">
-            <Button
-              variant="ghost"
-              size="icon"
+          {/* Month Selector */}
+          <div className="flex items-center gap-1 border border-gray-200 dark:border-[#282b26] rounded-full px-2.5 py-1" style={{ backgroundColor: '#161715' }}>
+            <button
               onClick={goToPrevMonth}
               disabled={isFetchingAll}
-              className="h-8 w-8 hover:bg-[#1a1a1f] text-zinc-400 hover:text-white rounded-lg"
+              className="p-1 text-gray-500 hover:text-black dark:hover:text-white cursor-pointer disabled:opacity-40"
             >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-xs font-semibold text-zinc-200 px-2 min-w-[100px] text-center">{monthYearString}</span>
-            <Button
-              variant="ghost"
-              size="icon"
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 px-1 min-w-[90px] text-center">
+              {monthYearString}
+            </span>
+            <button
               onClick={goToNextMonth}
               disabled={isCurrentMonth() || isFetchingAll}
-              className="h-8 w-8 hover:bg-[#1a1a1f] text-zinc-400 hover:text-white rounded-lg"
+              className="p-1 text-gray-500 hover:text-black dark:hover:text-white cursor-pointer disabled:opacity-40"
             >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
 
-          {/* Agent Filter (Multi-Select) */}
+          {/* Agent Filter */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] text-zinc-300 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors h-10 w-[200px] justify-between"
+              <button
+                className="px-3.5 py-1.5 border border-gray-200 dark:border-[#282b26] rounded-full text-xs font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2 cursor-pointer focus:outline-hidden"
+                style={{ backgroundColor: '#161715' }}
               >
-                {selectedAgentIds.length === 0
-                  ? "All Agents"
-                  : `${selectedAgentIds.length} Agent${selectedAgentIds.length > 1 ? 's' : ''} Selected`}
-                <span className="opacity-50 text-[10px]">▼</span>
-              </Button>
+                <span>
+                  {selectedAgentIds.length === 0
+                    ? "All Agents"
+                    : `${selectedAgentIds.length} Agent${selectedAgentIds.length > 1 ? 's' : ''}`}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+              </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-[#111113] border border-[#1d1d22] text-zinc-300 rounded-xl" align="end">
+            <DropdownMenuContent className="border border-gray-200 dark:border-[#282b26] text-gray-800 dark:text-gray-200 rounded-xl" style={{ backgroundColor: '#1C1E1A' }} align="end">
               <DropdownMenuCheckboxItem
                 checked={selectedAgentIds.length === 0}
                 onCheckedChange={() => setSelectedAgentIds([])}
-                className="hover:bg-[#1a1a1f] focus:bg-[#1a1a1f] text-xs"
+                className="hover:bg-gray-100 dark:hover:bg-[#161715] focus:bg-gray-100 dark:focus:bg-[#161715] text-xs cursor-pointer"
               >
                 All Agents
               </DropdownMenuCheckboxItem>
@@ -422,7 +395,7 @@ export default function BillingPage() {
                         setSelectedAgentIds(prev => prev.filter(id => id !== wfIdStr));
                       }
                     }}
-                    className="hover:bg-[#1a1a1f] focus:bg-[#1a1a1f] text-xs"
+                    className="hover:bg-gray-100 dark:hover:bg-[#161715] focus:bg-gray-100 dark:focus:bg-[#161715] text-xs cursor-pointer"
                   >
                     {wf.name}
                   </DropdownMenuCheckboxItem>
@@ -431,305 +404,308 @@ export default function BillingPage() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Clear filter button */}
-          {selectedAgentIds.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedAgentIds([])}
-              className="text-xs text-zinc-400 hover:text-white hover:bg-white/5 rounded-xl h-10"
+          {/* Rate Mode */}
+          <div className="relative">
+            <select
+              value={wallet && wallet.billing_rate > 0 ? "custom" : billingMode}
+              onChange={(e) => handleBillingModeChange(e.target.value)}
+              disabled={!!(wallet && wallet.billing_rate > 0)}
+              className="px-3.5 py-1.5 border border-gray-200 dark:border-[#282b26] rounded-full text-xs font-semibold text-gray-800 dark:text-gray-200 appearance-none pr-8 cursor-pointer focus:outline-hidden"
+              style={{ backgroundColor: '#161715' }}
             >
-              Clear
-            </Button>
-          )}
-        </div>
-
-        {/* Billing Mode Toggle */}
-        <div className="flex items-center">
-          <Select
-            value={wallet && wallet.billing_rate > 0 ? "custom" : billingMode}
-            onValueChange={handleBillingModeChange}
-            disabled={wallet && wallet.billing_rate > 0}
-          >
-            <SelectTrigger className="w-[180px] bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] text-zinc-300 rounded-xl text-xs h-10">
-              <SelectValue placeholder="Billing Mode" />
-            </SelectTrigger>
-            <SelectContent className="bg-[#111113] border border-[#1d1d22] text-zinc-300 rounded-xl">
               {wallet && wallet.billing_rate > 0 ? (
-                <SelectItem value="custom" className="hover:bg-[#1a1a1f] focus:bg-[#1a1a1f] text-xs">Custom ({getPulseUnitShortLabel()})</SelectItem>
+                <option value="custom">Custom ({getPulseUnitShortLabel()})</option>
               ) : (
                 <>
-                  <SelectItem value="per_minute" className="hover:bg-[#1a1a1f] focus:bg-[#1a1a1f] text-xs">Per Minute</SelectItem>
-                  <SelectItem value="per_30s" className="hover:bg-[#1a1a1f] focus:bg-[#1a1a1f] text-xs">Per 30s Pulse</SelectItem>
+                  <option value="per_minute">Per Minute</option>
+                  <option value="per_30s">Per 30s Pulse</option>
                 </>
               )}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Tier Badge Banner */}
-      <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="bg-blue-500/15 text-blue-400 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-blue-500/20">
-            📊 {tier}
-          </span>
-          <span className="text-xs font-medium text-zinc-200">
-            {orgTotalCalls.toLocaleString()} calls this month
-          </span>
-          <span className="text-zinc-700 hidden sm:inline">|</span>
-          <span className="text-xs font-semibold text-[#7c3aed]">
-            Rate: {formatCurrency(currentRate)}/{getPulseUnitLabel()}
-          </span>
-        </div>
-        {nextTier && !(wallet && wallet.billing_rate > 0) && (
-          <div className="text-xs text-zinc-400">
-            {Math.max(0, nextTier.maxCalls - orgTotalCalls + 1).toLocaleString()} more calls to reach {nextTier.label} ({formatCurrency(getPricePerUnit(nextTier.label, billingMode))}/{billingMode === 'per_minute' ? 'min' : '30s'})
-          </div>
-        )}
-        {wallet && wallet.billing_rate > 0 && (
-          <div className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/15 px-2.5 py-0.5 rounded-full font-semibold">
-            Custom Organization Pricing Active
-          </div>
-        )}
-        {selectedAgentIds.length > 0 && (
-          <div className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/15">
-            Tier is based on org-wide total
-          </div>
-        )}
-      </div>
-
-      {/* Summary Cards */}
-      {wallet && wallet.monthly_minutes_limit > 0 ? (
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 relative overflow-hidden">
-            <div className="text-xs font-semibold text-emerald-400 mb-2">Rupees Remaining</div>
-            <div className="text-2xl font-bold text-emerald-400">
-              ₹{(wallet.balance ?? 0).toFixed(2)}
-            </div>
-            <p className="text-[10px] text-zinc-500 mt-2">
-              Value of unused remaining minutes
-            </p>
-            <div className="absolute right-0 bottom-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-3xl" />
-          </div>
-
-          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
-            <div className="text-xs font-semibold text-zinc-400 mb-2">Minutes Remaining</div>
-            <div className="text-2xl font-bold text-white">
-              {(wallet.minutes_remaining ?? 0).toFixed(1)} min
-            </div>
-            <p className="text-[10px] text-zinc-500 mt-2">
-              Out of {((wallet.monthly_minutes_limit ?? 0) + (wallet.carry_forward_minutes ?? 0)).toFixed(0)} min allowance
-            </p>
-          </div>
-
-          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
-            <div className="text-xs font-semibold text-zinc-400 mb-2">Minutes Used</div>
-            <div className="text-2xl font-bold text-white">
-              {(wallet.minutes_used ?? 0).toFixed(1)} min
-            </div>
-            <p className="text-[10px] text-zinc-500 mt-2">
-              This cycle's total usage
-            </p>
-          </div>
-
-          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
-            <div className="text-xs font-semibold text-zinc-400 mb-2">Carry Forward</div>
-            <div className="text-2xl font-bold text-white">
-              {(wallet.carry_forward_minutes ?? 0).toFixed(1)} min
-            </div>
-            <p className="text-[10px] text-zinc-500 mt-2">
-              From previous cycle (2-month limit)
-            </p>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
-      ) : (
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
-            <div className="text-xs font-semibold text-zinc-400 mb-2">Accumulated Minutes</div>
-            <div className="text-2xl font-bold text-white">{totalMinutes.toFixed(1)}</div>
-            <p className="text-[10px] text-zinc-500 mt-2">
-              Raw sum of durations
-            </p>
+      </header>
+
+      {/* Main Workspace Container */}
+      <div className="max-w-6xl w-full mx-auto px-8 pt-6 pb-16 flex flex-col gap-6">
+        {/* Tier Progress Banner Card */}
+        <div
+          className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
+          style={{ backgroundColor: '#1C1E1A' }}
+        >
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="px-2.5 py-0.5 bg-purple-600 text-white font-bold text-[11px] rounded-full">
+              {tier}
+            </span>
+            <span className="text-xs font-bold text-gray-900 dark:text-white">
+              {orgTotalCalls.toLocaleString()} calls this month
+            </span>
+            <span className="text-gray-300 dark:text-gray-600">|</span>
+            <span className="text-xs font-semibold text-purple-700 dark:text-purple-400">
+              Rate: {formatCurrency(currentRate)}/{getPulseUnitLabel()}
+            </span>
           </div>
 
-          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
-            <div className="text-xs font-semibold text-zinc-400 mb-2">Billable Units</div>
-            <div className="text-2xl font-bold text-white">{totalBillableUnits.toLocaleString()}</div>
-            <p className="text-[10px] text-zinc-500 mt-2">
+          <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+            {nextTier && !(wallet && wallet.billing_rate > 0)
+              ? `${Math.max(0, nextTier.maxCalls - orgTotalCalls + 1).toLocaleString()} more calls to reach ${nextTier.label} (${formatCurrency(getPricePerUnit(nextTier.label, billingMode))}/${billingMode === 'per_minute' ? 'min' : '30s'})`
+              : 'Custom Pricing Active'}
+          </span>
+        </div>
+
+        {/* Metric Cards (Row 1) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1 */}
+          <div
+            className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-5 shadow-2xs space-y-1"
+            style={{ backgroundColor: '#1C1E1A' }}
+          >
+            <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+              Accumulated Minutes
+            </span>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {totalMinutes.toFixed(1)}
+            </div>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500">Raw sum of durations</p>
+          </div>
+
+          {/* Card 2 */}
+          <div
+            className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-5 shadow-2xs space-y-1"
+            style={{ backgroundColor: '#1C1E1A' }}
+          >
+            <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+              Billable Units
+            </span>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {totalBillableUnits.toLocaleString()}
+            </div>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500">
               {wallet && wallet.billing_rate > 0
                 ? `Total billable ${getPulseUnitShortLabel()} units`
                 : (billingMode === 'per_minute' ? 'Total billable minutes' : 'Total 30s pulses')}
             </p>
           </div>
 
-          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6 relative overflow-hidden">
-            <div className="text-xs font-semibold text-[#7c3aed] mb-2">Total Billed</div>
-            <div className="text-2xl font-bold text-white">{formatCurrency(totalRevenue)}</div>
-            <p className="text-[10px] text-zinc-500 mt-2">
-              Total revenue for selected filters
-            </p>
-            <div className="absolute right-0 bottom-0 w-24 h-24 bg-[#7c3aed]/5 rounded-full blur-3xl" />
+          {/* Card 3 */}
+          <div
+            className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-5 shadow-2xs space-y-1"
+            style={{ backgroundColor: '#1C1E1A' }}
+          >
+            <span className="text-[11px] font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wide">
+              Total Billed
+            </span>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {formatCurrency(totalRevenue)}
+            </div>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500">Total revenue for selected filters</p>
           </div>
 
-          <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
-            <div className="text-xs font-semibold text-zinc-400 mb-2">Avg Cost Per Call</div>
-            <div className="text-2xl font-bold text-white">{formatCurrency(avgRevenuePerCall)}</div>
-            <p className="text-[10px] text-zinc-500 mt-2">
-              Revenue / call count
-            </p>
+          {/* Card 4 */}
+          <div
+            className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-5 shadow-2xs space-y-1"
+            style={{ backgroundColor: '#1C1E1A' }}
+          >
+            <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+              Avg Cost Per Call
+            </span>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              {formatCurrency(avgRevenuePerCall)}
+            </div>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500">Revenue / call count</p>
           </div>
         </div>
-      )}
 
-      {/* Breakdown Table */}
-      <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
-        <div className="flex justify-between items-center mb-6">
-          <span className="text-sm font-semibold text-zinc-200">Per-Agent Breakdown</span>
-          <span className="text-[10px] text-zinc-500">Revenue and usage separated by voice agent</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-[#1d1d22] text-zinc-500 font-medium">
-                <th className="pb-3 font-medium">Agent Name</th>
-                <th className="pb-3 text-right font-medium">Calls</th>
-                <th className="pb-3 text-right font-medium">Total Minutes</th>
-                <th className="pb-3 text-right font-medium">Billable Units</th>
-                <th className="pb-3 text-right font-medium text-white">Billed Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1d1d22]/50">
-              {breakdownArray.length > 0 ? (
-                <>
-                  {breakdownArray.map(b => (
-                    <tr key={b.name} className="group hover:bg-white/1 transition-colors">
-                      <td className="py-3.5 text-zinc-300">
+        {/* Per-Agent Breakdown Table Card */}
+        <div
+          className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-5"
+          style={{ backgroundColor: '#1C1E1A' }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <h2 className="text-xl font-normal text-gray-900 dark:text-white font-serif tracking-tight">
+                Per-Agent Breakdown
+              </h2>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Revenue and usage separated by voice agent
+              </p>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-[#282b26] text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wider text-[10.5px]">
+                  <th className="pb-3 px-2">Agent Name</th>
+                  <th className="pb-3 px-2 text-right">Calls</th>
+                  <th className="pb-3 px-2 text-right">Total Minutes</th>
+                  <th className="pb-3 px-2 text-right">Billable Units</th>
+                  <th className="pb-3 px-2 text-right">Billed Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-[#282b26]">
+                {breakdownArray.length > 0 ? (
+                  breakdownArray.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50/70 dark:hover:bg-[#161715]/70 transition-colors">
+                      <td className="py-3.5 px-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-zinc-200">{b.name}</span>
-                          <span className="bg-[#1c1c1f] text-zinc-400 border border-zinc-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">
+                          <span className="font-bold text-gray-900 dark:text-white">
+                            {item.name}
+                          </span>
+                          <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-[#161715] text-gray-600 dark:text-gray-400 font-mono text-[9.5px] font-bold rounded">
                             {tier}
                           </span>
                         </div>
                       </td>
-                      <td className="py-3.5 text-right text-zinc-300">{b.calls.toLocaleString()}</td>
-                      <td className="py-3.5 text-right text-zinc-300">{b.minutes.toFixed(1)}</td>
-                      <td className="py-3.5 text-right text-zinc-300">{b.billableUnits.toLocaleString()}</td>
-                      <td className="py-3.5 text-right font-bold text-white">{formatCurrency(b.revenue)}</td>
+
+                      <td className="py-3.5 px-2 text-right font-medium text-gray-700 dark:text-gray-300">
+                        {item.calls.toLocaleString()}
+                      </td>
+
+                      <td className="py-3.5 px-2 text-right font-medium text-gray-700 dark:text-gray-300">
+                        {item.minutes.toFixed(1)}
+                      </td>
+
+                      <td className="py-3.5 px-2 text-right font-medium text-gray-700 dark:text-gray-300">
+                        {item.billableUnits.toLocaleString()}
+                      </td>
+
+                      <td className="py-3.5 px-2 text-right font-bold font-mono text-gray-900 dark:text-white">
+                        {formatCurrency(item.revenue)}
+                      </td>
                     </tr>
-                  ))}
-                  <tr className="bg-[#08080a] font-bold">
-                    <td className="py-4 text-zinc-200">Totals</td>
-                    <td className="py-4 text-right text-zinc-200">{filteredRuns.length.toLocaleString()}</td>
-                    <td className="py-4 text-right text-zinc-200">{totalMinutes.toFixed(1)}</td>
-                    <td className="py-4 text-right text-zinc-200">{totalBillableUnits.toLocaleString()}</td>
-                    <td className="py-4 text-right text-[#7c3aed]">{formatCurrency(totalRevenue)}</td>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-gray-400 dark:text-gray-500">
+                      {isFetchingAll ? 'Loading breakdown...' : 'No calls recorded for this period'}
+                    </td>
                   </tr>
-                </>
-              ) : (
-                <tr>
-                  <td colSpan={5} className="h-24 text-center text-zinc-500">
-                    {isFetchingAll ? 'Loading breakdown...' : 'No calls recorded for this period'}
+                )}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-gray-200 dark:border-[#282b26] text-gray-900 dark:text-white font-bold bg-gray-50/60 dark:bg-[#161715]/60">
+                  <td className="py-3.5 px-2 font-serif text-sm">Totals</td>
+                  <td className="py-3.5 px-2 text-right">{filteredRuns.length.toLocaleString()}</td>
+                  <td className="py-3.5 px-2 text-right">{totalMinutes.toFixed(1)}</td>
+                  <td className="py-3.5 px-2 text-right">{totalBillableUnits.toLocaleString()}</td>
+                  <td className="py-3.5 px-2 text-right font-mono text-purple-700 dark:text-purple-400 text-sm">
+                    {formatCurrency(totalRevenue)}
                   </td>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Call Log */}
-      <div className="bg-[#111113] border border-[#1d1d22] rounded-2xl p-6">
-        <div className="flex justify-between items-center mb-6">
-          <span className="text-sm font-semibold text-zinc-200">Call Log</span>
-          <span className="text-[10px] text-zinc-500">Individual call records for the selected period</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-[#1d1d22] text-zinc-500 font-medium">
-                <th className="pb-3 font-medium">Date & Time</th>
-                <th className="pb-3 font-medium">Agent</th>
-                <th className="pb-3 font-medium">Caller</th>
-                <th className="pb-3 font-medium">Call Type</th>
-                <th className="pb-3 text-right font-medium">Duration</th>
-                <th className="pb-3 text-right font-medium">Units</th>
-                <th className="pb-3 text-right font-medium">Rate Used</th>
-                <th className="pb-3 text-right font-medium text-white">Billed</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1d1d22]/50">
-              {isLoadingRuns ? (
-                <tr>
-                  <td colSpan={8} className="h-24 text-center text-zinc-500 animate-pulse">Loading calls...</td>
-                </tr>
-              ) : paginatedRuns.length > 0 ? (
-                paginatedRuns.map(run => {
-                  const units = getRunBillableUnits(run.call_duration_seconds);
-                  const charge = calculateRunCharge(run.call_duration_seconds);
-                  return (
-                    <tr key={run.id} className="group hover:bg-white/1 transition-colors">
-                      <td className="py-3.5 text-zinc-300 whitespace-nowrap">{formatDate(run.created_at)}</td>
-                      <td className="py-3.5 text-zinc-300 max-w-[150px] truncate" title={run.workflow_name || ''}>
-                        {run.workflow_name || 'Unknown'}
-                      </td>
-                      <td className="py-3.5 text-zinc-300 font-mono">
-                        {run.caller_number || run.called_number || '-'}
-                      </td>
-                      <td className="py-3.5 text-zinc-300 capitalize">{run.call_type || '-'}</td>
-                      <td className="py-3.5 text-right text-zinc-300 whitespace-nowrap">{formatDuration(run.call_duration_seconds)}</td>
-                      <td className="py-3.5 text-right text-zinc-300 whitespace-nowrap">
-                        {units} {getPulseUnitShortLabel()}
-                      </td>
-                      <td className="py-3.5 text-right text-zinc-500 whitespace-nowrap">
-                        {formatCurrency(currentRate)}/{getPulseUnitShortLabel()}
-                      </td>
-                      <td className="py-3.5 text-right font-semibold text-zinc-200">{formatCurrency(charge)}</td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={8} className="h-32 text-center">
-                    <div className="flex flex-col items-center justify-center text-zinc-500">
-                      <IndianRupee className="h-8 w-8 mb-2 opacity-20" />
-                      <p className="text-xs">No calls recorded for this period</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </tfoot>
+            </table>
+          </div>
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6 pt-4 border-t border-[#1d1d22]/50">
-            <p className="text-[10px] text-zinc-500">
-              Page {currentPage} of {totalPages} ({filteredRuns.length} total calls)
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 transition-colors"
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="bg-[#121214] border border-[#232328] hover:bg-[#1a1a1f] px-3 py-1.5 rounded-xl text-xs text-zinc-300 transition-colors"
-              >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
+        {/* Call Log Card */}
+        <div
+          className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-5"
+          style={{ backgroundColor: '#1C1E1A' }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <h2 className="text-xl font-normal text-gray-900 dark:text-white font-serif tracking-tight">
+                Call Log
+              </h2>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Individual call records for the selected period
+              </p>
             </div>
           </div>
-        )}
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-[#282b26] text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wider text-[10.5px]">
+                  <th className="pb-3 px-2">DATE & TIME</th>
+                  <th className="pb-3 px-2">AGENT</th>
+                  <th className="pb-3 px-2">CALLER</th>
+                  <th className="pb-3 px-2">CALL TYPE</th>
+                  <th className="pb-3 px-2 text-right">DURATION</th>
+                  <th className="pb-3 px-2 text-right">UNITS</th>
+                  <th className="pb-3 px-2 text-right">RATE USED</th>
+                  <th className="pb-3 px-2 text-right">BILLED</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-[#282b26]">
+                {isLoadingRuns ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-gray-400 dark:text-gray-500 animate-pulse">Loading calls...</td>
+                  </tr>
+                ) : paginatedRuns.length > 0 ? (
+                  paginatedRuns.map((run) => {
+                    const units = getRunBillableUnits(run.call_duration_seconds);
+                    const charge = calculateRunCharge(run.call_duration_seconds);
+                    return (
+                      <tr key={run.id} className="hover:bg-gray-50/70 dark:hover:bg-[#161715]/70 transition-colors">
+                        <td className="py-3.5 px-2 font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                          {formatDate(run.created_at)}
+                        </td>
+                        <td className="py-3.5 px-2 font-bold text-gray-900 dark:text-white max-w-[160px] truncate" title={run.workflow_name || ''}>
+                          {run.workflow_name || 'Unknown'}
+                        </td>
+                        <td className="py-3.5 px-2 font-mono text-gray-700 dark:text-gray-300">
+                          {run.caller_number || run.called_number || '-'}
+                        </td>
+                        <td className="py-3.5 px-2 text-gray-700 dark:text-gray-300 capitalize">
+                          {run.call_type || '-'}
+                        </td>
+                        <td className="py-3.5 px-2 text-right font-mono font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">
+                          {formatDuration(run.call_duration_seconds)}
+                        </td>
+                        <td className="py-3.5 px-2 text-right font-mono text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                          {units} {getPulseUnitShortLabel()}
+                        </td>
+                        <td className="py-3.5 px-2 text-right text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                          {formatCurrency(currentRate)}/{getPulseUnitShortLabel()}
+                        </td>
+                        <td className="py-3.5 px-2 text-right font-bold font-mono text-gray-900 dark:text-white whitespace-nowrap">
+                          {formatCurrency(charge)}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-gray-400 dark:text-gray-500">
+                      No calls recorded for this period
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-[#282b26]">
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Page {currentPage} of {totalPages} ({filteredRuns.length} total calls)
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 bg-gray-100 dark:bg-[#161715] hover:bg-gray-200 dark:hover:bg-[#232621] disabled:opacity-40 text-gray-700 dark:text-gray-300 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  <span>Previous</span>
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 bg-gray-100 dark:bg-[#161715] hover:bg-gray-200 dark:hover:bg-[#232621] disabled:opacity-40 text-gray-700 dark:text-gray-300 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                >
+                  <span>Next</span>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
