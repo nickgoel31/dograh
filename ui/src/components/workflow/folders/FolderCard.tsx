@@ -13,7 +13,7 @@ interface FolderCardProps {
 export function FolderCard({ folder, workflows }: FolderCardProps) {
     const router = useRouter();
 
-    const lastEdited = folder.updated_at || folder.created_at;
+    const lastEdited = (folder as any).updated_at || folder.created_at;
     const timeAgo = lastEdited
         ? (() => {
               const diff = Date.now() - new Date(lastEdited).getTime();
