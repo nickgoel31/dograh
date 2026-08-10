@@ -127,12 +127,12 @@ export function WorkflowRunsTable({
                     <p className="text-muted-foreground">{emptyMessage}</p>
                 </div>
             ) : (
-                <Card>
-                    <CardHeader>
+                <Card className="border border-[#282b26] rounded-2xl shadow-2xs p-6" style={{ backgroundColor: '#1C1E1A' }}>
+                    <CardHeader className="p-0 pb-4 mb-4 border-b border-[#282b26]">
                         <div className="flex items-center justify-between">
                             <div>
-                                <CardTitle>Workflow Runs</CardTitle>
-                                <CardDescription>
+                                <CardTitle className="text-lg font-serif font-normal text-white">Workflow Runs</CardTitle>
+                                <CardDescription className="text-xs text-[#9ca39a]">
                                     {subtitle || `Showing ${runs.length} of ${totalCount} total runs`}
                                 </CardDescription>
                             </div>
@@ -143,14 +143,15 @@ export function WorkflowRunsTable({
                                     onClick={onReload}
                                     disabled={loading}
                                     title="Reload"
+                                    className="bg-[#1a1c18] border-[#2e312b] text-white hover:bg-[#232621]"
                                 >
                                     <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                                 </Button>
                             )}
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
+                    <CardContent className="p-0">
+                        <div className="bg-[#1a1c18] border border-[#2e312b] rounded-xl overflow-hidden shadow-xs">
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-muted/50">
