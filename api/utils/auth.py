@@ -14,7 +14,13 @@ def verify_password(password: str, password_hash: str) -> bool:
     return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
 
 
-def create_jwt_token(user_id: int, email: str, role: str = "admin", is_superuser: bool = False) -> str:
+def create_jwt_token(
+    user_id: int,
+    email: str,
+    role: str = "admin",
+    is_superuser: bool = False,
+    acting_as_org_id: int | None = None,
+) -> str:
     payload = {
         "sub": str(user_id),
         "email": email,
@@ -23,6 +29,8 @@ def create_jwt_token(user_id: int, email: str, role: str = "admin", is_superuser
         "exp": datetime.now(UTC) + timedelta(hours=OSS_JWT_EXPIRY_HOURS),
         "iat": datetime.now(UTC),
     }
+    if acting_as_org_id is not None:
+        payload["acting_as_org_id"] = acting_as_org_id
     return jwt.encode(payload, OSS_JWT_SECRET, algorithm="HS256")
 
 

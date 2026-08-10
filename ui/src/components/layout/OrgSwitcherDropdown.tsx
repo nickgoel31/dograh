@@ -5,6 +5,7 @@ import { Building2, Check, Loader2, RefreshCw, Search, ShieldAlert, Sparkles, X 
 import { toast } from "sonner";
 
 import { client } from "@/client/client.gen";
+import { useAuth } from "@/lib/auth";
 
 interface Organization {
   id: number;
@@ -29,6 +30,7 @@ export const OrgSwitcherDropdown: React.FC<OrgSwitcherDropdownProps> = ({
   currentOrgId,
   isSuperadmin,
 }) => {
+  const { getAccessToken } = useAuth();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -60,9 +62,15 @@ export const OrgSwitcherDropdown: React.FC<OrgSwitcherDropdownProps> = ({
   const fetchOrganizations = async () => {
     setLoading(true);
     try {
+      const token = await getAccessToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const res = await client.request<Organization[]>({
         method: "GET",
         url: "/api/v1/superuser/organizations",
+        headers,
       });
       if (res.data) {
         setOrganizations(res.data);
@@ -78,10 +86,16 @@ export const OrgSwitcherDropdown: React.FC<OrgSwitcherDropdownProps> = ({
     if (isSwitching) return;
     setIsSwitching(true);
     try {
+      const token = await getAccessToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const res = (await client.request({
         method: "POST",
         url: "/api/v1/superuser/switch-org",
         body: { org_id: org.id },
+        headers,
       })) as any;
 
       if (res.data?.access_token) {

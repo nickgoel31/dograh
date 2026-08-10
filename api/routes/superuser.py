@@ -40,6 +40,16 @@ class ImpersonateResponse(BaseModel):
     access_token: str
 
 
+class SwitchOrgRequest(BaseModel):
+    org_id: int
+
+
+class SwitchOrgResponse(BaseModel):
+    access_token: str
+    org_id: int
+    org_name: str
+
+
 class SuperuserWorkflowRunResponse(BaseModel):
     id: int
     name: str
@@ -120,6 +130,39 @@ async def impersonate(
         refresh_token=session["refresh_token"],
         access_token=session["access_token"],
     )
+
+
+@router.post("/switch-org", response_model=SwitchOrgResponse)
+async def switch_org(
+    request: SwitchOrgRequest,
+    user: UserModel = Depends(get_superuser),
+):
+    """Switch organization context for superuser.
+    Updates selected_organization_id in DB and returns a JWT token scoped with acting_as_org_id.
+    """
+    async with db_client.async_session() as session:
+        org = await session.get(OrganizationModel, request.org_id)
+        if not org:
+            raise HTTPException(status_code=404, detail="Organization not found")
+
+        db_user = await session.get(UserModel, user.id)
+        if db_user:
+            db_user.selected_organization_id = org.id
+            await session.commit()
+
+        token = create_jwt_token(
+            user_id=user.id,
+            email=user.email,
+            role=user.role,
+            is_superuser=True,
+            acting_as_org_id=org.id,
+        )
+
+        return SwitchOrgResponse(
+            access_token=token,
+            org_id=org.id,
+            org_name=org.name,
+        )
 
 
 @router.get("/workflow-runs")
