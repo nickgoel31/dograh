@@ -1,26 +1,52 @@
 "use client";
 
 import { format } from "date-fns";
-import { ArrowLeft, BookA, Brain, CalendarIcon, Clipboard, Download, ExternalLink, FileDown, Fingerprint, Loader2, Mic, Pause, PhoneOff, Play, Rocket, Settings, Trash2Icon, Upload, Variable, X } from "lucide-react";
+import {
+  ArrowLeft,
+  BookA,
+  Brain,
+  CalendarIcon,
+  CheckCircle2,
+  Clipboard,
+  Cpu,
+  Download,
+  ExternalLink,
+  FileDown,
+  FileText,
+  Fingerprint,
+  Loader2,
+  Mic,
+  Pause,
+  PhoneOff,
+  Play,
+  Plus,
+  Rocket,
+  Save,
+  Settings,
+  Trash2Icon,
+  Upload,
+  Variable,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { downloadWorkflowReportApiV1WorkflowWorkflowIdReportGet, getAmbientNoiseUploadUrlApiV1WorkflowAmbientNoiseUploadUrlPost, getWorkflowApiV1WorkflowFetchWorkflowIdGet } from "@/client/sdk.gen";
+import {
+  downloadWorkflowReportApiV1WorkflowWorkflowIdReportGet,
+  getAmbientNoiseUploadUrlApiV1WorkflowAmbientNoiseUploadUrlPost,
+  getWorkflowApiV1WorkflowFetchWorkflowIdGet,
+} from "@/client/sdk.gen";
 import type { WorkflowResponse } from "@/client/types.gen";
 import { FlowEdge, FlowNode } from "@/components/flow/types";
 import { LLMConfigSelector } from "@/components/LLMConfigSelector";
 import { ServiceConfigurationForm } from "@/components/ServiceConfigurationForm";
 import SpinLoader from "@/components/SpinLoader";
-import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { SETTINGS_DOCUMENTATION_URLS } from "@/constants/documentation";
@@ -30,24 +56,24 @@ import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
 import { useAuth } from "@/lib/auth";
 import logger from "@/lib/logger";
 import {
-    type AmbientNoiseConfiguration,
-    DEFAULT_VOICEMAIL_DETECTION_CONFIGURATION,
-    DEFAULT_WORKFLOW_CONFIGURATIONS,
-    type TurnStopStrategy,
-    type VoicemailDetectionConfiguration,
-    type WorkflowConfigurations,
+  type AmbientNoiseConfiguration,
+  DEFAULT_VOICEMAIL_DETECTION_CONFIGURATION,
+  DEFAULT_WORKFLOW_CONFIGURATIONS,
+  type TurnStopStrategy,
+  type VoicemailDetectionConfiguration,
+  type WorkflowConfigurations,
 } from "@/types/workflow-configurations";
 
 import { EmbedDialog } from "../components/EmbedDialog";
 import { useWorkflowState } from "../hooks/useWorkflowState";
 
 // ---------------------------------------------------------------------------
-// Constants
+// Constants & Defaults
 // ---------------------------------------------------------------------------
 
 const DEFAULT_AMBIENT_NOISE_CONFIG: AmbientNoiseConfiguration = {
-    enabled: false,
-    volume: 0.3,
+  enabled: false,
+  volume: 0.3,
 };
 
 const DEFAULT_VOICEMAIL_SYSTEM_PROMPT = `You are a voicemail detection classifier for an OUTBOUND calling system. A bot has called a phone number and you need to determine if a human answered or if the call went to voicemail based on the provided text.
@@ -72,1362 +98,1328 @@ VOICEMAIL SYSTEM (respond "VOICEMAIL"):
 
 Respond with ONLY "CONVERSATION" if a person answered, or "VOICEMAIL" if it's voicemail/recording.`;
 
-// Sidebar navigation items
 const NAV_ITEMS = [
-    { id: "general", label: "General", icon: Settings },
-    { id: "models", label: "Model Overrides", icon: Brain },
-    { id: "variables", label: "Template Variables", icon: Variable },
-    { id: "dictionary", label: "Dictionary", icon: BookA },
-    { id: "voicemail", label: "Voicemail Detection", icon: PhoneOff },
-    { id: "recordings", label: "Recordings", icon: Mic },
-    { id: "deployment", label: "Add to Website", icon: Rocket },
-    { id: "report", label: "Report", icon: FileDown },
-    { id: "identity", label: "Agent UUID", icon: Fingerprint },
+  { id: "general", label: "General", icon: Settings },
+  { id: "models", label: "Model Overrides", icon: Cpu },
+  { id: "variables", label: "Template Variables", icon: Variable },
+  { id: "dictionary", label: "Dictionary", icon: BookA },
+  { id: "voicemail", label: "Voicemail Detection", icon: PhoneOff },
+  { id: "recordings", label: "Recordings", icon: Mic },
+  { id: "deployment", label: "Add to Website", icon: Rocket },
+  { id: "report", label: "Report", icon: FileText },
+  { id: "identity", label: "Agent UUID", icon: Fingerprint },
 ];
-
-// ---------------------------------------------------------------------------
-// Section: Report
-// ---------------------------------------------------------------------------
-
-function ReportSection({ workflowId }: { workflowId: number }) {
-    const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-    const [startTime, setStartTime] = useState("00:00");
-    const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-    const [endTime, setEndTime] = useState("23:59");
-    const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-    const [isDownloading, setIsDownloading] = useState(false);
-
-    const buildDateTime = (date: Date | undefined, time: string): string | undefined => {
-        if (!date) return undefined;
-        const [hours, minutes] = time.split(":").map(Number);
-        const combined = new Date(date);
-        combined.setHours(hours, minutes, 0, 0);
-        return combined.toISOString();
-    };
-
-    const handleDownload = async () => {
-        setIsDownloading(true);
-        setIsPopoverOpen(false);
-        try {
-            const response = await downloadWorkflowReportApiV1WorkflowWorkflowIdReportGet({
-                path: { workflow_id: workflowId },
-                query: {
-                    start_date: buildDateTime(startDate, startTime),
-                    end_date: buildDateTime(endDate, endTime),
-                },
-                parseAs: "blob",
-            });
-
-            if (response.data) {
-                const blob = response.data as Blob;
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `workflow_${workflowId}_report.csv`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(url);
-            } else {
-                toast.error("Failed to download report");
-            }
-        } catch (err) {
-            logger.error(`Failed to download workflow report: ${err}`);
-            toast.error("Failed to download report");
-        } finally {
-            setIsDownloading(false);
-        }
-    };
-
-    const handleClear = () => {
-        setStartDate(undefined);
-        setStartTime("00:00");
-        setEndDate(undefined);
-        setEndTime("23:59");
-    };
-
-    return (
-        <Card id="report">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                    <FileDown className="h-4 w-4" />
-                    Report
-                </CardTitle>
-                <CardDescription>
-                    Download a CSV report of completed runs for this agent, optionally filtered by date range.
-                </CardDescription>
-            </CardHeader>
-            <CardFooter className="border-t pt-6">
-                <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" disabled={isDownloading}>
-                            <Download className="h-4 w-4 mr-2" />
-                            Download Report
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-4" align="start">
-                        <div className="space-y-4">
-                            <div className="text-sm font-medium">Filter by date range</div>
-                            <div className="grid gap-3">
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs">From</Label>
-                                    <div className="flex gap-2">
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button variant="outline" size="sm" className="w-[140px] justify-start text-left font-normal">
-                                                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                                                    {startDate ? format(startDate, "MMM dd, yyyy") : "Start date"}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={startDate}
-                                                    onSelect={setStartDate}
-                                                    disabled={(date) => (endDate ? date > endDate : false)}
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
-                                        <Input
-                                            type="time"
-                                            value={startTime}
-                                            onChange={(e) => setStartTime(e.target.value)}
-                                            className="w-[100px] h-8 text-xs"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label className="text-xs">To</Label>
-                                    <div className="flex gap-2">
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button variant="outline" size="sm" className="w-[140px] justify-start text-left font-normal">
-                                                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                                                    {endDate ? format(endDate, "MMM dd, yyyy") : "End date"}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={endDate}
-                                                    onSelect={setEndDate}
-                                                    disabled={(date) => (startDate ? date < startDate : false)}
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
-                                        <Input
-                                            type="time"
-                                            value={endTime}
-                                            onChange={(e) => setEndTime(e.target.value)}
-                                            className="w-[100px] h-8 text-xs"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                            <Separator />
-                            <div className="flex justify-between">
-                                <Button variant="ghost" size="sm" onClick={handleClear}>
-                                    Clear
-                                </Button>
-                                <Button size="sm" onClick={handleDownload} disabled={isDownloading}>
-                                    <Download className="h-3.5 w-3.5 mr-1.5" />
-                                    {startDate || endDate ? "Download Filtered" : "Download All"}
-                                </Button>
-                            </div>
-                        </div>
-                    </PopoverContent>
-                </Popover>
-            </CardFooter>
-        </Card>
-    );
-}
-
-// ---------------------------------------------------------------------------
-// Section: General
-// ---------------------------------------------------------------------------
 
 const MAX_AMBIENT_NOISE_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
+// ---------------------------------------------------------------------------
+// Section 1: General
+// ---------------------------------------------------------------------------
+
 function GeneralSection({
-    workflowConfigurations,
-    workflowName,
-    workflowId,
-    initialConcurrencyLimit,
-    onSave,
+  workflowConfigurations,
+  workflowName,
+  workflowId,
+  initialConcurrencyLimit,
+  onSave,
 }: {
-    workflowConfigurations: WorkflowConfigurations;
-    workflowName: string;
-    workflowId: number;
-    initialConcurrencyLimit?: number | null;
-    onSave: (configurations: WorkflowConfigurations, workflowName: string, concurrencyLimit?: number | null) => Promise<void>;
+  workflowConfigurations: WorkflowConfigurations;
+  workflowName: string;
+  workflowId: number;
+  initialConcurrencyLimit?: number | null;
+  onSave: (configurations: WorkflowConfigurations, workflowName: string, concurrencyLimit?: number | null) => Promise<void>;
 }) {
-    const [name, setName] = useState(workflowName);
-    const [concurrencyLimit, setConcurrencyLimit] = useState<number | ''>(
-        initialConcurrencyLimit ?? ''
-    );
-    const [ambientNoiseConfig, setAmbientNoiseConfig] = useState<AmbientNoiseConfiguration>(
-        workflowConfigurations.ambient_noise_configuration || DEFAULT_AMBIENT_NOISE_CONFIG,
-    );
-    const [maxCallDuration, setMaxCallDuration] = useState(workflowConfigurations.max_call_duration || 600);
-    const [maxUserIdleTimeout, setMaxUserIdleTimeout] = useState(workflowConfigurations.max_user_idle_timeout || 10);
-    const [smartTurnStopSecs, setSmartTurnStopSecs] = useState(workflowConfigurations.smart_turn_stop_secs || 2);
-    const [turnStopStrategy, setTurnStopStrategy] = useState<TurnStopStrategy>(
-        workflowConfigurations.turn_stop_strategy || "transcription",
-    );
-    const [contextCompactionEnabled, setContextCompactionEnabled] = useState(
-        workflowConfigurations.context_compaction_enabled ?? false,
-    );
-    const [isSaving, setIsSaving] = useState(false);
-    const [isUploadingAudio, setIsUploadingAudio] = useState(false);
-    const [audioUploadError, setAudioUploadError] = useState<string | null>(null);
-    const ambientFileInputRef = useRef<HTMLInputElement>(null);
-    const { playingId, toggle: togglePlayback } = useAudioPlayback();
+  const [name, setName] = useState(workflowName);
+  const [concurrencyLimit, setConcurrencyLimit] = useState<number | "">(initialConcurrencyLimit ?? "");
+  const [ambientNoiseConfig, setAmbientNoiseConfig] = useState<AmbientNoiseConfiguration>(
+    workflowConfigurations.ambient_noise_configuration || DEFAULT_AMBIENT_NOISE_CONFIG,
+  );
+  const [maxCallDuration, setMaxCallDuration] = useState(workflowConfigurations.max_call_duration || 600);
+  const [maxUserIdleTimeout, setMaxUserIdleTimeout] = useState(workflowConfigurations.max_user_idle_timeout || 10);
+  const [smartTurnStopSecs, setSmartTurnStopSecs] = useState(workflowConfigurations.smart_turn_stop_secs || 2);
+  const [turnStopStrategy, setTurnStopStrategy] = useState<TurnStopStrategy>(
+    workflowConfigurations.turn_stop_strategy || "turn_analyzer",
+  );
+  const [contextCompactionEnabled, setContextCompactionEnabled] = useState(
+    workflowConfigurations.context_compaction_enabled ?? false,
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const [audioUploadError, setAudioUploadError] = useState<string | null>(null);
+  const ambientFileInputRef = useRef<HTMLInputElement>(null);
+  const { playingId, toggle: togglePlayback } = useAudioPlayback();
 
-    const { getAccessToken } = useAuth();
-    const [orgConcurrencyStatus, setOrgConcurrencyStatus] = useState<{
-        concurrency_limit: number | null;
-        allocated_concurrency: number;
-    } | null>(null);
+  const { getAccessToken } = useAuth();
+  const [orgConcurrencyStatus, setOrgConcurrencyStatus] = useState<{
+    concurrency_limit: number | null;
+    allocated_concurrency: number;
+  } | null>(null);
 
-    useEffect(() => {
-        const fetchStatus = async () => {
-            try {
-                const token = await getAccessToken();
-                const res = await fetch('/api/v1/organizations/concurrency-status', {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setOrgConcurrencyStatus(data);
-                }
-            } catch (err) {
-                logger.error("Failed to fetch organization concurrency status", err);
-            }
-        };
-        fetchStatus();
-    }, [getAccessToken]);
-
-    const isConcurrencyExceeded = useMemo(() => {
-        if (!orgConcurrencyStatus || orgConcurrencyStatus.concurrency_limit === null) return false;
-        
-        const numericLimit = concurrencyLimit === '' ? 0 : concurrencyLimit;
-        const initialLimit = initialConcurrencyLimit || 0;
-        
-        const otherAllocated = orgConcurrencyStatus.allocated_concurrency - initialLimit;
-        
-        return otherAllocated + numericLimit > orgConcurrencyStatus.concurrency_limit;
-    }, [orgConcurrencyStatus, concurrencyLimit, initialConcurrencyLimit]);
-
-    const isDirty = useMemo(() => {
-        const initAmbient = workflowConfigurations.ambient_noise_configuration || DEFAULT_AMBIENT_NOISE_CONFIG;
-        return (
-            name !== workflowName ||
-            JSON.stringify(ambientNoiseConfig) !== JSON.stringify(initAmbient) ||
-            maxCallDuration !== (workflowConfigurations.max_call_duration || 600) ||
-            maxUserIdleTimeout !== (workflowConfigurations.max_user_idle_timeout || 10) ||
-            smartTurnStopSecs !== (workflowConfigurations.smart_turn_stop_secs || 2) ||
-            turnStopStrategy !== (workflowConfigurations.turn_stop_strategy || "transcription") ||
-            contextCompactionEnabled !== (workflowConfigurations.context_compaction_enabled ?? false) ||
-            (concurrencyLimit === '' ? null : concurrencyLimit) !== (initialConcurrencyLimit ?? null)
-        );
-    }, [name, workflowName, ambientNoiseConfig, maxCallDuration, maxUserIdleTimeout, smartTurnStopSecs, turnStopStrategy, contextCompactionEnabled, workflowConfigurations, concurrencyLimit, initialConcurrencyLimit]);
-
-    useUnsavedChanges("general", isDirty);
-
-    const handleAmbientFileUpload = async (file: File) => {
-        if (file.size > MAX_AMBIENT_NOISE_FILE_SIZE) {
-            setAudioUploadError(`File too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum is 10MB.`);
-            return;
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const token = await getAccessToken();
+        const res = await fetch("/api/v1/organizations/concurrency-status", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setOrgConcurrencyStatus(data);
         }
-
-        setIsUploadingAudio(true);
-        setAudioUploadError(null);
-
-        try {
-            // 1. Get presigned upload URL
-            const res = await getAmbientNoiseUploadUrlApiV1WorkflowAmbientNoiseUploadUrlPost({
-                body: {
-                    workflow_id: Number(workflowId),
-                    filename: file.name,
-                    mime_type: file.type || "audio/wav",
-                    file_size: file.size,
-                },
-            });
-
-            if (res.error || !res.data?.upload_url) {
-                throw new Error("Failed to get upload URL");
-            }
-
-            const data = res.data;
-
-            // 2. Upload file to storage
-            const uploadRes = await fetch(data.upload_url, {
-                method: "PUT",
-                body: file,
-                headers: { "Content-Type": file.type || "audio/wav" },
-            });
-            if (!uploadRes.ok) {
-                throw new Error("File upload failed");
-            }
-
-            // 3. Update config with storage reference
-            setAmbientNoiseConfig((prev) => ({
-                ...prev,
-                storage_key: data.storage_key,
-                storage_backend: data.storage_backend,
-                original_filename: file.name,
-            }));
-        } catch (err) {
-            setAudioUploadError(err instanceof Error ? err.message : "Upload failed");
-        } finally {
-            setIsUploadingAudio(false);
-            if (ambientFileInputRef.current) ambientFileInputRef.current.value = "";
-        }
+      } catch (err) {
+        logger.error("Failed to fetch organization concurrency status", err);
+      }
     };
+    fetchStatus();
+  }, [getAccessToken]);
 
-    const handleRemoveCustomAudio = () => {
-        setAmbientNoiseConfig((prev) => ({
-            enabled: prev.enabled,
-            volume: prev.volume,
-        }));
-    };
+  const isConcurrencyExceeded = useMemo(() => {
+    if (!orgConcurrencyStatus || orgConcurrencyStatus.concurrency_limit === null) return false;
+    const numericLimit = concurrencyLimit === "" ? 0 : concurrencyLimit;
+    const initialLimit = initialConcurrencyLimit || 0;
+    const otherAllocated = orgConcurrencyStatus.allocated_concurrency - initialLimit;
+    return otherAllocated + numericLimit > orgConcurrencyStatus.concurrency_limit;
+  }, [orgConcurrencyStatus, concurrencyLimit, initialConcurrencyLimit]);
 
-    const handleSave = async () => {
-        setIsSaving(true);
-        try {
-            await onSave(
-                {
-                    ...workflowConfigurations,
-                    ambient_noise_configuration: ambientNoiseConfig,
-                    max_call_duration: maxCallDuration,
-                    max_user_idle_timeout: maxUserIdleTimeout,
-                    smart_turn_stop_secs: smartTurnStopSecs,
-                    turn_stop_strategy: turnStopStrategy,
-                    context_compaction_enabled: contextCompactionEnabled,
-                },
-                name,
-                concurrencyLimit !== '' ? concurrencyLimit : null,
-            );
-        } catch (error) {
-            console.error("Failed to save general settings:", error);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
+  const isDirty = useMemo(() => {
+    const initAmbient = workflowConfigurations.ambient_noise_configuration || DEFAULT_AMBIENT_NOISE_CONFIG;
     return (
-        <Card id="general">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                    <Settings className="h-4 w-4" />
-                    General
-                </CardTitle>
-                <CardDescription>Agent name, call behavior, and turn detection.{" "}
-                    <a href={SETTINGS_DOCUMENTATION_URLS.general} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">Learn more <ExternalLink className="h-3 w-3" /></a>
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                {/* Agent Name */}
-                <div className="space-y-2">
-                    <Label htmlFor="workflow_name" className="text-sm font-medium">Agent Name</Label>
-                    <Input
-                        id="workflow_name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Enter Agent name"
-                    />
-                </div>
-                
-                <div className="space-y-2">
-                    <Label htmlFor="concurrency_limit" className="text-sm font-medium">Concurrency Limit</Label>
-                    <div className="flex gap-4 items-center">
-                        <Input
-                            id="concurrency_limit"
-                            type="number"
-                            min="1"
-                            value={concurrencyLimit}
-                            onChange={(e) => setConcurrencyLimit(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
-                            placeholder="Leave empty for unlimited (up to org limit)"
-                        />
-                        {orgConcurrencyStatus && (
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                Org Limit: {orgConcurrencyStatus.concurrency_limit ?? 'Unlimited'}
-                            </span>
-                        )}
-                    </div>
-                    {isConcurrencyExceeded && (
-                        <p className="text-xs text-destructive">
-                            The sum of agent concurrency limits exceeds the total limit allocated for your organization ({orgConcurrencyStatus?.concurrency_limit}).
-                        </p>
-                    )}
-                </div>
-
-                <Separator />
-
-                {/* Ambient Noise */}
-                <div className="space-y-4">
-                    <div>
-                        <h3 className="text-sm font-medium">Ambient Noise</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                            Add background ambient noise to make the conversation sound more natural.
-                        </p>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="ambient-noise-enabled" className="text-sm">Use Ambient Noise</Label>
-                        <Switch
-                            id="ambient-noise-enabled"
-                            checked={ambientNoiseConfig.enabled}
-                            onCheckedChange={(checked) =>
-                                setAmbientNoiseConfig((prev) => ({ ...prev, enabled: checked }))
-                            }
-                        />
-                    </div>
-                    {ambientNoiseConfig.enabled && (
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="ambient-volume" className="text-xs">Volume</Label>
-                                <Input
-                                    id="ambient-volume"
-                                    type="number"
-                                    step="0.1"
-                                    min="0"
-                                    max="1"
-                                    value={ambientNoiseConfig.volume}
-                                    onChange={(e) => {
-                                        const value = parseFloat(e.target.value);
-                                        if (!isNaN(value)) setAmbientNoiseConfig((prev) => ({ ...prev, volume: value }));
-                                    }}
-                                />
-                            </div>
-
-                            {/* Custom Audio File */}
-                            <div className="space-y-2">
-                                <Label className="text-xs">Custom Audio File</Label>
-                                <p className="text-xs text-muted-foreground">
-                                    Upload your own audio file or use the default office ambience.
-                                </p>
-
-                                {ambientNoiseConfig.storage_key ? (
-                                    <div className="flex items-center gap-2 rounded-md border p-2 bg-muted/10">
-                                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono truncate flex-1">
-                                            {ambientNoiseConfig.original_filename || "Custom audio"}
-                                        </code>
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-6 w-6 p-0 shrink-0"
-                                            onClick={async () => {
-                                                try {
-                                                    await togglePlayback(
-                                                        "ambient-noise",
-                                                        ambientNoiseConfig.storage_key!,
-                                                        ambientNoiseConfig.storage_backend,
-                                                    );
-                                                } catch {
-                                                    setAudioUploadError("Failed to play audio");
-                                                }
-                                            }}
-                                        >
-                                            {playingId === "ambient-noise" ? (
-                                                <Pause className="w-3.5 h-3.5" />
-                                            ) : (
-                                                <Play className="w-3.5 h-3.5" />
-                                            )}
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-6 w-6 p-0 shrink-0"
-                                            onClick={handleRemoveCustomAudio}
-                                        >
-                                            <X className="w-3.5 h-3.5" />
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <div>
-                                        <input
-                                            ref={ambientFileInputRef}
-                                            type="file"
-                                            accept="audio/*"
-                                            onChange={(e) => {
-                                                const file = e.target.files?.[0];
-                                                if (file) handleAmbientFileUpload(file);
-                                            }}
-                                            className="hidden"
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            className="text-sm font-normal"
-                                            onClick={() => ambientFileInputRef.current?.click()}
-                                            disabled={isUploadingAudio}
-                                        >
-                                            {isUploadingAudio ? (
-                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                            ) : (
-                                                <Upload className="w-4 h-4 mr-2" />
-                                            )}
-                                            {isUploadingAudio ? "Uploading..." : "Upload audio file (max 10MB)"}
-                                        </Button>
-                                    </div>
-                                )}
-
-                                {audioUploadError && (
-                                    <p className="text-xs text-destructive">{audioUploadError}</p>
-                                )}
-
-                                {!ambientNoiseConfig.storage_key && (
-                                    <p className="text-xs text-muted-foreground italic">
-                                        Using default office ambience
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                <Separator />
-
-                {/* Turn Detection */}
-                <div className="space-y-4">
-                    <div>
-                        <h3 className="text-sm font-medium">Turn Detection</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                            Configure how the agent detects when the user has finished speaking.
-                        </p>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="turn_stop_strategy" className="text-xs">Detection Strategy</Label>
-                        <Select
-                            value={turnStopStrategy}
-                            onValueChange={(value: TurnStopStrategy) => setTurnStopStrategy(value)}
-                        >
-                            <SelectTrigger id="turn_stop_strategy">
-                                <SelectValue placeholder="Select strategy" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="transcription">Transcription-based</SelectItem>
-                                <SelectItem value="turn_analyzer">Smart Turn Analyzer</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">
-                            {turnStopStrategy === "transcription"
-                                ? "Best for short responses (1-2 word statements). Ends turn when transcription indicates completion."
-                                : "Best for longer responses with natural pauses. Uses ML model to detect end of turn."}
-                        </p>
-                    </div>
-                    {turnStopStrategy === "turn_analyzer" && (
-                        <div className="space-y-2">
-                            <Label htmlFor="smart_turn_stop_secs" className="text-xs">
-                                Incomplete Turn Timeout (seconds)
-                            </Label>
-                            <Input
-                                id="smart_turn_stop_secs"
-                                type="number"
-                                step="0.5"
-                                min="0.5"
-                                max="10"
-                                value={smartTurnStopSecs}
-                                onChange={(e) => {
-                                    const value = parseFloat(e.target.value);
-                                    if (!isNaN(value) && value >= 0.5) setSmartTurnStopSecs(value);
-                                }}
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Max silence duration before ending an incomplete turn. Default: 2 seconds
-                            </p>
-                        </div>
-                    )}
-                </div>
-
-                <Separator />
-
-                {/* Context Compaction */}
-                <div className="space-y-4">
-                    <div>
-                        <h3 className="text-sm font-medium">Context Compaction</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                            Automatically summarize conversation context when transitioning between nodes. Not applicable in Realtime mode — the speech-to-speech service manages its own conversation state and this setting is ignored.
-                        </p>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <Label htmlFor="context-compaction-enabled" className="text-sm">
-                            Enable Context Compaction
-                        </Label>
-                        <Switch
-                            id="context-compaction-enabled"
-                            checked={contextCompactionEnabled}
-                            onCheckedChange={setContextCompactionEnabled}
-                        />
-                    </div>
-                </div>
-
-                <Separator />
-
-                {/* Call Management */}
-                <div className="space-y-4">
-                    <div>
-                        <h3 className="text-sm font-medium">Call Management</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                            Configure call duration limits and idle timeout settings.
-                        </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="max_call_duration" className="text-xs">Max Call Duration (seconds)</Label>
-                            <Input
-                                id="max_call_duration"
-                                type="number"
-                                min="1"
-                                value={maxCallDuration}
-                                onChange={(e) => {
-                                    const value = parseInt(e.target.value);
-                                    if (!isNaN(value) && value > 0) setMaxCallDuration(value);
-                                }}
-                            />
-                            <p className="text-xs text-muted-foreground">Default: 600 (10 minutes)</p>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="max_user_idle_timeout" className="text-xs">
-                                Max User Idle Timeout (seconds)
-                            </Label>
-                            <Input
-                                id="max_user_idle_timeout"
-                                type="number"
-                                min="1"
-                                value={maxUserIdleTimeout}
-                                onChange={(e) => {
-                                    const value = parseInt(e.target.value);
-                                    if (!isNaN(value) && value > 0) setMaxUserIdleTimeout(value);
-                                }}
-                            />
-                            <p className="text-xs text-muted-foreground">Default: 10 seconds</p>
-                        </div>
-                    </div>
-                </div>
-            </CardContent>
-            <CardFooter className="justify-end gap-3 border-t pt-6">
-                {isDirty && <span className="text-xs text-muted-foreground">Unsaved changes</span>}
-                <Button onClick={handleSave} disabled={isSaving || !isDirty}>
-                    {isSaving ? "Saving..." : "Save General Settings"}
-                </Button>
-            </CardFooter>
-        </Card>
+      name !== workflowName ||
+      JSON.stringify(ambientNoiseConfig) !== JSON.stringify(initAmbient) ||
+      maxCallDuration !== (workflowConfigurations.max_call_duration || 600) ||
+      maxUserIdleTimeout !== (workflowConfigurations.max_user_idle_timeout || 10) ||
+      smartTurnStopSecs !== (workflowConfigurations.smart_turn_stop_secs || 2) ||
+      turnStopStrategy !== (workflowConfigurations.turn_stop_strategy || "turn_analyzer") ||
+      contextCompactionEnabled !== (workflowConfigurations.context_compaction_enabled ?? false) ||
+      (concurrencyLimit === "" ? null : concurrencyLimit) !== (initialConcurrencyLimit ?? null)
     );
+  }, [
+    name,
+    workflowName,
+    ambientNoiseConfig,
+    maxCallDuration,
+    maxUserIdleTimeout,
+    smartTurnStopSecs,
+    turnStopStrategy,
+    contextCompactionEnabled,
+    workflowConfigurations,
+    concurrencyLimit,
+    initialConcurrencyLimit,
+  ]);
+
+  useUnsavedChanges("general", isDirty);
+
+  const handleAmbientFileUpload = async (file: File) => {
+    if (file.size > MAX_AMBIENT_NOISE_FILE_SIZE) {
+      setAudioUploadError(`File too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum is 10MB.`);
+      return;
+    }
+    setIsUploadingAudio(true);
+    setAudioUploadError(null);
+    try {
+      const res = await getAmbientNoiseUploadUrlApiV1WorkflowAmbientNoiseUploadUrlPost({
+        body: {
+          workflow_id: Number(workflowId),
+          filename: file.name,
+          mime_type: file.type || "audio/wav",
+          file_size: file.size,
+        },
+      });
+      if (res.error || !res.data?.upload_url) {
+        throw new Error("Failed to get upload URL");
+      }
+      const data = res.data;
+      const uploadRes = await fetch(data.upload_url, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type || "audio/wav" },
+      });
+      if (!uploadRes.ok) {
+        throw new Error("File upload failed");
+      }
+      setAmbientNoiseConfig((prev) => ({
+        ...prev,
+        storage_key: data.storage_key,
+        storage_backend: data.storage_backend,
+        original_filename: file.name,
+      }));
+    } catch (err) {
+      setAudioUploadError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setIsUploadingAudio(false);
+      if (ambientFileInputRef.current) ambientFileInputRef.current.value = "";
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await onSave(
+        {
+          ...workflowConfigurations,
+          ambient_noise_configuration: ambientNoiseConfig,
+          max_call_duration: maxCallDuration,
+          max_user_idle_timeout: maxUserIdleTimeout,
+          smart_turn_stop_secs: smartTurnStopSecs,
+          turn_stop_strategy: turnStopStrategy,
+          context_compaction_enabled: contextCompactionEnabled,
+        },
+        name,
+        concurrencyLimit !== "" ? concurrencyLimit : null,
+      );
+      toast.success("General Settings saved successfully!");
+    } catch (error) {
+      console.error("Failed to save general settings:", error);
+      toast.error("Failed to save settings");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <section
+      id="general"
+      className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-6"
+      style={{ backgroundColor: '#1C1E1A' }}
+    >
+      <div className="space-y-1 pb-2 border-b border-gray-100 dark:border-[#282b26]">
+        <div className="flex items-center gap-2">
+          <Settings className="w-4 h-4 text-amber-600" />
+          <h2 className="text-xl font-normal text-gray-900 dark:text-[#f2f4f0] font-serif tracking-tight">
+            General
+          </h2>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-[#9ca39a] flex items-center gap-1">
+          <span>Agent name, call behavior, and turn detection.</span>
+          <a
+            href={SETTINGS_DOCUMENTATION_URLS.general}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-amber-700 hover:underline inline-flex items-center gap-0.5"
+          >
+            Learn more <ExternalLink className="w-3 h-3" />
+          </a>
+        </p>
+      </div>
+
+      {/* Agent Name */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">Agent Name</label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-[#1a1c18] border border-gray-200 dark:border-[#2e312b] rounded-xl text-xs font-semibold text-gray-900 dark:text-[#f2f4f0] focus:outline-hidden"
+        />
+      </div>
+
+      {/* Concurrency Limit */}
+      <div className="space-y-1.5">
+        <div className="flex justify-between items-center">
+          <label className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">Concurrency Limit</label>
+          <span className="text-[11px] text-gray-400 dark:text-[#9ca39a] font-medium">
+            Org Limit: {orgConcurrencyStatus?.concurrency_limit ?? 6}
+          </span>
+        </div>
+        <input
+          type="number"
+          min="1"
+          value={concurrencyLimit}
+          onChange={(e) => setConcurrencyLimit(e.target.value === "" ? "" : parseInt(e.target.value, 10))}
+          placeholder="Leave empty for unlimited (up to org limit)"
+          className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-[#1a1c18] border border-gray-200 dark:border-[#2e312b] rounded-xl text-xs text-gray-900 dark:text-[#f2f4f0] focus:outline-hidden"
+        />
+        {isConcurrencyExceeded && (
+          <p className="text-xs text-rose-400 mt-1">
+            The sum of agent concurrency limits exceeds the total limit allocated for your organization ({orgConcurrencyStatus?.concurrency_limit}).
+          </p>
+        )}
+      </div>
+
+      {/* Ambient Noise */}
+      <div className="p-4 bg-gray-50/80 dark:bg-[#1a1c18] border border-gray-200/80 dark:border-[#2e312b] rounded-xl flex items-center justify-between">
+        <div className="space-y-0.5">
+          <h4 className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">Ambient Noise</h4>
+          <p className="text-[11.5px] text-gray-500 dark:text-[#9ca39a]">
+            Add background ambient noise to make the conversation sound more natural.
+          </p>
+          <span className="text-xs font-semibold text-gray-800 dark:text-[#c8ccc5] inline-block pt-1">
+            Use Ambient Noise
+          </span>
+        </div>
+        <Switch
+          checked={ambientNoiseConfig.enabled}
+          onCheckedChange={(checked) => setAmbientNoiseConfig((prev) => ({ ...prev, enabled: checked }))}
+        />
+      </div>
+
+      {/* Turn Detection */}
+      <div className="space-y-4 pt-2">
+        <div className="space-y-0.5">
+          <h3 className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">Turn Detection</h3>
+          <p className="text-[11.5px] text-gray-500 dark:text-[#9ca39a]">
+            Configure how the agent detects when the user has finished speaking.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">Detection Strategy</label>
+          <select
+            value={turnStopStrategy}
+            onChange={(e) => setTurnStopStrategy(e.target.value as TurnStopStrategy)}
+            className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-[#1a1c18] border border-gray-200 dark:border-[#2e312b] rounded-xl text-xs text-gray-900 dark:text-[#f2f4f0] font-medium"
+          >
+            <option value="turn_analyzer">Smart Turn Analyzer</option>
+            <option value="transcription">Server VAD (Transcription-based)</option>
+          </select>
+          <p className="text-[11px] text-gray-400 dark:text-[#9ca39a]">
+            Best for longer responses with natural pauses. Uses ML model to detect end of turn.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">Incomplete Turn Timeout (seconds)</label>
+          <input
+            type="number"
+            step="0.5"
+            min="0.5"
+            max="10"
+            value={smartTurnStopSecs}
+            onChange={(e) => setSmartTurnStopSecs(parseFloat(e.target.value) || 2)}
+            className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-[#1a1c18] border border-gray-200 dark:border-[#2e312b] rounded-xl text-xs text-gray-900 dark:text-[#f2f4f0] font-mono"
+          />
+          <p className="text-[11px] text-gray-400 dark:text-[#9ca39a]">
+            Max silence duration before ending an incomplete turn. Default: 2 seconds
+          </p>
+        </div>
+      </div>
+
+      {/* Context Compaction */}
+      <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-[#282b26]">
+        <div className="space-y-0.5">
+          <h3 className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">Context Compaction</h3>
+          <p className="text-[11.5px] text-gray-500 dark:text-[#9ca39a] leading-relaxed">
+            Automatically summarize conversation context when transitioning between nodes. Not applicable in Realtime mode — the speech-to-speech service manages its own conversation state and this setting is ignored.
+          </p>
+        </div>
+
+        <div className="p-4 bg-gray-50/80 dark:bg-[#1a1c18] border border-gray-200/80 dark:border-[#2e312b] rounded-xl flex items-center justify-between">
+          <span className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">Enable Context Compaction</span>
+          <Switch checked={contextCompactionEnabled} onCheckedChange={setContextCompactionEnabled} />
+        </div>
+      </div>
+
+      {/* Call Management */}
+      <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-[#282b26]">
+        <div className="space-y-0.5">
+          <h3 className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">Call Management</h3>
+          <p className="text-[11.5px] text-gray-500 dark:text-[#9ca39a]">
+            Configure call duration limits and idle timeout settings.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">Max Call Duration (seconds)</label>
+            <input
+              type="number"
+              min="1"
+              value={maxCallDuration}
+              onChange={(e) => setMaxCallDuration(parseInt(e.target.value, 10) || 600)}
+              className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-[#1a1c18] border border-gray-200 dark:border-[#2e312b] rounded-xl text-xs font-mono text-gray-900 dark:text-[#f2f4f0]"
+            />
+            <p className="text-[11px] text-gray-400 dark:text-[#9ca39a]">Default: 600 (10 minutes)</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">Max User Idle Timeout (seconds)</label>
+            <input
+              type="number"
+              min="1"
+              value={maxUserIdleTimeout}
+              onChange={(e) => setMaxUserIdleTimeout(parseInt(e.target.value, 10) || 10)}
+              className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-[#1a1c18] border border-gray-200 dark:border-[#2e312b] rounded-xl text-xs font-mono text-gray-900 dark:text-[#f2f4f0]"
+            />
+            <p className="text-[11px] text-gray-400 dark:text-[#9ca39a]">Default: 10 seconds</p>
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={handleSave}
+        disabled={isSaving || !isDirty}
+        className="px-5 py-2.5 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cc] text-white dark:text-[#082117] text-xs font-bold rounded-full shadow-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+      >
+        {isSaving ? "Saving..." : "Save General Settings"}
+      </button>
+    </section>
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Section: Template Variables
+// Section 2: Template Variables
 // ---------------------------------------------------------------------------
 
 function TemplateVariablesSection({
-    templateContextVariables,
-    onSave,
+  templateContextVariables,
+  onSave,
 }: {
-    templateContextVariables: Record<string, string>;
-    onSave: (variables: Record<string, string>) => Promise<void>;
+  templateContextVariables: Record<string, string>;
+  onSave: (variables: Record<string, string>) => Promise<void>;
 }) {
-    const [contextVars, setContextVars] = useState<Record<string, string>>(templateContextVariables);
-    const [newKey, setNewKey] = useState("");
-    const [newValue, setNewValue] = useState("");
-    const [isSaving, setIsSaving] = useState(false);
+  const [contextVars, setContextVars] = useState<Record<string, string>>(templateContextVariables);
+  const [newKey, setNewKey] = useState("");
+  const [newValue, setNewValue] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
-    const isDirty = useMemo(() => {
-        const pendingVars = newKey && newValue ? { ...contextVars, [newKey]: newValue } : contextVars;
-        return JSON.stringify(pendingVars) !== JSON.stringify(templateContextVariables);
-    }, [contextVars, newKey, newValue, templateContextVariables]);
+  const isDirty = useMemo(() => {
+    const pendingVars = newKey && newValue ? { ...contextVars, [newKey]: newValue } : contextVars;
+    return JSON.stringify(pendingVars) !== JSON.stringify(templateContextVariables);
+  }, [contextVars, newKey, newValue, templateContextVariables]);
 
-    useUnsavedChanges("variables", isDirty);
+  useUnsavedChanges("variables", isDirty);
 
-    const handleAdd = () => {
-        if (newKey && newValue) {
-            setContextVars((prev) => ({ ...prev, [newKey]: newValue }));
-        }
-        setNewKey("");
-        setNewValue("");
-    };
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newKey && newValue) {
+      setContextVars((prev) => ({ ...prev, [newKey]: newValue }));
+      setNewKey("");
+      setNewValue("");
+    }
+  };
 
-    const handleRemove = (key: string) => {
-        setContextVars((prev) => {
-            const next = { ...prev };
-            delete next[key];
-            return next;
-        });
-    };
+  const handleRemove = (key: string) => {
+    setContextVars((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
 
-    const handleSave = async () => {
-        setIsSaving(true);
-        try {
-            let varsToSave = contextVars;
-            if (newKey && newValue) {
-                varsToSave = { ...varsToSave, [newKey]: newValue };
-            }
-            await onSave(varsToSave);
-        } catch (error) {
-            console.error("Failed to save variables:", error);
-        } finally {
-            setIsSaving(false);
-        }
-    };
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      let varsToSave = contextVars;
+      if (newKey && newValue) {
+        varsToSave = { ...varsToSave, [newKey]: newValue };
+      }
+      await onSave(varsToSave);
+      toast.success("Template Variables saved successfully!");
+    } catch (error) {
+      console.error("Failed to save variables:", error);
+      toast.error("Failed to save variables");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-    return (
-        <Card id="variables">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                    <Variable className="h-4 w-4" />
-                    Template Variables
-                </CardTitle>
-                <CardDescription>
-                    Variables available in workflow prompts via {`{{variable_name}}`} syntax for testing the workflow.{" "}
-                    <a href={SETTINGS_DOCUMENTATION_URLS.templateVariables} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">Learn more <ExternalLink className="h-3 w-3" /></a>
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                {/* Existing Variables */}
-                {Object.entries(contextVars).length > 0 && (
-                    <div className="space-y-2">
-                        <Label className="text-sm font-medium">Current Variables</Label>
-                        {Object.entries(contextVars).map(([key, value]) => (
-                            <div key={key} className="flex items-center gap-2 rounded-md border p-2">
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-medium">{key}</div>
-                                    <div className="text-xs text-muted-foreground truncate">{value}</div>
-                                </div>
-                                <Button size="sm" variant="ghost" onClick={() => handleRemove(key)}>
-                                    <Trash2Icon className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        ))}
-                    </div>
-                )}
+  return (
+    <section
+      id="variables"
+      className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-6"
+      style={{ backgroundColor: '#1C1E1A' }}
+    >
+      <div className="space-y-1 pb-2 border-b border-gray-100 dark:border-[#282b26]">
+        <div className="flex items-center gap-2">
+          <Variable className="w-4 h-4 text-amber-600" />
+          <h2 className="text-xl font-normal text-gray-900 dark:text-[#f2f4f0] font-serif tracking-tight">
+            Template Variables
+          </h2>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-[#9ca39a] flex items-center gap-1">
+          <span>Variables available in workflow prompts via {"{{variable_name}}"} syntax for testing the workflow.</span>
+          <a
+            href={SETTINGS_DOCUMENTATION_URLS.templateVariables}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-amber-700 hover:underline inline-flex items-center gap-0.5"
+          >
+            Learn more <ExternalLink className="w-3 h-3" />
+          </a>
+        </p>
+      </div>
 
-                {/* Add New Variable */}
-                <div className="space-y-3">
-                    <Label className="text-sm font-medium">Add New Variable</Label>
-                    <div className="flex gap-2">
-                        <div className="flex-1 space-y-1">
-                            <Label htmlFor="var-key" className="text-xs">Key</Label>
-                            <Input
-                                id="var-key"
-                                placeholder="Enter variable key"
-                                value={newKey}
-                                onChange={(e) => setNewKey(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex-1 space-y-1">
-                            <Label htmlFor="var-value" className="text-xs">Value</Label>
-                            <Input
-                                id="var-value"
-                                placeholder="Enter variable value"
-                                value={newValue}
-                                onChange={(e) => setNewValue(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                    <Button size="sm" onClick={handleAdd} disabled={!newKey || !newValue}>
-                        Add Variable
-                    </Button>
-                </div>
-            </CardContent>
-            <CardFooter className="justify-end gap-3 border-t pt-6">
-                {isDirty && <span className="text-xs text-muted-foreground">Unsaved changes</span>}
-                <Button onClick={handleSave} disabled={isSaving || !isDirty}>
-                    {isSaving ? "Saving..." : "Save Variables"}
-                </Button>
-            </CardFooter>
-        </Card>
-    );
+      {/* Existing Variables List */}
+      {Object.entries(contextVars).length > 0 && (
+        <div className="space-y-2">
+          {Object.entries(contextVars).map(([key, value]) => (
+            <div
+              key={key}
+              className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#1a1c18] border border-gray-200 dark:border-[#2e312b] rounded-xl text-xs"
+            >
+              <div className="flex items-center gap-2 font-mono">
+                <span className="font-bold text-gray-900 dark:text-[#f2f4f0]">{`{{${key}}}`}</span>
+                <span className="text-gray-400 dark:text-[#9ca39a]">=</span>
+                <span className="text-gray-700 dark:text-[#c8ccc5]">{value}</span>
+              </div>
+              <button
+                onClick={() => handleRemove(key)}
+                className="p-1 text-gray-400 dark:text-[#9ca39a] hover:text-rose-400 cursor-pointer"
+              >
+                <Trash2Icon className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add New Variable Form */}
+      <form onSubmit={handleAdd} className="space-y-3 pt-2">
+        <span className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">Add New Variable</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input
+            type="text"
+            value={newKey}
+            onChange={(e) => setNewKey(e.target.value)}
+            placeholder="Enter variable key"
+            className="px-3.5 py-2.5 bg-gray-50 dark:bg-[#1a1c18] border border-gray-200 dark:border-[#2e312b] rounded-xl text-xs text-gray-900 dark:text-[#f2f4f0] focus:outline-hidden"
+          />
+          <input
+            type="text"
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
+            placeholder="Enter variable value"
+            className="px-3.5 py-2.5 bg-gray-50 dark:bg-[#1a1c18] border border-gray-200 dark:border-[#2e312b] rounded-xl text-xs text-gray-900 dark:text-[#f2f4f0] focus:outline-hidden"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={!newKey || !newValue}
+          className="px-4 py-2 bg-gray-100 dark:bg-[#252822] hover:bg-gray-200 dark:hover:bg-[#2e322a] text-gray-900 dark:text-[#f2f4f0] text-xs font-bold rounded-full transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>Add Variable</span>
+        </button>
+      </form>
+
+      <button
+        onClick={handleSave}
+        disabled={isSaving || !isDirty}
+        className="px-5 py-2.5 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cc] text-white dark:text-[#082117] text-xs font-bold rounded-full shadow-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+      >
+        {isSaving ? "Saving..." : "Save Variables"}
+      </button>
+    </section>
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Section: Dictionary
+// Section 3: Dictionary
 // ---------------------------------------------------------------------------
 
 function DictionarySection({
-    dictionary,
-    onSave,
+  dictionary,
+  onSave,
 }: {
-    dictionary: string;
-    onSave: (dictionary: string) => Promise<void>;
+  dictionary: string;
+  onSave: (dictionary: string) => Promise<void>;
 }) {
-    const [dictionaryValue, setDictionaryValue] = useState(dictionary);
-    const [isSaving, setIsSaving] = useState(false);
+  const [dictionaryValue, setDictionaryValue] = useState(dictionary);
+  const [isSaving, setIsSaving] = useState(false);
 
-    const isDirty = dictionaryValue !== dictionary;
+  const isDirty = dictionaryValue !== dictionary;
+  useUnsavedChanges("dictionary", isDirty);
 
-    useUnsavedChanges("dictionary", isDirty);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await onSave(dictionaryValue);
+      toast.success("Dictionary words saved successfully!");
+    } catch (error) {
+      console.error("Failed to save dictionary:", error);
+      toast.error("Failed to save dictionary");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-    const handleSave = async () => {
-        setIsSaving(true);
-        try {
-            await onSave(dictionaryValue);
-        } catch (error) {
-            console.error("Failed to save dictionary:", error);
-        } finally {
-            setIsSaving(false);
-        }
-    };
+  return (
+    <section
+      id="dictionary"
+      className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-5"
+      style={{ backgroundColor: '#1C1E1A' }}
+    >
+      <div className="space-y-1 pb-2 border-b border-gray-100 dark:border-[#282b26]">
+        <div className="flex items-center gap-2">
+          <BookA className="w-4 h-4 text-amber-600" />
+          <h2 className="text-xl font-normal text-gray-900 dark:text-[#f2f4f0] font-serif tracking-tight">
+            Dictionary
+          </h2>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-[#9ca39a]">
+          Add words the agent should actively listen for — company jargon, names, industry terms. May incur extra cost depending on provider.
+        </p>
+      </div>
 
-    return (
-        <Card id="dictionary">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                    <BookA className="h-4 w-4" />
-                    Dictionary
-                </CardTitle>
-                <CardDescription>
-                    Add words the agent should actively listen for &mdash; company jargon, names,
-                    industry terms. May incur extra cost depending on provider.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Textarea
-                    placeholder="Enter words separated by comma (e.g. billing department, tretinoin)"
-                    value={dictionaryValue}
-                    onChange={(e) => setDictionaryValue(e.target.value)}
-                    rows={4}
-                    className="resize-none"
-                />
-            </CardContent>
-            <CardFooter className="justify-end gap-3 border-t pt-6">
-                {isDirty && <span className="text-xs text-muted-foreground">Unsaved changes</span>}
-                <Button onClick={handleSave} disabled={isSaving || !isDirty}>
-                    {isSaving ? "Saving..." : "Save Dictionary"}
-                </Button>
-            </CardFooter>
-        </Card>
-    );
+      <textarea
+        rows={3}
+        value={dictionaryValue}
+        onChange={(e) => setDictionaryValue(e.target.value)}
+        placeholder="Enter words separated by comma (e.g. billing department, tretinoin)"
+        className="w-full p-3.5 bg-gray-50 dark:bg-[#1a1c18] border border-gray-200 dark:border-[#2e312b] rounded-xl text-xs text-gray-900 dark:text-[#f2f4f0] focus:outline-hidden font-normal leading-relaxed"
+      />
+
+      <button
+        onClick={handleSave}
+        disabled={isSaving || !isDirty}
+        className="px-5 py-2.5 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cc] text-white dark:text-[#082117] text-xs font-bold rounded-full shadow-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+      >
+        {isSaving ? "Saving..." : "Save Dictionary"}
+      </button>
+    </section>
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Section: Voicemail Detection
+// Section 4: Voicemail Detection
 // ---------------------------------------------------------------------------
 
 function VoicemailSection({
-    workflowConfigurations,
-    workflowName,
-    onSave,
+  workflowConfigurations,
+  workflowName,
+  onSave,
 }: {
-    workflowConfigurations: WorkflowConfigurations;
-    workflowName: string;
-    onSave: (configurations: WorkflowConfigurations, workflowName: string) => Promise<void>;
+  workflowConfigurations: WorkflowConfigurations;
+  workflowName: string;
+  onSave: (configurations: WorkflowConfigurations, workflowName: string) => Promise<void>;
 }) {
-    const getConfig = (): VoicemailDetectionConfiguration => ({
-        ...DEFAULT_VOICEMAIL_DETECTION_CONFIGURATION,
-        ...workflowConfigurations.voicemail_detection,
-    });
+  const getConfig = (): VoicemailDetectionConfiguration => ({
+    ...DEFAULT_VOICEMAIL_DETECTION_CONFIGURATION,
+    ...workflowConfigurations.voicemail_detection,
+  });
 
-    const [enabled, setEnabled] = useState(getConfig().enabled);
-    const [useWorkflowLlm, setUseWorkflowLlm] = useState(getConfig().use_workflow_llm);
-    const [provider, setProvider] = useState(getConfig().provider || "openai");
-    const [model, setModel] = useState(getConfig().model || "gpt-4.1");
-    const [apiKey, setApiKey] = useState(getConfig().api_key || "");
-    const [systemPrompt, setSystemPrompt] = useState(getConfig().system_prompt || DEFAULT_VOICEMAIL_SYSTEM_PROMPT);
-    const [longSpeechTimeout, setLongSpeechTimeout] = useState(getConfig().long_speech_timeout);
-    const [isSaving, setIsSaving] = useState(false);
+  const [enabled, setEnabled] = useState(getConfig().enabled);
+  const [useWorkflowLlm, setUseWorkflowLlm] = useState(getConfig().use_workflow_llm);
+  const [provider, setProvider] = useState(getConfig().provider || "openai");
+  const [model, setModel] = useState(getConfig().model || "gpt-4.1");
+  const [apiKey, setApiKey] = useState(getConfig().api_key || "");
+  const [systemPrompt, setSystemPrompt] = useState(getConfig().system_prompt || DEFAULT_VOICEMAIL_SYSTEM_PROMPT);
+  const [longSpeechTimeout, setLongSpeechTimeout] = useState(getConfig().long_speech_timeout);
+  const [isSaving, setIsSaving] = useState(false);
 
-    const isDirty = useMemo(() => {
-        const init = {
-            ...DEFAULT_VOICEMAIL_DETECTION_CONFIGURATION,
-            ...workflowConfigurations.voicemail_detection,
-        };
-        return (
-            enabled !== init.enabled ||
-            useWorkflowLlm !== init.use_workflow_llm ||
-            provider !== (init.provider || "openai") ||
-            model !== (init.model || "gpt-4.1") ||
-            apiKey !== (init.api_key || "") ||
-            systemPrompt !== (init.system_prompt || DEFAULT_VOICEMAIL_SYSTEM_PROMPT) ||
-            longSpeechTimeout !== init.long_speech_timeout
-        );
-    }, [enabled, useWorkflowLlm, provider, model, apiKey, systemPrompt, longSpeechTimeout, workflowConfigurations]);
-
-    useUnsavedChanges("voicemail", isDirty);
-
-    const handleSave = async () => {
-        setIsSaving(true);
-        try {
-            const voicemailConfig: VoicemailDetectionConfiguration = {
-                enabled,
-                use_workflow_llm: useWorkflowLlm,
-                provider: useWorkflowLlm ? undefined : provider,
-                model: useWorkflowLlm ? undefined : model,
-                api_key: useWorkflowLlm ? undefined : apiKey,
-                system_prompt:
-                    systemPrompt && systemPrompt !== DEFAULT_VOICEMAIL_SYSTEM_PROMPT ? systemPrompt : undefined,
-                long_speech_timeout: longSpeechTimeout,
-            };
-            await onSave(
-                { ...workflowConfigurations, voicemail_detection: voicemailConfig },
-                workflowName,
-            );
-        } catch (error) {
-            console.error("Failed to save voicemail settings:", error);
-        } finally {
-            setIsSaving(false);
-        }
+  const isDirty = useMemo(() => {
+    const init = {
+      ...DEFAULT_VOICEMAIL_DETECTION_CONFIGURATION,
+      ...workflowConfigurations.voicemail_detection,
     };
-
     return (
-        <Card id="voicemail">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                    <PhoneOff className="h-4 w-4" />
-                    Voicemail Detection
-                </CardTitle>
-                <CardDescription>
-                    Automatically detect and end calls when a voicemail system is reached.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="flex items-center space-x-2 rounded-md border bg-muted/20 p-2">
-                    <Switch id="voicemail-enabled" checked={enabled} onCheckedChange={setEnabled} />
-                    <Label htmlFor="voicemail-enabled">Enable Voicemail Detection</Label>
-                </div>
-
-                {enabled && (
-                    <>
-                        {/* LLM Configuration */}
-                        <div className="space-y-3">
-                            <div className="flex items-center space-x-2 rounded-md border bg-muted/20 p-2">
-                                <Switch
-                                    id="voicemail-use-workflow-llm"
-                                    checked={useWorkflowLlm}
-                                    onCheckedChange={setUseWorkflowLlm}
-                                />
-                                <Label htmlFor="voicemail-use-workflow-llm">Use Workflow LLM</Label>
-                                <Label className="ml-2 text-xs text-muted-foreground">
-                                    Use the LLM configured in your account settings.
-                                </Label>
-                            </div>
-
-                            {!useWorkflowLlm && (
-                                <LLMConfigSelector
-                                    provider={provider}
-                                    onProviderChange={setProvider}
-                                    model={model}
-                                    onModelChange={setModel}
-                                    apiKey={apiKey}
-                                    onApiKeyChange={setApiKey}
-                                />
-                            )}
-                        </div>
-
-                        {/* System Prompt */}
-                        <div className="space-y-2">
-                            <Label>System Prompt</Label>
-                            <p className="text-xs text-muted-foreground">
-                                The LLM must respond with either &quot;CONVERSATION&quot; or &quot;VOICEMAIL&quot;.
-                            </p>
-                            <Textarea
-                                value={systemPrompt}
-                                onChange={(e) => setSystemPrompt(e.target.value)}
-                                className="min-h-[200px] font-mono text-xs"
-                            />
-                        </div>
-
-                        {/* Timing */}
-                        <div className="space-y-2 rounded-md border bg-muted/10 p-3">
-                            <Label className="font-medium">Timing</Label>
-                            <div className="space-y-2">
-                                <Label className="text-sm">Speech Cutoff (seconds)</Label>
-                                <p className="text-xs text-muted-foreground">
-                                    Trigger classification early if first turn speech exceeds this duration.
-                                </p>
-                                <Input
-                                    type="number"
-                                    step="0.5"
-                                    min="1"
-                                    max="30"
-                                    value={longSpeechTimeout}
-                                    onChange={(e) => setLongSpeechTimeout(parseFloat(e.target.value) || 8.0)}
-                                />
-                            </div>
-                        </div>
-                    </>
-                )}
-            </CardContent>
-            <CardFooter className="justify-end gap-3 border-t pt-6">
-                {isDirty && <span className="text-xs text-muted-foreground">Unsaved changes</span>}
-                <Button onClick={handleSave} disabled={isSaving || !isDirty}>
-                    {isSaving ? "Saving..." : "Save Voicemail Settings"}
-                </Button>
-            </CardFooter>
-        </Card>
+      enabled !== init.enabled ||
+      useWorkflowLlm !== init.use_workflow_llm ||
+      provider !== (init.provider || "openai") ||
+      model !== (init.model || "gpt-4.1") ||
+      apiKey !== (init.api_key || "") ||
+      systemPrompt !== (init.system_prompt || DEFAULT_VOICEMAIL_SYSTEM_PROMPT) ||
+      longSpeechTimeout !== init.long_speech_timeout
     );
+  }, [enabled, useWorkflowLlm, provider, model, apiKey, systemPrompt, longSpeechTimeout, workflowConfigurations]);
+
+  useUnsavedChanges("voicemail", isDirty);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const voicemailConfig: VoicemailDetectionConfiguration = {
+        enabled,
+        use_workflow_llm: useWorkflowLlm,
+        provider: useWorkflowLlm ? undefined : provider,
+        model: useWorkflowLlm ? undefined : model,
+        api_key: useWorkflowLlm ? undefined : apiKey,
+        system_prompt:
+          systemPrompt && systemPrompt !== DEFAULT_VOICEMAIL_SYSTEM_PROMPT ? systemPrompt : undefined,
+        long_speech_timeout: longSpeechTimeout,
+      };
+      await onSave({ ...workflowConfigurations, voicemail_detection: voicemailConfig }, workflowName);
+      toast.success("Voicemail settings saved successfully!");
+    } catch (error) {
+      console.error("Failed to save voicemail settings:", error);
+      toast.error("Failed to save voicemail settings");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <section
+      id="voicemail"
+      className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-5"
+      style={{ backgroundColor: '#1C1E1A' }}
+    >
+      <div className="space-y-1 pb-2 border-b border-gray-100 dark:border-[#282b26]">
+        <div className="flex items-center gap-2">
+          <PhoneOff className="w-4 h-4 text-amber-600" />
+          <h2 className="text-xl font-normal text-gray-900 dark:text-[#f2f4f0] font-serif tracking-tight">
+            Voicemail Detection
+          </h2>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-[#9ca39a]">
+          Automatically detect and end calls when a voicemail system is reached.
+        </p>
+      </div>
+
+      <div className="p-4 bg-gray-50/80 dark:bg-[#1a1c18] border border-gray-200/80 dark:border-[#2e312b] rounded-xl flex items-center justify-between">
+        <span className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">Enable Voicemail Detection</span>
+        <Switch checked={enabled} onCheckedChange={setEnabled} />
+      </div>
+
+      {enabled && (
+        <div className="space-y-4 pt-2">
+          <div className="p-4 bg-gray-50/80 dark:bg-[#1a1c18] border border-gray-200/80 dark:border-[#2e312b] rounded-xl flex items-center justify-between">
+            <span className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">Use Workflow LLM</span>
+            <Switch checked={useWorkflowLlm} onCheckedChange={setUseWorkflowLlm} />
+          </div>
+
+          {!useWorkflowLlm && (
+            <LLMConfigSelector
+              provider={provider}
+              onProviderChange={setProvider}
+              model={model}
+              onModelChange={setModel}
+              apiKey={apiKey}
+              onApiKeyChange={setApiKey}
+            />
+          )}
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">System Prompt</label>
+            <textarea
+              rows={6}
+              value={systemPrompt}
+              onChange={(e) => setSystemPrompt(e.target.value)}
+              className="w-full p-3 bg-gray-50 dark:bg-[#1a1c18] border border-gray-200 dark:border-[#2e312b] rounded-xl text-xs font-mono text-gray-900 dark:text-[#f2f4f0] focus:outline-hidden leading-relaxed"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-900 dark:text-[#f2f4f0]">Speech Cutoff (seconds)</label>
+            <input
+              type="number"
+              step="0.5"
+              min="1"
+              max="30"
+              value={longSpeechTimeout}
+              onChange={(e) => setLongSpeechTimeout(parseFloat(e.target.value) || 8.0)}
+              className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-[#1a1c18] border border-gray-200 dark:border-[#2e312b] rounded-xl text-xs font-mono text-gray-900 dark:text-[#f2f4f0]"
+            />
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={handleSave}
+        disabled={isSaving || !isDirty}
+        className="px-5 py-2.5 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cc] text-white dark:text-[#082117] text-xs font-bold rounded-full shadow-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+      >
+        {isSaving ? "Saving..." : "Save Voicemail Settings"}
+      </button>
+    </section>
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Section: Agent UUID
+// Section 5: Report
+// ---------------------------------------------------------------------------
+
+function ReportSection({ workflowId }: { workflowId: number }) {
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [startTime, setStartTime] = useState("00:00");
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [endTime, setEndTime] = useState("23:59");
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const buildDateTime = (date: Date | undefined, time: string): string | undefined => {
+    if (!date) return undefined;
+    const [hours, minutes] = time.split(":").map(Number);
+    const combined = new Date(date);
+    combined.setHours(hours, minutes, 0, 0);
+    return combined.toISOString();
+  };
+
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    setIsPopoverOpen(false);
+    try {
+      const response = await downloadWorkflowReportApiV1WorkflowWorkflowIdReportGet({
+        path: { workflow_id: workflowId },
+        query: {
+          start_date: buildDateTime(startDate, startTime),
+          end_date: buildDateTime(endDate, endTime),
+        },
+        parseAs: "blob",
+      });
+
+      if (response.data) {
+        const blob = response.data as Blob;
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `workflow_${workflowId}_report.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        toast.error("Failed to download report");
+      }
+    } catch (err) {
+      logger.error(`Failed to download workflow report: ${err}`);
+      toast.error("Failed to download report");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  return (
+    <section
+      id="report"
+      className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-5"
+      style={{ backgroundColor: '#1C1E1A' }}
+    >
+      <div className="space-y-1 pb-2 border-b border-gray-100 dark:border-[#282b26]">
+        <div className="flex items-center gap-2">
+          <FileText className="w-4 h-4 text-amber-600" />
+          <h2 className="text-xl font-normal text-gray-900 dark:text-[#f2f4f0] font-serif tracking-tight">
+            Report
+          </h2>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-[#9ca39a]">
+          Download a CSV report of completed runs for this agent, optionally filtered by date range.
+        </p>
+      </div>
+
+      <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+        <PopoverTrigger asChild>
+          <button className="px-5 py-2.5 bg-gray-100 dark:bg-[#252822] hover:bg-gray-200 dark:hover:bg-[#2e322a] text-gray-900 dark:text-[#f2f4f0] text-xs font-bold rounded-full transition-all flex items-center gap-2 cursor-pointer">
+            <Download className="w-3.5 h-3.5" />
+            <span>Download Report</span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-4 border border-[#282b26] rounded-2xl" align="start" style={{ backgroundColor: '#161715' }}>
+          <div className="space-y-4 text-white">
+            <div className="text-xs font-bold">Filter by date range</div>
+            <div className="grid gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-medium text-[#9ca39a]">From</label>
+                <div className="flex gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="px-3 py-1.5 bg-[#1a1c18] border border-[#2e312b] rounded-xl text-xs text-[#c8ccc5] flex items-center gap-2">
+                        <CalendarIcon className="h-3.5 w-3.5 text-[#9ca39a]" />
+                        {startDate ? format(startDate, "MMM dd, yyyy") : "Start date"}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={setStartDate}
+                        disabled={(date) => (endDate ? date > endDate : false)}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="w-[100px] px-2 py-1 bg-[#1a1c18] border border-[#2e312b] rounded-xl text-xs text-white"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-medium text-[#9ca39a]">To</label>
+                <div className="flex gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="px-3 py-1.5 bg-[#1a1c18] border border-[#2e312b] rounded-xl text-xs text-[#c8ccc5] flex items-center gap-2">
+                        <CalendarIcon className="h-3.5 w-3.5 text-[#9ca39a]" />
+                        {endDate ? format(endDate, "MMM dd, yyyy") : "End date"}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={endDate}
+                        onSelect={setEndDate}
+                        disabled={(date) => (startDate ? date < startDate : false)}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="w-[100px] px-2 py-1 bg-[#1a1c18] border border-[#2e312b] rounded-xl text-xs text-white"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-between pt-2 border-t border-[#282b26]">
+              <button
+                onClick={() => { setStartDate(undefined); setEndDate(undefined); }}
+                className="px-3 py-1.5 text-xs text-[#9ca39a] hover:text-white"
+              >
+                Clear
+              </button>
+              <button
+                onClick={handleDownload}
+                disabled={isDownloading}
+                className="px-4 py-1.5 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-xs font-bold rounded-xl"
+              >
+                {startDate || endDate ? "Download Filtered" : "Download All"}
+              </button>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Section 6: Agent UUID
 // ---------------------------------------------------------------------------
 
 function AgentUuidSection({ workflowUuid }: { workflowUuid: string }) {
-    const handleCopy = async () => {
-        try {
-            await navigator.clipboard.writeText(workflowUuid);
-            toast.success("Agent UUID copied");
-        } catch {
-            toast.error("Failed to copy Agent UUID");
-        }
-    };
+  const [copied, setCopied] = useState(false);
 
-    return (
-        <Card id="identity">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                    <Fingerprint className="h-4 w-4" />
-                    Agent UUID
-                </CardTitle>
-                <CardDescription>
-                    Stable identifier for this agent. Used in agent-stream URLs and
-                    other integrations where a numeric workflow ID isn&apos;t portable.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <button
-                    type="button"
-                    onClick={handleCopy}
-                    title="Click to copy"
-                    className="group flex w-full items-center gap-2 rounded-md border bg-muted/20 p-2 text-left font-mono text-xs transition-colors hover:bg-muted/40"
-                >
-                    <code className="flex-1 truncate">{workflowUuid}</code>
-                    <Clipboard className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
-                </button>
-            </CardContent>
-            <CardFooter className="border-t pt-6">
-                <Button variant="outline" size="sm" onClick={handleCopy}>
-                    <Clipboard className="h-3.5 w-3.5 mr-2" />
-                    Copy UUID
-                </Button>
-            </CardFooter>
-        </Card>
-    );
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(workflowUuid);
+      setCopied(true);
+      toast.success("Agent UUID copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy Agent UUID");
+    }
+  };
+
+  return (
+    <section
+      id="identity"
+      className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-5"
+      style={{ backgroundColor: '#1C1E1A' }}
+    >
+      <div className="space-y-1 pb-2 border-b border-gray-100 dark:border-[#282b26]">
+        <div className="flex items-center gap-2">
+          <Fingerprint className="w-4 h-4 text-amber-600" />
+          <h2 className="text-xl font-normal text-gray-900 dark:text-[#f2f4f0] font-serif tracking-tight">
+            Agent UUID
+          </h2>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-[#9ca39a]">
+          Stable identifier for this agent. Used in agent-stream URLs and other integrations where a numeric workflow ID isn't portable.
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between p-3.5 bg-gray-50 dark:bg-[#1a1c18] border border-gray-200 dark:border-[#2e312b] rounded-xl">
+        <span className="font-mono text-xs text-gray-900 dark:text-[#f2f4f0] font-bold select-all truncate">
+          {workflowUuid}
+        </span>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1 text-xs font-semibold text-gray-600 dark:text-[#9ca39a] hover:text-black dark:hover:text-white transition-colors ml-3 flex-shrink-0 cursor-pointer"
+        >
+          <Clipboard className="w-4 h-4" />
+          <span>{copied ? "Copied!" : "Copy"}</span>
+        </button>
+      </div>
+    </section>
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Main Page
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Page wrapper — handles auth & data fetching, then mounts the content
-// component only when everything is loaded. This avoids useWorkflowState
-// running with empty initial values and overwriting the Zustand store.
+// Main Page & Page Wrapper
 // ---------------------------------------------------------------------------
 
 export default function WorkflowSettingsPage() {
-    const params = useParams();
-    const { user, redirectToLogin, loading: authLoading } = useAuth();
-    const [workflow, setWorkflow] = useState<WorkflowResponse | undefined>(undefined);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const params = useParams();
+  const { user, redirectToLogin, loading: authLoading } = useAuth();
+  const [workflow, setWorkflow] = useState<WorkflowResponse | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (!authLoading && !user) {
-            redirectToLogin();
-        }
-    }, [authLoading, user, redirectToLogin]);
-
-    useEffect(() => {
-        const fetchWorkflow = async () => {
-            if (!user) return;
-            try {
-                const response = await getWorkflowApiV1WorkflowFetchWorkflowIdGet({
-                    path: { workflow_id: Number(params.workflowId) },
-                });
-                setWorkflow(response.data);
-            } catch (err) {
-                setError("Failed to fetch workflow");
-                logger.error(`Error fetching workflow settings: ${err}`);
-            } finally {
-                setLoading(false);
-            }
-        };
-        if (user) fetchWorkflow();
-    }, [params.workflowId, user]);
-
-    if (loading || authLoading) return <SpinLoader />;
-
-    if (error || !workflow) {
-        return (
-            <div className="flex min-h-screen items-center justify-center">
-                <div className="text-lg text-destructive">{error || "Workflow not found"}</div>
-            </div>
-        );
+  useEffect(() => {
+    if (!authLoading && !user) {
+      redirectToLogin();
     }
+  }, [authLoading, user, redirectToLogin]);
 
-    if (!user) return null;
+  useEffect(() => {
+    const fetchWorkflow = async () => {
+      if (!user) return;
+      try {
+        const response = await getWorkflowApiV1WorkflowFetchWorkflowIdGet({
+          path: { workflow_id: Number(params.workflowId) },
+        });
+        setWorkflow(response.data);
+      } catch (err) {
+        setError("Failed to fetch workflow");
+        logger.error(`Error fetching workflow settings: ${err}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (user) fetchWorkflow();
+  }, [params.workflowId, user]);
 
-    return <WorkflowSettingsContent workflow={workflow} user={user} />;
-}
+  if (loading || authLoading) return <SpinLoader />;
 
-// ---------------------------------------------------------------------------
-// Content — only mounts once the workflow API response is available, so
-// useWorkflowState always initialises with real data.
-// ---------------------------------------------------------------------------
-
-function WorkflowSettingsContent({
-    workflow,
-    user,
-}: {
-    workflow: WorkflowResponse;
-    user: { id: string; email?: string };
-}) {
+  if (error || !workflow) {
     return (
-        <UnsavedChangesProvider>
-            <WorkflowSettingsInner workflow={workflow} user={user} />
-        </UnsavedChangesProvider>
+      <div className="flex min-h-screen items-center justify-center bg-[#161715] text-white">
+        <div className="text-sm text-rose-400 font-semibold">{error || "Workflow not found"}</div>
+      </div>
     );
+  }
+
+  if (!user) return null;
+
+  return (
+    <UnsavedChangesProvider>
+      <WorkflowSettingsInner workflow={workflow} user={user} />
+    </UnsavedChangesProvider>
+  );
 }
 
 function WorkflowSettingsInner({
-    workflow,
-    user,
+  workflow,
+  user,
 }: {
-    workflow: WorkflowResponse;
-    user: { id: string; email?: string };
+  workflow: WorkflowResponse;
+  user: { id: string; email?: string };
 }) {
-    const router = useRouter();
-    const { dirtySections, confirmNavigate } = useUnsavedChangesContext();
-    const { role: userRole } = useCurrentUserRole();
+  const router = useRouter();
+  const { dirtySections, confirmNavigate } = useUnsavedChangesContext();
+  const { role: userRole } = useCurrentUserRole();
 
-    const [isEmbedDialogOpen, setIsEmbedDialogOpen] = useState(false);
-    const [activeSection, setActiveSection] = useState("general");
+  const [isEmbedDialogOpen, setIsEmbedDialogOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("general");
+  const [saveToast, setSaveToast] = useState<string | null>(null);
 
-    const workflowId = workflow.id;
+  const workflowId = workflow.id;
 
-    const initialFlow = useMemo(
-        () => ({
-            nodes: workflow.workflow_definition.nodes as FlowNode[],
-            edges: workflow.workflow_definition.edges as FlowEdge[],
-            viewport: { x: 0, y: 0, zoom: 0 },
-        }),
-        [workflow],
+  const initialFlow = useMemo(
+    () => ({
+      nodes: workflow.workflow_definition.nodes as FlowNode[],
+      edges: workflow.workflow_definition.edges as FlowEdge[],
+      viewport: { x: 0, y: 0, zoom: 0 },
+    }),
+    [workflow],
+  );
+
+  const initialTemplateContextVariables = useMemo(
+    () => (workflow.template_context_variables as Record<string, string>) || {},
+    [workflow],
+  );
+
+  const initialWorkflowConfigurations = useMemo(
+    () => (workflow.workflow_configurations as WorkflowConfigurations) || DEFAULT_WORKFLOW_CONFIGURATIONS,
+    [workflow],
+  );
+
+  const {
+    workflowName,
+    workflowConfigurations,
+    templateContextVariables,
+    dictionary,
+    saveWorkflowConfigurations,
+    saveTemplateContextVariables,
+    saveDictionary,
+  } = useWorkflowState({
+    initialWorkflowName: workflow.name,
+    workflowId,
+    initialFlow,
+    initialTemplateContextVariables,
+    initialWorkflowConfigurations,
+    user,
+  });
+
+  const triggerToast = (msg: string) => {
+    setSaveToast(msg);
+    setTimeout(() => setSaveToast(null), 3000);
+  };
+
+  const handleGlobalSave = async () => {
+    if (!workflowConfigurations) return;
+    try {
+      await saveWorkflowConfigurations(workflowConfigurations, workflowName);
+      triggerToast("All Agent Settings saved successfully!");
+    } catch {
+      toast.error("Failed to save changes");
+    }
+  };
+
+  // Intersection observer for active section
+  useEffect(() => {
+    const ids = NAV_ITEMS.map((n) => n.id);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: "-20% 0px -60% 0px" },
     );
-
-    const initialTemplateContextVariables = useMemo(
-        () => (workflow.template_context_variables as Record<string, string>) || {},
-        [workflow],
-    );
-
-    const initialWorkflowConfigurations = useMemo(
-        () => (workflow.workflow_configurations as WorkflowConfigurations) || DEFAULT_WORKFLOW_CONFIGURATIONS,
-        [workflow],
-    );
-
-    const {
-        workflowName,
-        workflowConfigurations,
-        templateContextVariables,
-        dictionary,
-        saveWorkflowConfigurations,
-        saveTemplateContextVariables,
-        saveDictionary,
-    } = useWorkflowState({
-        initialWorkflowName: workflow.name,
-        workflowId,
-        initialFlow,
-        initialTemplateContextVariables,
-        initialWorkflowConfigurations,
-        user,
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
     });
+    return () => observer.disconnect();
+  }, []);
 
-    // Intersection observer for active sidebar link
-    useEffect(() => {
-        const ids = NAV_ITEMS.map((n) => n.id);
-        const observer = new IntersectionObserver(
-            (entries) => {
-                for (const entry of entries) {
-                    if (entry.isIntersecting) {
-                        setActiveSection(entry.target.id);
-                        break;
-                    }
-                }
-            },
-            { rootMargin: "-20% 0px -60% 0px" },
-        );
-        ids.forEach((id) => {
-            const el = document.getElementById(id);
-            if (el) observer.observe(el);
-        });
-        return () => observer.disconnect();
-    }, []);
+  const scrollToSection = (id: string) => {
+    setActiveSection(id);
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
-    return (
-        <div className="min-h-screen bg-[#08080a] text-zinc-300">
-            {/* Sticky header */}
-            <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-[#1d1d22] bg-[#0c0c0e]/85 px-6 py-4 backdrop-blur-md">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => confirmNavigate(() => router.push(`/workflow/${workflowId}`))}
-                    className="h-9 w-9 rounded-xl hover:bg-[#1c1c1f] hover:text-white text-zinc-400 border border-[#232328]/40 hover:border-[#1d1d22] transition-all cursor-pointer"
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <div>
-                    <p className="text-[10px] uppercase tracking-wider font-bold text-[#7c3aed]">Workflow Settings</p>
-                    <h1 className="text-sm font-bold text-white mt-0.5">{workflowName || workflow.name}</h1>
-                </div>
-            </header>
+  return (
+    <div
+      className="flex-1 h-full overflow-y-auto flex flex-col font-sans select-none relative"
+      style={{ backgroundColor: '#161715' }}
+    >
+      {/* Sticky Top Header */}
+      <header
+        className="px-8 pt-6 pb-4 flex items-center justify-between sticky top-0 z-20 border-b border-[#242722]"
+        style={{ backgroundColor: '#161715' }}
+      >
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => confirmNavigate(() => router.push(`/workflow/${workflowId}`))}
+            className="p-1.5 rounded-xl bg-gray-50 dark:bg-[#1a1c18] hover:bg-gray-100 dark:hover:bg-[#232621] text-gray-600 dark:text-[#9ca39a] transition-colors border border-gray-200 dark:border-[#2e312b] cursor-pointer"
+            title="Back to Agent Editor"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
 
-            {/* Main + right nav */}
-            <div className="mx-auto flex max-w-5xl gap-8 px-6 py-8">
-                {/* Sections */}
-                <div className="min-w-0 flex-1 space-y-8">
-                    {workflowConfigurations && (
-                        <>
-                            {/* General */}
-                            <GeneralSection
-                                workflowConfigurations={workflowConfigurations}
-                                workflowName={workflowName || workflow.name}
-                                workflowId={workflowId}
-                                initialConcurrencyLimit={workflow.concurrency_limit}
-                                onSave={saveWorkflowConfigurations}
-                            />
-
-                            {/* Model Overrides */}
-                            {userRole !== "client" && (
-                                <Card id="models" className="bg-[#111113] border border-[#1d1d22] rounded-2xl shadow-none overflow-hidden p-0">
-                                    <CardHeader className="border-b border-[#1d1d22]/50 p-6 pb-5 mb-5">
-                                        <CardTitle className="flex items-center gap-2 text-base font-bold text-white">
-                                            <Brain className="h-4 w-4 text-[#7c3aed]" />
-                                            Model Overrides
-                                        </CardTitle>
-                                        <CardDescription className="text-xs text-zinc-500 mt-1">
-                                            Override global model settings for this workflow. Toggle individual services to
-                                            customize.{" "}
-                                            <a href={SETTINGS_DOCUMENTATION_URLS.modelOverrides} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline hover:text-white transition-colors">Learn more <ExternalLink className="h-3 w-3" /></a>
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="p-6 pt-0">
-                                        <ServiceConfigurationForm
-                                            mode="override"
-                                            currentOverrides={workflowConfigurations.model_overrides}
-                                            submitLabel="Save Model Overrides"
-                                            onSave={async (config) => {
-                                                await saveWorkflowConfigurations(
-                                                    {
-                                                        ...workflowConfigurations,
-                                                        model_overrides:
-                                                            config.model_overrides as WorkflowConfigurations["model_overrides"],
-                                                    } as WorkflowConfigurations,
-                                                    workflowName,
-                                                );
-                                            }}
-                                        />
-                                    </CardContent>
-                                </Card>
-                            )}
-
-                            {/* Template Variables */}
-                            <TemplateVariablesSection
-                                templateContextVariables={templateContextVariables}
-                                onSave={saveTemplateContextVariables}
-                            />
-
-                            {/* Dictionary */}
-                            <DictionarySection dictionary={dictionary} onSave={saveDictionary} />
-
-                            {/* Voicemail Detection */}
-                            <VoicemailSection
-                                workflowConfigurations={workflowConfigurations}
-                                workflowName={workflowName}
-                                onSave={saveWorkflowConfigurations}
-                            />
-
-                            {/* Recordings – moved to org-level page */}
-                            <Card id="recordings" className="bg-[#111113] border border-[#1d1d22] rounded-2xl shadow-none overflow-hidden p-0">
-                                <CardHeader className="p-6">
-                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-white">
-                                        <Mic className="h-4 w-4 text-[#7c3aed]" />
-                                        Recordings
-                                    </CardTitle>
-                                    <CardDescription className="text-xs text-zinc-500 mt-1">
-                                        Recordings are now managed at the organization level and shared across all agents.
-                                        Use <code className="rounded bg-[#08080a] border border-[#1d1d22] px-1 text-zinc-300 font-mono text-[10px] py-0.5">@</code> in prompt fields to insert them.{" "}
-                                        <a href={SETTINGS_DOCUMENTATION_URLS.recordings} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline hover:text-white transition-colors">Learn more <ExternalLink className="h-3 w-3" /></a>
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardFooter className="border-t border-[#1d1d22]/50 p-6 pt-6">
-                                    <Button variant="outline" asChild className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white rounded-xl text-xs font-bold px-4 h-9 transition-all cursor-pointer">
-                                        <Link href="/recordings">
-                                            Go to Recordings
-                                            <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
-                                        </Link>
-                                    </Button>
-                                </CardFooter>
-                            </Card>
-
-                            {/* Deployment (dialog trigger) */}
-                            <Card id="deployment" className="bg-[#111113] border border-[#1d1d22] rounded-2xl shadow-none overflow-hidden p-0">
-                                <CardHeader className="p-6">
-                                    <CardTitle className="flex items-center gap-2 text-base font-bold text-white">
-                                        <Rocket className="h-4 w-4 text-[#7c3aed]" />
-                                        Add to Website
-                                    </CardTitle>
-                                    <CardDescription className="text-xs text-zinc-500 mt-1">
-                                        Configure a widget to add this voice agent to your website.{" "}
-                                        <a href={SETTINGS_DOCUMENTATION_URLS.deployment} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline hover:text-white transition-colors">Learn more <ExternalLink className="h-3 w-3" /></a>
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardFooter className="border-t border-[#1d1d22]/50 p-6 pt-6">
-                                    <Button variant="outline" onClick={() => setIsEmbedDialogOpen(true)} className="bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white rounded-xl text-xs font-bold px-4 h-9 transition-all cursor-pointer">
-                                        Configure Widget
-                                    </Button>
-                                </CardFooter>
-                            </Card>
-
-                            {/* Report */}
-                            <ReportSection workflowId={workflowId} />
-
-                            {/* Agent UUID */}
-                            {workflow.workflow_uuid && (
-                                <AgentUuidSection workflowUuid={workflow.workflow_uuid} />
-                            )}
-                        </>
-                    )}
-                </div>
-
-                {/* ---- Right-side sticky nav ---- */}
-                <nav className="hidden w-48 shrink-0 lg:block">
-                    <div className="sticky top-24 space-y-1">
-                        <p className="mb-3 text-[10px] font-bold uppercase tracking-wider text-zinc-600 px-3">
-                            On this page
-                        </p>
-                        {NAV_ITEMS.filter((item) => userRole !== "client" || item.id !== "models").map((item) => {
-                            const Icon = item.icon;
-                            return (
-                                <a
-                                    key={item.id}
-                                    href={`#${item.id}`}
-                                    className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
-                                        activeSection === item.id
-                                            ? "bg-[#1c1c1f] text-white border border-[#232328]"
-                                            : "text-zinc-500 hover:text-zinc-300 hover:bg-[#1a1a1f]/40"
-                                    }`}
-                                >
-                                    <Icon className="h-3.5 w-3.5 text-zinc-400" />
-                                    {item.label}
-                                    {dirtySections.has(item.id) && (
-                                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" />
-                                    )}
-                                </a>
-                            );
-                        })}
-                    </div>
-                </nav>
-            </div>
-
-            {/* Dialogs for complex sections */}
-            <EmbedDialog
-                open={isEmbedDialogOpen}
-                onOpenChange={setIsEmbedDialogOpen}
-                workflowId={workflowId}
-                workflowName={workflowName || workflow.name}
-            />
+          <div className="space-y-0.5">
+            <h1 className="text-base font-semibold text-gray-900 dark:text-[#f2f4f0] tracking-tight flex items-center gap-2">
+              <span>{workflowName || workflow.name}</span>
+              <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-400 text-[10.5px] font-bold rounded-full">
+                Active
+              </span>
+            </h1>
+            <p className="text-xs text-gray-400 dark:text-[#9ca39a]">Agent Configuration & Workflow Settings</p>
+          </div>
         </div>
-    );
+
+        <button
+          onClick={handleGlobalSave}
+          className="flex items-center gap-1.5 px-5 py-2 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cc] text-white dark:text-[#082117] text-xs font-bold rounded-full shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+        >
+          <Save className="w-3.5 h-3.5" />
+          <span>Save Changes</span>
+        </button>
+      </header>
+
+      {/* Main Content Layout */}
+      <div className="max-w-6xl w-full mx-auto px-8 pt-6 pb-20 flex gap-8">
+        {/* Left Form Sections */}
+        <div className="flex-1 space-y-8 min-w-0">
+          {saveToast && (
+            <div className="flex items-center justify-between px-4 py-3 bg-emerald-900/30 border border-emerald-800 text-emerald-400 rounded-xl text-xs font-semibold animate-in fade-in duration-300">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>{saveToast}</span>
+              </div>
+            </div>
+          )}
+
+          {workflowConfigurations && (
+            <>
+              {/* Section 1: General */}
+              <GeneralSection
+                workflowConfigurations={workflowConfigurations}
+                workflowName={workflowName || workflow.name}
+                workflowId={workflowId}
+                initialConcurrencyLimit={workflow.concurrency_limit}
+                onSave={saveWorkflowConfigurations}
+              />
+
+              {/* Section 2: Model Overrides */}
+              {userRole !== "client" && (
+                <section
+                  id="models"
+                  className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-6"
+                  style={{ backgroundColor: '#1C1E1A' }}
+                >
+                  <div className="space-y-1 pb-2 border-b border-gray-100 dark:border-[#282b26]">
+                    <div className="flex items-center gap-2">
+                      <Cpu className="w-4 h-4 text-amber-600" />
+                      <h2 className="text-xl font-normal text-gray-900 dark:text-[#f2f4f0] font-serif tracking-tight">
+                        Model Overrides
+                      </h2>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-[#9ca39a] flex items-center gap-1">
+                      <span>Override global model settings for this workflow. Toggle individual services to customize.</span>
+                      <a
+                        href={SETTINGS_DOCUMENTATION_URLS.modelOverrides}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-amber-700 hover:underline inline-flex items-center gap-0.5"
+                      >
+                        Learn more <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </p>
+                  </div>
+
+                  <ServiceConfigurationForm
+                    mode="override"
+                    currentOverrides={workflowConfigurations.model_overrides}
+                    submitLabel="Save Model Overrides"
+                    onSave={async (config) => {
+                      await saveWorkflowConfigurations(
+                        {
+                          ...workflowConfigurations,
+                          model_overrides: config.model_overrides as WorkflowConfigurations["model_overrides"],
+                        } as WorkflowConfigurations,
+                        workflowName,
+                      );
+                      toast.success("Model Overrides saved successfully!");
+                    }}
+                  />
+                </section>
+              )}
+
+              {/* Section 3: Template Variables */}
+              <TemplateVariablesSection
+                templateContextVariables={templateContextVariables}
+                onSave={saveTemplateContextVariables}
+              />
+
+              {/* Section 4: Dictionary */}
+              <DictionarySection dictionary={dictionary} onSave={saveDictionary} />
+
+              {/* Section 5: Voicemail Detection */}
+              <VoicemailSection
+                workflowConfigurations={workflowConfigurations}
+                workflowName={workflowName}
+                onSave={saveWorkflowConfigurations}
+              />
+
+              {/* Section 6: Recordings */}
+              <section
+                id="recordings"
+                className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-5"
+                style={{ backgroundColor: '#1C1E1A' }}
+              >
+                <div className="space-y-1 pb-2 border-b border-gray-100 dark:border-[#282b26]">
+                  <div className="flex items-center gap-2">
+                    <Mic className="w-4 h-4 text-amber-600" />
+                    <h2 className="text-xl font-normal text-gray-900 dark:text-[#f2f4f0] font-serif tracking-tight">
+                      Recordings
+                    </h2>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-[#9ca39a] flex items-center gap-1">
+                    <span>Recordings are now managed at the organization level and shared across all agents. Use @ in prompt fields to insert them.</span>
+                    <a
+                      href={SETTINGS_DOCUMENTATION_URLS.recordings}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-amber-700 hover:underline inline-flex items-center gap-0.5"
+                    >
+                      Learn more <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </p>
+                </div>
+
+                <Link
+                  href="/recordings"
+                  className="px-5 py-2.5 bg-gray-100 dark:bg-[#252822] hover:bg-gray-200 dark:hover:bg-[#2e322a] text-gray-900 dark:text-[#f2f4f0] text-xs font-bold rounded-full transition-all inline-flex items-center gap-2"
+                >
+                  <span>Go to Recordings</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              </section>
+
+              {/* Section 7: Add to Website */}
+              <section
+                id="deployment"
+                className="border border-gray-200/90 dark:border-[#282b26] rounded-2xl p-6 shadow-2xs space-y-5"
+                style={{ backgroundColor: '#1C1E1A' }}
+              >
+                <div className="space-y-1 pb-2 border-b border-gray-100 dark:border-[#282b26]">
+                  <div className="flex items-center gap-2">
+                    <Rocket className="w-4 h-4 text-amber-600" />
+                    <h2 className="text-xl font-normal text-gray-900 dark:text-[#f2f4f0] font-serif tracking-tight">
+                      Add to Website
+                    </h2>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-[#9ca39a] flex items-center gap-1">
+                    <span>Configure a widget to add this voice agent to your website.</span>
+                    <a
+                      href={SETTINGS_DOCUMENTATION_URLS.deployment}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-amber-700 hover:underline inline-flex items-center gap-0.5"
+                    >
+                      Learn more <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setIsEmbedDialogOpen(true)}
+                  className="px-5 py-2.5 bg-gray-100 dark:bg-[#252822] hover:bg-gray-200 dark:hover:bg-[#2e322a] text-gray-900 dark:text-[#f2f4f0] text-xs font-bold rounded-full transition-all cursor-pointer"
+                >
+                  Configure Widget
+                </button>
+              </section>
+
+              {/* Section 8: Report */}
+              <ReportSection workflowId={workflowId} />
+
+              {/* Section 9: Agent UUID */}
+              {workflow.workflow_uuid && <AgentUuidSection workflowUuid={workflow.workflow_uuid} />}
+            </>
+          )}
+        </div>
+
+        {/* Right-side Sticky "On This Page" Nav Sidebar */}
+        <div className="w-56 hidden lg:block flex-shrink-0">
+          <div className="sticky top-24 space-y-3">
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-[#6b7068] px-3">
+              On This Page
+            </h4>
+
+            <nav className="space-y-0.5">
+              {NAV_ITEMS.filter((item) => userRole !== "client" || item.id !== "models").map((sec) => {
+                const Icon = sec.icon;
+                const isActive = activeSection === sec.id;
+                const isDirtySection = dirtySections.has(sec.id);
+                return (
+                  <button
+                    key={sec.id}
+                    onClick={() => scrollToSection(sec.id)}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all text-left cursor-pointer ${
+                      isActive
+                        ? "bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white font-bold shadow-2xs"
+                        : "text-gray-500 dark:text-[#9ca39a] hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? "text-amber-600" : "text-gray-400 dark:text-[#6b7068]"}`} />
+                    <span className="truncate flex-1">{sec.label}</span>
+                    {isDirtySection && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      <EmbedDialog
+        open={isEmbedDialogOpen}
+        onOpenChange={setIsEmbedDialogOpen}
+        workflowId={workflowId}
+        workflowName={workflowName || workflow.name}
+      />
+    </div>
+  );
 }
