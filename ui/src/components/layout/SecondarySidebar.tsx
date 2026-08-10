@@ -16,7 +16,10 @@ import {
   BarChart3,
   CreditCard,
   Key,
+  Shield,
+  Users,
 } from "lucide-react";
+import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
 
 interface SecondarySidebarProps {
   isCollapsed: boolean;
@@ -31,6 +34,7 @@ export const SecondarySidebar: React.FC<SecondarySidebarProps> = ({
 }) => {
   const pathname = usePathname();
   const router = useRouter();
+  const { role, isSuperadmin } = useCurrentUserRole();
 
   // Navigation schema mapping existing app routes
   const navigationGroups = [
@@ -61,6 +65,17 @@ export const SecondarySidebar: React.FC<SecondarySidebarProps> = ({
     },
   ];
 
+  // Add ADMIN group if user is superadmin
+  if (role === "super_admin" || isSuperadmin) {
+    navigationGroups.push({
+      heading: "ADMIN",
+      items: [
+        { label: "Platform Orgs", path: "/superadmin", icon: Shield },
+        { label: "Users Directory", path: "/superadmin/users", icon: Users },
+      ],
+    });
+  }
+
   if (pathname?.startsWith("/api-keys") || pathname?.startsWith("/developers")) {
     navigationGroups.length = 0;
     navigationGroups.push({
@@ -69,12 +84,22 @@ export const SecondarySidebar: React.FC<SecondarySidebarProps> = ({
     });
   }
 
+  const getHeaderTitle = () => {
+    if (pathname?.startsWith("/api-keys") || pathname?.startsWith("/developers")) {
+      return "Developer Portal";
+    }
+    if (pathname?.startsWith("/superadmin")) {
+      return "Superadmin Portal";
+    }
+    return "AI voice agents";
+  };
+
   if (isCollapsed) {
     return (
       <div className="h-full border-r border-gray-200/80 dark:border-[#242722] bg-white dark:bg-[#161715] p-3 flex flex-col items-center select-none">
         <button
           onClick={onToggleCollapse}
-          className="p-2 rounded-xl text-gray-500 dark:text-[#9ca39a] hover:bg-gray-100 dark:hover:bg-white/8 transition-colors"
+          className="p-2 rounded-xl text-gray-500 dark:text-[#9ca39a] hover:bg-gray-100 dark:hover:bg-white/8 transition-colors cursor-pointer"
         >
           <PanelLeft className="w-5 h-5" />
         </button>
@@ -87,11 +112,11 @@ export const SecondarySidebar: React.FC<SecondarySidebarProps> = ({
       {/* Header */}
       <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-gray-100/80 dark:border-[#1e2118]">
         <h2 className="text-xl font-normal text-gray-900 dark:text-[#f2f4f0] font-serif tracking-tight">
-          {pathname?.startsWith("/api-keys") || pathname?.startsWith("/developers") ? "Developer Portal" : "AI voice agents"}
+          {getHeaderTitle()}
         </h2>
         <button
           onClick={onToggleCollapse}
-          className="p-1.5 text-gray-500 dark:text-[#9ca39a] hover:bg-gray-100 dark:hover:bg-white/8 rounded-lg transition-colors"
+          className="p-1.5 text-gray-500 dark:text-[#9ca39a] hover:bg-gray-100 dark:hover:bg-white/8 rounded-lg transition-colors cursor-pointer"
         >
           <PanelLeftClose className="w-5 h-5 stroke-[1.75]" />
         </button>
@@ -106,14 +131,16 @@ export const SecondarySidebar: React.FC<SecondarySidebarProps> = ({
             </div>
 
             {group.items.map((item) => {
-              const isActive = pathname.startsWith(item.path);
+              const isActive = item.path === "/superadmin"
+                ? pathname === "/superadmin"
+                : pathname.startsWith(item.path);
               const Icon = item.icon;
 
               return (
                 <button
                   key={item.path}
                   onClick={() => router.push(item.path)}
-                  className={`w-full flex items-center justify-between px-3.5 py-2 rounded-full text-sm transition-all group ${
+                  className={`w-full flex items-center justify-between px-3.5 py-2 rounded-full text-sm transition-all group cursor-pointer ${
                     isActive
                       ? "bg-gray-200/80 dark:bg-white/10 text-gray-900 dark:text-white font-semibold shadow-2xs"
                       : "text-gray-700 dark:text-[#a1a69d] hover:bg-gray-100 dark:hover:bg-white/6 hover:text-gray-900 dark:hover:text-white font-medium"
