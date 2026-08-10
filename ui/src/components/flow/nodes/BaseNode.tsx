@@ -15,21 +15,16 @@ export const BaseNode = forwardRef<
     <div
         ref={ref}
         className={cn(
-            // Base styling - larger with max width, uses semantic colors
-            "relative rounded-lg border bg-card text-card-foreground min-w-[320px] max-w-[400px] min-h-[120px]",
-            // Border styling
-            "border-border",
+            "relative rounded-2xl border min-w-[340px] max-w-[440px] shadow-2xl transition-all",
+            "border-[#282b26] text-white",
             className,
-            // Selected state - prominent halo effect
-            selected ? "border-primary ring-2 ring-primary/40 shadow-[0_0_20px_rgba(59,130,246,0.5)]" : "",
-            // Invalid state
+            selected ? "border-indigo-500/80 ring-2 ring-indigo-500/30" : "hover:border-[#383d34]",
             invalid ? "border-destructive shadow-[0_0_10px_rgba(239,68,68,0.3)]" : "",
-            // Hovered through edge takes precedence over selected through edge
-            hovered_through_edge ? "ring-2 ring-primary/60 shadow-[0_0_12px_rgba(96,165,250,0.3)]" : "",
-            !hovered_through_edge && selected_through_edge ? "ring-1 ring-primary/50 shadow-[0_0_8px_rgba(59,130,246,0.2)]" : "",
-            runtimeActive ? "ring-2 ring-sky-400/60 shadow-[0_0_0_1px_rgba(56,189,248,0.18),0_0_24px_rgba(14,165,233,0.18)]" : "",
-            !selected_through_edge && !hovered_through_edge && "hover:border-muted-foreground/50",
+            hovered_through_edge ? "ring-2 ring-indigo-500/60" : "",
+            !hovered_through_edge && selected_through_edge ? "ring-1 ring-indigo-500/50" : "",
+            runtimeActive ? "ring-2 ring-sky-400/60 shadow-[0_0_24px_rgba(14,165,233,0.18)]" : "",
         )}
+        style={{ backgroundColor: '#161715' }}
         tabIndex={0}
         {...props}
     >

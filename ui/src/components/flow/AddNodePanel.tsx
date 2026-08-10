@@ -4,7 +4,6 @@ import { useEffect, useMemo } from 'react';
 
 import type { NodeSpec } from '@/client/types.gen';
 import { useNodeSpecs } from '@/components/flow/renderer';
-import { Button } from '@/components/ui/button';
 
 import { NodeType } from './types';
 
@@ -14,8 +13,6 @@ type AddNodePanelProps = {
     onNodeSelect: (nodeType: NodeType) => void;
 };
 
-// Section ordering and labels. Drives both the category → section title
-// mapping and the rendering order.
 const SECTION_ORDER: Array<{ category: NodeSpec['category']; title: string }> = [
     { category: 'trigger', title: 'Triggers' },
     { category: 'call_node', title: 'Agent Nodes' },
@@ -39,34 +36,31 @@ function NodeSection({
 }) {
     if (specs.length === 0) return null;
     return (
-        <div className="space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="space-y-2">
+            <span className="text-[10.5px] font-bold text-[#7c8279] uppercase tracking-wider">
                 {title}
-            </h3>
+            </span>
             <div className="space-y-2">
                 {specs.map((spec) => {
                     const Icon = resolveIcon(spec.icon);
                     return (
-                        <Button
+                        <div
                             key={spec.name}
-                            variant="outline"
-                            className="w-full justify-start p-4 h-auto hover:bg-accent/50 transition-colors"
                             onClick={() => onNodeSelect(spec.name as NodeType)}
+                            className="p-4 bg-[#1c1e1a] hover:bg-[#232621] border border-[#282b26] rounded-2xl space-y-1 cursor-pointer transition-all group"
                         >
-                            <div className="flex items-center">
-                                <div className="bg-muted p-2 rounded-lg mr-3 border border-border">
-                                    <Icon className="h-5 w-5" />
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-xl bg-[#252822] text-[#c8ccc5] group-hover:text-white flex-shrink-0">
+                                    <Icon className="w-4 h-4" />
                                 </div>
-                                <div className="flex flex-col items-start text-left min-w-0">
-                                    <span className="font-medium text-sm">
-                                        {spec.display_name}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground whitespace-normal">
+                                <div className="flex flex-col min-w-0">
+                                    <h4 className="text-xs font-bold text-white truncate">{spec.display_name}</h4>
+                                    <p className="text-[11.5px] text-[#9ca39a] leading-snug truncate">
                                         {spec.description}
-                                    </span>
+                                    </p>
                                 </div>
                             </div>
-                        </Button>
+                        </div>
                     );
                 })}
             </div>
@@ -77,8 +71,6 @@ function NodeSection({
 export default function AddNodePanel({ isOpen, onNodeSelect, onClose }: AddNodePanelProps) {
     const { specs } = useNodeSpecs();
 
-    // Group registered specs by category, preserving the SECTION_ORDER.
-    // Adding a new node type with a new spec.category just shows up here.
     const sections = useMemo(() => {
         return SECTION_ORDER.map(({ category, title }) => ({
             title,
@@ -97,40 +89,42 @@ export default function AddNodePanel({ isOpen, onNodeSelect, onClose }: AddNodeP
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, onClose]);
 
+    if (!isOpen) return null;
+
     return (
         <div
-            className={`fixed z-51 right-0 top-0 h-full w-80 bg-background shadow-lg transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'
-                }`}
+            className="absolute top-14 left-0 bottom-0 w-96 border-r border-[#242722] z-40 shadow-2xl flex flex-col p-6 space-y-5 animate-in slide-in-from-left duration-200"
+            style={{ backgroundColor: '#161715' }}
         >
-            <div className="p-4 h-full overflow-y-auto">
-                <div className="flex justify-between items-center mb-6">
-                    <div className="flex flex-col gap-1">
-                        <h2 className="text-lg font-semibold">Add New Node</h2>
-                        <a
-                            href="https://docs.dograh.com/voice-agent/introduction"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
-                        >
-                            <ExternalLink className="w-3 h-3" />
-                            View Nodes Documentation
-                        </a>
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={onClose}>
-                        <X className="w-5 h-5" />
-                    </Button>
+            <div className="flex items-center justify-between pb-2 border-b border-[#242722]">
+                <div>
+                    <h2 className="text-lg font-bold text-white">Add New Node</h2>
+                    <a
+                        href="https://docs.dograh.com/voice-agent/introduction"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-[#8b5cf6] hover:underline inline-flex items-center gap-1"
+                    >
+                        View Nodes Documentation <ExternalLink className="w-3 h-3" />
+                    </a>
                 </div>
+                <button
+                    onClick={onClose}
+                    className="text-[#9ca39a] hover:text-white p-1 cursor-pointer"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+            </div>
 
-                <div className="space-y-6">
-                    {sections.map(({ title, specs }) => (
-                        <NodeSection
-                            key={title}
-                            title={title}
-                            specs={specs}
-                            onNodeSelect={onNodeSelect}
-                        />
-                    ))}
-                </div>
+            <div className="flex-1 overflow-y-auto space-y-6 pr-1">
+                {sections.map(({ title, specs }) => (
+                    <NodeSection
+                        key={title}
+                        title={title}
+                        specs={specs}
+                        onNodeSelect={onNodeSelect}
+                    />
+                ))}
             </div>
         </div>
     );

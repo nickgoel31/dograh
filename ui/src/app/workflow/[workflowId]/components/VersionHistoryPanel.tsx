@@ -29,18 +29,6 @@ interface VersionHistoryPanelProps {
     onLoadMore: () => void;
 }
 
-const statusLabel: Record<string, string> = {
-    draft: "Draft",
-    published: "Published",
-    archived: "Archived",
-};
-
-const statusColor: Record<string, string> = {
-    draft: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-    published: "bg-green-500/20 text-green-400 border-green-500/30",
-    archived: "bg-gray-500/20 text-gray-400 border-gray-500/30",
-};
-
 export const VersionHistoryPanel = ({
     isOpen,
     onClose,
@@ -62,92 +50,86 @@ export const VersionHistoryPanel = ({
         return () => document.removeEventListener("keydown", handleKeyDown);
     }, [isOpen, onClose]);
 
+    if (!isOpen) return null;
+
     return (
         <div
-            className={`fixed z-51 right-0 top-0 h-full w-80 bg-[#1a1a1a] border-l border-[#2a2a2a] shadow-lg transform transition-transform duration-300 ease-in-out ${
-                isOpen ? "translate-x-0" : "translate-x-full"
-            }`}
+            className="absolute top-14 right-0 bottom-0 w-80 border-l border-[#242722] z-40 shadow-2xl flex flex-col p-6 space-y-4 animate-in slide-in-from-right duration-200"
+            style={{ backgroundColor: '#161715' }}
         >
-            <div className="p-4 h-full overflow-y-auto">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-lg font-semibold text-white">
-                        Version History
-                    </h2>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-white hover:bg-[#2a2a2a]"
-                    >
-                        <X className="w-5 h-5" />
-                    </Button>
-                </div>
+            <div className="flex items-center justify-between pb-2 border-b border-[#242722]">
+                <h2 className="text-lg font-bold text-white">Version History</h2>
+                <button
+                    onClick={onClose}
+                    className="text-[#9ca39a] hover:text-white p-1 cursor-pointer"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+            </div>
 
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
-                        <LoaderCircle className="w-6 h-6 text-gray-400 animate-spin" />
+                        <LoaderCircle className="w-6 h-6 text-[#9ca39a] animate-spin" />
                     </div>
                 ) : versions.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-8">
+                    <p className="text-xs text-[#9ca39a] text-center py-8">
                         No versions found.
                     </p>
                 ) : (
-                    <div className="space-y-2">
-                        {versions.map((version) => {
-                            const isActive = version.id === activeVersionId;
-                            const date = version.published_at || version.created_at;
-                            return (
-                                <button
-                                    key={version.id}
-                                    onClick={() => onSelectVersion(version)}
-                                    className={`w-full text-left p-3 rounded-lg border transition-colors cursor-pointer ${
-                                        isActive
-                                            ? "border-teal-500/50 bg-teal-500/10"
-                                            : "border-[#2a2a2a] bg-[#222] hover:bg-[#2a2a2a]"
-                                    }`}
-                                >
-                                    <div className="flex items-center justify-between mb-1.5">
-                                        <div className="flex items-center gap-2">
-                                            <FileText className="w-4 h-4 text-gray-400" />
-                                            <span className="text-sm font-medium text-white">
-                                                v{version.version_number}
-                                            </span>
-                                        </div>
-                                        {version.status !== "archived" && (
-                                            <span
-                                                className={`text-xs px-2 py-0.5 rounded-full border ${
-                                                    statusColor[version.status] ?? ""
-                                                }`}
-                                            >
-                                                {statusLabel[version.status] ?? version.status}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-xs text-gray-500">
-                                        {formatDistanceToNow(new Date(date), {
-                                            addSuffix: true,
-                                        })}
-                                    </p>
-                                </button>
-                            );
-                        })}
-                        {hasMore && (
-                            <Button
-                                variant="ghost"
-                                onClick={onLoadMore}
-                                disabled={loadingMore}
-                                className="w-full text-sm text-gray-300 hover:text-white hover:bg-[#2a2a2a]"
+                    versions.map((ver) => {
+                        const isActive = ver.id === activeVersionId;
+                        const date = ver.published_at || ver.created_at;
+                        return (
+                            <div
+                                key={ver.id}
+                                onClick={() => onSelectVersion(ver)}
+                                className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                                    isActive
+                                        ? "bg-[#102a20] border-emerald-600/60 text-white"
+                                        : "bg-[#1c1e1a] border-[#282b26] hover:bg-[#232621] text-[#c8ccc5]"
+                                }`}
                             >
-                                {loadingMore ? (
-                                    <LoaderCircle className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    "Load more"
+                                <div className="space-y-0.5">
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="w-4 h-4 text-[#9ca39a]" />
+                                        <span className="text-xs font-bold">v{ver.version_number}</span>
+                                    </div>
+                                    <span className="text-[11px] text-[#9ca39a] block pl-6">
+                                        {formatDistanceToNow(new Date(date), { addSuffix: true })}
+                                    </span>
+                                </div>
+
+                                {ver.status === "published" && (
+                                    <span className="px-2.5 py-0.5 bg-emerald-900/60 text-emerald-400 border border-emerald-700/50 text-[10.5px] font-bold rounded-full">
+                                        Published
+                                    </span>
                                 )}
-                            </Button>
-                        )}
-                    </div>
+                                {ver.status === "draft" && (
+                                    <span className="px-2.5 py-0.5 bg-amber-900/60 text-amber-400 border border-amber-700/50 text-[10.5px] font-bold rounded-full">
+                                        Draft
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })
                 )}
             </div>
+
+            {hasMore && (
+                <Button
+                    variant="ghost"
+                    onClick={onLoadMore}
+                    disabled={loadingMore}
+                    className="py-2 text-center text-xs font-bold text-[#c8ccc5] hover:text-white transition-colors border-t border-[#242722] cursor-pointer"
+                >
+                    {loadingMore ? (
+                        <LoaderCircle className="w-4 h-4 animate-spin" />
+                    ) : (
+                        "Load more"
+                    )}
+                </Button>
+            )}
         </div>
     );
 };

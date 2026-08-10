@@ -144,40 +144,52 @@ export function WorkflowTesterPanel({
         !hasSeenTooltip("web_call");
 
     return (
-        <div className={cn("flex h-full min-h-0 flex-col bg-[#111113]", className)}>
+        <div className={cn("flex h-full min-h-0 flex-col text-[#f2f4f0]", className)} style={{ backgroundColor: '#161715' }}>
             <Tabs
                 value={activeMode}
                 onValueChange={(value) => setActiveMode(value as "audio" | "text")}
                 className="min-h-0 flex-1 gap-0"
             >
-                <div className="border-b border-[#1d1d22] px-4 py-3 bg-[#0c0c0e]/30">
-                    <div className="flex items-center gap-3">
-                        <TabsList className="grid h-9 flex-1 grid-cols-2 rounded-xl bg-[#08080a] border border-[#1d1d22] p-1">
-                            <TabsTrigger value="audio" className="rounded-lg text-xs font-bold data-[state=active]:bg-[#1c1c1f] data-[state=active]:text-white text-zinc-400">
-                                <Mic className="h-3.5 w-3.5 mr-1" />
-                                Test Audio
-                            </TabsTrigger>
-                            <TabsTrigger value="text" className="rounded-lg text-xs font-bold data-[state=active]:bg-[#1c1c1f] data-[state=active]:text-white text-zinc-400">
-                                <MessageSquareText className="h-3.5 w-3.5 mr-1" />
-                                Test Chat
-                            </TabsTrigger>
-                        </TabsList>
+                <div className="border-b border-[#242722] p-3 bg-[#141513]">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1 bg-[#1c1e1a] p-1 rounded-xl border border-[#282b26] flex-1 mr-2">
+                            <button
+                                onClick={() => setActiveMode("audio")}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                    activeMode === "audio"
+                                        ? "bg-[#252822] text-white shadow-xs"
+                                        : "text-[#9ca39a] hover:text-white"
+                                }`}
+                            >
+                                <Mic className="w-3.5 h-3.5" />
+                                <span>Test Audio</span>
+                            </button>
+                            <button
+                                onClick={() => setActiveMode("text")}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                    activeMode === "text"
+                                        ? "bg-[#252822] text-white shadow-xs"
+                                        : "text-[#9ca39a] hover:text-white"
+                                }`}
+                            >
+                                <MessageSquareText className="w-3.5 h-3.5" />
+                                <span>Test Chat</span>
+                            </button>
+                        </div>
                         {onClose ? (
-                            <Button
-                                variant="ghost"
-                                size="icon"
+                            <button
                                 onClick={onClose}
-                                className="shrink-0 text-zinc-500 hover:text-white rounded-lg hover:bg-[#1c1c1f] cursor-pointer"
+                                className="p-1.5 text-[#9ca39a] hover:text-white rounded-lg transition-colors cursor-pointer"
                                 aria-label="Close tester panel"
                             >
-                                <X className="h-4 w-4" />
-                            </Button>
+                                <X className="w-4 h-4" />
+                            </button>
                         ) : null}
                     </div>
                 </div>
 
-                <TabsContent value="audio" className="min-h-0 flex-1 px-4 py-4">
-                    <div className="flex h-full min-h-0 flex-col gap-3">
+                <TabsContent value="audio" className="min-h-0 flex-1 px-6 py-6">
+                    <div className="flex h-full min-h-0 flex-col gap-4">
                         {!tokenReady ? (
                             <div className="space-y-4">
                                 <Skeleton className="h-14 bg-zinc-800 rounded-xl" />
@@ -199,31 +211,39 @@ export function WorkflowTesterPanel({
                         ) : (
                             <>
                                 {effectiveDisabledReason ? <DisabledNotice reason={effectiveDisabledReason} /> : null}
-                                <EmptyState
-                                    icon={<Phone className="h-7 w-7 text-zinc-400" />}
-                                    title="Call this agent in the browser"
-                                    description="Test the agent over a voice call. Some telephony-only tools, like call transfer, are not yet supported here."
-                                    action={
-                                        <Button
-                                            ref={runTestButtonRef}
-                                            onClick={createVoiceRun}
-                                            disabled={creatingVoiceRun || testerBlocked}
-                                            className="bg-[#7c3aed] hover:bg-[#8b5cf6] text-white font-bold text-xs px-4 h-9 rounded-xl transition-all shadow-lg cursor-pointer"
-                                        >
-                                            {creatingVoiceRun ? (
-                                                <>
-                                                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                                    Starting test...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Phone className="h-3.5 w-3.5 mr-1.5" />
-                                                    Run Test
-                                                </>
-                                            )}
-                                        </Button>
-                                    }
-                                />
+                                <div className="flex-1 p-6 flex flex-col items-center justify-center text-center space-y-6 overflow-y-auto">
+                                    <div className="w-14 h-14 rounded-2xl bg-[#1c1e1a] border border-[#282b26] flex items-center justify-center text-[#c8ccc5] shadow-inner">
+                                        <Phone className="w-7 h-7 text-[#8b5cf6]" />
+                                    </div>
+
+                                    <div className="space-y-2 max-w-xs">
+                                        <h3 className="text-sm font-bold text-white">
+                                            Call this agent in the browser
+                                        </h3>
+                                        <p className="text-xs text-[#9ca39a] leading-relaxed">
+                                            Test the agent over a voice call. Some telephony-only tools, like call transfer, are not yet supported here.
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        ref={runTestButtonRef}
+                                        onClick={createVoiceRun}
+                                        disabled={creatingVoiceRun || testerBlocked}
+                                        className="w-full py-3 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-full text-xs font-bold shadow-md transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                                    >
+                                        {creatingVoiceRun ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Starting test...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Phone className="w-4 h-4" />
+                                                Run Test
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </>
                         )}
                     </div>

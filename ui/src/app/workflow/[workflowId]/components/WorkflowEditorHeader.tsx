@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactFlowInstance } from "@xyflow/react";
-import { AlertCircle, ArrowLeft, Bot, Clipboard, Copy, Download, Eye, History, LoaderCircle, Menu, MoreVertical, Pencil, Phone, Rocket } from "lucide-react";
+import { AlertCircle, ArrowLeft, ChevronDown, Clipboard, Copy, Download, Eye, History, LoaderCircle, Menu, MoreVertical, Pencil, PhoneCall, Rocket, Sparkles, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -12,8 +12,6 @@ import {
 } from "@/client/sdk.gen";
 import { WorkflowError } from "@/client/types.gen";
 import { FlowEdge, FlowNode } from "@/components/flow/types";
-import { GitHubStarBadge } from "@/components/layout/GitHubStarBadge";
-import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -71,11 +69,8 @@ export const WorkflowEditorHeader = ({
     const [savingWorkflow, setSavingWorkflow] = useState(false);
     const [duplicating, setDuplicating] = useState(false);
     const [publishing, setPublishing] = useState(false);
-    // One discriminated-union state instead of (isEditingName, nameDraft,
-    // nameError, isRenaming): they're not independent — error and saving are
-    // mutually exclusive, and both are meaningless in the display state. The
-    // union makes the bad combinations unrepresentable and structurally
-    // prevents the Enter→disable-input→blur→re-fire race.
+    const [isStarred, setIsStarred] = useState(false);
+
     type RenameState =
         | { kind: "display" }
         | { kind: "editing"; draft: string; error: string | null }
@@ -176,14 +171,10 @@ export const WorkflowEditorHeader = ({
 
     const exitEditMode = () => {
         setRename({ kind: "display" });
-        // Return focus to the pencil button so keyboard users aren't stranded.
-        // Defer to next tick so React commits the input unmount first.
         setTimeout(() => renameButtonRef.current?.focus(), 0);
     };
 
     const attemptSave = async () => {
-        // Only "editing" can initiate a save. This also guards against the
-        // blur fired when disabling the input transitions us to "saving".
         if (rename.kind !== "editing") return;
         const trimmed = rename.draft.trim();
         if (trimmed.length === 0) {
@@ -191,18 +182,14 @@ export const WorkflowEditorHeader = ({
             return;
         }
         if (trimmed === workflowName) {
-            // No-op: exit cleanly with no API call.
             exitEditMode();
             return;
         }
         setRename({ kind: "saving", draft: rename.draft });
         try {
             await renameWorkflow(trimmed);
-            // Success: store update already propagated workflowName. Exit edit mode.
             exitEditMode();
         } catch {
-            // Roll back: keep user's typed value, reopen the input, focus it,
-            // surface a sonner toast (matches existing duplicate/publish failure pattern).
             toast.error("Failed to rename workflow");
             setRename({ kind: "editing", draft: trimmed, error: null });
             setTimeout(() => nameInputRef.current?.focus(), 0);
@@ -220,9 +207,7 @@ export const WorkflowEditorHeader = ({
     };
 
     const handleRenameBlur = () => {
-        // Ignore the blur fired when the input is disabled during save.
         if (rename.kind !== "editing") return;
-        // On blur with empty/whitespace, revert silently to display mode so the user is never trapped.
         if (rename.draft.trim().length === 0) {
             exitEditMode();
             return;
@@ -231,24 +216,28 @@ export const WorkflowEditorHeader = ({
     };
 
     return (
-        <div className="flex items-center justify-between w-full h-16 px-6 bg-[#0c0c0e] border-b border-[#1d1d22] backdrop-blur-md">
-            {/* Left section: Mobile menu + Back button + Workflow name */}
-            <div className="flex items-center gap-3 mr-4">
+        <header
+            className="h-14 px-6 border-b border-[#242722] flex items-center justify-between z-30 flex-shrink-0"
+            style={{ backgroundColor: '#161715' }}
+        >
+            {/* Left section: Mobile menu + Back button + Workflow title */}
+            <div className="flex items-center gap-3 min-w-0">
                 <button
                     onClick={toggleSidebar}
-                    className="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-[#1c1c1f] hover:text-white text-zinc-400 border border-[#232328]/40 hover:border-[#1d1d22] transition-all md:hidden cursor-pointer"
+                    className="p-1.5 rounded-xl text-[#9ca39a] hover:bg-[#232621] hover:text-white transition-colors md:hidden cursor-pointer"
                     aria-label="Open menu"
                 >
                     <Menu className="w-4 h-4" />
                 </button>
                 <button
                     onClick={handleBack}
-                    className="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-[#1c1c1f] hover:text-white text-zinc-400 border border-[#232328]/40 hover:border-[#1d1d22] transition-all cursor-pointer"
+                    className="p-1.5 rounded-xl text-[#9ca39a] hover:bg-[#232621] hover:text-white transition-colors cursor-pointer"
+                    title="Back to Voice Agents"
                 >
                     <ArrowLeft className="w-4 h-4" />
                 </button>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                     {rename.kind !== "display" ? (
                         <div className="flex flex-col gap-1">
                             <Input
@@ -265,75 +254,71 @@ export const WorkflowEditorHeader = ({
                                 autoFocus
                                 onFocus={(e) => e.currentTarget.select()}
                                 aria-label="Workflow name"
-                                aria-invalid={rename.kind === "editing" && rename.error !== null}
-                                className="h-9 max-w-xs bg-[#08080a] border-[#1d1d22] focus:border-[#7c3aed] text-white text-sm font-semibold rounded-xl"
+                                className="px-2 py-1 bg-[#1a1c18] border border-[#2e312b] rounded-lg text-sm font-semibold text-white focus:outline-hidden"
                             />
                             {rename.kind === "editing" && rename.error && (
                                 <span className="text-[10px] text-rose-400 font-medium px-1" role="alert">{rename.error}</span>
                             )}
                         </div>
                     ) : (
-                        <>
-                            <h1 className="text-sm font-bold text-white whitespace-nowrap truncate max-w-[14rem] md:max-w-md">
-                                <span className="md:hidden">
-                                    {workflowName.length > 12 ? `${workflowName.slice(0, 12)}…` : workflowName}
-                                </span>
-                                <span className="hidden md:inline">{workflowName}</span>
+                        <div className="flex items-center gap-2 min-w-0 group cursor-pointer" onClick={enterEditMode}>
+                            <h1 className="text-sm font-semibold text-white truncate max-w-md tracking-tight">
+                                {workflowName}
                             </h1>
                             {!isViewingHistoricalVersion && (
                                 <button
                                     ref={renameButtonRef}
                                     type="button"
-                                    onClick={enterEditMode}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        enterEditMode();
+                                    }}
                                     aria-label="Rename workflow"
-                                    className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-[#1c1c1f] hover:text-white text-zinc-400 transition-colors cursor-pointer"
+                                    className="p-1 text-[#9ca39a] opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                                 >
                                     <Pencil className="w-3.5 h-3.5" />
                                 </button>
                             )}
-                        </>
+                        </div>
                     )}
                 </div>
             </div>
 
-            {/* Right section: Version + status + tester/call actions + save */}
-            <div className="flex items-center gap-3">
+            {/* Right section: Action bar with demo pills */}
+            <div className="flex items-center gap-2.5 flex-shrink-0">
                 {/* Read-only banner when viewing a historical version */}
                 {isViewingHistoricalVersion && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-500/20 bg-blue-500/10 text-xs font-semibold text-blue-400">
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-xs font-semibold text-blue-400">
                         <Eye className="w-3.5 h-3.5" />
-                        <span>
-                            Viewing {activeVersionLabel}
-                        </span>
+                        <span>Viewing {activeVersionLabel}</span>
                     </div>
                 )}
 
                 {/* Back to Draft button when viewing history */}
                 {isViewingHistoricalVersion && (
-                    <Button
+                    <button
                         onClick={onBackToDraft}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold px-4 h-9 shadow-lg shadow-emerald-950/20 cursor-pointer transition-all"
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-xs font-bold transition-all cursor-pointer"
                     >
                         Back to Draft
-                    </Button>
+                    </button>
                 )}
 
-                {/* Version history button */}
+                {/* Version Selector Pill */}
                 <button
                     onClick={onHistoryClick}
-                    className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-[#232328] hover:border-zinc-700/60 bg-[#1c1c1f] hover:bg-[#27272a] text-xs font-bold text-zinc-300 hover:text-white transition-all cursor-pointer h-9"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1a1c18] hover:bg-[#232621] border border-[#2e312b] rounded-full text-xs text-[#c8ccc5] font-medium transition-colors cursor-pointer"
                 >
-                    <History className="w-3.5 h-3.5 text-zinc-400" />
-                    {activeVersionLabel && !isViewingHistoricalVersion && (
-                        <span>{activeVersionLabel}</span>
-                    )}
+                    <History className="w-3.5 h-3.5 text-[#9ca39a]" />
+                    <span>{activeVersionLabel || "v1 (Draft)"}</span>
+                    <ChevronDown className="w-3 h-3 text-[#9ca39a]" />
                 </button>
 
-                {/* Unsaved changes indicator (hidden when viewing history) */}
+                {/* Unsaved changes indicator */}
                 {isDirty && !isViewingHistoricalVersion && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 text-xs font-semibold text-amber-400 animate-pulse">
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-xs font-semibold text-amber-400 animate-pulse">
                         <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                        <span>Unsaved changes</span>
+                        <span>Unsaved</span>
                     </div>
                 )}
 
@@ -341,27 +326,22 @@ export const WorkflowEditorHeader = ({
                 {hasValidationErrors && (
                     <Popover>
                         <PopoverTrigger asChild>
-                            <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-xs font-bold text-rose-400 transition-all cursor-pointer h-9">
-                                <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-xs font-bold text-rose-400 transition-all cursor-pointer">
                                 <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
-                                <span>
-                                    {workflowValidationErrors.length} {workflowValidationErrors.length === 1 ? "error" : "errors"}
-                                </span>
+                                <span>{workflowValidationErrors.length} {workflowValidationErrors.length === 1 ? "error" : "errors"}</span>
                             </button>
                         </PopoverTrigger>
                         <PopoverContent
                             align="end"
-                            className="w-80 bg-[#111113] border border-[#232328] p-0 rounded-2xl overflow-hidden shadow-2xl text-zinc-300"
+                            className="w-80 border border-[#282b26] p-0 rounded-2xl overflow-hidden shadow-2xl text-zinc-300"
+                            style={{ backgroundColor: '#161715' }}
                         >
-                            <div className="px-4 py-3 bg-[#18181b]/50 border-b border-[#1d1d22]">
+                            <div className="px-4 py-3 border-b border-[#282b26]" style={{ backgroundColor: '#1a1c18' }}>
                                 <h3 className="text-xs font-bold text-white uppercase tracking-wider">Validation Errors</h3>
                             </div>
-                            <div className="max-h-64 overflow-y-auto divide-y divide-[#1d1d22]/50">
+                            <div className="max-h-64 overflow-y-auto divide-y divide-[#282b26]">
                                 {workflowValidationErrors.map((error, index) => (
-                                    <div
-                                        key={index}
-                                        className="px-4 py-3 hover:bg-[#1a1a1f]/30 transition-colors"
-                                    >
+                                    <div key={index} className="px-4 py-3 hover:bg-[#1a1c18] transition-colors">
                                         <div className="flex items-start gap-2">
                                             <AlertCircle className="w-4 h-4 text-rose-400 mt-0.5 flex-shrink-0" />
                                             <div className="flex-1 min-w-0">
@@ -383,79 +363,62 @@ export const WorkflowEditorHeader = ({
                     </Popover>
                 )}
 
-                {/* Publish button (only when on draft with no unsaved changes) */}
+                {/* Publish button */}
                 {!isViewingHistoricalVersion && hasDraft && (
-                    <Button
+                    <button
                         onClick={handlePublish}
                         disabled={isDirty || publishing || hasValidationErrors}
-                        variant="outline"
-                        className="bg-[#7c3aed] hover:bg-[#8b5cf6] border-none text-white text-xs font-bold px-4 h-9 rounded-xl transition-all shadow-lg cursor-pointer"
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-xs font-semibold rounded-full transition-colors disabled:opacity-50 cursor-pointer"
                     >
                         {publishing ? (
-                            <>
-                                <LoaderCircle className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                                Publishing...
-                            </>
+                            <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
                         ) : (
-                            <>
-                                <Rocket className="w-3.5 h-3.5 mr-1.5" />
-                                Publish
-                            </>
+                            <Rocket className="w-3.5 h-3.5" />
                         )}
-                    </Button>
+                        <span>{publishing ? "Publishing..." : "Publish"}</span>
+                    </button>
                 )}
 
+                {/* Phone Call Pill */}
                 {!isViewingHistoricalVersion && (
-                    <Button
-                        variant="outline"
-                        className="flex items-center gap-1.5 bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white rounded-xl text-xs font-bold px-4 h-9 transition-all cursor-pointer"
-                        disabled={isCallDisabled}
+                    <button
                         onClick={onPhoneCallClick}
+                        disabled={isCallDisabled}
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1a1c18] hover:bg-[#232621] border border-[#2e312b] rounded-full text-xs text-[#c8ccc5] font-semibold transition-colors disabled:opacity-50 cursor-pointer"
                     >
-                        <Phone className="w-3.5 h-3.5 text-zinc-400" />
-                        Phone Call
-                    </Button>
+                        <PhoneCall className="w-3.5 h-3.5 text-[#9ca39a]" />
+                        <span>Phone Call</span>
+                    </button>
                 )}
 
-                <Button
-                    variant="outline"
-                    className="flex items-center gap-1.5 bg-[#1c1c1f] hover:bg-[#27272a] border border-[#232328] hover:border-zinc-700/60 text-zinc-300 hover:text-white rounded-xl text-xs font-bold px-4 h-9 transition-all cursor-pointer"
+                {/* Test Agent Pill */}
+                <button
                     onClick={onTestAgentClick}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#1a1c18] hover:bg-[#232621] border border-[#2e312b] rounded-full text-xs text-[#c8ccc5] font-semibold transition-colors cursor-pointer"
                 >
-                    <Bot className="w-3.5 h-3.5 text-zinc-400" />
-                    Test Agent
-                </Button>
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Test Agent</span>
+                </button>
 
-                {/* Save button (only shown when editing the draft) */}
+                {/* Save CTA Button */}
                 {!isViewingHistoricalVersion && (
-                    <Button
+                    <button
                         onClick={handleSave}
                         disabled={!isDirty || savingWorkflow}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold px-4 h-9 shadow-lg shadow-emerald-950/20 cursor-pointer transition-all"
+                        className="px-4 py-1.5 bg-[#bcf0da] hover:bg-[#a5e9cc] text-[#082117] text-xs font-bold rounded-full shadow-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                     >
-                        {savingWorkflow ? (
-                            <>
-                                <LoaderCircle className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                                Saving...
-                            </>
-                        ) : (
-                            "Save"
-                        )}
-                    </Button>
+                        {savingWorkflow ? "Saving..." : "Save"}
+                    </button>
                 )}
 
-                {/* More options dropdown */}
+                {/* More Options Dropdown */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-zinc-400 hover:text-white hover:bg-[#1c1c1f] border border-[#232328]/60 h-9 w-9 rounded-xl cursor-pointer"
-                        >
+                        <button className="p-1.5 text-[#9ca39a] hover:text-white transition-colors cursor-pointer">
                             <MoreVertical className="w-4 h-4" />
-                        </Button>
+                        </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-[#111113] border border-[#232328] text-zinc-300 rounded-xl p-1.5 shadow-2xl">
+                    <DropdownMenuContent align="end" className="border border-[#282b26] text-zinc-300 rounded-xl p-1.5 shadow-2xl" style={{ backgroundColor: '#161715' }}>
                         <DropdownMenuItem
                             onClick={() => router.push(`/workflow/${workflowId}/runs`)}
                             className="rounded-lg text-xs px-3 py-2 focus:bg-[#1c1c1f] focus:text-white cursor-pointer"
@@ -493,11 +456,19 @@ export const WorkflowEditorHeader = ({
                     </DropdownMenuContent>
                 </DropdownMenu>
 
-                {/* GitHub star badge - desktop only */}
-                <div className="hidden md:block">
-                    <GitHubStarBadge className="border-[#232328] bg-[#1c1c1f] text-zinc-300 [&_span]:bg-transparent" source="workflow_editor_header" />
-                </div>
+                {/* Star Button */}
+                <button
+                    onClick={() => setIsStarred(!isStarred)}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-full border border-[#2e312b] text-xs font-semibold transition-colors cursor-pointer ${
+                        isStarred
+                            ? "bg-amber-400/10 text-amber-300 border-amber-400/30"
+                            : "bg-[#1a1c18] text-[#c8ccc5] hover:bg-[#232621]"
+                    }`}
+                >
+                    <Star className={`w-3.5 h-3.5 ${isStarred ? "fill-amber-400 text-amber-400" : "text-[#9ca39a]"}`} />
+                    <span>Star</span>
+                </button>
             </div>
-        </div>
+        </header>
     );
 };

@@ -367,7 +367,7 @@ export const PhoneCallDialog = ({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
+            <DialogContent className="border border-[#282b26] text-white rounded-3xl p-7 max-w-md w-full shadow-2xl" style={{ backgroundColor: '#161715' }}>
                 {checkingConfig || needsConfiguration === null
                     ? renderLoading()
                     : needsConfiguration
