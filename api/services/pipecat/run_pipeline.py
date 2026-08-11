@@ -183,7 +183,7 @@ async def run_pipeline_telephony(
 
     await db_client.update_workflow_run(workflow_run_id, cost_info={"call_id": call_id})
 
-    workflow = await db_client.get_workflow(workflow_id, user_id)
+    workflow = await db_client.get_workflow_by_id(workflow_id)
     if workflow:
         set_current_org_id(workflow.organization_id)
 
@@ -197,7 +197,7 @@ async def run_pipeline_telephony(
     # (test call, campaign dispatch, inbound). Transports use it to load creds
     # from the right config row. Falls back to None for legacy runs (transports
     # then resolve the org's default config).
-    workflow_run = await db_client.get_workflow_run(workflow_run_id)
+    workflow_run = await db_client.get_workflow_run_by_id(workflow_run_id)
     telephony_configuration_id = None
     if workflow_run and workflow_run.initial_context:
         telephony_configuration_id = workflow_run.initial_context.get(
@@ -265,7 +265,7 @@ async def run_pipeline_smallwebrtc(
     set_current_run_id(workflow_run_id)
 
     # Get workflow to extract all pipeline configurations
-    workflow = await db_client.get_workflow(workflow_id, user_id)
+    workflow = await db_client.get_workflow_by_id(workflow_id)
 
     # Set org context early so tasks created by the transport inherit it
     if workflow:
@@ -286,7 +286,7 @@ async def run_pipeline_smallwebrtc(
     # reuses these via kwargs so we don't fetch twice.
     from api.services.configuration.resolve import resolve_effective_config
 
-    workflow_run = await db_client.get_workflow_run(workflow_run_id, user_id)
+    workflow_run = await db_client.get_workflow_run_by_id(workflow_run_id)
     user_config = await db_client.get_user_configurations(user_id)
     run_configs = (
         (workflow_run.definition.workflow_configurations or {}) if workflow_run else {}
@@ -340,7 +340,11 @@ async def _run_pipeline(
             applied. Fetched and resolved here if None.
     """
     if workflow_run is None:
-        workflow_run = await db_client.get_workflow_run(workflow_run_id, user_id)
+        workflow_run = await db_client.get_workflow_run_by_id(workflow_run_id)
+
+    if not workflow_run:
+        logger.error(f"[run {workflow_run_id}] Workflow run not found in database")
+        raise HTTPException(status_code=404, detail=f"Workflow run {workflow_run_id} not found")
 
     # If the workflow run is already completed, we don't need to run it again
     if workflow_run.is_completed:
@@ -353,9 +357,10 @@ async def _run_pipeline(
         merged_call_context_vars = {**merged_call_context_vars, **call_context_vars}
 
     # Get workflow for metadata (name, organization_id, call_disposition_codes)
-    workflow = await db_client.get_workflow(workflow_id, user_id)
+    workflow = await db_client.get_workflow_by_id(workflow_id)
     if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow not found")
+        logger.error(f"[workflow {workflow_id}] Workflow not found in database")
+        raise HTTPException(status_code=404, detail=f"Workflow {workflow_id} not found")
 
     # Use the run's pinned definition for graph + configs (not the workflow's current)
     run_definition = workflow_run.definition
