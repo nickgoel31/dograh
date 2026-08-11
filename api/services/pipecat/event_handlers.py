@@ -135,10 +135,13 @@ def register_event_handlers(
         sample_rate=sample_rate,
         num_channels=num_channels,
     )
-    # Track both events to ensure the initial response is only triggered after both occur
+    # Track both events to ensure the initial response is only triggered after both occur.
+    # For WebRTC transports, client_connected is emitted when browser connects.
+    # For telephony transports, the phone call is already connected on the transport when the pipeline starts.
+    is_webrtc = hasattr(transport, "_connection") or "webrtc" in transport.__class__.__name__.lower()
     ready_state = {
         "pipeline_started": False,
-        "client_connected": False,
+        "client_connected": not is_webrtc,
         "initial_response_triggered": False,
     }
 
@@ -154,6 +157,7 @@ def register_event_handlers(
             and not ready_state["initial_response_triggered"]
         ):
             ready_state["initial_response_triggered"] = True
+            await audio_buffer.start_recording()
 
             asyncio.create_task(
                 _capture_call_event(
