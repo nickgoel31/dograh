@@ -55,6 +55,17 @@ async def run_completion(
         payload = copy.deepcopy(payload_snapshot)
         payload["recording_url"] = recording_url
 
+        transcript_with_tool_calls = payload.get("transcript_with_tool_calls")
+        if not transcript_with_tool_calls:
+            logger.info(
+                f"[tuner] Skipping export for node '{tuner_data.name}' (#{node_id}): transcript is empty"
+            )
+            results[f"tuner_{node_id}"] = {
+                "status": "skipped",
+                "reason": "empty_transcript",
+            }
+            continue
+
         try:
             config = TunerDeliveryConfig(
                 base_url=TUNER_BASE_URL,
