@@ -12,7 +12,7 @@ export function AgentPromptHero() {
     const handlePromptSubmit = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!promptText.trim()) return;
-        router.push(`/workflow/create?prompt=${encodeURIComponent(promptText)}`);
+        router.push(`/workflow/create?prompt=${encodeURIComponent(promptText)}&auto=true`);
     };
 
     const filterOptions = [
@@ -134,7 +134,7 @@ export function AgentPromptHero() {
                                 router.push(
                                     `/workflow/create?template=${encodeURIComponent(
                                         template.title
-                                    )}`
+                                    )}&auto=true`
                                 )
                             }
                             className="bg-gray-50/70 dark:bg-[#1c1e1a] hover:bg-gray-100/80 dark:hover:bg-[#232621] border border-gray-100 dark:border-[#282b26] rounded-2xl p-5 flex flex-col justify-between gap-6 transition-all cursor-pointer group"
