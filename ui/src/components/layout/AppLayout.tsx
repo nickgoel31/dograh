@@ -1,12 +1,13 @@
 "use client";
 
-import { AlertTriangle, RefreshCw, Search } from "lucide-react";
+import { AlertTriangle, PanelLeft, RefreshCw, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useSidebar } from "@/components/ui/sidebar";
 import { useAppConfig } from "@/context/AppConfigContext";
 
 import { AppSidebar } from "./AppSidebar";
@@ -44,11 +45,21 @@ function getPageName(pathname: string): string {
 function NeuralHeader() {
   const pathname = usePathname();
   const pageName = getPageName(pathname);
+  const { toggleSidebar } = useSidebar();
 
   return (
     <header className="sticky top-0 z-50 flex h-16 items-center justify-between px-6 pb-6 pt-6 mb-4 border-b border-gray-100 dark:border-[#282b26] bg-white dark:bg-[#161715] transition-all duration-300">
       {/* Left: mobile menu + page name */}
       <div className="flex items-center gap-3">
+        {/* Mobile menu trigger */}
+        <button
+          onClick={toggleSidebar}
+          className="p-1.5 rounded-xl text-gray-500 dark:text-[#9ca39a] hover:bg-gray-100 dark:hover:bg-[#232621] transition-colors md:hidden cursor-pointer"
+          aria-label="Toggle navigation menu"
+        >
+          <PanelLeft className="w-5 h-5" />
+        </button>
+
         {/* Mobile logo */}
         <Link href="/" className="flex items-center gap-2 text-sm font-bold md:hidden">
           <Image

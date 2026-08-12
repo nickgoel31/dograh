@@ -15,6 +15,7 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/lib/auth";
 import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
+import { useSidebar } from "@/components/ui/sidebar";
 import { OrgSwitcherDropdown } from "./OrgSwitcherDropdown";
 import {
   OrgGearIcon,
@@ -39,6 +40,16 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
   const { toggleTheme, isDark } = useTheme();
   const { logout, user } = useAuth();
   const { role, isSuperadmin, email, selectedOrgId, selectedOrgName } = useCurrentUserRole();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const handleNav = (path?: string) => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+    if (path) {
+      router.push(path);
+    }
+  };
   
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showOrgDropdown, setShowOrgDropdown] = useState(false);
@@ -155,7 +166,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                   key={category.id}
                   onClick={() => {
                     if (category.id !== "ai-chatbots") {
-                      router.push(category.path);
+                      handleNav(category.path);
                     }
                   }}
                   className={`flex items-center transition-all duration-200 text-left ${
@@ -194,7 +205,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                 {isDark ? <Sun className="w-5 h-5 text-amber-300" /> : <Moon className="w-5 h-5 text-gray-600" />}
               </button>
 
-              <button onClick={() => router.push("/billing")} className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-600 dark:text-[#9ca39a]">
+              <button onClick={() => handleNav("/billing")} className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-600 dark:text-[#9ca39a]">
                 <Wallet className="w-5 h-5 text-gray-600 dark:text-[#9ca39a]" />
               </button>
 
@@ -210,7 +221,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                   <div className="absolute left-12 bottom-0 w-52 bg-white dark:bg-[#1c1e1a] border border-gray-200 dark:border-[#282b26] rounded-2xl shadow-xl p-1.5 z-50 space-y-0.5">
                     {isSuperadmin && (
                       <button
-                        onClick={() => { setShowProfileMenu(false); router.push("/superadmin"); }}
+                        onClick={() => { setShowProfileMenu(false); handleNav("/superadmin"); }}
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-xl transition-colors text-left"
                       >
                         <Shield className="w-4 h-4 text-amber-500" />
@@ -218,14 +229,14 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                       </button>
                     )}
                     <button
-                      onClick={() => { setShowProfileMenu(false); router.push("/settings"); }}
+                      onClick={() => { setShowProfileMenu(false); handleNav("/settings"); }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-[#c8ccc5] hover:bg-gray-100 dark:hover:bg-white/8 rounded-xl transition-colors text-left"
                     >
                       <Settings className="w-4 h-4 text-gray-500" />
                       <span>Platform Settings</span>
                     </button>
                     <button
-                      onClick={() => { setShowProfileMenu(false); logout(); }}
+                      onClick={() => { setShowProfileMenu(false); handleNav(); logout(); }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors text-left"
                     >
                       <LogOut className="w-4 h-4 text-red-500" />
@@ -272,7 +283,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                   <div className="absolute left-0 bottom-12 w-full bg-white dark:bg-[#1c1e1a] border border-gray-200 dark:border-[#282b26] rounded-2xl shadow-xl p-1.5 z-50 space-y-0.5">
                     {isSuperadmin && (
                       <button
-                        onClick={() => { setShowProfileMenu(false); router.push("/superadmin"); }}
+                        onClick={() => { setShowProfileMenu(false); handleNav("/superadmin"); }}
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-xl transition-colors text-left"
                       >
                         <Shield className="w-4 h-4 text-amber-500" />
@@ -280,14 +291,14 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                       </button>
                     )}
                     <button
-                      onClick={() => { setShowProfileMenu(false); router.push("/settings"); }}
+                      onClick={() => { setShowProfileMenu(false); handleNav("/settings"); }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-[#c8ccc5] hover:bg-gray-100 dark:hover:bg-white/8 rounded-xl transition-colors text-left"
                     >
                       <Settings className="w-4 h-4 text-gray-500" />
                       <span>Platform Settings</span>
                     </button>
                     <button
-                      onClick={() => { setShowProfileMenu(false); logout(); }}
+                      onClick={() => { setShowProfileMenu(false); handleNav(); logout(); }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors text-left"
                     >
                       <LogOut className="w-4 h-4 text-red-500" />

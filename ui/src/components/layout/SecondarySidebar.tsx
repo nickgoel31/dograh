@@ -20,6 +20,7 @@ import {
   Users,
 } from "lucide-react";
 import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
+import { useSidebar } from "@/components/ui/sidebar";
 
 interface SecondarySidebarProps {
   isCollapsed: boolean;
@@ -35,6 +36,14 @@ export const SecondarySidebar: React.FC<SecondarySidebarProps> = ({
   const pathname = usePathname();
   const router = useRouter();
   const { role, isSuperadmin } = useCurrentUserRole();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const handleItemClick = (path: string) => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+    router.push(path);
+  };
 
   const isClientUser = role === "client" && !isSuperadmin;
 
@@ -151,7 +160,7 @@ export const SecondarySidebar: React.FC<SecondarySidebarProps> = ({
               return (
                 <button
                   key={item.path}
-                  onClick={() => router.push(item.path)}
+                  onClick={() => handleItemClick(item.path)}
                   className={`w-full flex items-center justify-between px-3.5 py-2 rounded-full text-sm transition-all group cursor-pointer ${
                     isActive
                       ? "bg-gray-200/80 dark:bg-white/10 text-gray-900 dark:text-white font-semibold shadow-2xs"
