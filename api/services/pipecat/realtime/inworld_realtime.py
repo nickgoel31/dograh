@@ -200,6 +200,18 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
             provider_data={
                 "tts": {
                     "steering_handling": "emit_once",
+                    # Prevent the ~500ms pause introduced when inworld-tts-2
+                    # splits the response at paragraph boundaries: use sentence-
+                    # level segmentation instead of the default paragraph split.
+                    "segmenter_strategy": "sentence",
+                    # Stream audio chunks immediately without waiting for word
+                    # timestamps to be aligned (SYNC mode introduces ~500ms
+                    # holdback before releasing the first chunk per segment).
+                    "timestamp_transport_strategy": "ASYNC",
+                    # Reduce model synthesis variance and eliminate unexpected
+                    # mid-sentence pauses; STABLE trades creativity for
+                    # consistent, predictable audio output on inworld-tts-2.
+                    "delivery_mode": "STABLE",
                 }
             },
         )
@@ -267,6 +279,9 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
                     "tts": {
                         **(base_pd.get("tts") or {}),
                         "steering_handling": "emit_once",
+                        "segmenter_strategy": "sentence",
+                        "timestamp_transport_strategy": "ASYNC",
+                        "delivery_mode": "STABLE",
                     },
                     "metadata": {"sdk": "pipecat-realtime"},
                 }
