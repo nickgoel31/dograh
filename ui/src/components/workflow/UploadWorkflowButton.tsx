@@ -33,10 +33,29 @@ export function UploadWorkflowButton() {
 
             if (!user) return;
             const accessToken = await getAccessToken();
+
+            // Clear trigger_path on trigger nodes so importing/uploading a definition
+            // generates fresh, non-conflicting trigger paths on the server.
+            const sanitizedDefinition = {
+                ...workflowData.workflow_definition,
+                nodes: workflowData.workflow_definition.nodes.map((node) => {
+                    if (node.type === 'trigger' && node.data) {
+                        return {
+                            ...node,
+                            data: {
+                                ...node.data,
+                                trigger_path: '',
+                            },
+                        };
+                    }
+                    return node;
+                }),
+            };
+
             const response = await createWorkflowApiV1WorkflowCreateDefinitionPost({
                 body: {
                     name: workflowData.name || `WF-${getRandomId()}`,
-                    workflow_definition: workflowData.workflow_definition as unknown as { [key: string]: unknown },
+                    workflow_definition: sanitizedDefinition as unknown as { [key: string]: unknown },
                 },
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
@@ -46,6 +65,12 @@ export function UploadWorkflowButton() {
             if (response.data?.id) {
                 router.push(`/workflow/${response.data.id}`);
                 setIsOpen(false);
+            } else if (response.error) {
+                const detail = (response.error as { detail?: string | { errors?: Array<{ message?: string }> } })?.detail;
+                const message = typeof detail === 'string'
+                    ? detail
+                    : detail?.errors?.[0]?.message || 'Failed to upload workflow.';
+                setError(message);
             }
         } catch (err) {
             setError('Failed to upload workflow. Please check if the file is valid.');
