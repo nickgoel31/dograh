@@ -867,6 +867,24 @@ class InworldRealtimeLLMConfiguration(BaseLLMConfiguration):
             "allow_custom_input": True,
         },
     )
+    delivery_mode: str = Field(
+        default="STABLE",
+        description=(
+            "TTS delivery mode. 'STABLE' trades creativity for consistent, "
+            "predictable audio output without unexpected mid-sentence pauses. "
+            "'CREATIVE' allows the model to be more expressive and natural."
+        ),
+        json_schema_extra={
+            "examples": ["STABLE", "CREATIVE"],
+        },
+    )
+    conversational: bool = Field(
+        default=False,
+        description=(
+            "Enables conversational responsiveness fillers (short fillers to bridge silence) "
+            "that participate in the shared TTS context for consistent voice and language."
+        ),
+    )
 
 
 

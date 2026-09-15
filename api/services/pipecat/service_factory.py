@@ -1014,6 +1014,8 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
         stt_eagerness = _get_attr(realtime_config, "stt_eagerness", "low")
         transcription_prompt = _get_attr(realtime_config, "transcription_prompt", None)
         raw_speed = _get_attr(realtime_config, "tts_speed", 1.5)
+        delivery_mode = _get_attr(realtime_config, "delivery_mode", "STABLE")
+        conversational = _get_attr(realtime_config, "conversational", False)
         try:
             tts_speed = float(raw_speed)
         except (ValueError, TypeError):
@@ -1030,6 +1032,8 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
             stt_eagerness=stt_eagerness,
             transcription_prompt=transcription_prompt,
             tts_speed=tts_speed,
+            delivery_mode=delivery_mode,
+            conversational=conversational,
         )
 
     else:

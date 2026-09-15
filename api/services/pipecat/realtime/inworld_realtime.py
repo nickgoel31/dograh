@@ -211,7 +211,8 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
                     # Reduce model synthesis variance and eliminate unexpected
                     # mid-sentence pauses; STABLE trades creativity for
                     # consistent, predictable audio output on inworld-tts-2.
-                    "delivery_mode": "STABLE",
+                    "delivery_mode": delivery_mode,
+                    "conversational": conversational,
                 }
             },
         )
