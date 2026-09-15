@@ -111,6 +111,8 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
         stt_eagerness: Literal["low", "medium", "high", "auto"] = "low",
         transcription_prompt: str | None = None,
         tts_speed: float = 1.5,
+        delivery_mode: Literal["STABLE", "CREATIVE"] = "STABLE",
+        conversational: bool = False,
         **kwargs,
     ):
         """Initialize DograhInworldRealtimeLLMService.
