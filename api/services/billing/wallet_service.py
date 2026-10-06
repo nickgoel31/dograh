@@ -17,6 +17,7 @@ Design
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -68,6 +69,14 @@ class CallAdmission:
 @dataclass
 class WalletSummary:
     data: dict[str, Any] = field(default_factory=dict)
+
+
+@asynccontextmanager
+async def _session():
+    """Session that keeps loaded attributes readable after commit (async-safe)."""
+    async with db_client.async_session() as session:
+        session.sync_session.expire_on_commit = False
+        yield session
 
 
 def _now() -> datetime:
@@ -303,7 +312,7 @@ async def record_usage(
 ) -> UsageResult:
     """Bill one finished call. Safe to call any number of times per run."""
     now = now or _now()
-    async with db_client.async_session() as session:
+    async with _session() as session:
         org = await _prepare(session, organization_id, now)
 
         existing = (
@@ -368,7 +377,7 @@ async def record_usage(
 async def check_can_start_call(organization_id: int, *, now: datetime | None = None) -> CallAdmission:
     """Admission control: may this organization start another call right now?"""
     now = now or _now()
-    async with db_client.async_session() as session:
+    async with _session() as session:
         org = await _prepare(session, organization_id, now)
         minutes = await _active_minutes(session, org.id, now)
         money = float(org.balance or 0.0)
@@ -422,7 +431,7 @@ async def grant_minutes(
     if minutes <= 0:
         raise WalletError("minutes must be positive")
     now = _now()
-    async with db_client.async_session() as session:
+    async with _session() as session:
         org = await _prepare(session, organization_id, now)
         if idempotency_key and await _idempotent_hit(session, org.id, idempotency_key):
             await session.commit()
@@ -465,7 +474,7 @@ async def credit_money(
     if abs(amount) < EPS:
         raise WalletError("amount must be non-zero")
     now = _now()
-    async with db_client.async_session() as session:
+    async with _session() as session:
         org = await _prepare(session, organization_id, now)
         if idempotency_key and await _idempotent_hit(session, org.id, idempotency_key):
             await session.commit()
@@ -496,7 +505,7 @@ async def remove_minutes(
     if minutes <= 0:
         raise WalletError("minutes must be positive")
     now = _now()
-    async with db_client.async_session() as session:
+    async with _session() as session:
         org = await _prepare(session, organization_id, now)
         taken, short, parts = await _consume(session, org.id, minutes, now)
         if short > EPS:
@@ -525,7 +534,7 @@ async def refund_usage(
     the ledger and can only happen once per call.
     """
     now = _now()
-    async with db_client.async_session() as session:
+    async with _session() as session:
         entry = (
             await session.execute(
                 select(WalletLedgerModel).where(
@@ -638,7 +647,7 @@ async def _idempotent_hit(session, org_id: int, key: str) -> bool:
 async def get_summary(organization_id: int, *, now: datetime | None = None) -> dict[str, Any]:
     """Wallet snapshot. Read-only apart from lazily granting due allowances."""
     now = now or _now()
-    async with db_client.async_session() as session:
+    async with _session() as session:
         org = await _prepare(session, organization_id, now)
         p_start, p_end = period_for(org.quota_reset_day, now)
         buckets = (
@@ -723,7 +732,7 @@ async def list_ledger(
     start: datetime | None = None,
     end: datetime | None = None,
 ) -> tuple[list[dict], int]:
-    async with db_client.async_session() as session:
+    async with _session() as session:
         q = select(WalletLedgerModel).where(WalletLedgerModel.organization_id == organization_id)
         if entry_type:
             q = q.where(WalletLedgerModel.entry_type == entry_type)
@@ -792,7 +801,7 @@ async def reconcile_unbilled_runs(
 ) -> dict[str, int]:
     """Bill completed runs that never reached the ledger (crashed jobs etc.)."""
     cutoff = _now() - timedelta(minutes=min_age_minutes)
-    async with db_client.async_session() as session:
+    async with _session() as session:
         billed_exists = (
             select(WalletLedgerModel.id)
             .where(
@@ -834,7 +843,7 @@ async def reconcile_unbilled_runs(
 
 async def audit_org(organization_id: int) -> dict[str, Any]:
     """Compare materialized balances with the ledger (drift detection)."""
-    async with db_client.async_session() as session:
+    async with _session() as session:
         org = await session.get(OrganizationModel, organization_id)
         if not org:
             raise WalletError("Organization not found")
@@ -867,7 +876,7 @@ async def client_stats(
     parent_id: int, *, start: datetime, end: datetime
 ) -> dict[int, dict[str, float]]:
     """Per-client usage and wholesale cost for a reseller over [start, end)."""
-    async with db_client.async_session() as session:
+    async with _session() as session:
         child_ids = [
             row[0]
             for row in (

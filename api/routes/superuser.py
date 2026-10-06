@@ -7,6 +7,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import List, Optional
 
+from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 from sqlalchemy import select, func, delete as sa_delete
@@ -385,7 +386,20 @@ async def list_all_organizations(user: UserModel = Depends(get_superuser)):
             )
             agent_count = agents_result.scalar() or 0
 
-            wallet = await wallet_service.get_summary(o.id)
+            try:
+                wallet = await wallet_service.get_summary(o.id)
+            except Exception as exc:  # one bad org must not blank the whole list
+                logger.error(f"Wallet summary failed for org {o.id}: {exc}")
+                wallet = {
+                    "balance": o.balance or 0.0,
+                    "monthly_minutes_limit": o.monthly_minutes_limit or 0.0,
+                    "wallet_enabled": bool(o.wallet_enabled),
+                    "currency": o.billing_currency,
+                    "monthly_carry_forward": bool(o.monthly_carry_forward),
+                    "allow_overdraft": bool(o.allow_overdraft),
+                    "minutes_remaining": 0.0,
+                    "minutes_available": 0.0,
+                }
             base_balance = wallet["balance"]
             balance_val = wallet["balance"]
             limit = wallet["monthly_minutes_limit"]
