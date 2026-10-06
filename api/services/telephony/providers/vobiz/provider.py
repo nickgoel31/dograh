@@ -524,9 +524,9 @@ class VobizProvider(TelephonyProvider):
         if not signature:
             logger.warning(
                 "Inbound Vobiz webhook missing X-Vobiz-Signature-V3/V2 — "
-                "skipping signature validation"
+                "rejecting"
             )
-            return True
+            return False
 
         # Reconstruct the URL scheme and netloc (host/port) using proxy headers if present.
         # Otherwise, keep the original url unchanged.

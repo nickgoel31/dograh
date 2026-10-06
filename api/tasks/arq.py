@@ -47,6 +47,7 @@ from api.tasks.campaign_tasks import (
     process_generic_batch,
 )
 from api.tasks.knowledge_base_processing import process_knowledge_base_document
+from api.tasks.wallet_tasks import reconcile_wallets
 from api.tasks.run_integrations import run_integrations_post_workflow_run
 from api.tasks.s3_upload import (
     process_workflow_completion,
@@ -64,9 +65,11 @@ class WorkerSettings:
         process_knowledge_base_document,
         check_auto_sync,
         process_generic_batch,
+        reconcile_wallets,
     ]
     cron_jobs = [
-        cron(check_auto_sync, minute=None)
+        cron(check_auto_sync, minute=None),
+        cron(reconcile_wallets, minute={3, 13, 23, 33, 43, 53}),
     ]
     redis_settings = REDIS_SETTINGS
     max_jobs = 10

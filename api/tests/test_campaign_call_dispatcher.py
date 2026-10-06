@@ -264,6 +264,20 @@ def mock_rate_limiter():
 # =============================================================================
 
 
+
+@pytest.fixture(autouse=True)
+def _wallet_allows_calls():
+    """These tests mock db_client; the wallet admission check has its own tests."""
+    from api.services.billing import wallet_service
+
+    with patch.object(
+        wallet_service,
+        "check_can_start_call",
+        AsyncMock(return_value=wallet_service.CallAdmission(True)),
+    ):
+        yield
+
+
 class TestProcessBatchBasic:
     """Basic tests for process_batch functionality."""
 

@@ -209,7 +209,9 @@ async def run_pipeline_telephony(
     # values into _run_pipeline so it doesn't fetch them again.
     from api.services.configuration.resolve import resolve_effective_config
 
-    user_config = await db_client.get_user_configurations(user_id)
+    user_config = await db_client.get_user_configurations(
+        user_id, organization_id=getattr(workflow, "organization_id", None)
+    )
     run_configs = (
         (workflow_run.definition.workflow_configurations or {}) if workflow_run else {}
     )
@@ -287,7 +289,9 @@ async def run_pipeline_smallwebrtc(
     from api.services.configuration.resolve import resolve_effective_config
 
     workflow_run = await db_client.get_workflow_run_by_id(workflow_run_id)
-    user_config = await db_client.get_user_configurations(user_id)
+    user_config = await db_client.get_user_configurations(
+        user_id, organization_id=getattr(workflow, "organization_id", None)
+    )
     run_configs = (
         (workflow_run.definition.workflow_configurations or {}) if workflow_run else {}
     )
@@ -399,7 +403,9 @@ async def _run_pipeline(
     if resolved_user_config is None:
         from api.services.configuration.resolve import resolve_effective_config
 
-        user_config = await db_client.get_user_configurations(user_id)
+        user_config = await db_client.get_user_configurations(
+            user_id, organization_id=getattr(workflow, "organization_id", None)
+        )
         user_config = resolve_effective_config(
             user_config, run_configs.get("model_overrides")
         )

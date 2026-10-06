@@ -137,6 +137,41 @@ class OrganizationModel(Base):
     monthly_minutes_end_year = Column(Integer, nullable=True)
     monthly_minutes_end_month = Column(Integer, nullable=True)
 
+    # Wallet (ledger based billing) configuration. See api/services/billing.
+    wallet_enabled = Column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    wallet_started_at = Column(DateTime(timezone=True), nullable=True)
+    billing_currency = Column(
+        String(8), nullable=False, default="INR", server_default=text("'INR'")
+    )
+    monthly_carry_forward = Column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    allow_overdraft = Column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+
+    # Reseller / white-label tenancy. A reseller organization owns child
+    # (client) organizations. ``hide_model_details`` makes the platform redact
+    # every provider / model / cost detail for non-superusers of this org.
+    parent_org_id = Column(
+        Integer, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    is_reseller = Column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    hide_model_details = Column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    # Money debited from a reseller's wallet per billed minute of a child org.
+    wholesale_rate = Column(Float, nullable=True)
+    max_child_orgs = Column(Integer, nullable=True)
+    # Default model profile used for every call made by this organization.
+    model_profile_id = Column(
+        Integer, ForeignKey("model_profiles.id", ondelete="SET NULL"), nullable=True
+    )
+
     whatsapp_enabled = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     whatsapp_phone_number_id = Column(String, nullable=True)
     whatsapp_access_token = Column(String, nullable=True)
@@ -656,6 +691,121 @@ class OrganizationUsageCycleModel(Base):
             "organization_id", "period_start", "period_end", name="unique_org_period"
         ),
         Index("idx_usage_cycles_org_period", "organization_id", "period_end"),
+    )
+
+
+class ModelProfileModel(Base):
+    """A named bundle of LLM/TTS/STT/realtime settings owned by the platform.
+
+    Resellers and their clients only ever see ``display_name``,
+    ``description``, ``tier`` and ``capabilities`` - never ``config``.
+    """
+
+    __tablename__ = "model_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String(64), unique=True, nullable=False)
+    display_name = Column(String(100), nullable=False)
+    description = Column(String(500), nullable=True)
+    tier = Column(String(32), nullable=True)
+    # Owner-written marketing labels, e.g. ["Natural voices", "Low latency"]
+    capabilities = Column(JSON, nullable=False, default=list, server_default=text("'[]'::json"))
+    # {"llm": {...}, "tts": {...}, "stt": {...}, "realtime": {...}, "is_realtime": bool}
+    config = Column(JSON, nullable=False, default=dict, server_default=text("'{}'::json"))
+    # Empty list = available to every reseller; otherwise only these org ids.
+    allowed_org_ids = Column(JSON, nullable=False, default=list, server_default=text("'[]'::json"))
+    is_active = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+
+class WalletBucketModel(Base):
+    """A pool of prepaid minutes (monthly allowance, top-up, adjustment...).
+
+    ``minutes_remaining`` is the single source of truth for what is left in the
+    pool and is only ever mutated together with a ``WalletLedgerModel`` row in
+    the same transaction.
+    """
+
+    __tablename__ = "wallet_buckets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(
+        Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    kind = Column(String(32), nullable=False)  # monthly_allowance|topup|adjustment|opening
+    minutes_total = Column(Float, nullable=False)
+    minutes_remaining = Column(Float, nullable=False)
+    valid_from = Column(DateTime(timezone=True), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=True)  # NULL = never
+    # Idempotency handle, e.g. "monthly:2026-10-01". Unique per organization.
+    source_ref = Column(String(128), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+    __table_args__ = (
+        UniqueConstraint("organization_id", "source_ref", name="uq_wallet_bucket_source"),
+        Index("idx_wallet_buckets_org_active", "organization_id", "expires_at"),
+    )
+
+
+class WalletLedgerModel(Base):
+    """Append-only record of every change to an organization's wallet."""
+
+    __tablename__ = "wallet_ledger"
+
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(
+        Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    # usage|grant|topup|money_topup|adjustment|expiry|wholesale|transfer_in|transfer_out
+    entry_type = Column(String(24), nullable=False)
+    workflow_run_id = Column(
+        Integer, ForeignKey("workflow_runs.id", ondelete="SET NULL"), nullable=True
+    )
+    bucket_id = Column(
+        Integer, ForeignKey("wallet_buckets.id", ondelete="SET NULL"), nullable=True
+    )
+    # Signed deltas. Negative = consumed.
+    minutes_delta = Column(Float, nullable=False, default=0.0, server_default=text("0"))
+    money_delta = Column(Float, nullable=False, default=0.0, server_default=text("0"))
+    # Minutes that were not covered by any bucket and were charged to money.
+    overage_minutes = Column(Float, nullable=False, default=0.0, server_default=text("0"))
+    billed_seconds = Column(Integer, nullable=True)
+    rate_snapshot = Column(Float, nullable=True)
+    pulse_snapshot = Column(Integer, nullable=True)
+    minutes_balance_after = Column(Float, nullable=True)
+    money_balance_after = Column(Float, nullable=True)
+    description = Column(String(500), nullable=True)
+    details = Column(JSON, nullable=False, default=dict, server_default=text("'{}'::json"))
+    # For reseller "wholesale" rows: the child organization that caused the charge.
+    source_org_id = Column(
+        Integer, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True
+    )
+    idempotency_key = Column(String(128), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+    __table_args__ = (
+        # A workflow run can be billed exactly once, no matter how many times the
+        # post-call job is retried or reconciled.
+        Index(
+            "uq_wallet_ledger_usage_per_run",
+            "workflow_run_id",
+            unique=True,
+            postgresql_where=text("entry_type = 'usage' AND workflow_run_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_wallet_ledger_idempotency",
+            "organization_id",
+            "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
+        ),
+        Index("idx_wallet_ledger_org_created", "organization_id", "created_at"),
     )
 
 

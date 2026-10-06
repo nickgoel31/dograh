@@ -171,3 +171,15 @@ class UserRole(str, Enum):
     SUPER_ADMIN = "super_admin"
     ADMIN = "admin"
     CLIENT = "client"
+
+
+# Roles an organization admin may hand out. ``super_admin`` is deliberately
+# excluded: it can only be granted by a superuser via /superuser routes.
+ASSIGNABLE_ORG_ROLES = frozenset({UserRole.ADMIN.value, UserRole.CLIENT.value})
+
+# Privilege order, used to make sure invites never demote anybody.
+ROLE_RANK = {
+    UserRole.CLIENT.value: 1,
+    UserRole.ADMIN.value: 2,
+    UserRole.SUPER_ADMIN.value: 3,
+}

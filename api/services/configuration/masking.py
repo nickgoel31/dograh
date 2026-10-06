@@ -15,6 +15,7 @@ from typing import Any, Dict, Optional
 from api.schemas.user_configuration import UserConfiguration
 from api.services.configuration.registry import ServiceConfig
 from api.services.integrations import get_node_secret_fields
+from api.services.reseller.context import models_hidden_var
 
 VISIBLE_CHARS = 4  # number of trailing characters to reveal
 MASK_CHAR = "*"
@@ -148,6 +149,13 @@ def mask_workflow_configurations(config: Optional[Dict]) -> Optional[Dict]:
     """Mask secret fields inside workflow-level model overrides for API responses."""
     if not config:
         return config
+
+    if models_hidden_var.get():
+        # Reseller tenants never see which models a workflow runs on.
+        redacted = {k: v for k, v in config.items() if k != "model_overrides"}
+        if config.get("model_overrides"):
+            redacted["model_overrides"] = {"managed": True}
+        return redacted
 
     masked = copy.deepcopy(config)
     model_overrides = masked.get("model_overrides")

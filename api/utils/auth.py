@@ -34,5 +34,17 @@ def create_jwt_token(
     return jwt.encode(payload, OSS_JWT_SECRET, algorithm="HS256")
 
 
+def create_invite_token(org_id: int, email: str, role: str, days: int = 7) -> str:
+    """Signed, expiring token that lets ``email`` join ``org_id`` with ``role``."""
+    payload = {
+        "org_id": org_id,
+        "email": email,
+        "role": role,
+        "exp": datetime.now(UTC) + timedelta(days=days),
+        "iat": datetime.now(UTC),
+    }
+    return jwt.encode(payload, OSS_JWT_SECRET, algorithm="HS256")
+
+
 def decode_jwt_token(token: str) -> dict:
     return jwt.decode(token, OSS_JWT_SECRET, algorithms=["HS256"])

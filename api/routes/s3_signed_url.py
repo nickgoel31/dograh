@@ -146,7 +146,7 @@ async def _authorize_and_get_workflow_run(
 )
 async def get_signed_url(
     key: Annotated[str, Query(description="S3 object key")],
-    expires_in: int = 3600,
+    expires_in: Annotated[int, Query(ge=60, le=86400)] = 3600,
     inline: bool = False,
     storage_backend: Annotated[
         Optional[str],

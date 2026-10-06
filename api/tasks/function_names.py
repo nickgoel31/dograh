@@ -6,5 +6,6 @@ class FunctionNames:
     PROCESS_CAMPAIGN_BATCH = "process_campaign_batch"
     PROCESS_KNOWLEDGE_BASE_DOCUMENT = "process_knowledge_base_document"
     CHECK_AUTO_SYNC = "check_auto_sync"
+    RECONCILE_WALLETS = "reconcile_wallets"
     PROCESS_GENERIC_BATCH = "process_generic_batch"
 

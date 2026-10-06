@@ -10,6 +10,8 @@ export function useCurrentUserRole() {
   const [email, setEmail] = useState<string | null>(null);
   const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
   const [selectedOrgName, setSelectedOrgName] = useState<string | null>(null);
+  const [isReseller, setIsReseller] = useState<boolean>(false);
+  const [modelsHidden, setModelsHidden] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,6 +22,8 @@ export function useCurrentUserRole() {
         setEmail(null);
         setSelectedOrgId(null);
         setSelectedOrgName(null);
+        setIsReseller(false);
+        setModelsHidden(false);
         setLoading(false);
         return;
       }
@@ -43,6 +47,8 @@ export function useCurrentUserRole() {
           setEmail((response.data as any).email || null);
           setSelectedOrgId((response.data as any).selected_organization_id || null);
           setSelectedOrgName((response.data as any).selected_organization_name || null);
+          setIsReseller(Boolean((response.data as any).is_reseller));
+          setModelsHidden(Boolean((response.data as any).models_hidden));
         }
       } catch (err) {
         console.error("Failed to fetch user role", err);
@@ -54,6 +60,6 @@ export function useCurrentUserRole() {
     fetchRole();
   }, [isAuthenticated, getAccessToken]);
 
-  return { role, isSuperadmin, email, selectedOrgId, selectedOrgName, loading };
+  return { role, isSuperadmin, email, selectedOrgId, selectedOrgName, isReseller, modelsHidden, loading };
 }
 

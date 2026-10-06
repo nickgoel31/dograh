@@ -2,6 +2,8 @@
 Vonage (Nexmo) implementation of the TelephonyProvider interface.
 """
 
+import hashlib
+import hmac
 import json
 import random
 import time
@@ -51,6 +53,7 @@ class VonageProvider(TelephonyProvider):
         self.application_id = config.get("application_id")
         self.private_key = config.get("private_key")
         self.from_numbers = config.get("from_numbers", [])
+        self.signature_secret = config.get("signature_secret")
 
         # Handle both single number (string) and multiple numbers (list)
         if isinstance(self.from_numbers, str):
@@ -436,9 +439,48 @@ class VonageProvider(TelephonyProvider):
         headers: Dict[str, str],
         body: str = "",
     ) -> bool:
+        """Verify Vonage's signed webhook (``Authorization: Bearer <JWT>``).
+
+        The JWT is HS256-signed with the account's signature secret and carries
+        ``iat`` and ``payload_hash`` (sha256 of the body) claims. When no
+        signature secret is configured we cannot verify, so we fail open with a
+        loud warning to keep existing deployments working.
         """
-        Vonage inbound signature verification - minimalist implementation.
-        """
+        if not self.signature_secret:
+            logger.warning(
+                "Vonage signature_secret not configured - inbound webhook "
+                "authenticity cannot be verified"
+            )
+            return True
+
+        normalized = {k.lower(): v for k, v in headers.items()}
+        auth = normalized.get("authorization", "")
+        if not auth.lower().startswith("bearer "):
+            logger.warning("Vonage webhook missing Bearer signature token")
+            return False
+
+        try:
+            claims = jwt.decode(
+                auth[7:].strip(),
+                self.signature_secret,
+                algorithms=["HS256"],
+                options={"require": ["iat"], "verify_exp": False},
+            )
+        except jwt.PyJWTError as exc:
+            logger.warning(f"Vonage webhook signature invalid: {exc}")
+            return False
+
+        if abs(time.time() - int(claims["iat"])) > 300:
+            logger.warning("Vonage webhook signature timestamp outside tolerance")
+            return False
+
+        payload_hash = claims.get("payload_hash")
+        if payload_hash and body:
+            expected = hashlib.sha256(body.encode("utf-8")).hexdigest()
+            if not hmac.compare_digest(str(payload_hash).lower(), expected):
+                logger.warning("Vonage webhook payload hash mismatch")
+                return False
+
         return True
 
     async def configure_inbound(

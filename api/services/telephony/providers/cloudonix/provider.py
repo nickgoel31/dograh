@@ -2,6 +2,7 @@
 Cloudonix implementation of the TelephonyProvider interface.
 """
 
+import hmac
 import json
 import random
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -765,16 +766,18 @@ class CloudonixProvider(TelephonyProvider):
             return False
 
         # Compare the API keys
-        is_valid = api_key == self.bearer_token
+        is_valid = hmac.compare_digest(
+            api_key.encode("utf-8"), self.bearer_token.encode("utf-8")
+        )
 
         if is_valid:
             logger.info("Cloudonix x-cx-apikey validation successful")
         else:
             logger.warning(
-                f"Cloudonix x-cx-apikey validation failed. Expected key ending with ...{self.bearer_token[-8:] if len(self.bearer_token) > 8 else 'SHORT_KEY'}"
+                f"Cloudonix x-cx-apikey validation failed. Key mismatch"
             )
 
-        return True  # TODO: update this post clarification from cloudonix
+        return is_valid
 
     async def configure_inbound(
         self, address: str, webhook_url: Optional[str]

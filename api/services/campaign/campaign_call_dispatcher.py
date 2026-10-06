@@ -99,6 +99,19 @@ class CampaignCallDispatcher:
             )
             return 0
 
+        # Stop dialing when the organization's wallet is exhausted. The campaign
+        # is paused (not failed) so it can be resumed after a top-up.
+        from api.services.billing import wallet_service
+
+        admission = await wallet_service.check_can_start_call(campaign.organization_id)
+        if not admission.allowed:
+            logger.warning(
+                f"Campaign {campaign_id} paused: wallet exhausted for org "
+                f"{campaign.organization_id}"
+            )
+            await db_client.update_campaign(campaign_id=campaign_id, state="paused")
+            return 0
+
         # Atomically claim queued runs for processing (thread-safe)
         # This uses SELECT FOR UPDATE SKIP LOCKED to prevent race conditions
         queued_runs = await db_client.claim_queued_runs_for_processing(

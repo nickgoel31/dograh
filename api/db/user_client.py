@@ -7,7 +7,12 @@ from sqlalchemy import func
 from sqlalchemy.future import select
 
 from api.db.base_client import BaseDBClient
-from api.db.models import UserConfigurationModel, UserModel
+from api.db.models import (
+    ModelProfileModel,
+    OrganizationModel,
+    UserConfigurationModel,
+    UserModel,
+)
 from api.schemas.user_configuration import UserConfiguration
 
 
@@ -65,7 +70,20 @@ class UserClient(BaseDBClient):
             )
             return result.scalars().first()
 
-    async def get_user_configurations(self, user_id: int) -> UserConfiguration:
+    async def get_user_configurations(
+        self,
+        user_id: int,
+        organization_id: int | None = None,
+        apply_profile: bool = True,
+    ) -> UserConfiguration:
+        """Return the user's service configuration.
+
+        When the organization has a *model profile* assigned (reseller / white
+        label setups) its LLM/TTS/STT/realtime sections replace the user's own
+        **in memory only**, so the real providers never have to be stored on, or
+        shown to, the tenant. Pass ``apply_profile=False`` when the result is
+        going to be edited and written back.
+        """
         async with self.async_session() as session:
             result = await session.execute(
                 select(UserConfigurationModel).where(
@@ -73,14 +91,28 @@ class UserClient(BaseDBClient):
                 )
             )
             configuration_obj = result.scalars().first()
-            if not configuration_obj:
+
+            raw: dict = dict(configuration_obj.configuration) if configuration_obj else {}
+            profile_cfg = (
+                await self._profile_config_for(session, user_id, organization_id)
+                if apply_profile
+                else None
+            )
+            if profile_cfg:
+                raw.update(profile_cfg)
+
+            if not raw and not configuration_obj:
                 return UserConfiguration()
 
             try:
                 return UserConfiguration.model_validate(
                     {
-                        **configuration_obj.configuration,
-                        "last_validated_at": configuration_obj.last_validated_at,
+                        **raw,
+                        "last_validated_at": (
+                            configuration_obj.last_validated_at
+                            if configuration_obj
+                            else None
+                        ),
                     }
                 )
             except ValidationError as e:
@@ -91,6 +123,37 @@ class UserClient(BaseDBClient):
                     "Returning default configuration."
                 )
                 return UserConfiguration()
+
+    async def _profile_config_for(
+        self, session, user_id: int, organization_id: int | None
+    ) -> dict | None:
+        if organization_id is None:
+            organization_id = (
+                await session.execute(
+                    select(UserModel.selected_organization_id).where(
+                        UserModel.id == user_id
+                    )
+                )
+            ).scalar_one_or_none()
+        if organization_id is None:
+            return None
+        profile_id = (
+            await session.execute(
+                select(OrganizationModel.model_profile_id).where(
+                    OrganizationModel.id == organization_id
+                )
+            )
+        ).scalar_one_or_none()
+        if profile_id is None:
+            return None
+        profile = await session.get(ModelProfileModel, profile_id)
+        if profile is None or not profile.is_active:
+            return None
+        return {
+            key: value
+            for key, value in (profile.config or {}).items()
+            if key in ("llm", "tts", "stt", "embeddings", "realtime", "is_realtime")
+        }
 
     async def update_user_configuration(
         self, user_id: int, configuration: UserConfiguration

@@ -3,7 +3,6 @@ from typing import Annotated, Optional
 import httpx
 from fastapi import Depends, Header, HTTPException, Query, WebSocket
 from loguru import logger
-from pydantic import ValidationError
 
 from api.constants import AUTH_PROVIDER, DOGRAH_MPS_SECRET_KEY, MPS_API_URL
 from api.db import db_client
@@ -13,7 +12,11 @@ from api.schemas.user_configuration import UserConfiguration
 from api.services.auth.stack_auth import stackauth
 from api.services.configuration.registry import ServiceProviders
 from api.services.posthog_client import capture_event
+from api.services.reseller.context import models_hidden_var
 from api.utils.auth import decode_jwt_token
+
+
+WS_BEARER_SUBPROTOCOL = "dograh.bearer"
 
 
 async def get_user(
@@ -143,13 +146,21 @@ async def get_user(
         user = user_model
 
     # SEC Check: Verify active organization
+    is_owner = bool(
+        getattr(user, "is_superuser", False)
+        or getattr(user, "role", "") == UserRole.SUPER_ADMIN.value
+    )
+    models_hidden = False
     if user and user.selected_organization_id:
         org = await db_client.get_organization_by_id(user.selected_organization_id)
         if org and not getattr(org, 'is_active', True):
             # Bypass the check for super admins so they can still manage deactivated orgs if impersonating
-            if not getattr(user, 'is_superuser', False) and getattr(user, 'role', '') != UserRole.SUPER_ADMIN.value:
+            if not is_owner:
                 raise HTTPException(status_code=403, detail="Your organization has been deactivated. Contact support.")
+        # Reseller / white-label tenants never see provider, model or vendor-cost details.
+        models_hidden = bool(org and org.hide_model_details) and not is_owner
 
+    models_hidden_var.set(models_hidden)
     return user
 
 
@@ -251,7 +262,7 @@ async def create_user_configuration_with_mps_key(
                 logger.warning(
                     "Warning: DOGRAH_MPS_SECRET_KEY not set for authenticated mode"
                 )
-                raise ValidationError("Missing DOGRAH_MPS_SECRET_KEY in non oss mode")
+                raise RuntimeError("Missing DOGRAH_MPS_SECRET_KEY in non oss mode")
 
             response = await client.post(
                 f"{MPS_API_URL}/api/v1/service-keys/",
@@ -346,6 +357,17 @@ async def get_user_ws(
     WebSocket authentication dependency.
     Uses token or api_key from query parameters for authentication.
     """
+    # Preferred: send the token in the Sec-WebSocket-Protocol header
+    # ("dograh.bearer, <token>") so it never lands in URLs / access logs.
+    # The query-string parameters remain as a deprecated fallback.
+    if not token and not api_key:
+        offered = [
+            p.strip()
+            for p in websocket.headers.get("sec-websocket-protocol", "").split(",")
+        ]
+        if len(offered) == 2 and offered[0] == WS_BEARER_SUBPROTOCOL and offered[1]:
+            token = offered[1]
+
     if not token and not api_key:
         await websocket.close(code=1008, reason="Missing authentication token")
         raise HTTPException(status_code=401, detail="Missing authentication token")

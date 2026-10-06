@@ -2,6 +2,8 @@
 
 import { AlertTriangle, ArrowRight, Bot, Building2, MoreHorizontal, Plus, Search, Settings2, Trash2, UserMinus,Users, Shield } from 'lucide-react';
 import { useEffect, useState } from "react";
+
+import { detailFromError } from "@/lib/apiError";
 import { toast } from "sonner";
 
 import { client } from "@/client/client.gen";
@@ -71,6 +73,18 @@ interface Organization {
   whatsapp_webhook_verify_token?: string;
   whatsapp_has_access_token?: boolean;
   concurrency_limit?: number;
+  wallet_enabled?: boolean;
+  billing_currency?: string;
+  monthly_carry_forward?: boolean;
+  allow_overdraft?: boolean;
+  minutes_remaining?: number;
+  minutes_available?: number;
+  is_reseller?: boolean;
+  hide_model_details?: boolean;
+  parent_org_id?: number | null;
+  wholesale_rate?: number | null;
+  max_child_orgs?: number | null;
+  model_profile_id?: number | null;
 }
 
 
@@ -105,8 +119,21 @@ export default function SuperadminPage() {
     const [editMonthlyMinutesLimit, setEditMonthlyMinutesLimit] = useState<number>(0);
     const [editCycleYear, setEditCycleYear] = useState<number>(new Date().getFullYear());
     const [editCycleMonth, setEditCycleMonth] = useState<number>(new Date().getMonth() + 1);
-    const [editCustomMinutesUsed, setEditCustomMinutesUsed] = useState<number | "">("");
-    const [editCycleTopupMinutes, setEditCycleTopupMinutes] = useState<number | "">("");
+    const [editIsReseller, setEditIsReseller] = useState<boolean>(false);
+    const [editHideModels, setEditHideModels] = useState<boolean>(false);
+    const [editWholesale, setEditWholesale] = useState<number | "">("");
+    const [editMaxChildren, setEditMaxChildren] = useState<number | "">("");
+    const [editParentId, setEditParentId] = useState<number | "">("");
+    const [editProfileId, setEditProfileId] = useState<number | "">("");
+    const [profileOptions, setProfileOptions] = useState<{ id: number; display_name: string }[]>([]);
+    const [editWalletEnabled, setEditWalletEnabled] = useState<boolean>(false);
+    const [editCarryForward, setEditCarryForward] = useState<boolean>(true);
+    const [editAllowOverdraft, setEditAllowOverdraft] = useState<boolean>(false);
+    const [editCurrency, setEditCurrency] = useState<string>("INR");
+    const [actionMinutes, setActionMinutes] = useState<number | "">("");
+    const [actionAmount, setActionAmount] = useState<number | "">("");
+    const [actionNote, setActionNote] = useState<string>("");
+    const [walletBusy, setWalletBusy] = useState<boolean>(false);
     const [editQuotaResetDay, setEditQuotaResetDay] = useState<number>(1);
     const [editStartYear, setEditStartYear] = useState<number | "">("");
     const [editStartMonth, setEditStartMonth] = useState<number | "">("");
@@ -272,7 +299,7 @@ export default function SuperadminPage() {
     };
 
     const handleDeleteRun = async (runId: number) => {
-        if (!confirm("Are you sure you want to delete this run? It will be removed from billing and the monthly minutes will be recalculated.")) {
+        if (!confirm("Delete this call log? Billing is not affected (use Refund to return minutes/charges).")) {
             return;
         }
         try {
@@ -280,11 +307,62 @@ export default function SuperadminPage() {
                 method: "DELETE",
                 url: `/api/v1/superuser/runs/${runId}`,
             });
-            toast.success("Run deleted and billing minutes recalculated");
+            toast.success("Run deleted");
             fetchRunsForAudit();
             fetchOrganizations();
         } catch {
             toast.error("Failed to delete run");
+        }
+    };
+
+    const runWalletAction = async (path: string, body: Record<string, unknown>, okMsg: string) => {
+        if (!editingOrg) return;
+        setWalletBusy(true);
+        try {
+            const res: any = await client.request({
+                method: "POST",
+                url: `/api/v1/superuser/organizations/${editingOrg.id}/wallet/${path}`,
+                body,
+            });
+            if (res.error) {
+                toast.error(detailFromError(res.error, "Wallet action failed"));
+                return;
+            }
+            const w = res?.data?.wallet;
+            if (w) setEditBalance(w.balance ?? 0);
+            toast.success(okMsg);
+            setActionMinutes("");
+            setActionAmount("");
+            setActionNote("");
+            fetchOrganizations();
+        } catch (error: any) {
+            toast.error(error.response?.data?.detail || "Wallet action failed");
+        } finally {
+            setWalletBusy(false);
+        }
+    };
+
+    const loadProfileOptions = async () => {
+        const res: any = await client.request({ method: "GET", url: "/api/v1/superuser/model-profiles" });
+        if (!res.error && Array.isArray(res.data)) setProfileOptions(res.data);
+    };
+
+    const handleRefundRun = async (runId: number) => {
+        if (!editingOrg) return;
+        if (!confirm(`Refund call #${runId}? Its minutes and any overage charge go back to the wallet.`)) return;
+        try {
+            const res: any = await client.request({
+                method: "POST",
+                url: `/api/v1/superuser/organizations/${editingOrg.id}/wallet/refund-run/${runId}`,
+            });
+            if (res.error) {
+                toast.error(detailFromError(res.error, "Refund failed"));
+                return;
+            }
+            toast.success("Call refunded");
+            fetchOrganizations();
+        } catch (error: any) {
+            toast.error(error.response?.data?.detail || "Refund failed");
         }
     };
 
@@ -293,11 +371,20 @@ export default function SuperadminPage() {
         if (!editingOrg) return;
         setIsSavingBilling(true);
         try {
-            await client.request({
+            const patchRes: any = await client.request({
                 method: "PATCH",
                 url: `/api/v1/superuser/organizations/${editingOrg.id}`,
                 body: {
-                    balance: editBalance,
+                    is_reseller: editIsReseller,
+                    hide_model_details: editHideModels,
+                    wholesale_rate: editWholesale === "" ? null : editWholesale,
+                    max_child_orgs: editMaxChildren === "" ? null : editMaxChildren,
+                    parent_org_id: editParentId === "" ? null : editParentId,
+                    model_profile_id: editProfileId === "" ? null : editProfileId,
+                    wallet_enabled: editWalletEnabled,
+                    monthly_carry_forward: editCarryForward,
+                    allow_overdraft: editAllowOverdraft,
+                    billing_currency: editCurrency,
                     billing_rate: editBillingRate,
                     billing_pulse: editBillingPulse,
                     concurrency_limit: editConcurrencyLimit,
@@ -306,10 +393,6 @@ export default function SuperadminPage() {
                     monthly_minutes_start_month: editStartMonth !== "" ? Number(editStartMonth) : null,
                     monthly_minutes_end_year: editEndYear !== "" ? Number(editEndYear) : null,
                     monthly_minutes_end_month: editEndMonth !== "" ? Number(editEndMonth) : null,
-                    cycle_year: editCycleYear,
-                    cycle_month: editCycleMonth,
-                    custom_minutes_used: editCustomMinutesUsed === "" ? null : editCustomMinutesUsed,
-                    cycle_topup_minutes: editCycleTopupMinutes === "" ? null : editCycleTopupMinutes,
                     whatsapp_enabled: editWhatsAppEnabled,
                     whatsapp_phone_number_id: editWhatsAppPhoneNumberId || null,
                     whatsapp_access_token: editWhatsAppAccessToken || null,
@@ -317,6 +400,10 @@ export default function SuperadminPage() {
                     quota_reset_day: editQuotaResetDay,
                 }
             });
+            if (patchRes.error) {
+                toast.error(detailFromError(patchRes.error, "Failed to update configuration"));
+                return;
+            }
             toast.success("Wallet & Billing configuration updated");
             setIsEditBillingOpen(false);
             fetchOrganizations();
@@ -546,9 +633,21 @@ export default function SuperadminPage() {
                                                                 setEditMonthlyMinutesLimit(org.monthly_minutes_limit ?? 0);
                                                                 setEditCycleYear(new Date().getFullYear());
                                                                 setEditCycleMonth(new Date().getMonth() + 1);
-                                                                setEditCustomMinutesUsed("");
-                                                                setEditCycleTopupMinutes("");
-                                                                setEditBalance(org.base_balance ?? org.balance ?? 0);
+                                                                setEditIsReseller(org.is_reseller ?? false);
+                                                                setEditHideModels(org.hide_model_details ?? false);
+                                                                setEditWholesale(org.wholesale_rate ?? "");
+                                                                setEditMaxChildren(org.max_child_orgs ?? "");
+                                                                setEditParentId(org.parent_org_id ?? "");
+                                                                setEditProfileId(org.model_profile_id ?? "");
+                                                                loadProfileOptions();
+                                                                setEditWalletEnabled(org.wallet_enabled ?? false);
+                                                                setEditCarryForward(org.monthly_carry_forward ?? true);
+                                                                setEditAllowOverdraft(org.allow_overdraft ?? false);
+                                                                setEditCurrency(org.billing_currency ?? "INR");
+                                                                setActionMinutes("");
+                                                                setActionAmount("");
+                                                                setActionNote("");
+                                                                setEditBalance(org.balance ?? 0);
                                                                 setEditBillingRate(org.billing_rate ?? 0);
                                                                 setEditBillingPulse(org.billing_pulse ?? 60);
                                                                 setEditConcurrencyLimit(org.concurrency_limit ?? 0);
@@ -650,30 +749,21 @@ export default function SuperadminPage() {
                             </DialogDescription>
                         </DialogHeader>
                         <div className="py-4 space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="balance">Wallet Balance (₹)</Label>
-                                <Input
-                                    id="balance"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={editBalance}
-                                    onChange={(e) => setEditBalance(parseFloat(e.target.value) || 0)}
-                                    required
-                                />
-                                <div className="space-y-1">
-                                    <p className="text-xs text-muted-foreground">
-                                        Base balance in DB: ₹{(editingOrg?.base_balance ?? editingOrg?.balance ?? 0).toFixed(2)}
-                                    </p>
-                                    {(editingOrg?.base_balance === 0 || editingOrg?.base_balance == null) && editingOrg?.balance !== 0 && (
-                                        <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                                            Dynamically calculated balance: ₹{(editingOrg?.balance ?? 0).toFixed(2)}
-                                        </p>
-                                    )}
+                            <div className="rounded-md border p-3 space-y-1 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Money balance</span>
+                                    <span className="font-semibold">{editCurrency} {editBalance.toFixed(2)}</span>
                                 </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Minutes remaining</span>
+                                    <span className="font-semibold">{(editingOrg?.minutes_remaining ?? 0).toFixed(1)} min</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground pt-1">
+                                    Balances only change through the wallet ledger - use the wallet controls below.
+                                </p>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="billingRate">Billing Rate (₹ per minute)</Label>
+                                <Label htmlFor="billingRate">Billing Rate (per minute, overage)</Label>
                                 <Input
                                     id="billingRate"
                                     type="number"
@@ -810,76 +900,93 @@ export default function SuperadminPage() {
                                 </div>
                             </div>
                             <div className="border-t pt-4 space-y-4">
-                                <h4 className="text-sm font-semibold text-foreground">Adjust Custom Usage Cycle Minutes</h4>
-                                <p className="text-xs text-muted-foreground">
-                                    Override or manually set minutes used for a specific cycle.
-                                </p>
+                                <h4 className="text-sm font-semibold text-foreground">Wallet controls</h4>
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-xs">
+                                        <input type="checkbox" checked={editWalletEnabled} onChange={(e) => setEditWalletEnabled(e.target.checked)} className="h-4 w-4" />
+                                        Wallet enabled (block calls when minutes and balance run out)
+                                    </label>
+                                    <label className="flex items-center gap-2 text-xs">
+                                        <input type="checkbox" checked={editCarryForward} onChange={(e) => setEditCarryForward(e.target.checked)} className="h-4 w-4" />
+                                        Unused monthly minutes carry forward
+                                    </label>
+                                    <label className="flex items-center gap-2 text-xs">
+                                        <input type="checkbox" checked={editAllowOverdraft} onChange={(e) => setEditAllowOverdraft(e.target.checked)} className="h-4 w-4" />
+                                        Allow overdraft (never block calls, balance may go negative)
+                                    </label>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="currency" className="text-xs">Currency code</Label>
+                                        <Input id="currency" value={editCurrency} maxLength={8} onChange={(e) => setEditCurrency(e.target.value.toUpperCase())} />
+                                    </div>
+                                </div>
+                                <div className="rounded-md border p-3 space-y-3">
+                                    <p className="text-xs text-muted-foreground">Actions apply immediately and are recorded in the ledger.</p>
+                                    <Input placeholder="Note (optional)" value={actionNote} onChange={(e) => setActionNote(e.target.value)} />
+                                    <div className="flex gap-2">
+                                        <Input type="number" min="0" step="0.1" placeholder="Minutes" value={actionMinutes}
+                                            onChange={(e) => setActionMinutes(e.target.value === "" ? "" : parseFloat(e.target.value) || "")} />
+                                        <Button type="button" size="sm" variant="secondary" disabled={walletBusy || !actionMinutes}
+                                            onClick={() => runWalletAction("topup-minutes", { minutes: actionMinutes, description: actionNote || undefined }, "Minutes added")}>
+                                            Add
+                                        </Button>
+                                        <Button type="button" size="sm" variant="outline" disabled={walletBusy || !actionMinutes}
+                                            onClick={() => runWalletAction("deduct-minutes", { minutes: actionMinutes, description: actionNote || undefined }, "Minutes deducted")}>
+                                            Deduct
+                                        </Button>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Input type="number" step="0.01" placeholder={`Amount (${editCurrency}, negative to debit)`} value={actionAmount}
+                                            onChange={(e) => setActionAmount(e.target.value === "" ? "" : parseFloat(e.target.value) || "")} />
+                                        <Button type="button" size="sm" variant="secondary" disabled={walletBusy || !actionAmount}
+                                            onClick={() => runWalletAction("credit", { amount: actionAmount, description: actionNote || undefined }, "Balance updated")}>
+                                            Apply
+                                        </Button>
+                                    </div>
+                                    <Button type="button" size="sm" variant="ghost" disabled={walletBusy}
+                                        onClick={() => runWalletAction("reconcile", {}, "Reconciled unbilled calls")}>
+                                        Reconcile unbilled calls
+                                    </Button>
+                                </div>
+                            <div className="border-t pt-4 space-y-3">
+                                <h4 className="text-sm font-semibold text-foreground">Reseller &amp; model access</h4>
+                                <label className="flex items-center gap-2 text-xs">
+                                    <input type="checkbox" checked={editIsReseller} onChange={(e) => setEditIsReseller(e.target.checked)} className="h-4 w-4" />
+                                    This organization is a reseller (can create and manage client workspaces)
+                                </label>
+                                <label className="flex items-center gap-2 text-xs">
+                                    <input type="checkbox" checked={editHideModels} onChange={(e) => setEditHideModels(e.target.checked)} className="h-4 w-4" />
+                                    Hide models, providers and vendor costs from this organization
+                                </label>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div className="space-y-1">
-                                        <Label htmlFor="cycleYear" className="text-xs">Cycle Year</Label>
-                                        <Input
-                                            id="cycleYear"
-                                            type="number"
-                                            min="2020"
-                                            max="2100"
-                                            value={editCycleYear}
-                                            onChange={(e) => setEditCycleYear(parseInt(e.target.value) || new Date().getFullYear())}
-                                        />
+                                        <Label className="text-xs">Wholesale rate (per minute, charged to a reseller)</Label>
+                                        <Input type="number" min="0" step="0.01" value={editWholesale}
+                                            onChange={(e) => setEditWholesale(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)} />
                                     </div>
                                     <div className="space-y-1">
-                                        <Label htmlFor="cycleMonth" className="text-xs">Cycle Month</Label>
-                                        <select
-                                            id="cycleMonth"
-                                            value={editCycleMonth}
-                                            onChange={(e) => setEditCycleMonth(parseInt(e.target.value) || new Date().getMonth() + 1)}
-                                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                        >
-                                            {Array.from({ length: 12 }, (_, i) => (
-                                                <option key={i + 1} value={i + 1}>
-                                                    {new Date(0, i).toLocaleString('default', { month: 'long' })}
-                                                </option>
-                                            ))}
+                                        <Label className="text-xs">Max client workspaces</Label>
+                                        <Input type="number" min="0" placeholder="Unlimited" value={editMaxChildren}
+                                            onChange={(e) => setEditMaxChildren(e.target.value === "" ? "" : parseInt(e.target.value) || 0)} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs">Parent reseller org ID</Label>
+                                        <Input type="number" min="1" placeholder="None" value={editParentId}
+                                            onChange={(e) => setEditParentId(e.target.value === "" ? "" : parseInt(e.target.value) || "")} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs">Model profile</Label>
+                                        <select value={editProfileId} onChange={(e) => setEditProfileId(e.target.value === "" ? "" : parseInt(e.target.value))}
+                                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm">
+                                            <option value="">None (use own settings)</option>
+                                            {profileOptions.map((p) => <option key={p.id} value={p.id}>{p.display_name}</option>)}
                                         </select>
                                     </div>
                                 </div>
-                                <div className="space-y-2 mt-4">
-                                    <Label className="text-xs">Custom Minutes Used</Label>
-                                    <div className="flex gap-2">
-                                        <Input
-                                            id="customMinutesUsed"
-                                            type="number"
-                                            step="0.1"
-                                            min="0"
-                                            value={editCustomMinutesUsed}
-                                            onChange={(e) => setEditCustomMinutesUsed(e.target.value === "" ? "" : parseFloat(e.target.value) || "")}
-                                            placeholder="System Calculated"
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="secondary"
-                                            size="sm"
-                                            onClick={() => setEditCustomMinutesUsed("")}
-                                        >
-                                            Use System
-                                        </Button>
-                                    </div>
-                                    <p className="text-[10px] text-muted-foreground">
-                                        Override system calculated minutes. Leave empty to use system calculation.
-                                    </p>
-                                </div>
-                                <div className="space-y-2 mt-4">
-                                    <Label htmlFor="cycleTopupMinutes" className="text-xs">Top Up Minutes</Label>
-                                    <Input
-                                        id="cycleTopupMinutes"
-                                        type="number"
-                                        min="0"
-                                        step="0.1"
-                                        placeholder="Add one-time minutes"
-                                        value={editCycleTopupMinutes}
-                                        onChange={(e) => setEditCycleTopupMinutes(e.target.value === "" ? "" : parseFloat(e.target.value) || "")}
-                                    />
-                                    <p className="text-[10px] text-muted-foreground">Adds extra minutes to this cycle that carry forward forever.</p>
-                                </div>
+                                <a href="/superadmin/model-profiles" className="text-xs text-emerald-400 underline">Manage model profiles</a>
+                            </div>
+
                             <div className="border-t pt-4 space-y-4">
                                 <h4 className="text-sm font-semibold text-foreground flex items-center justify-between">
                                     <span>WhatsApp Follow-Up Integration</span>
@@ -951,8 +1058,21 @@ export default function SuperadminPage() {
                                 <div className="border-t pt-4 space-y-4">
                                     <h4 className="text-sm font-semibold text-foreground">Audit Agent Runs (Call Logs)</h4>
                                     <p className="text-xs text-muted-foreground">
-                                        View or delete individual runs for the selected cycle month and year. Deleting a run automatically recalculates the cycle's used minutes.
+                                        View, refund or delete individual runs for the selected month. Deleting a call log does NOT change billing - use Refund to return a call's minutes and charge to the wallet.
                                     </p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Input type="number" min="2020" max="2100" value={editCycleYear}
+                                            onChange={(e) => setEditCycleYear(parseInt(e.target.value) || new Date().getFullYear())} />
+                                        <select
+                                            value={editCycleMonth}
+                                            onChange={(e) => setEditCycleMonth(parseInt(e.target.value) || new Date().getMonth() + 1)}
+                                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                                        >
+                                            {Array.from({ length: 12 }, (_, i) => (
+                                                <option key={i + 1} value={i + 1}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                     <div className="flex gap-2">
                                         <Button
                                             type="button"
@@ -976,6 +1096,15 @@ export default function SuperadminPage() {
                                                             {new Date(run.created_at).toLocaleString()} • {run.duration_seconds}s
                                                         </div>
                                                     </div>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleRefundRun(run.id)}
+                                                        className="h-7 px-2 text-xs flex-shrink-0"
+                                                    >
+                                                        Refund
+                                                    </Button>
                                                     <Button
                                                         type="button"
                                                         variant="ghost"

@@ -1,6 +1,6 @@
 import "./globals.css";
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fira_Code, Inter, Instrument_Serif } from "next/font/google";
 import { Suspense } from "react";
 
@@ -36,6 +36,11 @@ const instrumentSerif = Instrument_Serif({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  colorScheme: "dark",
+  themeColor: "#161715",
+};
+
 export const metadata: Metadata = {
   title: "Swarvo AI",
   description: "Open Source Voice Assistant Workflow Builder",
@@ -48,26 +53,7 @@ export default function RootLayout({
   }) {
 
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* Inline script to prevent flash of light theme - runs before React hydrates */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var theme = localStorage.getItem('theme');
-                  if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                    document.documentElement.classList.add('dark');
-                  } else {
-                    document.documentElement.classList.remove('dark');
-                  }
-                } catch (e) {}
-              })();
-            `,
-          }}
-        />
-      </head>
+    <html lang="en" className="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
       <body
         className={`${sansFont.variable} ${monoFont.variable} ${instrumentSerif.variable} antialiased`}>
         <SentryErrorBoundary>

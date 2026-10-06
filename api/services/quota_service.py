@@ -10,6 +10,7 @@ from loguru import logger
 
 from api.db import db_client
 from api.db.models import UserModel
+from api.services.billing import wallet_service
 from api.services.configuration.registry import ServiceProviders
 from api.services.configuration.resolve import resolve_effective_config
 from api.services.mps_service_key_client import mps_service_key_client
@@ -48,11 +49,33 @@ async def check_dograh_quota(
         if quota is insufficient.
     """
     try:
+        # Wallet admission control comes first: it is organization based and
+        # independent of which model providers the call will use.
+        workflow = (
+            await db_client.get_workflow_by_id(workflow_id)
+            if workflow_id is not None
+            else None
+        )
+        wallet_org_id = (
+            workflow.organization_id
+            if workflow is not None and workflow.organization_id is not None
+            else user.selected_organization_id
+        )
+        if wallet_org_id is not None:
+            admission = await wallet_service.check_can_start_call(wallet_org_id)
+            if not admission.allowed:
+                return QuotaCheckResult(
+                    has_quota=False,
+                    error_code="insufficient_balance",
+                    error_message=admission.reason,
+                )
+
         # Get user configurations
-        user_config = await db_client.get_user_configurations(user.id)
+        user_config = await db_client.get_user_configurations(
+            user.id, organization_id=wallet_org_id
+        )
 
         if workflow_id is not None:
-            workflow = await db_client.get_workflow_by_id(workflow_id)
             if workflow:
                 model_overrides = (workflow.workflow_configurations or {}).get(
                     "model_overrides"

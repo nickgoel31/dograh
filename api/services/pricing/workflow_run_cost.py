@@ -4,6 +4,7 @@ from loguru import logger
 
 from api.db import db_client
 from api.enums import WorkflowRunMode
+from api.services.billing import wallet_service
 from api.services.pricing.cost_calculator import cost_calculator
 from api.services.telephony.factory import get_telephony_provider_for_run
 
@@ -166,6 +167,11 @@ async def apply_workflow_run_usage_to_organization(
     if cost_info is None:
         return
 
+    # A retried post-call job must not add the same call to the quota twice.
+    if (workflow_run.cost_info or {}).get("usage_applied"):
+        logger.info(f"Usage for run {workflow_run.id} already applied, skipping")
+        return
+
     org = await _get_pricing_organization(workflow_run)
     if not org:
         return
@@ -175,6 +181,9 @@ async def apply_workflow_run_usage_to_organization(
         float(cost_info.get("dograh_token_usage") or 0),
         float(cost_info.get("call_duration_seconds") or 0),
         cost_info.get("charge_usd"),
+    )
+    await db_client.update_workflow_run(
+        run_id=workflow_run.id, cost_info={**cost_info, "usage_applied": True}
     )
 
 
@@ -206,28 +215,37 @@ async def calculate_workflow_run_cost(workflow_run_id: int):
         logger.warning("Workflow run not found")
         return
 
+    cost_error: Exception | None = None
     try:
         cost_info = await build_workflow_run_cost_info(workflow_run)
-        if cost_info is None:
-            return
+        if cost_info is not None:
+            await save_workflow_run_cost_info(workflow_run_id, cost_info)
 
-        await save_workflow_run_cost_info(workflow_run_id, cost_info)
-
-        try:
-            await apply_workflow_run_usage_to_organization(workflow_run, cost_info)
-        except Exception as e:
-            org = await _get_pricing_organization(workflow_run)
-            if org:
+            try:
+                await apply_workflow_run_usage_to_organization(workflow_run, cost_info)
+            except Exception as e:
+                org = await _get_pricing_organization(workflow_run)
                 logger.error(
-                    f"Failed to update organization usage for org {org.id}: {e}"
+                    f"Failed to update organization usage for org "
+                    f"{org.id if org else None}: {e}"
                 )
-            else:
-                logger.error(f"Failed to update organization usage: {e}")
-            # Don't fail the whole cost calculation if usage update fails
+                # Don't fail the whole cost calculation if usage update fails
 
-        logger.info(
-            f"Calculated cost for workflow run: ${cost_info['total_cost_usd']:.6f} USD ({cost_info['dograh_token_usage']} Dograh Tokens)"
-        )
+            logger.info(
+                f"Calculated cost for workflow run: ${cost_info['total_cost_usd']:.6f} USD ({cost_info['dograh_token_usage']} Dograh Tokens)"
+            )
     except Exception as e:
         logger.error(f"Error calculating cost for workflow run: {e}")
-        raise
+        cost_error = e
+
+    # Wallet billing is deliberately independent of the cost calculation above:
+    # a failure computing provider costs must never mean the call goes unbilled.
+    # It is idempotent per run, and anything that still fails here is picked up by
+    # the periodic wallet reconciler.
+    try:
+        await wallet_service.bill_workflow_run(workflow_run_id)
+    except Exception as e:
+        logger.error(f"Wallet billing failed for workflow run {workflow_run_id}: {e}")
+
+    if cost_error is not None:
+        raise cost_error

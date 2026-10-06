@@ -255,7 +255,10 @@ class SignalingManager:
         user: UserModel,
     ):
         """Handle WebSocket connection for signaling."""
-        await websocket.accept()
+        offered = websocket.headers.get("sec-websocket-protocol", "")
+        await websocket.accept(
+            subprotocol="dograh.bearer" if "dograh.bearer" in offered else None
+        )
         connection_id = f"{workflow_id}:{workflow_run_id}:{user.id}"
         self._connections[connection_id] = websocket
 

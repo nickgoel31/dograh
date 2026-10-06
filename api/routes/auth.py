@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger
 from pydantic import BaseModel
 
 from api.db import db_client
 from api.db.models import UserModel
-from api.enums import PostHogEvent
+from api.enums import ASSIGNABLE_ORG_ROLES, ROLE_RANK, PostHogEvent
+from api.utils import rate_limit
 from api.schemas.auth import AuthResponse, LoginRequest, SignupRequest, UserResponse
 from api.services.auth.depends import create_user_configuration_with_mps_key, get_user
 from api.services.posthog_client import capture_event
@@ -16,12 +17,30 @@ router = APIRouter(
 )
 
 
+_DUMMY_HASH = hash_password("dummy-password-for-timing-equalisation")
+
+
+def _client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 @router.post("/signup", response_model=AuthResponse)
-async def signup(request: SignupRequest):
-    # Check if email is already taken
+async def signup(request: SignupRequest, http_request: Request):
+    await rate_limit.enforce(
+        f"signup:{_client_ip(http_request)}", 10, 3600, "Too many signup attempts"
+    )
+
+    # Generic message so this endpoint cannot be used to enumerate emails.
     existing_user = await db_client.get_user_by_email(request.email)
     if existing_user:
-        raise HTTPException(status_code=409, detail="Email already registered")
+        raise HTTPException(
+            status_code=400,
+            detail="Unable to create account with these details. "
+            "If you already have an account, please sign in.",
+        )
 
     # Decode and validate invite token if provided
     org_id = None
@@ -30,14 +49,21 @@ async def signup(request: SignupRequest):
         try:
             from api.utils.auth import decode_jwt_token
             payload = decode_jwt_token(request.invite_token)
-            if payload.get("email") != request.email:
+            if str(payload.get("email", "")).lower() != request.email.lower():
                 raise HTTPException(status_code=400, detail="Invite token email mismatch")
             org_id = payload.get("org_id")
             role = payload.get("role", "client")
+            if org_id is None or role not in ASSIGNABLE_ORG_ROLES:
+                raise HTTPException(status_code=400, detail="Invalid invite token")
         except Exception as e:
             if isinstance(e, HTTPException):
                 raise e
             raise HTTPException(status_code=400, detail="Invalid or expired invite token")
+
+        # Validate the organization *before* creating the user so a bad invite
+        # cannot leave an orphan account (and burn the email) behind.
+        if not await db_client.get_organization_by_id(org_id):
+            raise HTTPException(status_code=400, detail="Invited organization not found")
 
     # Hash password and create user
     hashed = hash_password(request.password)
@@ -50,8 +76,6 @@ async def signup(request: SignupRequest):
 
     if org_id:
         organization = await db_client.get_organization_by_id(org_id)
-        if not organization:
-            raise HTTPException(status_code=400, detail="Invited organization not found")
     else:
         # Create organization for the user
         org_provider_id = f"org_{user.provider_id}"
@@ -100,10 +124,19 @@ async def signup(request: SignupRequest):
 
 
 @router.post("/login", response_model=AuthResponse)
-async def login(request: LoginRequest):
+async def login(request: LoginRequest, http_request: Request):
+    ip = _client_ip(http_request)
+    await rate_limit.enforce(f"login:ip:{ip}", 30, 300, "Too many login attempts")
+    await rate_limit.enforce(
+        f"login:email:{request.email.lower()}", 10, 300, "Too many login attempts"
+    )
+
     # Look up user by email
     user = await db_client.get_user_by_email(request.email)
     if not user or not user.password_hash:
+        # Spend the same CPU as a real check so timing doesn't reveal whether
+        # the email exists.
+        verify_password(request.password, _DUMMY_HASH)
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     # Verify password
@@ -158,12 +191,14 @@ async def accept_invite(
         payload = decode_jwt_token(request.token)
         
         # Verify invite email matches the logged-in user's email
-        if payload.get("email") != user.email:
+        if str(payload.get("email", "")).lower() != (user.email or "").lower():
             raise HTTPException(status_code=400, detail="Invite email does not match logged-in user")
             
         org_id = payload.get("org_id")
         role = payload.get("role", "client")
-        
+        if org_id is None or role not in ASSIGNABLE_ORG_ROLES:
+            raise HTTPException(status_code=400, detail="Invalid invite token")
+
         # Check organization exists
         org = await db_client.get_organization_by_id(org_id)
         if not org:
@@ -172,8 +207,13 @@ async def accept_invite(
         # Add user to organization
         await db_client.add_user_to_organization(user.id, org_id)
         
-        # Set role and select organization
-        await db_client.update_user_role_and_superuser(user_id=user.id, role=role)
+        # Never demote: a super admin (or existing admin) who accepts a
+        # lower-privilege invite keeps the role they already have.
+        current_role = user.role or "client"
+        if user.is_superuser or ROLE_RANK.get(role, 0) <= ROLE_RANK.get(current_role, 0):
+            role = current_role
+        else:
+            await db_client.update_user_role_and_superuser(user_id=user.id, role=role)
         await db_client.update_user_selected_organization(user.id, org_id)
         
         return {"detail": "Successfully joined organization", "organization_id": org_id, "role": role}

@@ -85,7 +85,7 @@ export const useWebSocketRTC = ({ workflowId, workflowRunId, accessToken, initia
         const baseUrl = client.getConfig().baseUrl || 'http://127.0.0.1:8000';
         // Convert HTTP to WS protocol
         const wsUrl = baseUrl.replace(/^http/, 'ws');
-        return `${wsUrl}/api/v1/ws/signaling/${workflowId}/${workflowRunId}?token=${accessToken}`;
+        return `${wsUrl}/api/v1/ws/signaling/${workflowId}/${workflowRunId}`;
     }, [workflowId, workflowRunId, accessToken]);
 
     const createPeerConnection = () => {
@@ -201,7 +201,9 @@ export const useWebSocketRTC = ({ workflowId, workflowRunId, accessToken, initia
             const wsUrl = getWebSocketUrl();
             logger.info(`Connecting to WebSocket: ${wsUrl}`);
 
-            const ws = new WebSocket(wsUrl);
+            // Token travels in the Sec-WebSocket-Protocol header, not the URL,
+            // so it can't leak into proxy / access logs.
+            const ws = new WebSocket(wsUrl, ['dograh.bearer', accessToken ?? '']);
 
             ws.onopen = () => {
                 logger.info('WebSocket connected');

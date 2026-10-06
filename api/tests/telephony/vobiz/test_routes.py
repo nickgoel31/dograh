@@ -217,10 +217,10 @@ async def test_vobiz_verify_inbound_signature_accepts_v2():
 
 
 @pytest.mark.asyncio
-async def test_vobiz_verify_inbound_signature_accepts_missing_signature():
+async def test_vobiz_verify_inbound_signature_rejects_missing_signature():
     provider = _provider()
 
-    assert await provider.verify_inbound_signature(
+    assert not await provider.verify_inbound_signature(
         "https://example.test/api/v1/telephony/vobiz/hangup-callback/123",
         {},
         {},

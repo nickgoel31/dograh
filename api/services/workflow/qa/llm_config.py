@@ -54,7 +54,9 @@ async def resolve_user_llm_config(
 
     llm_config: dict = {}
     if user_id:
-        user_configuration = await db_client.get_user_configurations(user_id)
+        user_configuration = await db_client.get_user_configurations(
+            user_id, organization_id=getattr(workflow_run.workflow, "organization_id", None)
+        )
         llm_config = user_configuration.model_dump(exclude_none=True).get("llm", {})
 
     provider = llm_config.get("provider", "openai")

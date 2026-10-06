@@ -24,7 +24,9 @@ export const ModelConfigurationDialog = ({
     workflowName,
     onSave,
 }: ModelConfigurationDialogProps) => {
-    const { role } = useCurrentUserRole();
+    const { role, modelsHidden } = useCurrentUserRole();
+
+    if (modelsHidden) return null; // models are platform-managed for this tenant
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>

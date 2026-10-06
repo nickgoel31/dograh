@@ -32,7 +32,6 @@ import { usePathname, useRouter } from "next/navigation";
 import React, { useRef } from "react";
 import { toast } from "sonner";
 
-import ThemeToggle from "@/components/ThemeSwitcher";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -505,11 +504,6 @@ export function AppSidebar() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {!isCollapsed && (
-              <div className="notranslate" translate="no">
-                <ThemeToggle showLabel={false} className="h-7 w-7 hover:bg-accent" />
-              </div>
-            )}
           </div>
         )}
 
@@ -565,27 +559,9 @@ export function AppSidebar() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {!isCollapsed && (
-              <div className="notranslate" translate="no">
-                <ThemeToggle showLabel={false} className="h-7 w-7 hover:bg-accent" />
-              </div>
-            )}
           </div>
         )}
 
-        {/* Collapsed theme toggle */}
-        {isCollapsed && (
-          <div className="mt-1 flex justify-center notranslate" translate="no">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <ThemeToggle showLabel={false} className="h-7 w-7 hover:bg-accent" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right">Toggle theme</TooltipContent>
-            </Tooltip>
-          </div>
-        )}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

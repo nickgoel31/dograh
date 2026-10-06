@@ -16,6 +16,7 @@ from api.routes.public_agent import router as public_agent_router
 from api.routes.public_download import router as public_download_router
 from api.routes.public_embed import router as public_embed_router
 from api.routes.reports import router as reports_router
+from api.routes.reseller import router as reseller_router
 from api.routes.s3_signed_url import router as s3_router
 from api.routes.service_keys import router as service_keys_router
 from api.routes.superuser import router as superuser_router
@@ -65,6 +66,7 @@ router.include_router(node_types_router)
 router.include_router(agent_stream_router)
 router.include_router(whatsapp_webhook_router)
 router.include_router(whatsapp_logs_router)
+router.include_router(reseller_router)
 
 
 for _integration_router in all_routers():

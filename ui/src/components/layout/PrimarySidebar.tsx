@@ -6,13 +6,11 @@ import {
   ChevronDown,
   ChevronUp,
   Wallet,
-  Sun,
-  Moon,
   Settings,
   LogOut,
   Shield,
+  Building2,
 } from "lucide-react";
-import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/lib/auth";
 import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -37,9 +35,8 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
 }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { toggleTheme, isDark } = useTheme();
   const { logout, user } = useAuth();
-  const { role, isSuperadmin, email, selectedOrgId, selectedOrgName } = useCurrentUserRole();
+  const { role, isSuperadmin, isReseller, email, selectedOrgId, selectedOrgName } = useCurrentUserRole();
   const { isMobile, setOpenMobile } = useSidebar();
 
   const handleNav = (path?: string) => {
@@ -198,13 +195,6 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
         <div className="flex flex-col gap-3 w-full">
           {!isHovered ? (
             <div className="flex flex-col items-center gap-4 w-full">
-              <button
-                onClick={toggleTheme}
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-600 dark:text-[#9ca39a] hover:bg-gray-100 dark:hover:bg-white/8 transition-colors"
-              >
-                {isDark ? <Sun className="w-5 h-5 text-amber-300" /> : <Moon className="w-5 h-5 text-gray-600" />}
-              </button>
-
               <button onClick={() => handleNav("/billing")} className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-600 dark:text-[#9ca39a]">
                 <Wallet className="w-5 h-5 text-gray-600 dark:text-[#9ca39a]" />
               </button>
@@ -219,6 +209,15 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
 
                 {showProfileMenu && (
                   <div className="absolute left-12 bottom-0 w-52 bg-white dark:bg-[#1c1e1a] border border-gray-200 dark:border-[#282b26] rounded-2xl shadow-xl p-1.5 z-50 space-y-0.5">
+                    {isReseller && (
+                      <button
+                        onClick={() => { setShowProfileMenu(false); handleNav("/reseller"); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-950/30 rounded-xl transition-colors text-left"
+                      >
+                        <Building2 className="w-4 h-4" />
+                        <span>Reseller Portal</span>
+                      </button>
+                    )}
                     {isSuperadmin && (
                       <button
                         onClick={() => { setShowProfileMenu(false); handleNav("/superadmin"); }}
@@ -248,18 +247,6 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
             </div>
           ) : (
             <div className="flex flex-col gap-3.5 w-full">
-              <button
-                onClick={toggleTheme}
-                className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-gray-100/80 dark:bg-white/6 border border-gray-200/40 dark:border-white/8 text-xs font-semibold text-gray-800 dark:text-[#c8ccc5]"
-              >
-                <div className="flex items-center gap-2.5">
-                  {isDark ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-gray-600" />}
-                  <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
-                </div>
-                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-gray-200/70 dark:bg-white/10">
-                  {isDark ? "DARK" : "LIGHT"}
-                </span>
-              </button>
 
               <div className="px-1">
                 <WalletBalance />
@@ -281,6 +268,15 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
 
                 {showProfileMenu && (
                   <div className="absolute left-0 bottom-12 w-full bg-white dark:bg-[#1c1e1a] border border-gray-200 dark:border-[#282b26] rounded-2xl shadow-xl p-1.5 z-50 space-y-0.5">
+                    {isReseller && (
+                      <button
+                        onClick={() => { setShowProfileMenu(false); handleNav("/reseller"); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-emerald-400 hover:bg-emerald-950/30 rounded-xl transition-colors text-left"
+                      >
+                        <Building2 className="w-4 h-4" />
+                        <span>Reseller Portal</span>
+                      </button>
+                    )}
                     {isSuperadmin && (
                       <button
                         onClick={() => { setShowProfileMenu(false); handleNav("/superadmin"); }}

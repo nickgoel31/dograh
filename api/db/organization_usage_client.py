@@ -204,11 +204,9 @@ class OrganizationUsageClient(BaseDBClient):
                     cycle_locked.used_amount_usd = 0
                 cycle_locked.used_amount_usd += charge_usd
 
-            # Deduct the INR cost of this call from org.balance using billed_seconds and billing_rate.
-            if billed_seconds > 0 and (org_locked.billing_rate or 0) > 0:
-                billed_minutes = billed_seconds / 60.0
-                cost_inr = billed_minutes * org_locked.billing_rate
-                org_locked.balance = max(0.0, (org_locked.balance or 0.0) - cost_inr)
+            # NOTE: money / minute accounting lives in the wallet ledger
+            # (api/services/billing/wallet_service.py). This method only tracks
+            # Dograh-token quota and USD usage for the cycle.
 
             await session.commit()
 

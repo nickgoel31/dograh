@@ -410,7 +410,9 @@ async def execute_text_chat_pending_turn(
     run_definition = workflow_run.definition
     run_configs = run_definition.workflow_configurations or {}
 
-    user_config = await db_client.get_user_configurations(workflow_run.workflow.user.id)
+    user_config = await db_client.get_user_configurations(
+        workflow_run.workflow.user.id, organization_id=workflow.organization_id
+    )
     user_config = resolve_effective_config(
         user_config, run_configs.get("model_overrides")
     )

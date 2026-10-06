@@ -1,8 +1,9 @@
+from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.exc import IntegrityError
 
 from api.constants import DEFAULT_CAMPAIGN_RETRY_CONFIG, DEFAULT_ORG_CONCURRENCY_LIMIT
@@ -31,7 +32,8 @@ from api.schemas.billing import (
     BillingConfigurationResponse,
 )
 from api.services.auth.depends import get_user, require_role
-from api.enums import UserRole
+from api.services.billing import wallet_service
+from api.enums import ASSIGNABLE_ORG_ROLES, UserRole
 from api.services.configuration.masking import is_mask_of, mask_key
 from api.services.posthog_client import capture_event
 from api.services.telephony import registry as telephony_registry
@@ -1053,6 +1055,13 @@ class InviteRequest(BaseModel):
     email: str
     role: str = "client"  # default to client
 
+    @field_validator("role")
+    @classmethod
+    def _role_must_be_assignable(cls, v: str) -> str:
+        if v not in ASSIGNABLE_ORG_ROLES:
+            raise ValueError(f"role must be one of {sorted(ASSIGNABLE_ORG_ROLES)}")
+        return v
+
 
 class InviteResponse(BaseModel):
     invite_url: str
@@ -1061,6 +1070,13 @@ class InviteResponse(BaseModel):
 
 class UpdateMemberRoleRequest(BaseModel):
     role: str
+
+    @field_validator("role")
+    @classmethod
+    def _role_must_be_assignable(cls, v: str) -> str:
+        if v not in ASSIGNABLE_ORG_ROLES:
+            raise ValueError(f"role must be one of {sorted(ASSIGNABLE_ORG_ROLES)}")
+        return v
 
 
 @router.get("/members", response_model=List[MemberResponse])
@@ -1097,6 +1113,13 @@ async def update_member_role(
     target_member = next((m for m in members if m.id == member_id), None)
     if not target_member:
         raise HTTPException(status_code=404, detail="Member not found in organization")
+
+    # Superusers are managed from /superuser only, and an admin may not change
+    # their own role (prevents accidental lock-out of the org).
+    if target_member.is_superuser or target_member.role == UserRole.SUPER_ADMIN.value:
+        raise HTTPException(status_code=403, detail="Cannot change a super admin's role")
+    if member_id == user.id:
+        raise HTTPException(status_code=400, detail="Cannot change your own role")
 
     # Update role
     updated = await db_client.update_user_role_and_superuser(
@@ -1141,28 +1164,31 @@ async def create_invite(
     user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ):
     """Create an organization invitation token and link."""
-    import jwt
-    from datetime import datetime, UTC, timedelta
-    from api.constants import OSS_JWT_SECRET, UI_APP_URL
+    from api.constants import UI_APP_URL
+    from api.utils.auth import create_invite_token
 
     if not user.selected_organization_id:
         raise HTTPException(status_code=400, detail="User has no selected organization")
 
-    # Generate token
-    payload = {
-        "org_id": user.selected_organization_id,
-        "email": request.email,
-        "role": request.role,
-        "exp": datetime.now(UTC) + timedelta(days=7),
-        "iat": datetime.now(UTC),
-    }
-    token = jwt.encode(payload, OSS_JWT_SECRET, algorithm="HS256")
+    token = create_invite_token(
+        user.selected_organization_id, request.email, request.role
+    )
     invite_url = f"{UI_APP_URL}/signup?invite_token={token}"
 
     return InviteResponse(invite_url=invite_url, token=token)
 
 
+class WalletBucketResponse(BaseModel):
+    id: int
+    kind: str
+    minutes_remaining: float
+    minutes_total: float
+    expires_at: Optional[str] = None
+
+
 class WalletResponse(BaseModel):
+    wallet_enabled: bool
+    currency: str
     balance: float
     billing_rate: float
     billing_pulse: int
@@ -1170,234 +1196,66 @@ class WalletResponse(BaseModel):
     carry_forward_minutes: float
     minutes_used: float
     minutes_remaining: float
+    minutes_available: float
+    overage_minutes_this_period: float
+    monthly_carry_forward: bool
+    allow_overdraft: bool
+    period_start: str
+    period_end: str
+    next_reset: str
+    low_balance: bool
+    out_of_balance: bool
+    buckets: List[WalletBucketResponse]
+
+
+class LedgerEntryResponse(BaseModel):
+    id: int
+    entry_type: str
+    created_at: Optional[str] = None
+    workflow_run_id: Optional[int] = None
+    minutes_delta: float
+    money_delta: float
+    overage_minutes: float
+    billed_seconds: Optional[int] = None
+    rate: Optional[float] = None
+    minutes_balance_after: Optional[float] = None
+    money_balance_after: Optional[float] = None
+    description: Optional[str] = None
+
+
+class LedgerPageResponse(BaseModel):
+    items: List[LedgerEntryResponse]
+    total: int
 
 
 @router.get("/wallet", response_model=WalletResponse)
 async def get_wallet(
-    year: Optional[int] = None,
-    month: Optional[int] = None,
     user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT])),
 ):
-    """Get the wallet balance and billing settings of the user's selected organization."""
-    from datetime import datetime, timezone
-    from dateutil.relativedelta import relativedelta
-    from sqlalchemy import select
-    from api.db.models import OrganizationUsageCycleModel, OrganizationModel
-
+    """Current wallet snapshot (minutes buckets + money balance)."""
     if not user.selected_organization_id:
         raise HTTPException(status_code=400, detail="User has no selected organization")
+    return await wallet_service.get_summary(user.selected_organization_id)
 
-    # If year/month not provided, use current year/month
-    now = datetime.now(timezone.utc)
-    if year is None:
-        year = now.year
-    if month is None:
-        month = now.month
-    
-    async with db_client.async_session() as session:
-        # Get organization
-        org = await session.get(OrganizationModel, user.selected_organization_id)
-        if not org:
-            raise HTTPException(status_code=404, detail="Organization not found")
 
-        # 1. Fetch all usage cycles for this org, sorted by period_start ASC
-        stmt = (
-            select(OrganizationUsageCycleModel)
-            .where(OrganizationUsageCycleModel.organization_id == org.id)
-            .order_by(OrganizationUsageCycleModel.period_start.asc())
-        )
-        result = await session.execute(stmt)
-        cycles = list(result.scalars().all())
-
-        # 2. Calculate the expected period_start for the requested year/month
-        reset_day = getattr(org, "quota_reset_day", 1) or 1
-        
-        # Determine the target date
-        if year == now.year and month == now.month:
-            target_date = now
-        else:
-            target_date = datetime(year, month, 15, 0, 0, 0, tzinfo=timezone.utc)
-            
-        if target_date.day >= reset_day:
-            try:
-                expected_period_start = target_date.replace(day=reset_day, hour=0, minute=0, second=0, microsecond=0)
-            except ValueError:
-                expected_period_start = target_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        else:
-            try:
-                expected_period_start = (target_date - relativedelta(months=1)).replace(day=reset_day, hour=0, minute=0, second=0, microsecond=0)
-            except ValueError:
-                expected_period_start = (target_date - relativedelta(months=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-        logger.info(f"get_wallet: org={org.id} year={year} month={month} reset_day={reset_day} expected_period_start={expected_period_start}")
-        logger.info(f"get_wallet: found {len(cycles)} cycles: {[str(c.period_start) for c in cycles]}")
-
-        # 3. Find the target cycle — try exact match first, then fuzzy fallback
-        target_cycle = None
-        
-        # Pass 1: exact period_start match
-        for c in cycles:
-            c_start = c.period_start
-            if c_start.tzinfo is None:
-                c_start = c_start.replace(tzinfo=timezone.utc)
-            if c_start == expected_period_start:
-                target_cycle = c
-                logger.info(f"get_wallet: matched cycle by exact period_start id={c.id}")
-                break
-        
-        # Pass 2: fallback — same calendar month as expected_period_start
-        if not target_cycle:
-            for c in cycles:
-                c_start = c.period_start
-                if c_start.tzinfo is None:
-                    c_start = c_start.replace(tzinfo=timezone.utc)
-                if c_start.year == expected_period_start.year and c_start.month == expected_period_start.month:
-                    target_cycle = c
-                    logger.info(f"get_wallet: matched cycle by year/month fallback id={c.id} period_start={c_start}")
-                    break
-
-        # Pass 3: create a new cycle if none found
-        if not target_cycle:
-            period_end = expected_period_start + relativedelta(months=1) - relativedelta(seconds=1)
-            target_cycle = OrganizationUsageCycleModel(
-                organization_id=org.id,
-                period_start=expected_period_start,
-                period_end=period_end,
-                quota_dograh_tokens=getattr(org, "quota_dograh_tokens", 0) or 0,
-            )
-            session.add(target_cycle)
-            await session.commit()
-            
-            # Refetch cycles list
-            stmt = (
-                select(OrganizationUsageCycleModel)
-                .where(OrganizationUsageCycleModel.organization_id == org.id)
-                .order_by(OrganizationUsageCycleModel.period_start.asc())
-            )
-            result = await session.execute(stmt)
-            cycles = list(result.scalars().all())
-            # Find it again by exact period_start
-            for c in cycles:
-                c_start = c.period_start
-                if c_start.tzinfo is None:
-                    c_start = c_start.replace(tzinfo=timezone.utc)
-                if c_start == expected_period_start:
-                    target_cycle = c
-                    break
-
-        # Helper to check if a cycle is within the contract period
-        def is_cycle_within_contract_period(period_start) -> bool:
-            limit = getattr(org, "monthly_minutes_limit", 0.0) or 0.0
-            if limit <= 0.0:
-                return False
-            
-            start_year = getattr(org, "monthly_minutes_start_year", None)
-            start_month = getattr(org, "monthly_minutes_start_month", None)
-            end_year = getattr(org, "monthly_minutes_end_year", None)
-            end_month = getattr(org, "monthly_minutes_end_month", None)
-            
-            ps_year = period_start.year
-            ps_month = period_start.month
-            
-            if start_year is not None and start_month is not None:
-                if (ps_year < start_year) or (ps_year == start_year and ps_month < start_month):
-                    return False
-            if end_year is not None and end_month is not None:
-                if (ps_year > end_year) or (ps_year == end_year and ps_month > end_month):
-                    return False
-            return True
-
-        # 4. Chronologically compute carry-forward and used minutes
-        carry_forward_to_next = 0.0
-        topup_balance_to_next = 0.0
-        cycle_details = {}
-
-        for c in cycles:
-            c_start = c.period_start
-            if c_start.tzinfo is None:
-                c_start = c_start.replace(tzinfo=timezone.utc)
-            is_active = is_cycle_within_contract_period(c_start)
-
-            # Always use custom_minutes_used if set, regardless of contract status
-            if c.custom_minutes_used is not None:
-                c_used = c.custom_minutes_used
-            else:
-                c_used = (c.total_duration_seconds or 0) / 60.0
-
-            c_topup = getattr(c, "topup_minutes", 0.0) or 0.0
-
-            if not is_active and carry_forward_to_next <= 0.0 and topup_balance_to_next <= 0.0 and c_topup <= 0.0:
-                cycle_details[c.id] = {
-                    "carry_forward_minutes": 0.0,
-                    "minutes_used": c_used,
-                    "minutes_remaining": 0.0,
-                    "balance": getattr(org, "balance", 0.0) or 0.0,
-                }
-                carry_forward_to_next = 0.0
-                topup_balance_to_next = 0.0
-            else:
-                c_base_limit = getattr(org, "monthly_minutes_limit", 0.0) or 0.0 if is_active else 0.0
-                c_carry_forward = carry_forward_to_next
-                c_topup_balance = topup_balance_to_next + c_topup
-                
-                c_total_allowed = c_base_limit + c_carry_forward + c_topup_balance
-                c_remaining = max(0.0, c_total_allowed - c_used)
-                
-                remaining_after_cf = max(0.0, c_used - c_carry_forward)
-                remaining_after_base = max(0.0, remaining_after_cf - c_base_limit)
-                
-                carry_forward_to_next = max(0.0, c_base_limit - remaining_after_cf)
-                topup_balance_to_next = max(0.0, c_topup_balance - remaining_after_base)
-                
-                base_balance = getattr(org, "balance", 0.0) or 0.0
-                billing_rate = getattr(org, "billing_rate", 0.0) or 0.0
-                if base_balance == 0.0 and billing_rate > 0.0:
-                    balance_val = c_remaining * billing_rate
-                else:
-                    balance_val = base_balance
-                
-                cycle_details[c.id] = {
-                    "carry_forward_minutes": c_carry_forward + c_topup_balance,
-                    "minutes_used": c_used,
-                    "minutes_remaining": c_remaining,
-                    "balance": balance_val,
-                }
-
-        logger.info(f"get_wallet: target_cycle id={target_cycle.id} period_start={target_cycle.period_start} custom_minutes_used={target_cycle.custom_minutes_used} total_duration_seconds={target_cycle.total_duration_seconds}")
-
-        details = cycle_details.get(target_cycle.id)
-        if not details:
-            base_balance = getattr(org, "balance", 0.0) or 0.0
-            billing_rate = getattr(org, "billing_rate", 0.0) or 0.0
-            is_active = is_cycle_within_contract_period(
-                target_cycle.period_start if target_cycle.period_start.tzinfo else target_cycle.period_start.replace(tzinfo=timezone.utc)
-            )
-            c_base_limit = getattr(org, "monthly_minutes_limit", 0.0) or 0.0 if is_active else 0.0
-            c_topup = getattr(target_cycle, "topup_minutes", 0.0) or 0.0
-            limit = c_base_limit + c_topup
-
-            if target_cycle.custom_minutes_used is not None:
-                minutes_used = target_cycle.custom_minutes_used
-            else:
-                minutes_used = (target_cycle.total_duration_seconds or 0) / 60.0
-            
-            if base_balance == 0.0 and billing_rate > 0.0:
-                balance_val = max(0.0, limit - minutes_used) * billing_rate
-            else:
-                balance_val = base_balance
-            details = {
-                "carry_forward_minutes": 0.0,
-                "minutes_used": minutes_used,
-                "minutes_remaining": max(0.0, limit - minutes_used),
-                "balance": balance_val,
-            }
-
-        return WalletResponse(
-            balance=details["balance"],
-            billing_rate=getattr(org, "billing_rate", 0.0) or 0.0,
-            billing_pulse=getattr(org, "billing_pulse", 60) or 60,
-            monthly_minutes_limit=getattr(org, "monthly_minutes_limit", 0.0) or 0.0,
-            carry_forward_minutes=details["carry_forward_minutes"],
-            minutes_used=details["minutes_used"],
-            minutes_remaining=details["minutes_remaining"],
-        )
+@router.get("/wallet/ledger", response_model=LedgerPageResponse)
+async def get_wallet_ledger(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    entry_type: Optional[str] = None,
+    start: Optional[datetime] = None,
+    end: Optional[datetime] = None,
+    user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT])),
+):
+    """Immutable history of every wallet movement (usage, grants, top-ups...)."""
+    if not user.selected_organization_id:
+        raise HTTPException(status_code=400, detail="User has no selected organization")
+    items, total = await wallet_service.list_ledger(
+        user.selected_organization_id,
+        limit=limit,
+        offset=offset,
+        entry_type=entry_type,
+        start=start,
+        end=end,
+    )
+    return LedgerPageResponse(items=items, total=total)

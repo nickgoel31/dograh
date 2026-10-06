@@ -33,6 +33,11 @@ from api.services.configuration.resolve import (
 from api.services.mps_service_key_client import mps_service_key_client
 from api.services.posthog_client import capture_event
 from api.services.pricing.run_usage_response import format_public_usage_info
+from api.services.reseller.context import models_hidden_var
+from api.services.reseller.redaction import (
+    cost_info_for_caller,
+    usage_info_for_caller,
+)
 from api.services.reports import generate_workflow_report_csv
 from api.services.storage import storage_fs
 from api.services.workflow.dto import ReactFlowDTO, sanitize_workflow_definition
@@ -965,7 +970,31 @@ async def update_workflow(
         # Also stamp the current global API key into the override so the override
         # remains functional if the global config later switches to a different provider.
         workflow_configurations = request.workflow_configurations
-        if workflow_configurations and workflow_configurations.get("model_overrides"):
+        tenant_models_hidden = models_hidden_var.get()
+        if tenant_models_hidden and workflow_configurations is not None:
+            # Ignore any attempt to set / echo model overrides; carry over the
+            # platform-managed ones untouched (and skip provider validation).
+            existing_workflow = await db_client.get_workflow(
+                workflow_id, organization_id=user.selected_organization_id
+            )
+            existing_draft = await db_client.get_draft_version(workflow_id)
+            existing_configs = (
+                existing_draft.workflow_configurations
+                if existing_draft
+                else (
+                    existing_workflow.released_definition.workflow_configurations
+                    if existing_workflow and existing_workflow.released_definition
+                    else None
+                )
+            ) or {}
+            workflow_configurations = {
+                k: v
+                for k, v in workflow_configurations.items()
+                if k not in ("model_overrides", "model_profile_name")
+            }
+            if existing_configs.get("model_overrides"):
+                workflow_configurations["model_overrides"] = existing_configs["model_overrides"]
+        elif workflow_configurations and workflow_configurations.get("model_overrides"):
             existing_workflow = await db_client.get_workflow(
                 workflow_id, organization_id=user.selected_organization_id
             )
@@ -1196,7 +1225,7 @@ async def get_workflow_run(
         "transcript_public_url": artifact_url(public_access_token, "transcript"),
         "recording_public_url": artifact_url(public_access_token, "recording"),
         "public_access_token": public_access_token,
-        "cost_info": {
+        "cost_info": cost_info_for_caller({
             "dograh_token_usage": (
                 run.cost_info.get("dograh_token_usage")
                 if run.cost_info and "dograh_token_usage" in run.cost_info
@@ -1211,10 +1240,10 @@ async def get_workflow_run(
             else None,
             "total_cost_usd": run.cost_info.get("total_cost_usd"),
             "cost_breakdown": run.cost_info.get("cost_breakdown"),
-        }
+        })
         if run.cost_info
         else None,
-        "usage_info": format_public_usage_info(run.usage_info),
+        "usage_info": usage_info_for_caller(format_public_usage_info(run.usage_info)),
         "created_at": run.created_at,
         "definition_id": run.definition_id,
         "initial_context": run.initial_context,

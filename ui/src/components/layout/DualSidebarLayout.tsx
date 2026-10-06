@@ -7,7 +7,6 @@ import Link from "next/link";
 import { PanelLeft } from "lucide-react";
 import { PrimarySidebar } from "./PrimarySidebar";
 import { SecondarySidebar } from "./SecondarySidebar";
-import { ThemeProvider } from "@/context/ThemeContext";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useCurrentUserRole } from "@/hooks/useCurrentUserRole";
@@ -123,10 +122,8 @@ const DualSidebarInner: React.FC<DualSidebarLayoutProps> = ({ children }) => {
 
 export const DualSidebarLayout: React.FC<DualSidebarLayoutProps> = ({ children }) => {
   return (
-    <ThemeProvider>
-      <SidebarProvider defaultOpen={true}>
+    <SidebarProvider defaultOpen={true}>
         <DualSidebarInner>{children}</DualSidebarInner>
-      </SidebarProvider>
-    </ThemeProvider>
+    </SidebarProvider>
   );
 };

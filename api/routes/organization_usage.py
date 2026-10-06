@@ -14,6 +14,7 @@ from api.enums import UserRole
 from api.services.auth.depends import get_user, require_role
 from api.services.mps_service_key_client import mps_service_key_client
 from api.services.reports import generate_usage_runs_report_csv
+from api.services.reseller.redaction import forbid_if_hidden, hidden
 from api.utils.artifacts import artifact_url
 
 router = APIRouter(prefix="/organizations")
@@ -99,6 +100,7 @@ class DailyUsageBreakdownResponse(BaseModel):
 @router.get("/usage/current-period", response_model=CurrentUsageResponse)
 async def get_current_period_usage(user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT]))):
     """Get current billing period usage for the user's organization."""
+    forbid_if_hidden()  # token quotas reveal what the platform pays for model usage
     if not user.selected_organization_id:
         raise HTTPException(status_code=400, detail="No organization selected")
 
@@ -111,6 +113,7 @@ async def get_current_period_usage(user: UserModel = Depends(require_role([UserR
 
 @router.get("/usage/mps-credits", response_model=MPSCreditsResponse)
 async def get_mps_credits(user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT]))):
+    forbid_if_hidden()
     """Get aggregated usage and quota from MPS.
 
     OSS users: queries by provider_id (created_by).
@@ -234,6 +237,11 @@ async def get_usage_history(
                 public_access_token, "transcript"
             )
             run["recording_public_url"] = artifact_url(public_access_token, "recording")
+            if hidden():
+                run["dograh_token_usage"] = 0
+                run["charge_usd"] = None
+        if hidden():
+            total_tokens = 0
 
         return {
             "runs": runs,
@@ -298,6 +306,7 @@ async def get_daily_usage_breakdown(
     user: UserModel = Depends(require_role([UserRole.ADMIN, UserRole.CLIENT])),
 ):
     """Get daily usage breakdown for the last N days. Only available for organizations with pricing."""
+    forbid_if_hidden()
     if not user.selected_organization_id:
         raise HTTPException(status_code=400, detail="No organization selected")
 

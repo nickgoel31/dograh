@@ -21,6 +21,7 @@ from api.services.configuration.masking import check_for_masked_keys, mask_user_
 from api.services.configuration.merge import merge_user_configurations
 from api.services.configuration.registry import REGISTRY, ServiceType
 from api.services.mps_service_key_client import mps_service_key_client
+from api.services.reseller.redaction import forbid_if_hidden, hidden
 
 router = APIRouter(prefix="/user")
 
@@ -32,6 +33,9 @@ class AuthUserResponse(TypedDict, total=False):
     email: Optional[str]
     selected_organization_id: Optional[int]
     selected_organization_name: Optional[str]
+    is_reseller: bool
+    models_hidden: bool
+    has_parent_org: bool
 
 
 class DefaultConfigurationsResponse(TypedDict):
@@ -76,10 +80,14 @@ async def get_auth_user(
     user: UserModel = Depends(get_user),
 ) -> AuthUserResponse:
     org_name = None
+    is_reseller = False
+    has_parent_org = False
     if user.selected_organization_id:
         org = await db_client.get_organization_by_id(user.selected_organization_id)
         if org:
             org_name = org.name
+            is_reseller = bool(org.is_reseller)
+            has_parent_org = org.parent_org_id is not None
 
     return {
         "id": user.id,
@@ -88,6 +96,9 @@ async def get_auth_user(
         "email": user.email,
         "selected_organization_id": user.selected_organization_id,
         "selected_organization_name": org_name,
+        "is_reseller": is_reseller,
+        "models_hidden": hidden(),
+        "has_parent_org": has_parent_org,
     }
 
 
@@ -103,13 +114,41 @@ class UserConfigurationRequestResponseSchema(BaseModel):
     timezone: str | None = None
     organization_pricing: dict[str, Union[float, str, bool]] | None = None
     whatsapp_enabled: bool | None = None
+    # Set for reseller tenants: models are chosen by the platform, not editable here.
+    models_managed: bool | None = None
+    model_profile_name: str | None = None
+
+
+async def _managed_models_view(user: UserModel, base: dict | None = None) -> dict:
+    """What a tenant whose models are platform-managed is allowed to see."""
+    org = await db_client.get_organization_by_id(user.selected_organization_id)
+    profile_name = None
+    if org and org.model_profile_id:
+        profile = await db_client.get_model_profile(org.model_profile_id)
+        profile_name = profile.display_name if profile and profile.is_active else None
+    view = {
+        k: v
+        for k, v in (base or {}).items()
+        if k in ("test_phone_number", "timezone", "whatsapp_enabled")
+    }
+    if org:
+        view["whatsapp_enabled"] = getattr(org, "whatsapp_enabled", False)
+    view["models_managed"] = True
+    view["model_profile_name"] = profile_name
+    return view
 
 
 @router.get("/configurations/user")
 async def get_user_configurations(
     user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> UserConfigurationRequestResponseSchema:
-    user_configurations = await db_client.get_user_configurations(user.id)
+    if hidden():
+        stored = await db_client.get_user_configurations(user.id, apply_profile=False)
+        return await _managed_models_view(user, mask_user_config(stored))
+
+    user_configurations = await db_client.get_user_configurations(
+        user.id, apply_profile=False
+    )
     masked_config = mask_user_config(user_configurations)
 
     # Add organization pricing info if available
@@ -133,12 +172,25 @@ async def update_user_configurations(
     request: UserConfigurationRequestResponseSchema,
     user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> UserConfigurationRequestResponseSchema:
-    existing_config = await db_client.get_user_configurations(user.id)
+    existing_config = await db_client.get_user_configurations(
+        user.id, apply_profile=False
+    )
 
     incoming_dict = request.model_dump(exclude_none=True)
 
     # Remove organization_pricing from incoming dict as it's read-only
     incoming_dict.pop("organization_pricing", None)
+    incoming_dict.pop("models_managed", None)
+    incoming_dict.pop("model_profile_name", None)
+
+    if hidden():
+        # Models are platform-managed: tenants may only change plain settings.
+        allowed = {
+            k: v for k, v in incoming_dict.items() if k in ("timezone", "test_phone_number")
+        }
+        merged = merge_user_configurations(existing_config, allowed)
+        saved = await db_client.update_user_configuration(user.id, merged)
+        return await _managed_models_view(user, mask_user_config(saved))
 
     # Merge via helper
     try:
@@ -186,6 +238,8 @@ async def validate_user_configurations(
     validity_ttl_seconds: int = Query(default=60, ge=0, le=86400),
     user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> APIKeyStatusResponse:
+    if hidden():
+        return {"status": []}  # nothing for a tenant to fix: the platform owns the keys
     configurations = await db_client.get_user_configurations(user.id)
 
     if (
@@ -355,6 +409,7 @@ async def get_voices(
     user: UserModel = Depends(require_role([UserRole.ADMIN])),
 ) -> VoicesResponse:
     """Get available voices for a TTS provider."""
+    forbid_if_hidden()
     try:
         result = await mps_service_key_client.get_voices(
             provider=provider,

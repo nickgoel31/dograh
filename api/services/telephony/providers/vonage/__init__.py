@@ -22,6 +22,7 @@ def _config_loader(value: Dict[str, Any]) -> Dict[str, Any]:
         "api_key": value.get("api_key"),
         "api_secret": value.get("api_secret"),
         "from_numbers": value.get("from_numbers", []),
+        "signature_secret": value.get("signature_secret"),
     }
 
 
@@ -48,6 +49,14 @@ _UI_METADATA = ProviderUIMetadata(
             label="API Secret",
             type="password",
             sensitive=True,
+        ),
+        ProviderUIField(
+            name="signature_secret",
+            label="Signature Secret",
+            type="password",
+            sensitive=True,
+            required=False,
+            description="Used to verify that webhooks really come from Vonage",
         ),
         ProviderUIField(
             name="from_numbers",
