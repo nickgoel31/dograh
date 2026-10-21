@@ -1,11 +1,12 @@
 """Database client for managing knowledge base documents and chunks."""
 
 import hashlib
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
 
 from api.db.base_client import BaseDBClient
@@ -28,6 +29,7 @@ class KnowledgeBaseClient(BaseDBClient):
         docling_metadata: Optional[dict] = None,
         document_uuid: Optional[str] = None,
         retrieval_mode: str = "chunked",
+        refresh_interval_hours: Optional[int] = None,
     ) -> KnowledgeBaseDocumentModel:
         """Create a new knowledge base document record.
 
@@ -60,6 +62,7 @@ class KnowledgeBaseClient(BaseDBClient):
                 processing_status="pending",
                 total_chunks=0,
                 retrieval_mode=retrieval_mode,
+                refresh_interval_hours=refresh_interval_hours,
             )
 
             # Use provided UUID or let the model generate one
@@ -475,6 +478,110 @@ class KnowledgeBaseClient(BaseDBClient):
             )
             result = await session.execute(query)
             return list(result.scalars().all())
+
+    async def get_chunk_ids_for_document(self, document_id: int) -> List[int]:
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(KnowledgeBaseChunkModel.id).where(
+                    KnowledgeBaseChunkModel.document_id == document_id
+                )
+            )
+            return [row[0] for row in result.all()]
+
+    async def delete_chunks_by_ids(self, chunk_ids: List[int]) -> None:
+        if not chunk_ids:
+            return
+        async with self.async_session() as session:
+            await session.execute(
+                delete(KnowledgeBaseChunkModel).where(
+                    KnowledgeBaseChunkModel.id.in_(chunk_ids)
+                )
+            )
+            await session.commit()
+
+    async def set_document_refresh_settings(
+        self, document_uuid: str, organization_id: int, refresh_interval_hours: Optional[int]
+    ) -> Optional[KnowledgeBaseDocumentModel]:
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(KnowledgeBaseDocumentModel).where(
+                    KnowledgeBaseDocumentModel.document_uuid == document_uuid,
+                    KnowledgeBaseDocumentModel.organization_id == organization_id,
+                    KnowledgeBaseDocumentModel.is_active.is_(True),
+                )
+            )
+            document = result.scalar_one_or_none()
+            if document is None:
+                return None
+            document.refresh_interval_hours = refresh_interval_hours
+            await session.commit()
+            await session.refresh(document)
+            return document
+
+    async def record_document_refresh(
+        self,
+        document_id: int,
+        *,
+        success: bool,
+        error: Optional[str] = None,
+        etag: Optional[str] = None,
+        last_modified: Optional[str] = None,
+    ) -> None:
+        """Record the outcome of a (re)fetch. A failure keeps the old content."""
+        now = datetime.now(timezone.utc)
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(KnowledgeBaseDocumentModel).where(
+                    KnowledgeBaseDocumentModel.id == document_id
+                )
+            )
+            document = result.scalar_one_or_none()
+            if document is None:
+                return
+            document.last_refresh_attempt_at = now
+            if success:
+                document.last_refreshed_at = now
+                document.last_refresh_error = None
+                document.processing_error = None
+                if etag is not None:
+                    document.source_etag = etag
+                if last_modified is not None:
+                    document.source_last_modified = last_modified
+            else:
+                document.last_refresh_error = (error or "Refresh failed")[:2000]
+            await session.commit()
+
+    async def mark_refresh_attempt(self, document_id: int) -> None:
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(KnowledgeBaseDocumentModel).where(
+                    KnowledgeBaseDocumentModel.id == document_id
+                )
+            )
+            document = result.scalar_one_or_none()
+            if document is not None:
+                document.last_refresh_attempt_at = datetime.now(timezone.utc)
+                await session.commit()
+
+    async def get_documents_due_for_refresh(self, limit: int = 50) -> List[KnowledgeBaseDocumentModel]:
+        """URL documents whose refresh interval has elapsed."""
+        now = datetime.now(timezone.utc)
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(KnowledgeBaseDocumentModel).where(
+                    KnowledgeBaseDocumentModel.is_active.is_(True),
+                    KnowledgeBaseDocumentModel.source_url.is_not(None),
+                    KnowledgeBaseDocumentModel.refresh_interval_hours.is_not(None),
+                    KnowledgeBaseDocumentModel.processing_status.in_(["completed", "failed"]),
+                )
+            )
+            due = []
+            for doc in result.scalars().all():
+                last = doc.last_refresh_attempt_at or doc.last_refreshed_at or doc.created_at
+                if last is None or now - last >= timedelta(hours=doc.refresh_interval_hours):
+                    due.append(doc)
+            due.sort(key=lambda d: d.last_refresh_attempt_at or d.created_at or now)
+            return due[:limit]
 
     async def delete_document(
         self,

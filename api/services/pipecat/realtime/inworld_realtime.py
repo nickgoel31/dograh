@@ -14,9 +14,16 @@ Adds:
   transcription via the ``completed`` event is final by construction.
 - **STT language, vocabulary hints, turn-detection mode, and eagerness**
   via Inworld's ``providerData.stt`` and ``audio.input.transcription``.
+- **Knowledge-base search feedback**: when the model calls the knowledge-base
+  tool without having said anything first, the service speaks a short holding
+  phrase ("one moment, let me check that"). Once the search result is
+  delivered the final answer is generated and spoken automatically - and a
+  response is never requested while another one is still being generated, so
+  the answer can no longer be dropped when the search finishes quickly.
 """
 
 import json
+import time
 from typing import Any, Literal
 
 from loguru import logger
@@ -66,6 +73,20 @@ def _dograh_parse_server_event(data: str):
 events.parse_server_event = _dograh_parse_server_event
 
 
+# Tool names that trigger the "let me check" holding phrase.
+KNOWLEDGE_BASE_TOOL_NAMES = frozenset({"retrieve_from_knowledge_base"})
+
+KB_FILLER_INSTRUCTIONS = (
+    "You are about to look something up for the caller. Say ONE very short, natural "
+    "holding phrase (at most 8 words) in the language the caller is using, telling them "
+    "you are checking - for example 'One moment, let me check that for you.' Vary the "
+    "wording. Do NOT answer the question yet and do NOT call any tool."
+)
+
+# A response that never reports completion must not block the next one forever.
+_STALE_RESPONSE_SECONDS = 10.0
+
+
 class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
     """Inworld Realtime with Dograh engine integration quirks. See module docstring."""
 
@@ -113,6 +134,8 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
         tts_speed: float = 1.5,
         delivery_mode: Literal["STABLE", "CREATIVE"] = "STABLE",
         conversational: bool = False,
+        kb_search_filler: bool = True,
+        kb_search_filler_instructions: str | None = None,
         **kwargs,
     ):
         """Initialize DograhInworldRealtimeLLMService.
@@ -135,6 +158,10 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
                 For ``inworld-tts-2`` this maps to a steering tag injected
                 into the system instructions; ``audio.output.speed`` is also
                 set for non-TTS-2 model fallback.
+            kb_search_filler: Speak a short holding phrase when the model starts
+                a knowledge-base lookup without having said anything first.
+            kb_search_filler_instructions: Override the instruction used to
+                generate that holding phrase.
             **kwargs: Remaining keyword arguments forwarded to
                 :class:`InworldRealtimeLLMService`, including ``api_key``,
                 ``llm_model``, ``voice``, ``tts_model``, ``stt_model``.
@@ -238,6 +265,15 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
         self._handled_initial_context: bool = False
         self._bot_is_speaking: bool = False
         self._deferred_function_calls: list[FunctionCallFromLLM] = []
+
+        # Response lifecycle + knowledge-base feedback state
+        self._kb_search_filler = kb_search_filler
+        self._kb_filler_instructions = kb_search_filler_instructions or KB_FILLER_INSTRUCTIONS
+        self._response_active: bool = False
+        self._response_active_since: float = 0.0
+        self._audio_in_response: bool = False
+        self._pending_create_response: bool = False
+        self._pending_kb_filler: bool = False
 
 
     # ------------------------------------------------------------------
@@ -437,8 +473,74 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
             return "\n".join(parts) if parts else None
         return None
 
+    # ------------------------------------------------------------------
+    # Response lifecycle: never create a response while one is in flight
+    # ------------------------------------------------------------------
+
+    def _mark_response_active(self) -> None:
+        self._response_active = True
+        self._response_active_since = time.monotonic()
+
+    def _response_in_flight(self) -> bool:
+        if not self._response_active:
+            return False
+        if time.monotonic() - self._response_active_since > _STALE_RESPONSE_SECONDS:
+            logger.warning(f"{self}: response never completed; treating it as finished")
+            self._response_active = False
+            return False
+        return True
+
+    async def _create_response(self):
+        """Create a response, queueing it if another one is still being generated.
+
+        The knowledge-base tool result usually arrives while the response that
+        issued the call (or the holding phrase) is still finishing. Creating a
+        second response then is rejected by the server and the answer is lost,
+        so it is queued and sent from ``response.done``.
+        """
+        if self._api_session_ready and self._response_in_flight():
+            logger.debug(f"{self}: response in flight, queueing create_response")
+            self._pending_create_response = True
+            return
+        if self._api_session_ready:
+            self._mark_response_active()
+        await super()._create_response()
+
+    async def _speak_kb_search_filler(self) -> None:
+        """Ask the model to say a short 'checking' phrase (no answer, no tools)."""
+        if not self._api_session_ready or self._disconnecting:
+            return
+        logger.info(f"{self}: knowledge-base search started silently, speaking holding phrase")
+        self._mark_response_active()
+        await self._ws_send(
+            {
+                "type": "response.create",
+                "response": {
+                    "modalities": ["audio", "text"],
+                    "instructions": self._kb_filler_instructions,
+                },
+            }
+        )
+
+    async def _after_response_done(self) -> None:
+        """Run whatever was waiting for the finished response."""
+        if self._pending_create_response:
+            # The answer (tool result) is already available: skip the holding phrase.
+            self._pending_create_response = False
+            self._pending_kb_filler = False
+            await self._create_response()
+            return
+        if self._pending_kb_filler:
+            self._pending_kb_filler = False
+            await self._speak_kb_search_filler()
+
+    async def _handle_evt_audio_delta(self, evt):
+        self._audio_in_response = True
+        await super()._handle_evt_audio_delta(evt)
+
     async def _send_manual_response_create(self):
         """Trigger inference after manually appending conversation items."""
+        self._mark_response_active()
         await self.push_frame(LLMFullResponseStartFrame())
         await self.start_processing_metrics()
         await self.start_ttfb_metrics()
@@ -463,6 +565,12 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
         )
         await self.run_function_calls(function_calls)
 
+    async def _handle_evt_conversation_item_added(self, evt):
+        if getattr(evt.item, "role", None) == "assistant" or evt.item.type == "function_call":
+            if not self._response_active:
+                self._mark_response_active()
+        await super()._handle_evt_conversation_item_added(evt)
+
     async def _handle_evt_function_call_arguments_done(self, evt):
         """Process or defer tool calls until the bot finishes speaking."""
         try:
@@ -480,6 +588,15 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
                         arguments=args,
                     )
                 ]
+
+                if (
+                    self._kb_search_filler
+                    and function_call_item.name in KNOWLEDGE_BASE_TOOL_NAMES
+                    and not self._audio_in_response
+                    and not self._bot_is_speaking
+                ):
+                    # The model went straight to the lookup without saying anything.
+                    self._pending_kb_filler = True
 
                 if self._bot_is_speaking:
                     self._deferred_function_calls.extend(function_calls)
@@ -528,9 +645,17 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
     # ------------------------------------------------------------------
 
     async def _handle_evt_response_done(self, evt):
-        """Override to extract TTS character counts, audio seconds, and STT audio seconds."""
-        await super()._handle_evt_response_done(evt)
+        """Track the response lifecycle, then extract usage and run queued work."""
+        self._response_active = False
+        self._audio_in_response = False
+        try:
+            await super()._handle_evt_response_done(evt)
+            await self._extract_response_usage(evt)
+        finally:
+            await self._after_response_done()
 
+    async def _extract_response_usage(self, evt):
+        """Extract TTS character counts, audio seconds, and STT audio seconds."""
         try:
             raw_usage = getattr(evt, "_raw_usage", None)
             if not raw_usage or not isinstance(raw_usage, dict):

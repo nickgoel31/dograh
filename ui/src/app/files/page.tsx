@@ -1,20 +1,21 @@
 "use client";
 
-import { ExternalLink, Upload, X } from "lucide-react";
+import { ExternalLink, Link2, Upload, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { ClientAccessGuard } from "@/components/layout/ClientAccessGuard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth";
 
-import { ClientAccessGuard } from "@/components/layout/ClientAccessGuard";
-
 import DocumentList from "./DocumentList";
 import DocumentUpload from "./DocumentUpload";
+import UrlSourceForm from "./UrlSourceForm";
 
 export default function FilesPage() {
     const { user, redirectToLogin, loading } = useAuth();
     const [refreshKey, setRefreshKey] = useState(0);
     const [isUploadOpen, setIsUploadOpen] = useState(false);
+    const [isUrlOpen, setIsUrlOpen] = useState(false);
 
     // Redirect if not authenticated
     useEffect(() => {
@@ -62,13 +63,22 @@ export default function FilesPage() {
                     </p>
                 </div>
 
-                <button
-                    onClick={() => setIsUploadOpen(true)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cd] text-white dark:text-[#082117] text-xs font-bold rounded-full shadow-xs transition-all active:scale-[0.98] cursor-pointer"
-                >
-                    <Upload className="w-3.5 h-3.5 stroke-[2]" />
-                    <span>Upload Document</span>
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setIsUrlOpen(true)}
+                        className="flex items-center gap-1.5 px-4 py-2 border border-[#282b26] text-white text-xs font-bold rounded-full transition-all hover:bg-white/5 active:scale-[0.98] cursor-pointer"
+                    >
+                        <Link2 className="w-3.5 h-3.5 stroke-[2]" />
+                        <span>Add from URL</span>
+                    </button>
+                    <button
+                        onClick={() => setIsUploadOpen(true)}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-black dark:bg-[#bcf0da] hover:bg-gray-800 dark:hover:bg-[#a5e9cd] text-white dark:text-[#082117] text-xs font-bold rounded-full shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+                    >
+                        <Upload className="w-3.5 h-3.5 stroke-[2]" />
+                        <span>Upload Document</span>
+                    </button>
+                </div>
             </header>
 
             {/* Main Content Workspace Container */}
@@ -98,6 +108,35 @@ export default function FilesPage() {
                     <DocumentList refreshTrigger={refreshKey} onOpenUpload={() => setIsUploadOpen(true)} />
                 </div>
             </div>
+
+            {/* Add URL source modal */}
+            {isUrlOpen && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                    <div
+                        className="border border-gray-200 dark:border-[#282b26] rounded-2xl p-6 w-full max-w-lg shadow-2xl space-y-5 text-gray-900 dark:text-white"
+                        style={{ backgroundColor: '#1C1E1A' }}
+                    >
+                        <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-[#282b26]">
+                            <div className="space-y-0.5">
+                                <h3 className="text-base font-bold text-gray-900 dark:text-white">Add from URL</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    A live source that your agents can always read the latest version of
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setIsUrlOpen(false)}
+                                className="p-1 text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg transition-colors cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <UrlSourceForm
+                            onAdded={() => { setRefreshKey(prev => prev + 1); setIsUrlOpen(false); }}
+                            onClose={() => setIsUrlOpen(false)}
+                        />
+                    </div>
+                </div>
+            )}
 
             {/* Upload Document Modal */}
             {isUploadOpen && (

@@ -1326,6 +1326,14 @@ class KnowledgeBaseDocumentModel(Base):
 
     # Processing metadata
     source_url = Column(String, nullable=True)  # If document was fetched from URL
+    # URL sources are living documents: re-fetched on this schedule (None = manual only)
+    refresh_interval_hours = Column(Integer, nullable=True)
+    last_refreshed_at = Column(DateTime(timezone=True), nullable=True)
+    last_refresh_attempt_at = Column(DateTime(timezone=True), nullable=True)
+    last_refresh_error = Column(Text, nullable=True)
+    # Validators from the last fetch, so unchanged pages answer 304 and cost nothing
+    source_etag = Column(String, nullable=True)
+    source_last_modified = Column(String, nullable=True)
     total_chunks = Column(Integer, nullable=False, default=0)
     processing_status = Column(
         Enum(

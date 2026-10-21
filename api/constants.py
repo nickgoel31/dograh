@@ -148,4 +148,10 @@ FORCE_TURN_RELAY = os.getenv("FORCE_TURN_RELAY", "false").lower() == "true"
 OSS_JWT_SECRET = os.getenv("OSS_JWT_SECRET", "change-me-in-production")
 OSS_JWT_EXPIRY_HOURS = int(os.getenv("OSS_JWT_EXPIRY_HOURS", "720"))  # 30 days
 
+# Knowledge-base URL sources may point at private addresses only when explicitly
+# enabled (e.g. an internal wiki on the same VPC). Off by default: SSRF protection.
+KB_URL_ALLOW_PRIVATE_HOSTS = (
+    os.getenv("KB_URL_ALLOW_PRIVATE_HOSTS", "false").lower() == "true"
+)
+
 TUNER_BASE_URL = os.getenv("TUNER_BASE_URL", "https://api.usetuner.ai")

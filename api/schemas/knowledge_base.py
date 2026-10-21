@@ -35,6 +35,26 @@ class ProcessDocumentRequestSchema(BaseModel):
     )
 
 
+ALLOWED_REFRESH_INTERVAL_HOURS = (1, 6, 12, 24, 168)
+
+
+class ProcessUrlRequestSchema(BaseModel):
+    """Add a web page / online document as a knowledge base source."""
+
+    url: str = Field(..., max_length=2048, description="http(s) address of the page or file")
+    retrieval_mode: str = Field(default="chunked", description="'chunked' or 'full_document'")
+    refresh_interval_hours: Optional[int] = Field(
+        default=24,
+        description="Re-fetch the source this often (1, 6, 12, 24 or 168 hours). Null = only when refreshed manually.",
+    )
+
+
+class RefreshSettingsRequestSchema(BaseModel):
+    refresh_interval_hours: Optional[int] = Field(
+        default=None, description="1, 6, 12, 24, 168 hours, or null to stop automatic refresh"
+    )
+
+
 class DocumentResponseSchema(BaseModel):
     """Response schema for document metadata."""
 
@@ -51,6 +71,9 @@ class DocumentResponseSchema(BaseModel):
     custom_metadata: Dict[str, Any]
     docling_metadata: Dict[str, Any]
     source_url: Optional[str] = None
+    refresh_interval_hours: Optional[int] = None
+    last_refreshed_at: Optional[datetime] = None
+    last_refresh_error: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     organization_id: int

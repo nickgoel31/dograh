@@ -2,6 +2,7 @@
 
 import uuid
 from typing import Annotated, Optional
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
@@ -15,7 +16,10 @@ from api.schemas.knowledge_base import (
     DocumentResponseSchema,
     DocumentUploadRequestSchema,
     DocumentUploadResponseSchema,
+    ALLOWED_REFRESH_INTERVAL_HOURS,
     ProcessDocumentRequestSchema,
+    ProcessUrlRequestSchema,
+    RefreshSettingsRequestSchema,
 )
 from api.sdk_expose import sdk_expose
 from api.services.auth.depends import get_user
@@ -23,8 +27,42 @@ from api.services.posthog_client import capture_event
 from api.services.storage import storage_fs
 from api.tasks.arq import enqueue_job
 from api.tasks.function_names import FunctionNames
+from api.utils.safe_fetch import UnsafeURLError, validate_public_url
 
 router = APIRouter(prefix="/knowledge-base", tags=["knowledge-base"])
+
+
+def _to_schema(doc) -> DocumentResponseSchema:
+    return DocumentResponseSchema(
+        id=doc.id,
+        document_uuid=doc.document_uuid,
+        filename=doc.filename,
+        file_size_bytes=doc.file_size_bytes or 0,
+        file_hash=doc.file_hash or "",
+        mime_type=doc.mime_type or "application/octet-stream",
+        processing_status=doc.processing_status,
+        processing_error=doc.processing_error,
+        total_chunks=doc.total_chunks,
+        retrieval_mode=doc.retrieval_mode,
+        custom_metadata=doc.custom_metadata,
+        docling_metadata=doc.docling_metadata,
+        source_url=doc.source_url,
+        refresh_interval_hours=doc.refresh_interval_hours,
+        last_refreshed_at=doc.last_refreshed_at,
+        last_refresh_error=doc.last_refresh_error,
+        created_at=doc.created_at,
+        updated_at=doc.updated_at,
+        organization_id=doc.organization_id,
+        created_by=doc.created_by,
+        is_active=doc.is_active,
+    )
+
+
+def _url_filename(url: str) -> str:
+    parts = urlsplit(url)
+    path = parts.path.strip("/")
+    name = f"{parts.hostname}/{path}" if path else parts.hostname or url
+    return name[:480]
 
 
 @router.post(
@@ -188,6 +226,113 @@ async def process_document(
         ) from exc
 
 
+def _check_interval(hours: Optional[int]) -> None:
+    if hours is not None and hours not in ALLOWED_REFRESH_INTERVAL_HOURS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"refresh_interval_hours must be one of {list(ALLOWED_REFRESH_INTERVAL_HOURS)} or null",
+        )
+
+
+@router.post(
+    "/process-url",
+    response_model=DocumentResponseSchema,
+    summary="Add a URL as a knowledge base source",
+)
+async def process_url(request: ProcessUrlRequestSchema, user=Depends(get_user)):
+    """Add a web page or online document that stays up to date.
+
+    The page is fetched by the server (only public addresses are allowed),
+    processed like an uploaded file, and re-fetched on the chosen schedule.
+    Re-embedding only happens when the content actually changed.
+    """
+    _check_interval(request.refresh_interval_hours)
+    if request.retrieval_mode not in ("chunked", "full_document"):
+        raise HTTPException(status_code=400, detail="Invalid retrieval_mode")
+    try:
+        url = await validate_public_url(request.url)
+    except UnsafeURLError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    document = await db_client.create_document(
+        organization_id=user.selected_organization_id,
+        created_by=user.id,
+        filename=_url_filename(url),
+        file_size_bytes=0,
+        file_hash="",
+        mime_type="text/html",
+        source_url=url,
+        custom_metadata={"source": "url"},
+        retrieval_mode=request.retrieval_mode,
+        refresh_interval_hours=request.refresh_interval_hours,
+    )
+    await enqueue_job(
+        FunctionNames.PROCESS_KNOWLEDGE_BASE_URL,
+        document.id,
+        user.selected_organization_id,
+        str(user.provider_id),
+        128,
+    )
+    capture_event(
+        distinct_id=str(user.provider_id),
+        event=PostHogEvent.KNOWLEDGE_BASE_CREATED,
+        properties={
+            "document_id": document.id,
+            "source": "url",
+            "retrieval_mode": request.retrieval_mode,
+            "organization_id": user.selected_organization_id,
+        },
+    )
+    return _to_schema(document)
+
+
+@router.post(
+    "/documents/{document_uuid}/refresh",
+    summary="Re-fetch a URL source now",
+)
+async def refresh_document(document_uuid: str, user=Depends(get_user)):
+    document = await db_client.get_document_by_uuid(
+        document_uuid=document_uuid, organization_id=user.selected_organization_id
+    )
+    if not document or not document.is_active:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not document.source_url:
+        raise HTTPException(status_code=400, detail="Only URL sources can be refreshed")
+    if document.processing_status in ("pending", "processing"):
+        raise HTTPException(status_code=409, detail="This source is still being processed")
+
+    await db_client.mark_refresh_attempt(document.id)
+    await enqueue_job(
+        FunctionNames.REFRESH_KNOWLEDGE_BASE_URL,
+        document.id,
+        str(user.provider_id),
+        128,
+    )
+    return {"detail": "Refresh started"}
+
+
+@router.patch(
+    "/documents/{document_uuid}/refresh-settings",
+    response_model=DocumentResponseSchema,
+    summary="Change how often a URL source is refreshed",
+)
+async def update_refresh_settings(
+    document_uuid: str, request: RefreshSettingsRequestSchema, user=Depends(get_user)
+):
+    _check_interval(request.refresh_interval_hours)
+    existing = await db_client.get_document_by_uuid(
+        document_uuid=document_uuid, organization_id=user.selected_organization_id
+    )
+    if not existing or not existing.is_active:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not existing.source_url:
+        raise HTTPException(status_code=400, detail="Only URL sources can be refreshed")
+    document = await db_client.set_document_refresh_settings(
+        document_uuid, user.selected_organization_id, request.refresh_interval_hours
+    )
+    return _to_schema(document)
+
+
 @router.get(
     "/documents",
     response_model=DocumentListResponseSchema,
@@ -221,29 +366,7 @@ async def list_documents(
         )
 
         # Convert to response schema
-        document_list = [
-            DocumentResponseSchema(
-                id=doc.id,
-                document_uuid=doc.document_uuid,
-                filename=doc.filename,
-                file_size_bytes=doc.file_size_bytes,
-                file_hash=doc.file_hash,
-                mime_type=doc.mime_type,
-                processing_status=doc.processing_status,
-                processing_error=doc.processing_error,
-                total_chunks=doc.total_chunks,
-                retrieval_mode=doc.retrieval_mode,
-                custom_metadata=doc.custom_metadata,
-                docling_metadata=doc.docling_metadata,
-                source_url=doc.source_url,
-                created_at=doc.created_at,
-                updated_at=doc.updated_at,
-                organization_id=doc.organization_id,
-                created_by=doc.created_by,
-                is_active=doc.is_active,
-            )
-            for doc in documents
-        ]
+        document_list = [_to_schema(doc) for doc in documents]
 
         return DocumentListResponseSchema(
             documents=document_list,
@@ -281,26 +404,7 @@ async def get_document(
         if not document:
             raise HTTPException(status_code=404, detail="Document not found")
 
-        return DocumentResponseSchema(
-            id=document.id,
-            document_uuid=document.document_uuid,
-            filename=document.filename,
-            file_size_bytes=document.file_size_bytes,
-            file_hash=document.file_hash,
-            mime_type=document.mime_type,
-            processing_status=document.processing_status,
-            processing_error=document.processing_error,
-            total_chunks=document.total_chunks,
-            retrieval_mode=document.retrieval_mode,
-            custom_metadata=document.custom_metadata,
-            docling_metadata=document.docling_metadata,
-            source_url=document.source_url,
-            created_at=document.created_at,
-            updated_at=document.updated_at,
-            organization_id=document.organization_id,
-            created_by=document.created_by,
-            is_active=document.is_active,
-        )
+        return _to_schema(document)
 
     except HTTPException:
         raise

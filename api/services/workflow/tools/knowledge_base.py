@@ -344,6 +344,13 @@ def get_knowledge_base_tool(
             "that might be stored in the knowledge base documents."
         )
 
+    # Voice agents go quiet while a lookup runs. Ask the model to cover the gap.
+    description += (
+        " Before calling it, briefly tell the caller you are checking "
+        "(for example 'One moment, let me check that for you') in their language, "
+        "then, once you have the result, answer the question."
+    )
+
     return {
         "type": "function",
         "function": {

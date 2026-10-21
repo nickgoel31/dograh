@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, FileText, RotateCw, Search, Trash2 } from 'lucide-react';
+import { CheckCircle2, FileText, Globe, RefreshCw, RotateCw, Search, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -8,8 +8,8 @@ import {
   deleteDocumentApiV1KnowledgeBaseDocumentsDocumentUuidDelete,
   listDocumentsApiV1KnowledgeBaseDocumentsGet,
 } from '@/client/sdk.gen';
-import type { DocumentResponseSchema } from '@/client/types.gen';
 import { Skeleton } from '@/components/ui/skeleton';
+import { type KnowledgeDocument, REFRESH_OPTIONS, refreshUrlSource, setRefreshInterval } from '@/lib/knowledgeBaseUrl';
 import logger from '@/lib/logger';
 
 interface DocumentListProps {
@@ -18,7 +18,7 @@ interface DocumentListProps {
 }
 
 export default function DocumentList({ refreshTrigger, onOpenUpload }: DocumentListProps) {
-  const [documents, setDocuments] = useState<DocumentResponseSchema[]>([]);
+  const [documents, setDocuments] = useState<KnowledgeDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +39,7 @@ export default function DocumentList({ refreshTrigger, onOpenUpload }: DocumentL
         throw new Error('Failed to fetch documents');
       }
 
-      setDocuments(response.data.documents);
+      setDocuments(response.data.documents as KnowledgeDocument[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch documents');
       logger.error('Error fetching documents:', err);
@@ -86,6 +86,25 @@ export default function DocumentList({ refreshTrigger, onOpenUpload }: DocumentL
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete document');
       logger.error('Error deleting document:', err);
+    }
+  };
+
+  const handleRefreshNow = async (doc: KnowledgeDocument) => {
+    try {
+      await refreshUrlSource(doc.document_uuid);
+      toast.success('Refreshing from the source...');
+      setTimeout(fetchDocuments, 4000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not refresh');
+    }
+  };
+
+  const handleIntervalChange = async (doc: KnowledgeDocument, value: string) => {
+    try {
+      await setRefreshInterval(doc.document_uuid, value === '' ? null : Number(value));
+      fetchDocuments();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update the schedule');
     }
   };
 
@@ -187,14 +206,16 @@ export default function DocumentList({ refreshTrigger, onOpenUpload }: DocumentL
                     className="p-2.5 rounded-xl border border-gray-200 dark:border-[#282b26] shadow-2xs text-rose-600 dark:text-rose-400 flex-shrink-0"
                     style={{ backgroundColor: '#1C1E1A' }}
                   >
-                    <FileText className="w-5 h-5" />
+                    {doc.source_url ? <Globe className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
                   </div>
                   <div className="flex flex-col min-w-0">
                     <h3 className="text-xs font-bold text-gray-900 dark:text-white group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors truncate">
                       {doc.filename}
                     </h3>
                     <span className="text-[11px] text-gray-400 dark:text-gray-500">
-                      {formatFileSize(doc.file_size_bytes)} • {formatDate(doc.created_at)}
+                      {doc.source_url
+                        ? `Web source • ${doc.last_refreshed_at ? `updated ${formatDate(doc.last_refreshed_at)}` : 'not fetched yet'}`
+                        : `${formatFileSize(doc.file_size_bytes)} • ${formatDate(doc.created_at)}`}
                     </span>
                   </div>
                 </div>
@@ -207,6 +228,34 @@ export default function DocumentList({ refreshTrigger, onOpenUpload }: DocumentL
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
+
+              {doc.source_url && (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={doc.refresh_interval_hours ? String(doc.refresh_interval_hours) : ''}
+                    onChange={(e) => handleIntervalChange(doc, e.target.value)}
+                    className="flex-1 rounded-lg border border-[#282b26] px-2 py-1.5 text-[11px] text-gray-200 focus:outline-hidden"
+                    style={{ backgroundColor: '#1C1E1A' }}
+                    title="How often to re-read this page"
+                  >
+                    {REFRESH_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.value === '' ? 'Refresh: manual' : `Refresh: ${o.label.toLowerCase()}`}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => handleRefreshNow(doc)}
+                    disabled={doc.processing_status === 'processing' || doc.processing_status === 'pending'}
+                    className="flex items-center gap-1 rounded-lg border border-[#282b26] px-2.5 py-1.5 text-[11px] font-semibold text-gray-200 hover:bg-white/5 disabled:opacity-40 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Refresh now
+                  </button>
+                </div>
+              )}
+              {doc.last_refresh_error && doc.processing_status === 'completed' && (
+                <p className="text-[11px] text-amber-400 leading-snug">
+                  Last refresh failed, still using the previous version: {doc.last_refresh_error}
+                </p>
+              )}
 
               {doc.processing_error && (
                 <p className="text-[11px] text-rose-500 leading-snug">
