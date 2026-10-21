@@ -141,3 +141,23 @@ async def test_error_text_with_braces_still_marks_the_document_failed(env):
 
     statuses = [c.args[1] for c in env.db.update_document_status.await_args_list]
     assert statuses[-1] == "failed"
+
+
+async def test_processor_receives_a_filename_with_the_right_extension(env):
+    # The processor picks the parser from the extension; "host/path" has none.
+    await_args = {}
+
+    async def fake_process(**kw):
+        await_args.update(kw)
+        return {"chunks": [{"chunk_text": "a", "chunk_index": 0}], "docling_metadata": {}}
+
+    env.mps.process_document.side_effect = fake_process
+    with patch.object(kb, "fetch_url", AsyncMock(return_value=_page())):
+        await kb.process_knowledge_base_url(None, 7, 1, "prov")
+    assert await_args["filename"] == "docs.example.com_faq.html"
+
+
+def test_processor_filename_helper():
+    assert kb._processor_filename("a.com/x/y", ".pdf") == "a.com_x_y.pdf"
+    assert kb._processor_filename("report.pdf", ".pdf") == "report.pdf"
+    assert kb._processor_filename("/", ".txt") == "page.txt"

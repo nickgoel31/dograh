@@ -315,6 +315,17 @@ async def process_knowledge_base_document(
         _remove_quietly(temp_file_path)
 
 
+def _processor_filename(display_name: str, extension: str) -> str:
+    """File name sent to the document processor.
+
+    The processor decides how to read a file from its extension. A URL source's
+    display name ("host/path") has none, so add the one matching what we fetched
+    and make sure no path separators survive.
+    """
+    name = display_name.replace("/", "_").replace("\\", "_").strip("_") or "page"
+    return name if name.lower().endswith(extension) else f"{name}{extension}"
+
+
 async def _fetch_and_ingest_url(
     document_id: int,
     created_by_provider_id: str,
@@ -355,7 +366,7 @@ async def _fetch_and_ingest_url(
         result = await _ingest_local_file(
             document_id=document_id,
             temp_file_path=temp_file_path,
-            filename=document.filename,
+            filename=_processor_filename(document.filename, extension),
             organization_id=document.organization_id,
             created_by_provider_id=created_by_provider_id,
             max_tokens=max_tokens,
