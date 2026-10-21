@@ -11,6 +11,7 @@ answering from the previous version while a refresh is in progress - and keeps
 it if the refresh fails.
 """
 
+import json
 import os
 import tempfile
 from typing import Literal
@@ -59,7 +60,7 @@ async def _ingest_local_file(
             f"File size ({file_size / (1024 * 1024):.1f}MB) exceeds the "
             f"maximum allowed size of {MAX_FILE_SIZE_BYTES // (1024 * 1024)}MB."
         )
-        logger.warning(f"Document {document_id}: {error_message}")
+        logger.warning("Document {}: {}", document_id, error_message)
         await fail(error_message)
         return "failed"
 
@@ -164,7 +165,7 @@ async def _ingest_local_file(
             "API key not configured. Please set your API key in "
             "Model Configurations > Embedding to process documents."
         )
-        logger.warning(f"Document {document_id}: {error_message}")
+        logger.warning("Document {}: {}", document_id, error_message)
         await fail(error_message)
         return "failed"
 
@@ -303,9 +304,8 @@ async def process_knowledge_base_document(
             retrieval_mode=retrieval_mode,
         )
     except Exception as e:
-        logger.error(
-            f"Error processing knowledge base document {document_id}: {e}",
-            exc_info=True,
+        logger.opt(exception=True).error(
+            "Error processing knowledge base document {}: {}", document_id, str(e)
         )
         await db_client.update_document_status(
             document_id, "failed", error_message=str(e)
@@ -337,10 +337,19 @@ async def _fetch_and_ingest_url(
         await db_client.record_document_refresh(document_id, success=True)
         return "unchanged"
 
+    extension, body = fetched.extension, fetched.body
+    if fetched.content_type == "application/json":
+        # The document processor does not accept raw JSON; give it readable text.
+        try:
+            body = json.dumps(json.loads(body), indent=2, ensure_ascii=False).encode("utf-8")
+        except ValueError:
+            pass
+        extension = ".txt"
+
     temp_file_path = None
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=fetched.extension) as temp_file:
-            temp_file.write(fetched.body)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=extension) as temp_file:
+            temp_file.write(body)
             temp_file_path = temp_file.name
 
         result = await _ingest_local_file(
@@ -381,11 +390,13 @@ async def process_knowledge_base_url(
             document_id, created_by_provider_id, max_tokens, is_refresh=False
         )
     except (UnsafeURLError, FetchError) as e:
-        logger.warning(f"Knowledge base URL {document_id} rejected: {e}")
+        logger.warning("Knowledge base URL {} rejected: {}", document_id, str(e))
         await db_client.update_document_status(document_id, "failed", error_message=str(e))
         await db_client.record_document_refresh(document_id, success=False, error=str(e))
     except Exception as e:
-        logger.error(f"Error processing knowledge base URL {document_id}: {e}", exc_info=True)
+        logger.opt(exception=True).error(
+            "Error processing knowledge base URL {}: {}", document_id, str(e)
+        )
         await db_client.update_document_status(document_id, "failed", error_message=str(e))
         await db_client.record_document_refresh(document_id, success=False, error=str(e))
         raise
@@ -405,7 +416,7 @@ async def refresh_knowledge_base_url(
         )
         logger.info(f"Knowledge base URL {document_id} refresh finished: {result}")
     except Exception as e:  # keep serving the old content, just record why
-        logger.warning(f"Refresh of knowledge base URL {document_id} failed: {e}")
+        logger.warning("Refresh of knowledge base URL {} failed: {}", document_id, str(e))
         await db_client.record_document_refresh(document_id, success=False, error=str(e))
 
 

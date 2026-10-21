@@ -1,6 +1,7 @@
 """API routes for knowledge base operations."""
 
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
 from urllib.parse import urlsplit
 
@@ -299,7 +300,12 @@ async def refresh_document(document_uuid: str, user=Depends(get_user)):
     if not document.source_url:
         raise HTTPException(status_code=400, detail="Only URL sources can be refreshed")
     if document.processing_status in ("pending", "processing"):
-        raise HTTPException(status_code=409, detail="This source is still being processed")
+        updated = document.updated_at
+        if updated is not None and updated.tzinfo is None:
+            updated = updated.replace(tzinfo=timezone.utc)
+        # Allow a retry once a job has clearly stalled (e.g. the worker was restarted).
+        if updated is None or datetime.now(timezone.utc) - updated < timedelta(minutes=10):
+            raise HTTPException(status_code=409, detail="This source is still being processed")
 
     await db_client.mark_refresh_attempt(document.id)
     await enqueue_job(

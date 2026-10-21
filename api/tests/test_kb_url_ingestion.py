@@ -38,6 +38,7 @@ def env():
     ):
         setattr(db, name, AsyncMock())
     db.get_chunk_ids_for_document = AsyncMock(return_value=[1, 2, 3])
+    db.get_document_by_hash = AsyncMock(return_value=None)
     db.get_user_configurations = AsyncMock(
         return_value=SimpleNamespace(
             embeddings=SimpleNamespace(provider="openai", api_key="k", model="m", base_url=None)
@@ -111,3 +112,32 @@ async def test_initial_fetch_failure_marks_document_failed(env):
         await kb.process_knowledge_base_url(None, 7, 1, "prov")
     statuses = [c.args[1] for c in env.db.update_document_status.await_args_list]
     assert statuses == ["processing", "failed"]
+
+
+async def test_json_pages_are_sent_to_the_processor_as_text(env):
+    seen = {}
+
+    async def fake_process(**kw):
+        seen["path"] = kw["file_path"]
+        seen["text"] = open(kw["file_path"], encoding="utf-8").read()
+        return {"chunks": [{"chunk_text": "a", "chunk_index": 0}], "docling_metadata": {}}
+
+    env.mps.process_document.side_effect = fake_process
+    page = FetchedContent("https://x.io/api", "application/json", ".json", b'{"a":1}')
+    with patch.object(kb, "fetch_url", AsyncMock(return_value=page)):
+        await kb.process_knowledge_base_url(None, 7, 1, "prov")
+
+    assert seen["path"].endswith(".txt")
+    assert '"a": 1' in seen["text"]
+
+
+async def test_error_text_with_braces_still_marks_the_document_failed(env):
+    # MPS error bodies look like {"detail": "..."}; logging them used to raise
+    # KeyError inside the handler, leaving the document stuck on "processing".
+    env.mps.process_document.side_effect = RuntimeError('{"detail":"Unsupported document format"}')
+    with patch.object(kb, "fetch_url", AsyncMock(return_value=_page())):
+        with pytest.raises(RuntimeError):
+            await kb.process_knowledge_base_url(None, 7, 1, "prov")
+
+    statuses = [c.args[1] for c in env.db.update_document_status.await_args_list]
+    assert statuses[-1] == "failed"

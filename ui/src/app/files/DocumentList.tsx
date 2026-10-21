@@ -244,7 +244,6 @@ export default function DocumentList({ refreshTrigger, onOpenUpload }: DocumentL
                   </select>
                   <button
                     onClick={() => handleRefreshNow(doc)}
-                    disabled={doc.processing_status === 'processing' || doc.processing_status === 'pending'}
                     className="flex items-center gap-1 rounded-lg border border-[#282b26] px-2.5 py-1.5 text-[11px] font-semibold text-gray-200 hover:bg-white/5 disabled:opacity-40 cursor-pointer"
                   >
                     <RefreshCw className="w-3 h-3" /> Refresh now
