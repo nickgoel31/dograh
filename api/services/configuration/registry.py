@@ -32,12 +32,16 @@ from api.services.configuration.options import (
     GOOGLE_VERTEX_REALTIME_VOICES,
     SARVAM_LANGUAGES,
     SARVAM_LLM_MODELS,
+    SARVAM_LLM_REASONING_EFFORTS,
     SARVAM_STT_LANGUAGES_V3,
     SARVAM_STT_LANGUAGES_V25,
     SARVAM_STT_MODELS,
     SARVAM_TTS_MODELS,
     SARVAM_V2_VOICES,
     SARVAM_V3_VOICES,
+    SARVAM_V4_FLASH_DEFAULT_VOICE,
+    SARVAM_V4_FLASH_LANGUAGES,
+    SARVAM_V4_FLASH_VOICES,
     SPEECHMATICS_STT_LANGUAGES,
     INWORLD_REALTIME_MODELS,
     INWORLD_REALTIME_VOICES,
@@ -551,12 +555,23 @@ class SarvamLLMConfiguration(BaseLLMConfiguration):
     model_config = SARVAM_PROVIDER_MODEL_CONFIG
     provider: Literal[ServiceProviders.SARVAM] = ServiceProviders.SARVAM
     model: str = Field(
-        default="sarvam-30b",
+        default="sarvam-105b",
         description=(
-            "Sarvam chat model. Use sarvam-30b for low-latency voice agents; "
-            "sarvam-105b for complex multi-step reasoning."
+            "Sarvam chat model. sarvam-105b is the flagship (reasoning, tools, agents); "
+            "sarvam-105b-conversations is tuned for live dialogue. gemma4, glm5.3 and "
+            "deepseekv4.1-flash are open-weight models in beta. sarvam-30b is deprecated. "
+            "Use Enter Custom Value for any other model id."
         ),
         json_schema_extra={"examples": SARVAM_LLM_MODELS, "allow_custom_input": True},
+    )
+    reasoning_effort: str = Field(
+        default="default",
+        description=(
+            "Thinking depth. 'default' lets Sarvam decide; 'off' disables thinking for the "
+            "lowest latency (recommended for voice); low / medium / high think longer. "
+            "Reasoning tokens are billed as output tokens."
+        ),
+        json_schema_extra={"examples": SARVAM_LLM_REASONING_EFFORTS},
     )
     temperature: float = Field(
         default=0.5,
@@ -1133,25 +1148,47 @@ class SarvamTTSConfiguration(BaseTTSConfiguration):
     model_config = SARVAM_PROVIDER_MODEL_CONFIG
     provider: Literal[ServiceProviders.SARVAM] = ServiceProviders.SARVAM
     model: str = Field(
-        default="bulbul:v2",
-        description="Sarvam TTS model (voice list depends on this).",
-        json_schema_extra={"examples": SARVAM_TTS_MODELS},
+        default="bulbul:v4-flash",
+        description=(
+            "Sarvam TTS model (voice list depends on this). bulbul:v4-flash is the latest "
+            "and recommended for new agents (200+ persona voices, fastest); bulbul:v3 is "
+            "stable; bulbul:v2 is legacy. Use Enter Custom Value for any other model id."
+        ),
+        json_schema_extra={"examples": SARVAM_TTS_MODELS, "allow_custom_input": True},
     )
     voice: str = Field(
-        default="anushka",
-        description="Sarvam voice name; must match the selected model's voice list.",
+        default=SARVAM_V4_FLASH_DEFAULT_VOICE,
+        description=(
+            "Sarvam voice; must match the selected model. bulbul:v4-flash voices are named "
+            "<name>_<language>_<style> (e.g. simran_en_customer, ritu_hi_customer); pick one "
+            "whose language matches the language below. Use Enter Custom Value for a voice "
+            "that is not listed."
+        ),
         json_schema_extra={
-            "examples": SARVAM_V2_VOICES,
+            "examples": SARVAM_V4_FLASH_VOICES,
+            "allow_custom_input": True,
             "model_options": {
-                "bulbul:v2": SARVAM_V2_VOICES,
+                "bulbul:v4-flash": SARVAM_V4_FLASH_VOICES,
                 "bulbul:v3": SARVAM_V3_VOICES,
+                "bulbul:v2": SARVAM_V2_VOICES,
             },
         },
     )
     language: str = Field(
         default="hi-IN",
-        description="BCP-47 Indian-language code (e.g. hi-IN, en-IN).",
-        json_schema_extra={"examples": SARVAM_LANGUAGES},
+        description=(
+            "BCP-47 Indian-language code (e.g. hi-IN, en-IN). bulbul:v4-flash does not "
+            "offer Malayalam or Odia yet."
+        ),
+        json_schema_extra={
+            "examples": SARVAM_LANGUAGES,
+            "allow_custom_input": True,
+            "model_options": {
+                "bulbul:v4-flash": SARVAM_V4_FLASH_LANGUAGES,
+                "bulbul:v3": SARVAM_LANGUAGES,
+                "bulbul:v2": SARVAM_LANGUAGES,
+            },
+        },
     )
 
 
@@ -1529,9 +1566,10 @@ class SarvamSTTConfiguration(BaseSTTConfiguration):
         default="saarika:v2.5",
         description=(
             "Sarvam STT model. saarika:v2.5 transcribes in the spoken language; "
-            "saaras:v3 is the recommended model with flexible output modes."
+            "saaras:v3 supports flexible output modes. Use Enter Custom Value for any other "
+            "model id (for example a newer Saaras release)."
         ),
-        json_schema_extra={"examples": SARVAM_STT_MODELS},
+        json_schema_extra={"examples": SARVAM_STT_MODELS, "allow_custom_input": True},
     )
     language: str = Field(
         default="unknown",
@@ -1540,6 +1578,7 @@ class SarvamSTTConfiguration(BaseSTTConfiguration):
         ),
         json_schema_extra={
             "examples": SARVAM_STT_LANGUAGES_V25,
+            "allow_custom_input": True,
             "model_options": {
                 "saarika:v2.5": SARVAM_STT_LANGUAGES_V25,
                 "saaras:v3": SARVAM_STT_LANGUAGES_V3,

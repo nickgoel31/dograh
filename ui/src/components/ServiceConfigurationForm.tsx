@@ -311,7 +311,9 @@ export function ServiceConfigurationForm({
                     if (!actualSchema?.allow_custom_input || !actualSchema?.examples) return;
 
                     const savedValue = src?.[field] as string | undefined;
-                    if (savedValue && !actualSchema.examples.includes(savedValue)) {
+                    const savedModel = src?.model as string | undefined;
+                    const knownOptions = (savedModel && actualSchema.model_options?.[savedModel]) || actualSchema.examples;
+                    if (savedValue && !knownOptions.includes(savedValue)) {
                         detectedCustomInput[`${service}_${field}`] = true;
                     }
                 });
@@ -345,6 +347,19 @@ export function ServiceConfigurationForm({
         const currentVoice = getValues("tts_voice") as string;
         if (validVoices && currentVoice && !validVoices.includes(currentVoice)) {
             setValue("tts_voice", validVoices[0], { shouldDirty: true });
+        }
+    }, [ttsModel, serviceProviders.tts, setValue, getValues, schemas]);
+
+    // Reset TTS language when the TTS model does not offer it
+    useEffect(() => {
+        const languageSchema = schemas?.tts?.[serviceProviders.tts]?.properties?.language;
+        const modelOptions = languageSchema?.model_options;
+        if (!modelOptions || !ttsModel) return;
+
+        const validLanguages = modelOptions[ttsModel as string];
+        const currentLanguage = getValues("tts_language") as string;
+        if (validLanguages && currentLanguage && !validLanguages.includes(currentLanguage)) {
+            setValue("tts_language", validLanguages[0], { shouldDirty: true });
         }
     }, [ttsModel, serviceProviders.tts, setValue, getValues, schemas]);
 
@@ -537,7 +552,8 @@ export function ServiceConfigurationForm({
             const fieldKey = `${service}_${field}`;
             const watchVal = watch(fieldKey);
             const currentValue = watchVal !== undefined && watchVal !== null ? String(watchVal) : "";
-            const options = actualSchema.examples;
+            const selectedModel = watch(`${service}_model`) as string | undefined;
+            const options = (selectedModel && actualSchema.model_options?.[selectedModel]) || actualSchema.examples;
 
             if (isCustomInput[fieldKey]) {
                 return (

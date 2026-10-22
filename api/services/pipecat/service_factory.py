@@ -5,6 +5,12 @@ import aiohttp
 from fastapi import HTTPException
 from loguru import logger
 
+from api.services.pipecat.sarvam_compat import (
+    DograhSarvamLLMService,
+    default_sarvam_voice,
+    ensure_sarvam_stt_model,
+    ensure_sarvam_tts_model,
+)
 from api.constants import MPS_API_URL
 from api.services.configuration.registry import ServiceProviders
 from api.services.pipecat.minimax_tts import MiniMaxOwnedSessionTTSService
@@ -51,7 +57,7 @@ from pipecat.services.openai.stt import (
 from pipecat.services.openai.tts import OpenAITTSService, OpenAITTSSettings
 from pipecat.services.openrouter.llm import OpenRouterLLMService, OpenRouterLLMSettings
 from pipecat.services.rime.tts import RimeTTSService, RimeTTSSettings
-from pipecat.services.sarvam.llm import SarvamLLMService, SarvamLLMSettings
+from pipecat.services.sarvam.llm import SarvamLLMSettings
 from pipecat.services.sarvam.stt import SarvamSTTService, SarvamSTTSettings
 from pipecat.services.sarvam.tts import SarvamTTSService, SarvamTTSSettings
 from pipecat.services.speaches.llm import SpeachesLLMService, SpeachesLLMSettings
@@ -112,7 +118,6 @@ def create_stt_service(
                 language = getattr(user_config.stt, "language", None) or "multi"
                 if language != "multi":
                     try:
-                        from pipecat.transcriptions.language import Language
                         language_hints = [Language(language)]
                     except Exception as e:
                         logger.warning(f"Failed to resolve language hint {language}: {e}")
@@ -222,7 +227,6 @@ def create_stt_service(
             }
             if language != "multi":
                 try:
-                    from pipecat.transcriptions.language import Language
                     settings_kwargs["language_hints"] = [Language(language)]
                 except Exception as e:
                     logger.warning(f"Failed to resolve language hint {language}: {e}")
@@ -272,6 +276,7 @@ def create_stt_service(
         else:
             # Unmapped BCP-47 codes pass through; Sarvam accepts them per https://docs.sarvam.ai/api-reference-docs/speech-to-text/transcribe
             pipecat_language = language
+        ensure_sarvam_stt_model(user_config.stt.model)
         return SarvamSTTService(
             api_key=user_config.stt.api_key,
             settings=SarvamSTTSettings(
@@ -560,9 +565,14 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             "te-IN": Language.TE,
         }
         language = getattr(user_config.tts, "language", None)
-        pipecat_language = language_mapping.get(language, Language.HI)
+        # A custom language code that has no enum value is passed through as-is
+        # instead of silently falling back to Hindi.
+        pipecat_language = language_mapping.get(language) or language or Language.HI
 
-        voice = getattr(user_config.tts, "voice", None) or "anushka"
+        ensure_sarvam_tts_model(user_config.tts.model)
+        voice = getattr(user_config.tts, "voice", None) or default_sarvam_voice(
+            user_config.tts.model
+        )
         return SarvamTTSService(
             api_key=user_config.tts.api_key,
             settings=SarvamTTSSettings(
@@ -691,6 +701,7 @@ def create_llm_service_from_provider(
     location: str | None = None,
     credentials: str | None = None,
     temperature: float | None = None,
+    reasoning_effort: str | None = None,
 ):
     """Create an LLM service from explicit provider/model/api_key.
 
@@ -784,12 +795,16 @@ def create_llm_service_from_provider(
             ),
         )
     elif provider == ServiceProviders.SARVAM.value:
-        return SarvamLLMService(
+        # "default" lets Sarvam decide, "off" sends an explicit null to disable thinking.
+        effort = reasoning_effort if reasoning_effort in ("low", "medium", "high") else None
+        return DograhSarvamLLMService(
             api_key=api_key,
             settings=SarvamLLMSettings(
                 model=model,
                 temperature=temperature if temperature is not None else 0.5,
+                reasoning_effort=effort,
             ),
+            thinking_off=reasoning_effort == "off",
         )
     elif provider == ServiceProviders.TOGETHER.value:
         return TogetherLLMService(
@@ -1070,5 +1085,6 @@ def create_llm_service(user_config):
         kwargs["temperature"] = user_config.llm.temperature
     elif provider == ServiceProviders.SARVAM.value:
         kwargs["temperature"] = user_config.llm.temperature
+        kwargs["reasoning_effort"] = getattr(user_config.llm, "reasoning_effort", None)
 
     return create_llm_service_from_provider(provider, model, api_key, **kwargs)
