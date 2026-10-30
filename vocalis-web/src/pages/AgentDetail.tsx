@@ -10,6 +10,7 @@ import { useData } from '@/store/data'
 import { USE_MOCKS } from '@/lib/api/env'
 import { agentsApi, toAgent } from '@/lib/api/agents'
 import { fromWorkflowDefinition, toWorkflowDefinition } from '@/lib/flowConvert'
+import { AttachPicker } from '@/components/AttachPicker'
 import { useUI } from '@/store/ui'
 import { api } from '@/lib/api'
 import { useAsync } from '@/components/shared'
@@ -134,11 +135,11 @@ export default function AgentDetail() {
           advanced={<Q title="Model" hint="Which language model writes the replies."><Field label="Model"><Select value={d.model} onChange={(e) => up({ model: e.target.value })}>{['gpt-4o-mini', 'gpt-4o', 'claude-haiku-5-5', 'claude-sonnet-5-5', 'gemini-2.5-flash'].map((m) => <option key={m}>{m}</option>)}</Select></Field>
             <div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="Temperature"><Slider value={30} onChange={() => undefined} /></Field><Field label="Max reply tokens"><Input defaultValue="220" type="number" /></Field></div></Q>} /></TabPanel>
 
-        <TabPanel value="knowledge"><Q title="What does your agent know?" hint="Tick the sources it can use when answering.">
-          <div className="space-y-2">{knowledge.filter((k) => k.status === 'ready').map((k) => <label key={k.id} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-muted"><input type="checkbox" checked={d.kb.includes(k.id)} onChange={() => up({ kb: d.kb.includes(k.id) ? d.kb.filter((x) => x !== k.id) : [...d.kb, k.id] })} /><span className="flex-1 font-medium">{k.title}</span><Badge>{k.kind}</Badge></label>)}</div></Q></TabPanel>
+        <TabPanel value="knowledge">{USE_MOCKS ? (<><Q title="What does your agent know?" hint="Tick the sources it can use when answering.">
+          <div className="space-y-2">{knowledge.filter((k) => k.status === 'ready').map((k) => <label key={k.id} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-muted"><input type="checkbox" checked={d.kb.includes(k.id)} onChange={() => up({ kb: d.kb.includes(k.id) ? d.kb.filter((x) => x !== k.id) : [...d.kb, k.id] })} /><span className="flex-1 font-medium">{k.title}</span><Badge>{k.kind}</Badge></label>)}</div></Q></>) : <Q title="What does your agent know?" hint="Tick the sources it can use when answering."><AttachPicker kind="knowledge" agentId={agent.id} /></Q>}</TabPanel>
 
-        <TabPanel value="tools"><Q title="What can your agent do?" hint="Switch on the abilities you want.">
-          <div className="divide-y">{toolList.map(([k, t, p]) => <div key={k} className="flex items-center justify-between py-3"><div><div className="font-medium">{t}</div><div className="text-[13px] text-soft">{p}</div></div><Switch label={t} checked={d.tools.includes(k)} onChange={(v) => up({ tools: v ? [...d.tools, k] : d.tools.filter((x) => x !== k) })} /></div>)}</div></Q></TabPanel>
+        <TabPanel value="tools">{USE_MOCKS ? (<><Q title="What can your agent do?" hint="Switch on the abilities you want.">
+          <div className="divide-y">{toolList.map(([k, t, p]) => <div key={k} className="flex items-center justify-between py-3"><div><div className="font-medium">{t}</div><div className="text-[13px] text-soft">{p}</div></div><Switch label={t} checked={d.tools.includes(k)} onChange={(v) => up({ tools: v ? [...d.tools, k] : d.tools.filter((x) => x !== k) })} /></div>)}</div></Q></>) : <Q title="What can your agent do?" hint="Tick the tools it may use during a call."><AttachPicker kind="tools" agentId={agent.id} /></Q>}</TabPanel>
 
         <TabPanel value="flow"><Q title="Call flow" hint="Plan how a call moves from hello to goodbye. Click a step to edit it."><CallFlowEditor value={d.flow} onChange={(flow) => up({ flow })} /></Q></TabPanel>
 

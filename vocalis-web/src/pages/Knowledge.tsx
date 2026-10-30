@@ -4,11 +4,13 @@ import { toast } from 'sonner'
 import { Button, Card, Dialog, Input, Tab, TabPanel, Tabs, TabsList, Textarea } from '@/components/ui'
 import { CardSkeletons, PageHeader, StatusBadge, useAsync } from '@/components/shared'
 import { api } from '@/lib/api'
+import { USE_MOCKS } from '@/lib/api/env'
+import { KnowledgeReal } from './GrowthReal'
 import { timeAgo } from '@/lib/utils'
 
 const icon = { PDF: FileText, Website: Globe, Text: Type, 'Q&A': MessageSquare }
 
-export default function KnowledgePage() {
+function DemoKnowledgePage() {
   const { data, loading } = useAsync(() => api.knowledge(), [])
   const [open, setOpen] = React.useState(false)
   const [q, setQ] = React.useState('')
@@ -36,4 +38,8 @@ export default function KnowledgePage() {
       </Dialog>
     </>
   )
+}
+
+export default function KnowledgePage() {
+  return USE_MOCKS ? <DemoKnowledgePage /> : <KnowledgeReal />
 }

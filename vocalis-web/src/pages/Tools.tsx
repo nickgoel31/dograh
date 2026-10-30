@@ -4,10 +4,12 @@ import { toast } from 'sonner'
 import { Badge, Button, Card, Dialog, Field, Input, Select, Textarea } from '@/components/ui'
 import { CardSkeletons, CodeBlock, PageHeader, SimpleAdvanced, useAsync } from '@/components/shared'
 import { api } from '@/lib/api'
+import { USE_MOCKS } from '@/lib/api/env'
+import { ToolsReal } from './GrowthReal'
 
 const builtin = ['Transfer to a human', 'Send a text message', 'Send an email', 'End the call', 'Press keypad numbers', 'Check the calendar']
 
-export default function ToolsPage() {
+function DemoToolsPage() {
   const { data, loading } = useAsync(() => api.integrations(), [])
   const [on, setOn] = React.useState<Record<string, boolean>>({})
   const [open, setOpen] = React.useState(false)
@@ -36,4 +38,8 @@ export default function ToolsPage() {
       </Dialog>
     </>
   )
+}
+
+export default function ToolsPage() {
+  return USE_MOCKS ? <DemoToolsPage /> : <ToolsReal />
 }

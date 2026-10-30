@@ -10,7 +10,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from api.db import models, product_models
-from api.product import agents_router, billing_router, calls_router, config, conversations_router, deps, gateway, numbers_router, payments, voices_router
+from api.product import (agents_router, billing_router, calls_router, campaigns_router, config, conversations_router, deps, gateway,
+                         home_router, knowledge_router, notifications, numbers_router, payments, tools_router, voices_router)
 from api.product import router as product_router
 
 TABLES = [
@@ -31,6 +32,8 @@ TABLES = [
     product_models.ProductBillingSettingsModel.__table__,
     product_models.ProductPaymentModel.__table__,
     product_models.ProductInvoiceModel.__table__,
+    product_models.ProductNotificationModel.__table__,
+    product_models.ProductCampaignAuditModel.__table__,
 ]
 
 
@@ -85,6 +88,80 @@ PROFILES = {
     "lite": {"llm": {"provider": "openai", "api_key": "KEY-LITE", "model": "lite-llm"}},
 }
 PRESET_MAP = '{"default": "std", "fast": "lite", "balanced": "std", "smartest": "pro"}'
+
+
+class FakeKB:
+    """Documents per organization, as the platform would hold them."""
+
+    def __init__(self):
+        self.docs: dict[int, list[dict]] = {}
+        self._n = itertools.count(1)
+
+    def _add(self, org, filename, **kw):
+        n = next(self._n)
+        self.docs.setdefault(org, []).append({"id": n, "document_uuid": f"uuid-{org}-{n}", "filename": filename, "file_size_bytes": 10,
+                                              "mime_type": "text/plain", "processing_status": "completed", "source_url": None, **kw})
+
+    async def list(self, org_id, user_id):
+        return list(self.docs.get(org_id, []))
+
+    async def add_url(self, org_id, user_id, url, refresh_hours):
+        self._add(org_id, url.split("//")[-1], source_url=url, refresh_interval_hours=refresh_hours)
+
+    async def add_text(self, org_id, user_id, filename, text):
+        self._add(org_id, filename)
+
+    async def file_upload(self, org_id, user_id, filename, mime):
+        return {"upload_url": f"https://up/{org_id}", "document_uuid": f"d-{org_id}-{next(self._n)}", "s3_key": f"k/{org_id}/{filename}"}
+
+    async def process_file(self, org_id, user_id, document_uuid, s3_key):
+        self._add(org_id, s3_key.rsplit("/", 1)[-1], mime_type="application/pdf")
+
+    async def delete(self, org_id, user_id, document_uuid):
+        self.docs[org_id] = [d for d in self.docs.get(org_id, []) if d["document_uuid"] != document_uuid]
+
+    async def search(self, org_id, user_id, query, document_uuids, limit):
+        return [{"chunk_text": "We open at nine.", "filename": d["filename"], "similarity": 0.9, "document_uuid": d["document_uuid"]}
+                for d in self.docs.get(org_id, []) if not document_uuids or d["document_uuid"] in document_uuids][:limit]
+
+
+class FakeTools:
+    def __init__(self):
+        self.items: dict[int, list[dict]] = {}
+        self._n = itertools.count(1)
+
+    async def list(self, org_id, user_id):
+        return list(self.items.get(org_id, []))
+
+    async def create_http(self, org_id, user_id, spec):
+        n = next(self._n)
+        t = {"id": n, "uuid": f"tool-{org_id}-{n}", "name": spec["name"], "description": spec["description"],
+             "definition": {"type": "http_api", "config": {"url": spec["url"], "method": spec["method"], "headers": spec["headers"], "parameters": spec["parameters"]}}}
+        self.items.setdefault(org_id, []).append(t)
+        return t
+
+    async def archive(self, org_id, user_id, tool_uuid):
+        self.items[org_id] = [t for t in self.items.get(org_id, []) if t["uuid"] != tool_uuid]
+
+
+class FakeCampaigns:
+    def __init__(self):
+        self.items: list[dict] = []
+        self.csv: dict[int, str] = {}
+
+    async def create(self, org_id, user_id, name, workflow_id, csv_text, schedule, retry):
+        c = {"ref": len(self.items) + 1, "name": name, "state": "created", "total": csv_text.count("\n") - 1, "workflow_id": workflow_id, "org": org_id}
+        self.items.append(c)
+        self.csv[c["ref"]] = csv_text
+        return c
+
+    async def list(self, org_id, user_id):
+        return [c for c in self.items if c["org"] == org_id]
+
+    async def act(self, org_id, user_id, ref, action):
+        c = next(c for c in self.items if c["ref"] == ref and c["org"] == org_id)
+        c["state"] = {"start": "running", "pause": "paused", "resume": "running"}[action]
+        return {"ref": ref, "state": c["state"]}
 
 
 class FakeWallet:
@@ -144,6 +221,12 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(conversations_router.router)
     app.include_router(numbers_router.router)
     app.include_router(billing_router.router)
+    for r in (campaigns_router, home_router, knowledge_router, notifications, tools_router):
+        app.include_router(r.router)
+    kb, tl, cp = FakeKB(), FakeTools(), FakeCampaigns()
+    app.dependency_overrides[knowledge_router.get_knowledge] = lambda: kb
+    app.dependency_overrides[tools_router.get_tools] = lambda: tl
+    app.dependency_overrides[campaigns_router.get_campaigns] = lambda: cp
     app.dependency_overrides[deps.get_session] = _session
     app.dependency_overrides[gateway.get_gateway] = lambda: fake
     wallet = FakeWallet()
@@ -153,6 +236,7 @@ async def make_client(monkeypatch, seed_profiles=True):
         c.session_factory = Session
         c.fake = fake
         c.wallet = c_wallet
+        c.kb, c.tools, c.camps = kb, tl, cp
         yield c
     await engine.dispose()
 

@@ -35,6 +35,11 @@ from api.product.agents_router import router as product_agents_router
 from api.product.calls_router import router as product_calls_router
 from api.product.conversations_router import router as product_conversations_router
 from api.product.billing_router import router as product_billing_router
+from api.product.campaigns_router import router as product_campaigns_router
+from api.product.home_router import router as product_home_router
+from api.product.knowledge_router import router as product_knowledge_router
+from api.product.notifications import router as product_notifications_router
+from api.product.tools_router import router as product_tools_router
 from api.product.numbers_router import router as product_numbers_router
 from api.product.voices_router import router as product_voices_router
 from api.product.router import router as product_router
@@ -81,6 +86,8 @@ router.include_router(product_calls_router)
 router.include_router(product_conversations_router)
 router.include_router(product_numbers_router)
 router.include_router(product_billing_router)
+for _r in (product_campaigns_router, product_home_router, product_knowledge_router, product_notifications_router, product_tools_router):
+    router.include_router(_r)
 
 
 for _integration_router in all_routers():

@@ -195,7 +195,7 @@ async def readiness(
 
 
 async def go_live(
-    session: AsyncSession, gw: PlatformGateway, ws: ProductWorkspaceModel, user_id: int, agent: ProductAgentModel
+    session: AsyncSession, gw: PlatformGateway, ws: ProductWorkspaceModel, user_id: int, agent: ProductAgentModel, kb=None, tools=None
 ) -> ProductAgentModel:
     blockers = [c for c in await readiness(session, gw, ws, agent) if c.level == "blocker"]
     if blockers:
@@ -204,6 +204,13 @@ async def go_live(
     graph = await gw.published_definition(ws.test_org_id, agent.test_workflow_id)
     if graph is None:
         raise product_error(500, "publish_failed", "We couldn't publish this agent. Please try again.")
+    if kb is not None:  # live calls search the Live organization's copy of each document
+        from api.product.knowledge_router import remap_for_live
+
+        graph = await remap_for_live(graph, kb, ws, user_id)
+        from api.product.tools_router import get_tools, remap_tools_for_live
+
+        graph = await remap_tools_for_live(graph, tools or get_tools(), ws, user_id)
     if agent.live_workflow_id is None:
         agent.live_workflow_id = await gw.create_agent(ws.live_org_id, user_id, agent.name, graph)
     else:

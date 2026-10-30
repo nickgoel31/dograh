@@ -6,6 +6,8 @@ import { Button, Card, Switch } from '@/components/ui'
 import { PageHeader, StatCard, useAsync } from '@/components/shared'
 import { Skeleton } from '@/components/ui'
 import { api } from '@/lib/api'
+import { USE_MOCKS } from '@/lib/api/env'
+import { HomeReal } from './GrowthReal'
 import { useUI } from '@/store/ui'
 import { useData } from '@/store/data'
 import { money, cn } from '@/lib/utils'
@@ -93,7 +95,7 @@ function Existing() {
   )
 }
 
-export default function HomePage() {
+function DemoHomePage() {
   const [newUser, setNewUser] = React.useState(false)
   return (
     <>
@@ -102,4 +104,8 @@ export default function HomePage() {
       {newUser ? <Onboarding /> : <Existing />}
     </>
   )
+}
+
+export default function HomePage() {
+  return USE_MOCKS ? <DemoHomePage /> : <HomeReal />
 }

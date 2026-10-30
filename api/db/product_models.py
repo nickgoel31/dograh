@@ -157,3 +157,38 @@ class ProductInvoiceModel(Base):
     issued_at = Column(DateTime(timezone=True), default=_now)
 
     __table_args__ = (UniqueConstraint("workspace_id", "period", name="uq_product_invoice_period"),)
+
+
+class ProductNotificationModel(Base):
+    __tablename__ = "product_notifications"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    kind = Column(String(24), nullable=False)
+    title = Column(String(160), nullable=False)
+    body = Column(String(400), nullable=True)
+    link = Column(String(200), nullable=True)
+    dedupe_key = Column(String(80), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_now)
+    read_at = Column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("ix_product_notifications_ws", "workspace_id", "id"),
+        UniqueConstraint("workspace_id", "dedupe_key", name="uq_product_notification_dedupe"),
+    )
+
+
+class ProductCampaignAuditModel(Base):
+    """Who started what, with which consent. Append-only."""
+
+    __tablename__ = "product_campaign_audit"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    campaign_ref = Column(Integer, nullable=False)
+    action = Column(String(16), nullable=False)
+    at = Column(DateTime(timezone=True), default=_now)
+    detail = Column(JSON, nullable=False, default=dict)
+
+    __table_args__ = (Index("ix_product_campaign_audit_ws", "workspace_id", "campaign_ref"),)

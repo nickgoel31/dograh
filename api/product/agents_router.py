@@ -8,6 +8,8 @@ from api.product import versions as vdiff
 from api.product.deps import Ctx, get_ctx, require
 from api.product.errors import product_error
 from api.product.gateway import PlatformGateway, get_gateway
+from api.product.knowledge_router import get_knowledge
+from api.product.tools_router import get_tools
 from api.product.roles import Perm
 from api.product.templates import TEMPLATES
 
@@ -188,9 +190,11 @@ async def publish(
     agent_id: str,
     ctx: Ctx = Depends(require(Perm.AGENTS_WRITE)),
     gw: PlatformGateway = Depends(get_gateway),
+    kb=Depends(get_knowledge),
+    tools=Depends(get_tools),
 ):
     agent = await svc.get_agent(ctx.session, ctx.workspace, agent_id)
-    await svc.go_live(ctx.session, gw, ctx.workspace, ctx.user.id, agent)
+    await svc.go_live(ctx.session, gw, ctx.workspace, ctx.user.id, agent, kb, tools)
     await ctx.session.commit()
     return _out(agent)
 

@@ -6,10 +6,12 @@ import { toast } from 'sonner'
 import { Button, Card, Field, Input, Progress, Select } from '@/components/ui'
 import { CardSkeletons, EmptyState, PageHeader, StatusBadge, useAsync } from '@/components/shared'
 import { api } from '@/lib/api'
+import { USE_MOCKS } from '@/lib/api/env'
+import { CampaignsReal } from './GrowthReal'
 import { useData } from '@/store/data'
 import { cn } from '@/lib/utils'
 
-export default function CampaignsPage() {
+function DemoCampaignsPage() {
   const { data, loading } = useAsync(() => api.campaigns(), [])
   return (
     <>
@@ -64,4 +66,8 @@ export function NewCampaign() {
       </div>
     </div>
   )
+}
+
+export default function CampaignsPage() {
+  return USE_MOCKS ? <DemoCampaignsPage /> : <CampaignsReal />
 }

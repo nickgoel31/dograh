@@ -11,6 +11,7 @@ from api.db.product_models import ProductAgentModel, ProductInvoiceModel, Produc
 from api.product import billing as bl
 from api.product import config
 from api.product.deps import Ctx, get_ctx, get_session, require
+from api.product.notifications import notify
 from api.product.errors import product_error
 from api.product.payments import PaymentError, PaymentProvider, WalletGateway, get_payments, get_wallet
 from api.product.roles import Perm
@@ -101,6 +102,15 @@ async def summary(ctx: Ctx = Depends(require(Perm.BILLING_MANAGE)), wallet: Wall
     start, end = bl.month_bounds(bl.current_period())
     entries = await bl.usage_entries(ctx.session, ctx.workspace.live_org_id, start, end)
     value = round(sum(e["value"] for e in entries), 2)
+    state = bl.limit_state(s.spend_limit, value)
+    period = bl.current_period()
+    if state == "limit":
+        await notify(ctx.session, ctx.workspace.id, "spend", "You've reached your spending limit", "New calls are paused until you raise it.", "/billing", f"limit:{period}")
+    elif state == "warn":
+        await notify(ctx.session, ctx.workspace.id, "spend", "You've used 80% of your spending limit", "", "/billing", f"spend80:{period}")
+    if w.get("low_balance"):
+        await notify(ctx.session, ctx.workspace.id, "balance", "Your balance is running low", "Add money to keep taking calls.", "/billing", f"low:{datetime.now(UTC).strftime('%Y-%m-%d')}")
+    await ctx.session.commit()
     return SummaryOut(
         currency=config.CURRENCY, price_per_min=config.PRICE_PER_MIN, free_mode=ctx.environment == "test",
         balance=float(w.get("balance", 0)), minutes_available=float(w.get("minutes_available", 0)),

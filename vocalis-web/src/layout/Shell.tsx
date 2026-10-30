@@ -9,6 +9,8 @@ import {
 import { Toaster, toast } from 'sonner'
 import { BRAND } from '@/config/brand'
 import { useMe } from '@/lib/useMe'
+import { http } from '@/lib/api/http'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { USE_MOCKS, authApi } from '@/lib/api'
 import { queryClient } from '@/lib/query'
 import { useUI } from '@/store/ui'
@@ -110,6 +112,13 @@ const alerts = [
 
 function Topbar({ openNav }: { openNav: () => void }) {
   const { view, theme, collapsed, set } = useUI()
+  const me = useMe().data
+  const mode = useUI((s) => s.mode)
+  const qc = useQueryClient()
+  const notes = useQuery({ queryKey: ['notifications', mode], queryFn: () => http<{ unread: number; items: { id: string; title: string; body: string; link: string | null; read: boolean }[] }>('/notifications'), enabled: !USE_MOCKS, refetchInterval: 30000 })
+  const unread = USE_MOCKS ? 1 : notes.data?.unread ?? 0
+  const bell = USE_MOCKS ? alerts : (notes.data?.items ?? []).map((n) => ({ t: n.title, d: n.body, to: n.link ?? '/', tone: n.read ? 'text-soft' : 'text-ink', id: n.id }))
+  const initials = USE_MOCKS ? 'AS' : (me?.user.name || me?.user.email || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
   const nav = useNavigate()
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-bg/85 px-4 backdrop-blur md:px-6">
@@ -126,16 +135,18 @@ function Topbar({ openNav }: { openNav: () => void }) {
         <span className={cn('text-xs font-medium', view === 'advanced' ? 'text-ink' : 'text-soft')}>Advanced</span>
       </div>
       <Menu>
-        <MenuTrigger asChild><Button variant="ghost" size="icon" className="relative" aria-label="Notifications"><Bell size={18} /><span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-bad" /></Button></MenuTrigger>
+        <MenuTrigger asChild><Button variant="ghost" size="icon" className="relative" aria-label="Notifications"><Bell size={18} />{unread > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-bad" />}</Button></MenuTrigger>
         <MenuContent className="w-80">
           <div className="px-2.5 py-2 text-xs font-semibold uppercase tracking-wide text-soft">Notifications</div>
-          {alerts.map((a) => <MenuItem key={a.t} onSelect={() => nav(a.to)} className="flex-col items-start gap-0.5"><span className={cn('font-medium', a.tone)}>{a.t}</span><span className="text-xs text-soft">{a.d}</span></MenuItem>)}
+          {bell.length === 0 && <div className="px-2.5 py-3 text-sm text-soft">You’re all caught up.</div>}
+          {unread > 0 && !USE_MOCKS && <MenuItem onSelect={() => http('/notifications/read-all', { method: 'POST' }).then(() => qc.invalidateQueries({ queryKey: ['notifications'] }))}>Mark all as read</MenuItem>}
+          {bell.map((a) => <MenuItem key={a.t} onSelect={() => nav(a.to)} className="flex-col items-start gap-0.5"><span className={cn('font-medium', a.tone)}>{a.t}</span><span className="text-xs text-soft">{a.d}</span></MenuItem>)}
         </MenuContent>
       </Menu>
       <Menu>
-        <MenuTrigger asChild><button className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-fg" aria-label="Account menu">AS</button></MenuTrigger>
+        <MenuTrigger asChild><button className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-fg" aria-label="Account menu">{initials}</button></MenuTrigger>
         <MenuContent>
-          <div className="px-2.5 py-2"><div className="font-medium">Aarav Sharma</div><div className="text-xs text-soft">aarav@sunrisedental.in</div></div>
+          <div className="px-2.5 py-2"><div className="font-medium">{USE_MOCKS ? 'Aarav Sharma' : me?.user.name}</div><div className="text-xs text-soft">{USE_MOCKS ? 'aarav@sunrisedental.in' : me?.user.email}</div></div>
           <MenuSep />
           <MenuItem onSelect={() => set({ theme: theme === 'dark' ? 'light' : 'dark' })}>{theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}{theme === 'dark' ? 'Light mode' : 'Dark mode'}</MenuItem>
           <MenuItem onSelect={() => nav('/settings')}><Settings size={15} />Settings</MenuItem>

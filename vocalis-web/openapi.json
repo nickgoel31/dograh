@@ -3796,6 +3796,2417 @@
           }
         }
       }
+    },
+    "/api/v1/product/campaigns/contacts/check": {
+      "post": {
+        "tags": [
+          "campaigns"
+        ],
+        "summary": "Check Contacts",
+        "operationId": "check_contacts_api_v1_product_campaigns_contacts_check_post",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/campaigns": {
+      "post": {
+        "tags": [
+          "campaigns"
+        ],
+        "summary": "Create",
+        "operationId": "create_api_v1_product_campaigns_post",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "campaigns"
+        ],
+        "summary": "List Campaigns",
+        "operationId": "list_campaigns_api_v1_product_campaigns_get",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CampaignOut"
+                  },
+                  "title": "Response List Campaigns Api V1 Product Campaigns Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/campaigns/{campaign_id}/start": {
+      "post": {
+        "tags": [
+          "campaigns"
+        ],
+        "summary": "Start",
+        "operationId": "start_api_v1_product_campaigns__campaign_id__start_post",
+        "parameters": [
+          {
+            "name": "campaign_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Campaign Id"
+            }
+          },
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/campaigns/{campaign_id}/pause": {
+      "post": {
+        "tags": [
+          "campaigns"
+        ],
+        "summary": "Pause",
+        "operationId": "pause_api_v1_product_campaigns__campaign_id__pause_post",
+        "parameters": [
+          {
+            "name": "campaign_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Campaign Id"
+            }
+          },
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/campaigns/{campaign_id}/resume": {
+      "post": {
+        "tags": [
+          "campaigns"
+        ],
+        "summary": "Resume",
+        "operationId": "resume_api_v1_product_campaigns__campaign_id__resume_post",
+        "parameters": [
+          {
+            "name": "campaign_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Campaign Id"
+            }
+          },
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/home/summary": {
+      "get": {
+        "tags": [
+          "home"
+        ],
+        "summary": "Summary",
+        "operationId": "summary_api_v1_product_home_summary_get",
+        "parameters": [
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(today|7d|30d)$",
+              "default": "7d",
+              "title": "Range"
+            }
+          },
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/knowledge": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "List Sources",
+        "operationId": "list_sources_api_v1_product_knowledge_get",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocOut"
+                  },
+                  "title": "Response List Sources Api V1 Product Knowledge Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/knowledge/url": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Add Url",
+        "operationId": "add_url_api_v1_product_knowledge_url_post",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UrlBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocOut"
+                  },
+                  "title": "Response Add Url Api V1 Product Knowledge Url Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/knowledge/text": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Add Text",
+        "operationId": "add_text_api_v1_product_knowledge_text_post",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/knowledge/qa": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Add Qa",
+        "operationId": "add_qa_api_v1_product_knowledge_qa_post",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QABody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/knowledge/file": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Start File",
+        "description": "Step 1 of a file upload: a one-time upload address. The browser PUTs the file there, then calls /file/process.",
+        "operationId": "start_file_api_v1_product_knowledge_file_post",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/knowledge/file/process": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Finish File",
+        "operationId": "finish_file_api_v1_product_knowledge_file_process_post",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/knowledge/{doc_id}": {
+      "delete": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Remove",
+        "operationId": "remove_api_v1_product_knowledge__doc_id__delete",
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doc Id"
+            }
+          },
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/knowledge/ask": {
+      "post": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Ask",
+        "description": "What the agent would find for this question: the best passage and where it came from.",
+        "operationId": "ask_api_v1_product_knowledge_ask_post",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/knowledge/agent/{agent_id}": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Attached",
+        "operationId": "attached_api_v1_product_knowledge_agent__agent_id__get",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          },
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Attached Api V1 Product Knowledge Agent  Agent Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Attach",
+        "operationId": "attach_api_v1_product_knowledge_agent__agent_id__put",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          },
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/api__product__knowledge_router__AttachBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Attach Api V1 Product Knowledge Agent  Agent Id  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/notifications": {
+      "get": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "List Notifications",
+        "operationId": "list_notifications_api_v1_product_notifications_get",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/notifications/read-all": {
+      "post": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Read All",
+        "operationId": "read_all_api_v1_product_notifications_read_all_post",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/notifications/{notification_id}/read": {
+      "post": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Read One",
+        "operationId": "read_one_api_v1_product_notifications__notification_id__read_post",
+        "parameters": [
+          {
+            "name": "notification_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Notification Id"
+            }
+          },
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/tools/catalog": {
+      "get": {
+        "tags": [
+          "tools"
+        ],
+        "summary": "Catalog",
+        "operationId": "catalog_api_v1_product_tools_catalog_get",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogItem"
+                  },
+                  "title": "Response Catalog Api V1 Product Tools Catalog Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/tools": {
+      "get": {
+        "tags": [
+          "tools"
+        ],
+        "summary": "List Tools",
+        "operationId": "list_tools_api_v1_product_tools_get",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ToolOut"
+                  },
+                  "title": "Response List Tools Api V1 Product Tools Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "tools"
+        ],
+        "summary": "Create",
+        "operationId": "create_api_v1_product_tools_post",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToolBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/tools/{tool_id}": {
+      "delete": {
+        "tags": [
+          "tools"
+        ],
+        "summary": "Remove",
+        "operationId": "remove_api_v1_product_tools__tool_id__delete",
+        "parameters": [
+          {
+            "name": "tool_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tool Id"
+            }
+          },
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/tools/test": {
+      "post": {
+        "tags": [
+          "tools"
+        ],
+        "summary": "Test Tool",
+        "description": "Call the address for real with sample values. Private addresses are refused; the user's session is never forwarded.",
+        "operationId": "test_tool_api_v1_product_tools_test_post",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/tools/agent/{agent_id}": {
+      "get": {
+        "tags": [
+          "tools"
+        ],
+        "summary": "Attached",
+        "operationId": "attached_api_v1_product_tools_agent__agent_id__get",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          },
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Attached Api V1 Product Tools Agent  Agent Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "tools"
+        ],
+        "summary": "Attach",
+        "operationId": "attach_api_v1_product_tools_agent__agent_id__put",
+        "parameters": [
+          {
+            "name": "agent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Agent Id"
+            }
+          },
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/api__product__tools_router__AttachBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Attach Api V1 Product Tools Agent  Agent Id  Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4100,6 +6511,52 @@
         "type": "object",
         "title": "AgentPatch"
       },
+      "AnswerOut": {
+        "properties": {
+          "found": {
+            "type": "boolean",
+            "title": "Found"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "found"
+        ],
+        "title": "AnswerOut"
+      },
       "AssignBody": {
         "properties": {
           "agent_id": {
@@ -4116,6 +6573,29 @@
         },
         "type": "object",
         "title": "AssignBody"
+      },
+      "Attention": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "link": {
+            "type": "string",
+            "title": "Link"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "text",
+          "link"
+        ],
+        "title": "Attention"
       },
       "BuyBody": {
         "properties": {
@@ -4435,6 +6915,99 @@
         ],
         "title": "CallPage"
       },
+      "CampaignOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "dialed": {
+            "type": "integer",
+            "title": "Dialed",
+            "default": 0
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered",
+            "default": 0
+          },
+          "voicemail": {
+            "type": "integer",
+            "title": "Voicemail",
+            "default": 0
+          },
+          "no_answer": {
+            "type": "integer",
+            "title": "No Answer",
+            "default": 0
+          },
+          "converted": {
+            "type": "integer",
+            "title": "Converted",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "agent_id",
+          "status",
+          "total"
+        ],
+        "title": "CampaignOut"
+      },
+      "CatalogItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "blurb": {
+            "type": "string",
+            "title": "Blurb"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "blurb",
+          "status"
+        ],
+        "title": "CatalogItem"
+      },
       "CheckOut": {
         "properties": {
           "id": {
@@ -4492,6 +7065,146 @@
         ],
         "title": "ConfirmBody"
       },
+      "ContactsBody": {
+        "properties": {
+          "csv_text": {
+            "type": "string",
+            "maxLength": 5000000,
+            "title": "Csv Text"
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "title": "Country",
+            "default": "IN"
+          }
+        },
+        "type": "object",
+        "required": [
+          "csv_text"
+        ],
+        "title": "ContactsBody"
+      },
+      "ContactsOut": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "valid": {
+            "type": "integer",
+            "title": "Valid"
+          },
+          "duplicates": {
+            "type": "integer",
+            "title": "Duplicates"
+          },
+          "invalid": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Invalid"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "sample": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Sample"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "valid",
+          "duplicates",
+          "invalid",
+          "columns",
+          "sample"
+        ],
+        "title": "ContactsOut"
+      },
+      "CreateBody": {
+        "properties": {
+          "csv_text": {
+            "type": "string",
+            "maxLength": 5000000,
+            "title": "Csv Text"
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}$",
+            "title": "Country",
+            "default": "IN"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "agent_id": {
+            "type": "string",
+            "title": "Agent Id"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone",
+            "default": "Asia/Kolkata"
+          },
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/SlotIn"
+            },
+            "type": "array",
+            "maxItems": 14,
+            "minItems": 1,
+            "title": "Slots"
+          },
+          "max_retries": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Max Retries",
+            "default": 2
+          },
+          "retry_delay_minutes": {
+            "type": "integer",
+            "maximum": 240.0,
+            "minimum": 1.0,
+            "title": "Retry Delay Minutes",
+            "default": 30
+          },
+          "consent_confirmed": {
+            "type": "boolean",
+            "title": "Consent Confirmed",
+            "default": false
+          },
+          "dnc_checked": {
+            "type": "boolean",
+            "title": "Dnc Checked",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "csv_text",
+          "name",
+          "agent_id",
+          "slots"
+        ],
+        "title": "CreateBody"
+      },
       "DiffOut": {
         "properties": {
           "prompt": {
@@ -4514,6 +7227,94 @@
           "steps"
         ],
         "title": "DiffOut"
+      },
+      "DocOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "updated": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem"
+          },
+          "refresh_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresh Hours"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "kind",
+          "status",
+          "updated",
+          "size"
+        ],
+        "title": "DocOut"
+      },
+      "FileBody": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Mime Type",
+            "default": "application/pdf"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename"
+        ],
+        "title": "FileBody"
       },
       "FlowOut": {
         "properties": {
@@ -4546,6 +7347,58 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HomeOut": {
+        "properties": {
+          "range": {
+            "type": "string",
+            "title": "Range"
+          },
+          "kpis": {
+            "$ref": "#/components/schemas/Kpis"
+          },
+          "days": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Days"
+          },
+          "attention": {
+            "items": {
+              "$ref": "#/components/schemas/Attention"
+            },
+            "type": "array",
+            "title": "Attention"
+          },
+          "onboarding": {
+            "items": {
+              "$ref": "#/components/schemas/Step"
+            },
+            "type": "array",
+            "title": "Onboarding"
+          },
+          "free_mode": {
+            "type": "boolean",
+            "title": "Free Mode"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "range",
+          "kpis",
+          "days",
+          "attention",
+          "onboarding",
+          "free_mode"
+        ],
+        "title": "HomeOut"
       },
       "IceOut": {
         "properties": {
@@ -4644,6 +7497,41 @@
         ],
         "title": "InvoiceOut"
       },
+      "Kpis": {
+        "properties": {
+          "calls": {
+            "type": "integer",
+            "title": "Calls"
+          },
+          "success_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Success Rate"
+          },
+          "minutes": {
+            "type": "number",
+            "title": "Minutes"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "calls",
+          "success_rate",
+          "minutes",
+          "spend"
+        ],
+        "title": "Kpis"
+      },
       "LoginBody": {
         "properties": {
           "email": {
@@ -4719,6 +7607,77 @@
           "brand"
         ],
         "title": "MeOut"
+      },
+      "NotificationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "read": {
+            "type": "boolean",
+            "title": "Read"
+          },
+          "at": {
+            "type": "string",
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "body",
+          "link",
+          "read",
+          "at"
+        ],
+        "title": "NotificationOut"
+      },
+      "NotificationsOut": {
+        "properties": {
+          "unread": {
+            "type": "integer",
+            "title": "Unread"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "unread",
+          "items"
+        ],
+        "title": "NotificationsOut"
       },
       "NumberOut": {
         "properties": {
@@ -4848,6 +7807,111 @@
           "region"
         ],
         "title": "OfferOut"
+      },
+      "ParamIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,40}$",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "pattern": "^(string|number|boolean)$",
+            "title": "Type",
+            "default": "string"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description"
+        ],
+        "title": "ParamIn"
+      },
+      "QA": {
+        "properties": {
+          "q": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Q"
+          },
+          "a": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "A"
+          }
+        },
+        "type": "object",
+        "required": [
+          "q",
+          "a"
+        ],
+        "title": "QA"
+      },
+      "QABody": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "pairs": {
+            "items": {
+              "$ref": "#/components/schemas/QA"
+            },
+            "type": "array",
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Pairs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "pairs"
+        ],
+        "title": "QABody"
+      },
+      "QuestionBody": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Question"
+          },
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "title": "QuestionBody"
       },
       "SettingsOut": {
         "properties": {
@@ -4986,6 +8050,56 @@
         ],
         "title": "SignupBody"
       },
+      "SlotIn": {
+        "properties": {
+          "day_of_week": {
+            "type": "integer",
+            "maximum": 6.0,
+            "minimum": 0.0,
+            "title": "Day Of Week"
+          },
+          "start_time": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "pattern": "^\\d{2}:\\d{2}$",
+            "title": "End Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day_of_week",
+          "start_time",
+          "end_time"
+        ],
+        "title": "SlotIn"
+      },
+      "Step": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "done"
+        ],
+        "title": "Step"
+      },
       "SummaryOut": {
         "properties": {
           "currency": {
@@ -5103,6 +8217,174 @@
         ],
         "title": "TemplateOut"
       },
+      "TestBody": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "title": "Url"
+          },
+          "method": {
+            "type": "string",
+            "pattern": "^(GET|POST|PUT|PATCH|DELETE)$",
+            "title": "Method",
+            "default": "POST"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "maxProperties": 10,
+            "title": "Headers"
+          },
+          "sample": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Sample"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "TestBody"
+      },
+      "TextBody": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "text"
+        ],
+        "title": "TextBody"
+      },
+      "TicketBody": {
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "title": "Ticket"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticket"
+        ],
+        "title": "TicketBody"
+      },
+      "ToolBody": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "title": "Url"
+          },
+          "method": {
+            "type": "string",
+            "pattern": "^(GET|POST|PUT|PATCH|DELETE)$",
+            "title": "Method",
+            "default": "POST"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "maxProperties": 10,
+            "title": "Headers"
+          },
+          "parameters": {
+            "items": {
+              "$ref": "#/components/schemas/ParamIn"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Parameters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "url"
+        ],
+        "title": "ToolBody"
+      },
+      "ToolOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Headers"
+          },
+          "parameters": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Parameters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "url",
+          "method",
+          "headers",
+          "parameters"
+        ],
+        "title": "ToolOut"
+      },
       "TopupBody": {
         "properties": {
           "amount": {
@@ -5193,6 +8475,32 @@
           "text"
         ],
         "title": "TurnOut"
+      },
+      "UrlBody": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "title": "Url"
+          },
+          "refresh_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresh Hours",
+            "default": 24
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "UrlBody"
       },
       "UserOut": {
         "properties": {
@@ -5557,6 +8865,23 @@
         "type": "object",
         "title": "SettingsBody"
       },
+      "api__product__knowledge_router__AttachBody": {
+        "properties": {
+          "document_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Document Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_ids"
+        ],
+        "title": "AttachBody"
+      },
       "api__product__numbers_router__SettingsBody": {
         "properties": {
           "label": {
@@ -5603,6 +8928,23 @@
         },
         "type": "object",
         "title": "SettingsBody"
+      },
+      "api__product__tools_router__AttachBody": {
+        "properties": {
+          "tool_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Tool Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tool_ids"
+        ],
+        "title": "AttachBody"
       }
     }
   }
