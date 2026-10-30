@@ -1,6 +1,7 @@
 import { api as mockApi } from '@/mock/api'
 import { USE_MOCKS } from './env'
 import { toVoice, voicesApi } from './voices'
+import { callsApi } from './calls'
 
 export { USE_MOCKS } from './env'
 export { ApiError } from './http'
@@ -17,6 +18,9 @@ export type { Me, WorkspaceInfo } from './auth'
  */
 const real: Partial<typeof mockApi> = {
   voices: async () => (await voicesApi.list()).map(toVoice),
+  // The server scopes calls to the active Test/Live mode itself.
+  calls: () => callsApi.list(),
+  call: (id: string) => callsApi.get(id),
 }
 
 export const api: typeof mockApi = USE_MOCKS ? mockApi : { ...mockApi, ...real }

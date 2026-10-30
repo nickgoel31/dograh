@@ -5,6 +5,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts'
 import { Download, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge, Button, Card, Chip, Input, Select } from '@/components/ui'
+import { USE_MOCKS } from '@/lib/api/env'
 import { AdvancedOnly, EmptyState, PageHeader, StatusBadge, TableSkeleton, WaveformPlayer, sentimentEmoji, useAsync } from '@/components/shared'
 import { api } from '@/lib/api'
 import { useUI } from '@/store/ui'
@@ -36,7 +37,7 @@ export default function ConversationsPage() {
     { header: 'Agent', accessorFn: (c) => aName(c.agentId) },
     { header: 'Length', cell: ({ row }) => <span className="num">{fmtDur(row.original.duration)}</span> },
     { header: 'Result', cell: ({ row }) => <StatusBadge status={row.original.outcome} /> },
-    { header: 'Mood', cell: ({ row }) => <span className="text-lg" title="How the caller felt">{sentimentEmoji[row.original.sentiment]}</span> },
+    { header: 'Mood', cell: ({ row }) => <span className="text-lg" title="How the caller felt">{row.original.sentiment ? sentimentEmoji[row.original.sentiment] : '—'}</span> },
     { header: 'Cost', cell: ({ row }) => <span className="num">{money(row.original.cost, 2)}</span> },
   ], [agents])
   const table = useReactTable({ data: rows, columns, getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(), initialState: { pagination: { pageSize: 10 } } })
@@ -86,8 +87,14 @@ export function CallDetail() {
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
           <Card className="p-6">
-            <WaveformPlayer duration={call.duration} time={t} playing={playing} onToggle={() => setPlaying(!playing)} onSeek={(x) => setT(Math.max(0, Math.min(call.duration, x)))} segments={call.turns} seed={+call.id.slice(1)} />
-            <div className="num mt-2 text-right text-xs text-soft">{fmtDur(t)} / {fmtDur(call.duration)}</div>
+            {USE_MOCKS ? (
+              <WaveformPlayer duration={call.duration} time={t} playing={playing} onToggle={() => setPlaying(!playing)} onSeek={(x) => setT(Math.max(0, Math.min(call.duration, x)))} segments={call.turns} seed={+call.id.slice(1)} />
+            ) : call.audioUrl ? (
+              <audio controls preload="none" src={call.audioUrl} className="w-full" aria-label="Call recording" />
+            ) : (
+              <p className="text-sm text-soft">There's no recording for this call.</p>
+            )}
+            {USE_MOCKS && <div className="num mt-2 text-right text-xs text-soft">{fmtDur(t)} / {fmtDur(call.duration)}</div>}
             <div className="mt-4 max-h-[320px] space-y-2 overflow-y-auto" aria-label="Transcript">
               {call.turns.map((x, i) => <button key={i} ref={x === active ? lineRef : undefined} onClick={() => setT(x.t)} className={cn('flex w-full gap-3 rounded-lg p-2.5 text-left text-sm transition hover:bg-muted', x === active && 'bg-accent-soft')}>
                 <span className="num w-10 shrink-0 text-xs text-soft">{fmtDur(x.t)}</span><span className={cn('w-14 shrink-0 text-xs font-semibold', x.who === 'agent' ? 'text-accent' : 'text-warn')}>{x.who === 'agent' ? 'Agent' : 'Caller'}</span><span className="flex-1">{x.text}{x.tool && <Badge tone="gray" className="ml-2">🔧 {x.tool}</Badge>}</span></button>)}
@@ -106,7 +113,7 @@ export function CallDetail() {
           </Card>
         </div>
         <div className="space-y-6">
-          <Card className="p-6"><h3 className="font-semibold">Summary</h3><p className="mt-2 text-soft">{call.summary}</p></Card>
+          <Card className="p-6"><h3 className="font-semibold">Summary</h3><p className="mt-2 text-soft">{call.summary || 'A summary will appear here once call summaries are switched on.'}</p></Card>
           <Card className="p-6"><h3 className="font-semibold">What we found out</h3><dl className="mt-3 space-y-2 text-sm">{Object.entries(call.extracted).map(([k, v]) => <div key={k} className="flex justify-between gap-4"><dt className="text-soft">{k}</dt><dd className="font-medium">{v}</dd></div>)}</dl></Card>
           <Card className="p-6"><h3 className="font-semibold">Where the money went</h3>
             <div className="relative h-44"><ResponsiveContainer><PieChart><Pie data={call.costSplit} dataKey="value" innerRadius={52} outerRadius={72} paddingAngle={3} stroke="none">{call.costSplit.map((_, i) => <Cell key={i} fill={colors[i]} />)}</Pie></PieChart></ResponsiveContainer><div className="num absolute inset-0 flex items-center justify-center text-lg font-semibold">{money(call.cost, 2)}</div></div>

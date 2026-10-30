@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from api.db import models, product_models
-from api.product import agents_router, calls_router, config, deps, gateway, voices_router
+from api.product import agents_router, calls_router, config, conversations_router, deps, gateway, voices_router
 from api.product import router as product_router
 
 TABLES = [
@@ -23,6 +23,8 @@ TABLES = [
     product_models.ProductAgentModel.__table__,
     product_models.ProductVoiceFavoriteModel.__table__,
     models.ModelProfileModel.__table__,
+    models.WorkflowModel.__table__,
+    models.WorkflowRunModel.__table__,
 ]
 
 
@@ -86,6 +88,7 @@ async def make_client(monkeypatch, seed_profiles=True):
     )
     async with engine.begin() as conn:
         for t in TABLES:
+            t.indexes.clear()  # some core indexes use Postgres-only expressions
             for c in t.columns:
                 c.server_default = None
         await conn.run_sync(lambda c: models.Base.metadata.create_all(c, tables=TABLES))
@@ -114,6 +117,7 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(agents_router.router)
     app.include_router(voices_router.router)
     app.include_router(calls_router.router)
+    app.include_router(conversations_router.router)
     app.dependency_overrides[deps.get_session] = _session
     app.dependency_overrides[gateway.get_gateway] = lambda: fake
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:

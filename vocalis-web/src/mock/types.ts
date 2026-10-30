@@ -10,7 +10,7 @@ export type Outcome = 'booked' | 'resolved' | 'qualified' | 'transferred' | 'voi
 export interface Turn { who: 'agent' | 'caller'; t: number; end: number; text: string; reply?: number; tool?: string; interrupted?: boolean }
 export interface Call {
   id: string; time: string; caller: string; phone: string; agentId: string; duration: number
-  outcome: Outcome; sentiment: 1 | 2 | 3 | 4 | 5; cost: number; failReason?: string
+  outcome: Outcome; sentiment: 1 | 2 | 3 | 4 | 5 | null; cost: number; failReason?: string; inProgress?: boolean; audioUrl?: string
   turns: Turn[]; summary: string; extracted: Record<string, string>
   costSplit: { name: string; value: number }[]; test: boolean
 }

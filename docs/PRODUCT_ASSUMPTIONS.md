@@ -41,3 +41,14 @@ Decisions taken for the white-label product (brand: `PRODUCT_NAME`, default "Voc
 - **Test calls** (`WS /api/v1/product/agents/{id}/call`): cookie auth, origin check, workspace + role (developer or above), then a run is created in the **test** org against the draft graph and the platform's signalling takes over. Rejections accept the socket first and close with a reason code, because a socket closed before accept reaches browsers as a bare HTTP 403. In dev behind the Vite proxy set `PRODUCT_ALLOWED_ORIGINS=http://localhost:5174` (the proxy rewrites Host).
 - **"Free" is by construction, not yet measured**: test orgs have the wallet off. Needs checking against a real run.
 - **Typed-chat fallback and the Call Flow converter** are not built; the demo chat is hidden in real mode.
+
+## Versions, call flow, conversations (Phase 3, part 3)
+- **Versions**: listed from the platform's version history (no author/note exist there, so the UI shows status instead). Restore makes the chosen version the working draft; nothing goes live until Go live.
+- **Call flow**: the editor's steps convert to/from the platform graph in `vocalis-web/src/lib/flowConvert.ts`. Step kinds live in ids (the platform drops unknown fields); steps the editor doesn't know are shown as "Advanced step" and kept byte-for-byte. A yes/no step is a conversation step whose two outgoing connections carry yes/no conditions (the platform has no branch node). "Hand to a human" is a plain conversation step until Tools wires the real transfer tool. The flow API validates with the platform's own validator and never lets the editor overwrite the agent's main prompt.
+- **Conversations** (`/product/conversations`): scoped to the workspace *and* the active environment's organization (Test mode never lists live calls). Public ids are opaque and tamper-proof (`call_…`).
+  - **Outcome mapping** (`api/product/conversations.py`) is rule-based on the platform's disposition text. The platform's disposition vocabulary was not fully enumerable from the code, so the rules are a **first guess to verify against real calls**.
+  - **Not produced yet** (shown as empty, never faked): sentiment, AI summary, "why it failed" beyond a generic message, waveform peaks (plain audio player instead). These need the post-call analysis job.
+  - **Reply speed** comes from the platform's recorded speed metrics when present.
+  - **Cost** = minutes x `PRICE_PER_MIN` in Live, 0 in Test, split by the platform's vendor-cost proportions (phone is 0 until telephony). Replaced by real ledger numbers in the billing phase.
+  - **Filters**: no filter = full SQL paging. Outcome/search filters scan the newest 2,000 calls (`truncated` is returned). The UI loads the newest 100 calls and filters inside them; CSV export streams everything.
+  - **Audio** is a one-hour signed link from storage; never the stored path.

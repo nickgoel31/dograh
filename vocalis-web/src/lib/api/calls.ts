@@ -1,0 +1,30 @@
+import { http } from './http'
+import type { components } from './schema'
+import type { Call } from '@/mock/types'
+
+type CallOut = components['schemas']['CallOut']
+type CallDetail = components['schemas']['CallDetail']
+
+const SPLIT_ORDER = ['Speech to text', 'AI brain', 'Voice', 'Phone']
+
+/** Server call -> the shape the Conversations page already renders. */
+export function toCall(c: CallOut | CallDetail): Call {
+  const d = c as CallDetail
+  return {
+    id: c.id, time: c.time, caller: c.caller, phone: c.phone ?? '', agentId: c.agent_id ?? '', duration: c.duration,
+    outcome: (c.outcome ?? 'resolved') as Call['outcome'],
+    inProgress: c.outcome === null,
+    sentiment: (c.sentiment ?? null) as Call['sentiment'],
+    cost: c.cost, failReason: c.fail_reason ?? undefined,
+    turns: (d.turns ?? []).map((t) => ({ who: t.who as 'agent' | 'caller', t: t.t, end: t.end, text: t.text, reply: t.reply ?? undefined, tool: t.tool ?? undefined })),
+    summary: d.summary ?? '', extracted: d.extracted ?? {},
+    costSplit: SPLIT_ORDER.map((n) => ({ name: n, value: Number(d.cost_split?.find((s) => s.name === n)?.value ?? 0) })),
+    test: c.test, audioUrl: d.audio_url ?? undefined,
+  }
+}
+
+export const callsApi = {
+  // One page of the newest calls; the page filters within it.
+  list: async () => (await http<components['schemas']['CallPage']>('/conversations?limit=100')).calls.map(toCall),
+  get: async (id: string) => toCall(await http<CallDetail>(`/conversations/${id}`)),
+}
