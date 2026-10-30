@@ -123,6 +123,7 @@ class ProductBillingSettingsModel(Base):
     billing_state = Column(String(2), nullable=True)  # GST state code, e.g. "29"
     billing_address = Column(String(400), nullable=True)
     first_grant_done = Column(Boolean, nullable=False, default=False)
+    human_cost_per_min = Column(Float, nullable=True)  # what a person would cost per minute, for the 'money saved' estimate
 
 
 class ProductPaymentModel(Base):
@@ -194,3 +195,80 @@ class ProductCampaignAuditModel(Base):
     detail = Column(JSON, nullable=False, default=dict)
 
     __table_args__ = (Index("ix_product_campaign_audit_ws", "workspace_id", "campaign_ref"),)
+
+
+class ProductTestCaseModel(Base):
+    __tablename__ = "product_test_cases"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    agent_id = Column(Integer, ForeignKey("product_agents.id", ondelete="CASCADE"), nullable=False)
+    say = Column(String(500), nullable=False)
+    expect = Column(String(500), nullable=False)
+    must_call = Column(String(80), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (Index("ix_product_test_cases_agent", "agent_id"),)
+
+
+class ProductTestResultModel(Base):
+    """Cached outcome of a test case against one version of an agent."""
+
+    __tablename__ = "product_test_results"
+
+    id = Column(Integer, primary_key=True)
+    case_id = Column(Integer, ForeignKey("product_test_cases.id", ondelete="CASCADE"), nullable=False)
+    agent_version = Column(Integer, nullable=False)
+    passed = Column(Boolean, nullable=False)
+    note = Column(String(300), nullable=True)
+    reply = Column(String(1000), nullable=True)
+    ran_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (UniqueConstraint("case_id", "agent_version", name="uq_product_test_result"),)
+
+
+class ProductSimRunModel(Base):
+    __tablename__ = "product_sim_runs"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    agent_id = Column(Integer, ForeignKey("product_agents.id", ondelete="CASCADE"), nullable=False)
+    ab_test_id = Column(Integer, nullable=True)
+    variant = Column(String(1), nullable=True)
+    persona = Column(String(24), nullable=False)
+    status = Column(String(8), nullable=False, default="running")  # running | done | failed
+    score = Column(Integer, nullable=True)
+    note = Column(String(300), nullable=True)
+    transcript = Column(JSON, nullable=False, default=list)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (Index("ix_product_sim_runs_agent", "agent_id", "id"),)
+
+
+class ProductAbTestModel(Base):
+    __tablename__ = "product_ab_tests"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    agent_id = Column(Integer, ForeignKey("product_agents.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(120), nullable=False)
+    prompt_a = Column(String(20000), nullable=False)
+    prompt_b = Column(String(20000), nullable=False)
+    workflow_a = Column(Integer, nullable=False)
+    workflow_b = Column(Integer, nullable=False)
+    runs_per_variant = Column(Integer, nullable=False)
+    status = Column(String(8), nullable=False, default="running")
+    result = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+
+class ProductInsightModel(Base):
+    __tablename__ = "product_insights"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    week = Column(String(8), nullable=False)  # YYYY-Www
+    items = Column(JSON, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (UniqueConstraint("workspace_id", "week", name="uq_product_insight_week"),)

@@ -15,10 +15,18 @@ from api.product.service import default_view, list_workspaces, org_for_environme
 from api.utils.auth import decode_jwt_token
 
 
-async def get_session() -> AsyncIterator[AsyncSession]:
+def session_factory():
+    """Sessions that keep loaded values after a commit. The platform's own factory expires them, and code that reads
+    a saved object afterwards (as the product routes do) would then try to reload it outside an async call."""
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
     from api.db import db_client
 
-    async with db_client.async_session() as session:
+    return async_sessionmaker(db_client.engine, expire_on_commit=False)
+
+
+async def get_session() -> AsyncIterator[AsyncSession]:
+    async with session_factory()() as session:
         yield session
 
 

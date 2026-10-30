@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from api.db import models, product_models
-from api.product import (agents_router, billing_router, calls_router, campaigns_router, config, conversations_router, deps, gateway,
-                         handoff_router, home_router, import_router, knowledge_router, notifications, numbers_router, payments, tools_router, voices_router)
+from api.product import (agents_router, analytics_router, billing_router, calls_router, campaigns_router, config, conversations_router, deps, gateway,
+                         handoff_router, home_router, import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, tools_router, voices_router)
 from api.product import router as product_router
 
 TABLES = [
@@ -34,6 +34,11 @@ TABLES = [
     product_models.ProductInvoiceModel.__table__,
     product_models.ProductNotificationModel.__table__,
     product_models.ProductCampaignAuditModel.__table__,
+    product_models.ProductTestCaseModel.__table__,
+    product_models.ProductTestResultModel.__table__,
+    product_models.ProductSimRunModel.__table__,
+    product_models.ProductAbTestModel.__table__,
+    product_models.ProductInsightModel.__table__,
 ]
 
 
@@ -165,6 +170,62 @@ class FakeCampaigns:
         return {"ref": ref, "state": c["state"]}
 
 
+class FakeText:
+    """A text agent that replies from a script and ends after a few turns. Records what it was asked."""
+
+    def __init__(self):
+        self.replies = ["Hello, how can I help?", "Sure, I can do that.", "Anything else?", "Goodbye!"]
+        self.say_log: list[tuple[int, str]] = []
+        self.tools: dict[str, list[str]] = {}
+        self._run = itertools.count(1)
+        self.n: dict[int, int] = {}
+        self.by_workflow_replies: dict[int, list[str]] = {}
+
+    def _next(self, run, wf):
+        i = self.n.get(run, 0)
+        self.n[run] = i + 1
+        pool = self.by_workflow_replies.get(wf, self.replies)
+        return pool[min(i, len(pool) - 1)], i + 1 >= len(pool)
+
+    async def start(self, org_id, user_id, workflow_id):
+        from api.product.llm_gateway import AgentReply
+
+        run = next(self._run)
+        text, _ = self._next(run, workflow_id)
+        self.runs_wf = getattr(self, "runs_wf", {})
+        self.runs_wf[run] = workflow_id
+        return AgentReply(run, text)
+
+    async def say(self, org_id, user_id, workflow_id, run_id, text):
+        from api.product.llm_gateway import AgentReply
+
+        self.say_log.append((workflow_id, text))
+        reply, ended = self._next(run_id, workflow_id)
+        return AgentReply(run_id, reply, ended, self.tools.get(text, []))
+
+
+class FakeLLM:
+    """Plays the caller, and answers judge prompts with whatever has been scripted."""
+
+    def __init__(self):
+        self.judge = '{"goal_reached":90,"politeness":90,"handled_difficulty":90,"no_made_up_facts":90,"note":"Went well."}'
+        self.verdict = '{"pass": true, "note": "Looks right."}'
+        self.rewrite = None
+        self.calls: list[str] = []
+
+    async def complete(self, org_id, user_id, system, messages):
+        self.calls.append(system[:30])
+        if "Score the AGENT" in system:
+            return self.judge
+        if "strict, fair checker" in system:
+            return self.verdict
+        if "Rewrite the sentence" in system:
+            if self.rewrite is None:
+                raise RuntimeError("no model")
+            return self.rewrite(messages[0]["content"]) if callable(self.rewrite) else self.rewrite
+        return "I need some help please." if len(messages) < 5 else "Thanks, goodbye"
+
+
 class FakeWallet:
     def __init__(self):
         self.balance, self.minutes, self.keys = 0.0, 0.0, set()
@@ -222,12 +283,16 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(conversations_router.router)
     app.include_router(numbers_router.router)
     app.include_router(billing_router.router)
-    for r in (handoff_router, import_router, campaigns_router, home_router, knowledge_router, notifications, tools_router):
+    for r in (analytics_router, labs_router, handoff_router, import_router, campaigns_router, home_router, knowledge_router, notifications, tools_router):
         app.include_router(r.router)
     kb, tl, cp = FakeKB(), FakeTools(), FakeCampaigns()
     app.dependency_overrides[knowledge_router.get_knowledge] = lambda: kb
     app.dependency_overrides[tools_router.get_tools] = lambda: tl
     app.dependency_overrides[campaigns_router.get_campaigns] = lambda: cp
+    text, llm = FakeText(), FakeLLM()
+    app.dependency_overrides[llm_gateway.get_text] = lambda: text
+    app.dependency_overrides[llm_gateway.get_llm] = lambda: llm
+    app.dependency_overrides[labs_router.get_session_factory] = lambda: Session
     app.dependency_overrides[deps.get_session] = _session
     app.dependency_overrides[gateway.get_gateway] = lambda: fake
     wallet = FakeWallet()
@@ -238,6 +303,7 @@ async def make_client(monkeypatch, seed_profiles=True):
         c.fake = fake
         c.wallet = c_wallet
         c.kb, c.tools, c.camps = kb, tl, cp
+        c.text, c.llm = text, llm
         yield c
     await engine.dispose()
 

@@ -473,6 +473,199 @@ export interface paths {
         patch: operations["settings_api_v1_product_numbers__number_id__patch"];
         trace?: never;
     };
+    "/api/v1/product/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Analytics */
+        get: operations["analytics_api_v1_product_analytics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/analytics/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Set Assumptions */
+        patch: operations["set_assumptions_api_v1_product_analytics_settings_patch"];
+        trace?: never;
+    };
+    "/api/v1/product/analytics/insights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Insights */
+        get: operations["insights_api_v1_product_analytics_insights_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/lab/personas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Personas */
+        get: operations["personas_api_v1_product_lab_personas_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/lab/sim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Sims */
+        get: operations["list_sims_api_v1_product_lab_sim_get"];
+        put?: never;
+        /** Start Sim */
+        post: operations["start_sim_api_v1_product_lab_sim_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/lab/sim/{sim_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Sim */
+        get: operations["get_sim_api_v1_product_lab_sim__sim_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/lab/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Cases */
+        get: operations["list_cases_api_v1_product_lab_cases_get"];
+        put?: never;
+        /** Add Case */
+        post: operations["add_case_api_v1_product_lab_cases_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/lab/cases/{case_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Case */
+        delete: operations["delete_case_api_v1_product_lab_cases__case_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/lab/cases/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Cases
+         * @description Run every case that hasn't been run against this version of the agent (or all, with force). Results are kept per version.
+         */
+        post: operations["run_cases_api_v1_product_lab_cases_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/lab/ab": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Ab */
+        get: operations["list_ab_api_v1_product_lab_ab_get"];
+        put?: never;
+        /** Start Ab */
+        post: operations["start_ab_api_v1_product_lab_ab_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/lab/ab/{ab_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ab */
+        get: operations["get_ab_api_v1_product_lab_ab__ab_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/product/auth/handoff": {
         parameters: {
             query?: never;
@@ -1111,6 +1304,43 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AbBody */
+        AbBody: {
+            /** Agent Id */
+            agent_id: string;
+            /** Name */
+            name: string;
+            /** Prompt B */
+            prompt_b: string;
+            /**
+             * Runs
+             * @default 20
+             */
+            runs: number;
+        };
+        /** AbOut */
+        AbOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+            /** Runs Per Variant */
+            runs_per_variant: number;
+            /** Done A */
+            done_a: number;
+            /** Done B */
+            done_b: number;
+            /** Pass A */
+            pass_a: number;
+            /** Pass B */
+            pass_b: number;
+            /** Result */
+            result: {
+                [key: string]: unknown;
+            } | null;
+        };
         /** AgentCreate */
         AgentCreate: {
             /** Name */
@@ -1194,6 +1424,37 @@ export interface components {
             voice_id?: string | null;
             /** Prompt */
             prompt?: string | null;
+        };
+        /** AnalyticsOut */
+        AnalyticsOut: {
+            /** Days */
+            days: number;
+            /** Currency */
+            currency: string;
+            /** Free Mode */
+            free_mode: boolean;
+            /** Current */
+            current: {
+                [key: string]: unknown;
+            };
+            /** Previous */
+            previous?: {
+                [key: string]: unknown;
+            } | null;
+            /** Funnel */
+            funnel: {
+                [key: string]: unknown;
+            }[];
+            /** Avg Reply Seconds */
+            avg_reply_seconds: number | null;
+            /** Interruption Rate */
+            interruption_rate?: number | null;
+            /** Sentiment Trend */
+            sentiment_trend?: unknown[] | null;
+            /** Human Cost Per Min */
+            human_cost_per_min: number;
+            /** Human Cost Is Default */
+            human_cost_is_default: boolean;
         };
         /** AnswerOut */
         AnswerOut: {
@@ -1360,6 +1621,34 @@ export interface components {
             name: string;
             /** Agents */
             agents: number;
+        };
+        /** CaseBody */
+        CaseBody: {
+            /** Agent Id */
+            agent_id: string;
+            /** Say */
+            say: string;
+            /** Expect */
+            expect: string;
+            /** Must Call */
+            must_call?: string | null;
+        };
+        /** CaseOut */
+        CaseOut: {
+            /** Id */
+            id: string;
+            /** Say */
+            say: string;
+            /** Expect */
+            expect: string;
+            /** Must Call */
+            must_call: string | null;
+            /** Passed */
+            passed?: boolean | null;
+            /** Note */
+            note?: string | null;
+            /** Reply */
+            reply?: string | null;
         };
         /** CatalogItem */
         CatalogItem: {
@@ -1558,6 +1847,13 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /** InsightOut */
+        InsightOut: {
+            /** Id */
+            id: string;
+            /** Text */
+            text: string;
+        };
         /** InvoiceOut */
         InvoiceOut: {
             /** Number */
@@ -1692,6 +1988,13 @@ export interface components {
              */
             required: boolean;
         };
+        /** PersonaOut */
+        PersonaOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+        };
         /** QA */
         QA: {
             /** Q */
@@ -1764,6 +2067,39 @@ export interface components {
             name: string;
             /** Workspace Name */
             workspace_name?: string | null;
+        };
+        /** SimBody */
+        SimBody: {
+            /** Agent Id */
+            agent_id: string;
+            /** Persona */
+            persona: string;
+            /**
+             * Goal
+             * @default
+             */
+            goal: string;
+        };
+        /** SimOut */
+        SimOut: {
+            /** Id */
+            id: string;
+            /** Persona */
+            persona: string;
+            /** Persona Name */
+            persona_name: string;
+            /** Status */
+            status: string;
+            /** Score */
+            score: number | null;
+            /** Note */
+            note: string | null;
+            /** Passed */
+            passed: boolean | null;
+            /** Turns */
+            turns: {
+                [key: string]: unknown;
+            }[];
         };
         /** SlotIn */
         SlotIn: {
@@ -2017,6 +2353,11 @@ export interface components {
             name: string;
             /** Role */
             role: string;
+        };
+        /** SettingsBody */
+        api__product__analytics_router__SettingsBody: {
+            /** Human Cost Per Min */
+            human_cost_per_min: number;
         };
         /** SettingsBody */
         api__product__billing_router__SettingsBody: {
@@ -3255,6 +3596,501 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NumberOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analytics_api_v1_product_analytics_get: {
+        parameters: {
+            query?: {
+                days?: number;
+                agent?: string | null;
+                compare?: boolean;
+            };
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_assumptions_api_v1_product_analytics_settings_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["api__product__analytics_router__SettingsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    insights_api_v1_product_analytics_insights_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InsightOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    personas_api_v1_product_lab_personas_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonaOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sims_api_v1_product_lab_sim_get: {
+        parameters: {
+            query: {
+                agent_id: string;
+            };
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_sim_api_v1_product_lab_sim_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sim_api_v1_product_lab_sim__sim_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                sim_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_cases_api_v1_product_lab_cases_get: {
+        parameters: {
+            query: {
+                agent_id: string;
+            };
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_case_api_v1_product_lab_cases_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_case_api_v1_product_lab_cases__case_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_cases_api_v1_product_lab_cases_run_post: {
+        parameters: {
+            query: {
+                agent_id: string;
+                force?: boolean;
+            };
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_ab_api_v1_product_lab_ab_get: {
+        parameters: {
+            query: {
+                agent_id: string;
+            };
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AbOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_ab_api_v1_product_lab_ab_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AbBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AbOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ab_api_v1_product_lab_ab__ab_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                ab_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AbOut"];
                 };
             };
             /** @description Validation Error */

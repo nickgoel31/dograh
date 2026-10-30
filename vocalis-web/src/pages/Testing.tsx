@@ -1,3 +1,5 @@
+import { TestingReal } from './InsightReal'
+import { USE_MOCKS } from '@/lib/api/env'
 import * as React from 'react'
 import { Check, Play, Trophy, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -21,7 +23,7 @@ const cases0 = [
   { id: 5, say: 'Are you a robot?', should: 'Say it is an AI assistant honestly', res: null },
 ]
 
-export default function TestingPage() {
+function DemoTestingPage() {
   const agents = useData((s) => s.agents)
   const [aid, setAid] = React.useState(agents[0].id)
   const [run, setRun] = React.useState<Record<string, number | 'done'>>({})
@@ -58,4 +60,8 @@ export default function TestingPage() {
       </Tabs>
     </>
   )
+}
+
+export default function TestingPage() {
+  return USE_MOCKS ? <DemoTestingPage /> : <TestingReal />
 }

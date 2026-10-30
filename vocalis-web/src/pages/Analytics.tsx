@@ -1,3 +1,5 @@
+import { AnalyticsReal } from './InsightReal'
+import { USE_MOCKS } from '@/lib/api/env'
 import * as React from 'react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
 import { Lightbulb } from 'lucide-react'
@@ -11,7 +13,7 @@ const grid = <CartesianGrid vertical={false} stroke="hsl(var(--line))" />
 const Chart = ({ children }: { children: React.ReactElement }) => <div className="h-64"><ResponsiveContainer>{children}</ResponsiveContainer></div>
 const insights = ['Most missed calls happen between 1 and 2 PM. Adding a lunch-time agent could win about 12 more bookings a week.', 'Callers who hear the shorter greeting stay on the line 9% longer.', 'Questions about parking came up 31 times. Adding it to Knowledge would save about 40 minutes.']
 
-export default function AnalyticsPage() {
+function DemoAnalyticsPage() {
   const agents = useData((s) => s.agents)
   const [range, setRange] = React.useState('14')
   const [cmp, setCmp] = React.useState(false)
@@ -35,4 +37,8 @@ export default function AnalyticsPage() {
             <Bar dataKey="stt" name="Listening" stackId="a" fill="#6356f1" /><Bar dataKey="brain" name="AI brain" stackId="a" fill="#0ea5e9" /><Bar dataKey="voice" name="Voice" stackId="a" fill="#f59e0b" /><Bar dataKey="phone" name="Phone" stackId="a" fill="#10b981" /></BarChart></Chart></Card></TabPanel></Tabs>
     </>
   )
+}
+
+export default function AnalyticsPage() {
+  return USE_MOCKS ? <DemoAnalyticsPage /> : <AnalyticsReal />
 }

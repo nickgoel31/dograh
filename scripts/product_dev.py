@@ -25,10 +25,10 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # no
 from sqlalchemy.pool import StaticPool  # noqa: E402
 
 from api.db import models  # noqa: E402
-from api.product import (agents_router, billing_router, calls_router, campaigns_router, conversations_router, deps, gateway, handoff_router, home_router,  # noqa: E402
-                         import_router, knowledge_router, notifications, numbers_router, payments, tools_router, voices_router)
+from api.product import (agents_router, analytics_router, billing_router, calls_router, campaigns_router, conversations_router, deps, gateway, handoff_router, home_router,  # noqa: E402
+                         import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, tools_router, voices_router)
 from api.product import router as product_router  # noqa: E402
-from api.tests.product.support import (PROFILES, TABLES, FakeCampaigns, FakeGateway, FakeKB, FakeTools, FakeWallet)  # noqa: E402
+from api.tests.product.support import (PROFILES, TABLES, FakeCampaigns, FakeGateway, FakeKB, FakeLLM, FakeText, FakeTools, FakeWallet)  # noqa: E402
 
 for t in TABLES:
     t.indexes.clear()
@@ -50,13 +50,14 @@ async def _no_limit(*a, **k):
 
 product_router.rate_limit.enforce = _no_limit
 app = FastAPI(title="Product dev API")
-for r in (product_router, handoff_router, import_router, agents_router, voices_router, calls_router, conversations_router, numbers_router, billing_router,
+for r in (product_router, analytics_router, labs_router, handoff_router, import_router, agents_router, voices_router, calls_router, conversations_router, numbers_router, billing_router,
           campaigns_router, home_router, knowledge_router, notifications, tools_router):
     app.include_router(r.router, prefix="/api/v1")
 fake, wallet = FakeGateway(), FakeWallet()
 kb, tl, cp = FakeKB(), FakeTools(), FakeCampaigns()
 app.dependency_overrides.update({
     deps.get_session: _session, gateway.get_gateway: lambda: fake, payments.get_wallet: lambda: wallet,
+    llm_gateway.get_text: lambda: FakeText(), llm_gateway.get_llm: lambda: FakeLLM(), labs_router.get_session_factory: lambda: Session,
     knowledge_router.get_knowledge: lambda: kb, tools_router.get_tools: lambda: tl, campaigns_router.get_campaigns: lambda: cp,
 })
 

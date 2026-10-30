@@ -15,7 +15,9 @@ from api.product.conversations_router import router as conversations_router
 from api.product.billing_router import router as billing_router
 from api.product.campaigns_router import router as campaigns_router
 from api.product.handoff_router import router as handoff_router
+from api.product.analytics_router import router as analytics_router
 from api.product.home_router import router as home_router
+from api.product.labs_router import router as lab_router
 from api.product.import_router import router as import_router
 from api.product.knowledge_router import router as knowledge_router
 from api.product.notifications import router as notifications_router
@@ -33,7 +35,7 @@ def build_app() -> FastAPI:
     app.include_router(calls_router, prefix="/api/v1")
     app.include_router(conversations_router, prefix="/api/v1")
     app.include_router(numbers_router, prefix="/api/v1")
-    for r in (handoff_router, import_router, billing_router, campaigns_router, home_router, knowledge_router, notifications_router, tools_router):
+    for r in (analytics_router, lab_router, handoff_router, import_router, billing_router, campaigns_router, home_router, knowledge_router, notifications_router, tools_router):
         app.include_router(r, prefix="/api/v1")
     return app
 
