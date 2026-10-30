@@ -21,6 +21,10 @@ class PlatformGateway(Protocol):
         """Draft if one exists, else the published graph."""
         ...
 
+    async def set_model_overrides(self, org_id: int, agent_ref: int, overrides: dict | None) -> None:
+        """Set (or clear) the agent's per-agent model/voice overrides on its draft."""
+        ...
+
     async def start_test_run(self, org_id: int, user_id: int, agent_ref: int) -> int:
         """Create a browser test call against the draft (or published) graph."""
         ...
@@ -70,6 +74,23 @@ class CoreGateway:
         if draft is not None:
             return draft.workflow_json
         return await self.published_definition(org_id, agent_ref)
+
+    async def set_model_overrides(self, org_id, agent_ref, overrides) -> None:
+        db = self._db()
+        wf = await db.get_workflow(agent_ref, organization_id=org_id)
+        if wf is None:
+            raise LookupError("agent not found")
+        draft = await db.get_draft_version(agent_ref)
+        if draft is not None:
+            cfg = dict(draft.workflow_configurations or {})
+        else:
+            rel = wf.released_definition
+            cfg = dict((rel.workflow_configurations if rel else wf.workflow_configurations) or {})
+        if overrides:
+            cfg["model_overrides"] = overrides
+        else:
+            cfg.pop("model_overrides", None)
+        await db.save_workflow_draft(agent_ref, workflow_configurations=cfg)
 
     async def start_test_run(self, org_id, user_id, agent_ref) -> int:
         import time

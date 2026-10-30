@@ -22,6 +22,7 @@ TABLES = [
     product_models.ProductUserProfileModel.__table__,
     product_models.ProductAgentModel.__table__,
     product_models.ProductVoiceFavoriteModel.__table__,
+    models.ModelProfileModel.__table__,
 ]
 
 
@@ -33,6 +34,7 @@ class FakeGateway:
         self.published: dict[tuple[int, int], dict] = {}
         self.drafts: dict[tuple[int, int], dict] = {}
         self.names: dict[tuple[int, int], str] = {}
+        self.overrides: dict[tuple[int, int], dict | None] = {}
         self.runs: list[tuple[int, int, int]] = []
         self.served: list[tuple[int, int, int]] = []
 
@@ -63,8 +65,20 @@ class FakeGateway:
         return deepcopy(self.drafts.get(key) or self.published.get(key))
 
 
+PROFILES = {
+    "std": {
+        "llm": {"provider": "openai", "api_key": "KEY-STD", "model": "std-llm"},
+        "tts": {"provider": "sarvam", "api_key": "KEY-TTS", "model": "bulbul:v4-flash", "voice": "shubh_enhi_ads", "language": "hi-IN"},
+        "stt": {"provider": "deepgram", "api_key": "KEY-STT", "model": "nova"},
+    },
+    "pro": {"llm": {"provider": "openai", "api_key": "KEY-PRO", "model": "pro-llm"}},
+    "lite": {"llm": {"provider": "openai", "api_key": "KEY-LITE", "model": "lite-llm"}},
+}
+PRESET_MAP = '{"default": "std", "fast": "lite", "balanced": "std", "smartest": "pro"}'
+
+
 @asynccontextmanager
-async def make_client(monkeypatch):
+async def make_client(monkeypatch, seed_profiles=True):
     engine = create_async_engine(
         "sqlite+aiosqlite://", poolclass=StaticPool, connect_args={"check_same_thread": False}
     )
@@ -74,6 +88,14 @@ async def make_client(monkeypatch):
                 c.server_default = None
         await conn.run_sync(lambda c: models.Base.metadata.create_all(c, tables=TABLES))
     Session = async_sessionmaker(engine, expire_on_commit=False)
+    if seed_profiles:
+        async with Session() as s:
+            for slug, cfg in PROFILES.items():
+                s.add(models.ModelProfileModel(slug=slug, display_name=slug, config=cfg, is_active=True))
+            await s.commit()
+        monkeypatch.setenv("PRODUCT_PROFILES", PRESET_MAP)
+    else:
+        monkeypatch.delenv("PRODUCT_PROFILES", raising=False)
 
     async def _session():
         async with Session() as s:
@@ -125,5 +147,12 @@ async def _serve_signaling(self, ws, org_id, user_id, agent_ref, run_id):
     await ws.close()
 
 
+async def _set_model_overrides(self, org_id, agent_ref, overrides):
+    if (org_id, agent_ref) not in self.published:
+        raise LookupError("wrong org")
+    self.overrides[(org_id, agent_ref)] = overrides
+
+
+FakeGateway.set_model_overrides = _set_model_overrides
 FakeGateway.start_test_run = _start_test_run
 FakeGateway.serve_signaling = _serve_signaling

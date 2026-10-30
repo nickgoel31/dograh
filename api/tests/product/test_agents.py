@@ -163,7 +163,7 @@ async def test_readiness_blocks_go_live_when_prompt_empty(client):
     h = bearer(tok)
     a = await new_agent(client, tok, business="")
     checks = {c["id"]: c["level"] for c in (await client.get(f"/product/agents/{a['id']}/readiness", headers=h)).json()}
-    assert checks == {"prompt": "ok", "business": "warn", "voice": "warn"}
+    assert checks == {"models": "ok", "prompt": "ok", "business": "warn", "voice": "warn"}
     await client.patch(f"/product/agents/{a['id']}", json={"prompt": ""}, headers=h)
     checks = {c["id"]: c["level"] for c in (await client.get(f"/product/agents/{a['id']}/readiness", headers=h)).json()}
     assert checks["prompt"] == "blocker"

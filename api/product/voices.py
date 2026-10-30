@@ -51,12 +51,19 @@ class SarvamAdapter:
     model = "bulbul:v4-flash"
 
     def list(self) -> list[Voice]:
-        from api.services.configuration.options.sarvam import SARVAM_V4_FLASH_VOICES
+        from api.services.configuration.options.sarvam import (
+            SARVAM_V4_FLASH_LANGUAGES,
+            SARVAM_V4_FLASH_VOICES,
+        )
 
         out = []
         for raw in SARVAM_V4_FLASH_VOICES:
             name, _, rest = raw.partition("_")
             code, _, style = rest.partition("_")
+            tts = {"provider": self.provider, "model": self.model, "voice": raw}
+            # Only single-language personas get a language code; mixed ones keep the profile's.
+            if f"{code}-IN" in SARVAM_V4_FLASH_LANGUAGES:
+                tts["language"] = f"{code}-IN"
             out.append(
                 Voice(
                     id=voice_id(self.provider, self.model, raw),
@@ -64,7 +71,7 @@ class SarvamAdapter:
                     language=LANGUAGE_NAMES.get(code, code or "Unknown"),
                     style=style.replace("_", " ").capitalize() or None,
                     provider=PROVIDER_ALIASES[self.provider],
-                    tts={"provider": self.provider, "model": self.model, "voice": raw},
+                    tts=tts,
                 )
             )
         return out

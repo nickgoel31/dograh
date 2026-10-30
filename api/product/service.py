@@ -12,6 +12,7 @@ from api.db.product_models import (
     ProductUserProfileModel,
     ProductWorkspaceModel,
 )
+from api.product import models_config
 from api.product.ids import new_public_id
 from api.product.roles import Role
 
@@ -49,6 +50,8 @@ async def create_workspace(
     session.add(ws)
     await session.flush()
     session.add(ProductMembershipModel(workspace_id=ws.id, user_id=user.id, role=Role.OWNER.value))
+    # No-op (returns False) until the operator has configured a default profile; repaired later.
+    await models_config.ensure_org_profiles(session, live.id, test.id)
     if user.selected_organization_id is None:
         user.selected_organization_id = test.id
     await session.flush()

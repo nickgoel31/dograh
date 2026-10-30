@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.db.product_models import ProductAgentModel, ProductWorkspaceModel
 from api.product import definition as defn
+from api.product import models_config
 from api.product import prompt as prompts
 from api.product import voices as voice_catalogue
 from api.product.errors import product_error
@@ -107,6 +108,7 @@ async def update_agent(
             "Someone else changed this agent while you were editing. Reload to see their changes.",
         )
     custom_prompt = changes.pop("prompt", None)
+    touches_models = bool({"voice_id", "brain"} & changes.keys())
     if changes.get("voice_id") and voice_catalogue.find(changes["voice_id"]) is None:
         raise product_error(400, "unknown_voice", "That voice isn't available. Pick one from the voice list.")
     for field in ("name", "emoji", "color", "role", "tone", "business", "what_you_do", "voice_id"):
@@ -131,6 +133,11 @@ async def update_agent(
     else:
         graph = defn.with_prompt(graph, name=agent.name)
     await gw.save_draft(ws.test_org_id, agent.test_workflow_id, agent.name, graph)
+    if touches_models:
+        await gw.set_model_overrides(
+            ws.test_org_id, agent.test_workflow_id,
+            await models_config.build_overrides(session, brain=agent.brain, voice_id=agent.voice_id),
+        )
     agent.version += 1
     await session.flush()
     return agent
@@ -156,9 +163,17 @@ async def duplicate_agent(
     return copy
 
 
-async def readiness(gw: PlatformGateway, ws: ProductWorkspaceModel, agent: ProductAgentModel) -> list[Check]:
+async def readiness(
+    session: AsyncSession, gw: PlatformGateway, ws: ProductWorkspaceModel, agent: ProductAgentModel
+) -> list[Check]:
+    models_ok = await models_config.ensure_org_profiles(session, ws.test_org_id, ws.live_org_id)
     graph = await gw.working_definition(ws.test_org_id, agent.test_workflow_id) or {}
     checks = [
+        Check(
+            "models", "Calls are set up for your workspace",
+            "ok" if models_ok else "blocker",
+            None if models_ok else "Calling isn't enabled for your workspace yet. Please contact support.",
+        ),
         Check(
             "prompt", "Your agent knows what to say",
             "ok" if defn.get_prompt(graph).strip() else "blocker",
@@ -181,7 +196,7 @@ async def readiness(gw: PlatformGateway, ws: ProductWorkspaceModel, agent: Produ
 async def go_live(
     session: AsyncSession, gw: PlatformGateway, ws: ProductWorkspaceModel, user_id: int, agent: ProductAgentModel
 ) -> ProductAgentModel:
-    blockers = [c for c in await readiness(gw, ws, agent) if c.level == "blocker"]
+    blockers = [c for c in await readiness(session, gw, ws, agent) if c.level == "blocker"]
     if blockers:
         raise product_error(400, "not_ready", f"Not ready to go live yet: {blockers[0].hint or blockers[0].label}")
     await gw.publish(ws.test_org_id, agent.test_workflow_id)
@@ -192,7 +207,11 @@ async def go_live(
         agent.live_workflow_id = await gw.create_agent(ws.live_org_id, user_id, agent.name, graph)
     else:
         await gw.save_draft(ws.live_org_id, agent.live_workflow_id, agent.name, graph)
-        await gw.publish(ws.live_org_id, agent.live_workflow_id)
+    await gw.set_model_overrides(
+        ws.live_org_id, agent.live_workflow_id,
+        await models_config.build_overrides(session, brain=agent.brain, voice_id=agent.voice_id),
+    )
+    await gw.publish(ws.live_org_id, agent.live_workflow_id)
     agent.status = "live"
     agent.version += 1
     await session.flush()

@@ -16,6 +16,7 @@ const REASONS: Record<string, string> = {
   workspace_not_found: "We couldn't find that workspace.",
   not_allowed: "You don't have permission to test this agent. Ask a workspace owner.",
   agent_not_found: "We couldn't find that agent.",
+  calls_not_set_up: "Calling isn't enabled for your workspace yet. Please contact support.",
 }
 
 function wsUrl(agentId: string, workspaceId: string | null) {

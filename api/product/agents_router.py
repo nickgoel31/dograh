@@ -177,7 +177,9 @@ async def resume(agent_id: str, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE))):
 @router.get("/{agent_id}/readiness", response_model=list[CheckOut])
 async def readiness(agent_id: str, ctx: Ctx = Depends(get_ctx), gw: PlatformGateway = Depends(get_gateway)):
     agent = await svc.get_agent(ctx.session, ctx.workspace, agent_id)
-    return [CheckOut(**c.__dict__) for c in await svc.readiness(gw, ctx.workspace, agent)]
+    checks = await svc.readiness(ctx.session, gw, ctx.workspace, agent)
+    await ctx.session.commit()  # readiness repairs a missing model profile
+    return [CheckOut(**c.__dict__) for c in checks]
 
 
 @router.post("/{agent_id}/publish", response_model=AgentOut)

@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.db.models import UserModel
 from api.db.product_models import ProductAgentModel
-from api.product import config
+from api.product import config, models_config
 from api.product.deps import Ctx, get_ctx, get_session
 from api.product.gateway import PlatformGateway, get_gateway
 from api.product.roles import Perm, can
@@ -97,6 +97,9 @@ async def _authorize(
     )
     if agent is None:
         return "agent_not_found"
+    if not await models_config.ensure_org_profiles(session, view.workspace.test_org_id):
+        return "calls_not_set_up"
+    await session.commit()
     return user, view.workspace, agent
 
 
