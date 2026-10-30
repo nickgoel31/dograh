@@ -23,3 +23,12 @@ Decisions taken for the white-label product (brand: `PRODUCT_NAME`, default "Voc
 - `OSS_JWT_SECRET` default is a placeholder; set a long random value before any deployment (tests currently warn about a 23-byte key).
 - Rate limiting reuses the core limiter (Redis, degrades to per-process).
 - Core tables are still created through the fork's normal migrations; the new migration `d1e2f3a4b5c6` has **not** been run against Postgres (see verification notes in the Phase 2 report).
+
+## Agents (Phase 3, part 1)
+- **Editing happens on the test workflow; "Go live" copies the published version into the live org** (created on first go-live, updated in place afterwards). `product_agents` holds both workflow ids plus emoji/colour/tone/business, status (`draft|live|paused`) and an integer `version` used as the ETag (`If-Match` header → friendly 409 `edited_elsewhere`).
+- **Simple vs custom prompt**: simple agents recompile their prompt from fields via `api/product/prompt.py` (versioned, deterministic); writing a prompt switches the agent to custom and later field edits no longer overwrite it.
+- **No LLM "generate my agent" yet.** The wizard creates from one of 8 data templates (`api/product/templates.py`) plus the user's description. LLM generation needs a server-side model config the product layer does not have yet.
+- **Readiness** currently checks only: prompt present (blocker), business name (warn), voice chosen (warn). Knowledge, test-call and phone-number checks are added when those modules exist; the Publish tab still shows the demo's local checklist beside the real server check.
+- **Pause/resume is a status flag only** for now; it does not yet stop inbound routing or campaigns (needs Phone Numbers/Campaigns, later phases).
+- **Not yet real in the agent screen**: voice list (still demo voices), Call Flow editor (not saved; converter not written), Knowledge/Tools/Behavior/Phone/Test tabs, versions list, per-agent call stats (return 0).
+- The core is reached through one seam, `api/product/gateway.py`. `CoreGateway` matches the core's real method signatures (checked) and the graph it generates passes the core's own DTO + graph validation (checked), but it has **not** been exercised against a real database.

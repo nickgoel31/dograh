@@ -54,6 +54,42 @@ class ProductMembershipModel(Base):
     )
 
 
+class ProductAgentModel(Base):
+    """Product metadata for one agent. The conversation graph lives in the platform.
+
+    Editing always happens on the test workflow; "Go live" copies the published
+    version into the live organization (created on first go-live).
+    """
+
+    __tablename__ = "product_agents"
+
+    id = Column(Integer, primary_key=True)
+    public_id = Column(String(32), unique=True, nullable=False, index=True)
+    workspace_id = Column(
+        Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False
+    )
+    name = Column(String(120), nullable=False)
+    emoji = Column(String(16), nullable=False, default="🤖")
+    color = Column(String(16), nullable=False, default="#6356f1")
+    role = Column(String(120), nullable=False, default="")
+    tone = Column(String(24), nullable=False, default="Friendly")
+    business = Column(String(160), nullable=False, default="")
+    what_you_do = Column(String(2000), nullable=False, default="")
+    brain = Column(String(16), nullable=False, default="balanced")
+    voice_id = Column(String(64), nullable=True)
+    # "simple": prompt is compiled from the fields above. "custom": user-written.
+    prompt_mode = Column(String(8), nullable=False, default="simple")
+    status = Column(String(8), nullable=False, default="draft")  # draft|live|paused
+    test_workflow_id = Column(Integer, nullable=False)
+    live_workflow_id = Column(Integer, nullable=True)
+    # Bumped on every change; used as the ETag for conflict detection.
+    version = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime(timezone=True), default=_now)
+    updated_at = Column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    __table_args__ = (Index("ix_product_agents_workspace", "workspace_id"),)
+
+
 class ProductUserProfileModel(Base):
     __tablename__ = "product_user_profiles"
 

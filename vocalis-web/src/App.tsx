@@ -2,10 +2,12 @@ import * as React from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { queryClient } from '@/lib/query'
-import { USE_MOCKS } from '@/lib/api'
+import { ApiError, USE_MOCKS } from '@/lib/api'
 import { useMe } from '@/lib/useMe'
 import { useUI } from '@/store/ui'
 import AuthPage from '@/pages/Auth'
+import { useData } from '@/store/data'
+import { agentsApi, toAgent } from '@/lib/api/agents'
 import Shell from '@/layout/Shell'
 import Home from '@/pages/Home'
 import Agents, { NewAgentPage, TemplatesPage } from '@/pages/Agents'
@@ -30,6 +32,20 @@ function Gate({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (data && data.workspaces.every((w) => w.id !== workspaceId)) set({ workspaceId: data.current_workspace.id })
   }, [data, workspaceId, set])
+  // A saved workspace that no longer belongs to this account must not brick the app.
+  React.useEffect(() => {
+    if (error instanceof ApiError && error.code === 'workspace_not_found') set({ workspaceId: null })
+  }, [error, set])
+  const setAgents = useData((s) => s.setAgents)
+  const signedIn = !!data
+  const mode = useUI((s) => s.mode)
+  // Load this workspace's agents whenever the user, workspace or mode changes.
+  React.useEffect(() => {
+    if (USE_MOCKS || !signedIn) return
+    let live = true
+    agentsApi.list().then((rows) => { if (live) setAgents(rows.map((a) => toAgent(a))) }).catch(() => { if (live) setAgents([]) })
+    return () => { live = false }
+  }, [signedIn, workspaceId, mode, setAgents])
   if (USE_MOCKS) return <>{children}</>
   if (isPending) return <div className="flex min-h-screen items-center justify-center text-sm text-soft">Loading…</div>
   if (signedOut) return <AuthPage />

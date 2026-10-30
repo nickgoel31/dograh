@@ -7,6 +7,8 @@ import { Badge, Button, Card, Chip, Field, Input, Select, Slider, Switch, Tab, T
 import { AdvancedOnly, EmptyState, Friendly, PageHeader, SimpleAdvanced, StatusBadge, UnsavedBar, speak } from '@/components/shared'
 import { VoicePlayground } from '@/components/Playground'
 import { useData } from '@/store/data'
+import { USE_MOCKS } from '@/lib/api/env'
+import { agentsApi, toAgent } from '@/lib/api/agents'
 import { useUI } from '@/store/ui'
 import { voices } from '@/mock/voices'
 import { knowledge, numbers } from '@/mock/misc'
@@ -32,6 +34,12 @@ export default function AgentDetail() {
   const [sp, setSp] = useSearchParams()
   const agent = useData((s) => s.agents.find((a) => a.id === id))
   const updateAgent = useData((s) => s.updateAgent)
+  const upsertAgent = useData((s) => s.upsertAgent)
+  // The list omits the prompt and edit version; load them when an agent is opened.
+  React.useEffect(() => {
+    if (USE_MOCKS || !id) return
+    agentsApi.get(id).then((a) => upsertAgent(toAgent(a, useData.getState().agents.find((x) => x.id === id)))).catch(() => {})
+  }, [id, upsertAgent])
   const setUI = useUI((s) => s.set)
   const base = React.useMemo<Draft | null>(() => agent ? ({ ...agent, speed: 50, emotion: 'Warm', model: 'gpt-4o-mini', kb: ['k1', 'k4'], tools: ['calendar', 'book', 'end'], patience: 60, interrupt: 50, chatty: 40, maxMin: 10, voicemail: 'leave', tested: false, flow: defaultFlow() }) : null, [agent?.id])
   const [saved, setSaved] = React.useState<Draft | null>(base)
@@ -41,7 +49,7 @@ export default function AgentDetail() {
   if (!agent || !d || !saved) return <EmptyState emoji="🔍" title="We couldn't find that agent" text="It may have been deleted. Head back to see all your agents." action={<Button variant="primary" size="lg" onClick={() => nav('/agents')}>See all agents</Button>} />
   const dirty = JSON.stringify(d) !== JSON.stringify(saved)
   const up = (p: Partial<Draft>) => setD({ ...d, ...p })
-  const voice = voices.find((v) => v.id === d.voiceId)!
+  const voice = voices.find((v) => v.id === d.voiceId) ?? voices[0]
   const tab = sp.get('tab') ?? 'personality'
   const save = () => { updateAgent(agent.id, { name: d.name, voiceId: d.voiceId, brain: d.brain, tone: d.tone, business: d.business, whatYouDo: d.whatYouDo, prompt: d.prompt }); setSaved(d); toast.success('Saved!') }
 

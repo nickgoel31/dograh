@@ -10,6 +10,8 @@ import { useUI } from '@/store/ui'
 import { templates } from '@/mock/agents'
 import { sleep, cn } from '@/lib/utils'
 import type { Agent } from '@/mock/types'
+import { USE_MOCKS } from '@/lib/api/env'
+import { agentsApi, toAgent } from '@/lib/api/agents'
 
 export default function AgentsPage() {
   const { agents, duplicate, updateAgent } = useData()
@@ -79,17 +81,17 @@ export function TemplatesPage() {
 }
 
 const goals = [
-  { id: 'answer', emoji: '📞', t: 'Answer calls', d: 'Greet callers and answer questions', name: 'Receptionist' },
-  { id: 'book', emoji: '📅', t: 'Book appointments', d: 'Fill your calendar automatically', name: 'Booker' },
-  { id: 'leads', emoji: '🎯', t: 'Qualify leads', d: 'Find out who is ready to buy', name: 'Qualifier' },
-  { id: 'support', emoji: '🛟', t: 'Customer support', d: 'Solve problems, 24 hours a day', name: 'Support Hero' },
-  { id: 'orders', emoji: '🛍️', t: 'Take orders', d: 'Collect orders over the phone', name: 'Order Taker' },
-  { id: 'survey', emoji: '📋', t: 'Run surveys', d: 'Collect feedback quickly', name: 'Surveyor' },
+  { id: 'answer', template: 'receptionist', emoji: '📞', t: 'Answer calls', d: 'Greet callers and answer questions', name: 'Receptionist' },
+  { id: 'book', template: 'appointments', emoji: '📅', t: 'Book appointments', d: 'Fill your calendar automatically', name: 'Booker' },
+  { id: 'leads', template: 'leads', emoji: '🎯', t: 'Qualify leads', d: 'Find out who is ready to buy', name: 'Qualifier' },
+  { id: 'support', template: 'support', emoji: '🛟', t: 'Customer support', d: 'Solve problems, 24 hours a day', name: 'Support Hero' },
+  { id: 'orders', template: 'orders', emoji: '🛍️', t: 'Take orders', d: 'Collect orders over the phone', name: 'Order Taker' },
+  { id: 'survey', template: 'survey', emoji: '📋', t: 'Run surveys', d: 'Collect feedback quickly', name: 'Surveyor' },
 ]
 
 export function NewAgentPage() {
   const nav = useNavigate()
-  const { addAgent } = useData()
+  const { addAgent, upsertAgent } = useData()
   const set = useUI((s) => s.set)
   const [step, setStep] = React.useState(1)
   const [goal, setGoal] = React.useState<(typeof goals)[number] | null>(null)
@@ -99,8 +101,20 @@ export function NewAgentPage() {
 
   const generate = async () => {
     setBusy(true)
-    await sleep(2000)
     const g = goal ?? goals[0]
+    if (!USE_MOCKS) {
+      // Keep the friendly pause, but wait for the real result.
+      try {
+        const [created] = await Promise.all([
+          agentsApi.create({ name: `${g.name}`, template: g.template, business: desc.split('.')[0].slice(0, 60), what_you_do: desc }),
+          sleep(2000),
+        ])
+        const a = toAgent(await agentsApi.get(created.id))
+        upsertAgent(a); setAgent(a); setBusy(false); setStep(3)
+      } catch (e) { setBusy(false); toast.error(e instanceof Error ? e.message : 'We could not create your agent. Please try again.') }
+      return
+    }
+    await sleep(2000)
     const a: Agent = {
       id: 'a' + Date.now(), name: `${['Asha', 'Neel', 'Tara', 'Kai'][Math.floor(Math.random() * 4)]} — ${g.name}`, emoji: g.emoji, color: '#6356f1', role: g.t, status: 'draft', callsToday: 0, successRate: 0,
       spark: [0, 0, 0, 0, 0, 0, 0, 0], voiceId: 'v3', brain: 'balanced', tone: 'Friendly', business: desc.split('.')[0].slice(0, 40) || 'My business', whatYouDo: desc || 'Answer questions politely.',

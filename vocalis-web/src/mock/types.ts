@@ -1,5 +1,6 @@
 export type AgentStatus = 'live' | 'draft' | 'paused'
 export interface Agent {
+  version?: number
   id: string; name: string; emoji: string; color: string; role: string; status: AgentStatus
   callsToday: number; successRate: number; spark: number[]
   voiceId: string; brain: 'fast' | 'balanced' | 'smartest'; tone: string; business: string; whatYouDo: string

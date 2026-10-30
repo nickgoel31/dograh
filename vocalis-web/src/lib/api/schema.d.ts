@@ -90,10 +90,243 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/product/agents/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Templates */
+        get: operations["templates_api_v1_product_agents_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Agents */
+        get: operations["list_agents_api_v1_product_agents_get"];
+        put?: never;
+        /** Create Agent */
+        post: operations["create_agent_api_v1_product_agents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/agents/{agent_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Agent */
+        get: operations["get_agent_api_v1_product_agents__agent_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Agent */
+        patch: operations["patch_agent_api_v1_product_agents__agent_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/product/agents/{agent_id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Duplicate */
+        post: operations["duplicate_api_v1_product_agents__agent_id__duplicate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/agents/{agent_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause */
+        post: operations["pause_api_v1_product_agents__agent_id__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/agents/{agent_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume */
+        post: operations["resume_api_v1_product_agents__agent_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/agents/{agent_id}/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Readiness */
+        get: operations["readiness_api_v1_product_agents__agent_id__readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/agents/{agent_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish */
+        post: operations["publish_api_v1_product_agents__agent_id__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AgentCreate */
+        AgentCreate: {
+            /** Name */
+            name: string;
+            /** Template */
+            template?: string | null;
+            /** Role */
+            role?: string | null;
+            /**
+             * Business
+             * @default
+             */
+            business: string;
+            /**
+             * What You Do
+             * @default
+             */
+            what_you_do: string;
+            /** Tone */
+            tone?: string | null;
+        };
+        /** AgentOut */
+        AgentOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Emoji */
+            emoji: string;
+            /** Color */
+            color: string;
+            /** Role */
+            role: string;
+            /** Status */
+            status: string;
+            /** Tone */
+            tone: string;
+            /** Business */
+            business: string;
+            /** What You Do */
+            what_you_do: string;
+            /** Brain */
+            brain: string;
+            /** Voice Id */
+            voice_id: string | null;
+            /** Prompt Mode */
+            prompt_mode: string;
+            /** Prompt */
+            prompt?: string | null;
+            /** Version */
+            version: number;
+            /**
+             * Calls Today
+             * @default 0
+             */
+            calls_today: number;
+            /** Success Rate */
+            success_rate?: number | null;
+            /** Spark */
+            spark?: number[];
+        };
+        /** AgentPatch */
+        AgentPatch: {
+            /** Name */
+            name?: string | null;
+            /** Emoji */
+            emoji?: string | null;
+            /** Color */
+            color?: string | null;
+            /** Role */
+            role?: string | null;
+            /** Tone */
+            tone?: string | null;
+            /** Business */
+            business?: string | null;
+            /** What You Do */
+            what_you_do?: string | null;
+            /** Brain */
+            brain?: string | null;
+            /** Voice Id */
+            voice_id?: string | null;
+            /** Prompt */
+            prompt?: string | null;
+        };
+        /** CheckOut */
+        CheckOut: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Level */
+            level: string;
+            /** Hint */
+            hint?: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -141,6 +374,23 @@ export interface components {
             name: string;
             /** Workspace Name */
             workspace_name?: string | null;
+        };
+        /** TemplateOut */
+        TemplateOut: {
+            /** Key */
+            key: string;
+            /** Name */
+            name: string;
+            /** Emoji */
+            emoji: string;
+            /** Color */
+            color: string;
+            /** Role */
+            role: string;
+            /** Tone */
+            tone: string;
+            /** Blurb */
+            blurb: string;
         };
         /** UserOut */
         UserOut: {
@@ -359,6 +609,359 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    templates_api_v1_product_agents_templates_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_agents_api_v1_product_agents_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_agent_api_v1_product_agents_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_agent_api_v1_product_agents__agent_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_agent_api_v1_product_agents__agent_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    duplicate_api_v1_product_agents__agent_id__duplicate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pause_api_v1_product_agents__agent_id__pause_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_api_v1_product_agents__agent_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readiness_api_v1_product_agents__agent_id__readiness_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_api_v1_product_agents__agent_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentOut"];
                 };
             };
             /** @description Validation Error */
