@@ -9,8 +9,10 @@ import { days } from '@/mock/misc'
 import { money } from '@/lib/utils'
 import { PRICE_PER_MIN } from '@/config/brand'
 import { useUI } from '@/store/ui'
+import { USE_MOCKS } from '@/lib/api/env'
+import RealBilling from './BillingReal'
 
-export default function BillingPage() {
+function DemoBilling() {
   const mode = useUI((s) => s.mode)
   const inv = useAsync(() => api.invoices(), [])
   const [auto, setAuto] = React.useState(true)
@@ -42,4 +44,8 @@ export default function BillingPage() {
       </div>
     </>
   )
+}
+
+export default function BillingPage() {
+  return USE_MOCKS ? <DemoBilling /> : <RealBilling />
 }

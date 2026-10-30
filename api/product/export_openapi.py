@@ -12,6 +12,7 @@ from api.product import config
 from api.product.agents_router import router as agents_router
 from api.product.calls_router import router as calls_router
 from api.product.conversations_router import router as conversations_router
+from api.product.billing_router import router as billing_router
 from api.product.numbers_router import router as numbers_router
 from api.product.voices_router import router as voices_router
 from api.product.router import router
@@ -25,6 +26,7 @@ def build_app() -> FastAPI:
     app.include_router(calls_router, prefix="/api/v1")
     app.include_router(conversations_router, prefix="/api/v1")
     app.include_router(numbers_router, prefix="/api/v1")
+    app.include_router(billing_router, prefix="/api/v1")
     return app
 
 

@@ -473,6 +473,162 @@ export interface paths {
         patch: operations["settings_api_v1_product_numbers__number_id__patch"];
         trace?: never;
     };
+    "/api/v1/product/billing/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Summary */
+        get: operations["summary_api_v1_product_billing_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/billing/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Usage */
+        get: operations["usage_api_v1_product_billing_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/billing/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Settings */
+        patch: operations["update_settings_api_v1_product_billing_settings_patch"];
+        trace?: never;
+    };
+    "/api/v1/product/billing/topups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Topup */
+        post: operations["start_topup_api_v1_product_billing_topups_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/billing/topups/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Topup */
+        post: operations["confirm_topup_api_v1_product_billing_topups_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/billing/webhooks/razorpay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Razorpay Webhook
+         * @description Provider callback (no login). Trusted only if the signature checks out.
+         */
+        post: operations["razorpay_webhook_api_v1_product_billing_webhooks_razorpay_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/billing/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Payments */
+        get: operations["payments_api_v1_product_billing_payments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/billing/invoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Invoices */
+        get: operations["invoices_api_v1_product_billing_invoices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/billing/invoices/{number}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Invoice Pdf */
+        get: operations["invoice_pdf_api_v1_product_billing_invoices__number__pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -671,6 +827,15 @@ export interface components {
             /** Hint */
             hint?: string | null;
         };
+        /** ConfirmBody */
+        ConfirmBody: {
+            /** Order Id */
+            order_id: string;
+            /** Payment Id */
+            payment_id: string;
+            /** Signature */
+            signature: string;
+        };
         /** DiffOut */
         DiffOut: {
             /** Prompt */
@@ -709,6 +874,23 @@ export interface components {
             username?: string | null;
             /** Credential */
             credential?: string | null;
+        };
+        /** InvoiceOut */
+        InvoiceOut: {
+            /** Number */
+            number: string;
+            /** Period */
+            period: string;
+            /** Minutes */
+            minutes: number;
+            /** Taxable */
+            taxable: number;
+            /** Tax */
+            tax: number;
+            /** Total */
+            total: number;
+            /** Currency */
+            currency: string;
         };
         /** LoginBody */
         LoginBody: {
@@ -775,21 +957,24 @@ export interface components {
             /** Region */
             region: string | null;
         };
-        /** SettingsBody */
-        SettingsBody: {
-            /** Label */
-            label?: string | null;
-            /** Hours */
-            hours?: {
-                [key: string]: unknown;
-            } | null;
-            /** Fallback */
-            fallback?: string | null;
-            /**
-             * Clear Fallback
-             * @default false
-             */
-            clear_fallback: boolean;
+        /** SettingsOut */
+        SettingsOut: {
+            /** Spend Limit */
+            spend_limit: number | null;
+            /** Auto Topup Enabled */
+            auto_topup_enabled: boolean;
+            /** Auto Topup Threshold */
+            auto_topup_threshold: number | null;
+            /** Auto Topup Amount */
+            auto_topup_amount: number | null;
+            /** Billing Name */
+            billing_name: string | null;
+            /** Billing Gstin */
+            billing_gstin: string | null;
+            /** Billing State */
+            billing_state: string | null;
+            /** Billing Address */
+            billing_address: string | null;
         };
         /** SignupBody */
         SignupBody: {
@@ -804,6 +989,32 @@ export interface components {
             name: string;
             /** Workspace Name */
             workspace_name?: string | null;
+        };
+        /** SummaryOut */
+        SummaryOut: {
+            /** Currency */
+            currency: string;
+            /** Price Per Min */
+            price_per_min: number;
+            /** Free Mode */
+            free_mode: boolean;
+            /** Balance */
+            balance: number;
+            /** Minutes Available */
+            minutes_available: number;
+            /** Month Usage Value */
+            month_usage_value: number;
+            /** Month Minutes */
+            month_minutes: number;
+            /** Spend Limit */
+            spend_limit: number | null;
+            /** Limit State */
+            limit_state: string;
+            /** Low Balance */
+            low_balance: boolean;
+            settings: components["schemas"]["SettingsOut"];
+            /** Payments Enabled */
+            payments_enabled: boolean;
         };
         /** TemplateOut */
         TemplateOut: {
@@ -821,6 +1032,22 @@ export interface components {
             tone: string;
             /** Blurb */
             blurb: string;
+        };
+        /** TopupBody */
+        TopupBody: {
+            /** Amount */
+            amount: number;
+        };
+        /** TopupOut */
+        TopupOut: {
+            /** Order Id */
+            order_id: string;
+            /** Key */
+            key: string;
+            /** Amount */
+            amount: number;
+            /** Currency */
+            currency: string;
         };
         /** TurnOut */
         TurnOut: {
@@ -911,6 +1138,46 @@ export interface components {
             name: string;
             /** Role */
             role: string;
+        };
+        /** SettingsBody */
+        api__product__billing_router__SettingsBody: {
+            /** Spend Limit */
+            spend_limit?: number | null;
+            /**
+             * Clear Spend Limit
+             * @default false
+             */
+            clear_spend_limit: boolean;
+            /** Auto Topup Enabled */
+            auto_topup_enabled?: boolean | null;
+            /** Auto Topup Threshold */
+            auto_topup_threshold?: number | null;
+            /** Auto Topup Amount */
+            auto_topup_amount?: number | null;
+            /** Billing Name */
+            billing_name?: string | null;
+            /** Billing Gstin */
+            billing_gstin?: string | null;
+            /** Billing State */
+            billing_state?: string | null;
+            /** Billing Address */
+            billing_address?: string | null;
+        };
+        /** SettingsBody */
+        api__product__numbers_router__SettingsBody: {
+            /** Label */
+            label?: string | null;
+            /** Hours */
+            hours?: {
+                [key: string]: unknown;
+            } | null;
+            /** Fallback */
+            fallback?: string | null;
+            /**
+             * Clear Fallback
+             * @default false
+             */
+            clear_fallback: boolean;
         };
     };
     responses: never;
@@ -2088,7 +2355,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SettingsBody"];
+                "application/json": components["schemas"]["api__product__numbers_router__SettingsBody"];
             };
         };
         responses: {
@@ -2099,6 +2366,317 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NumberOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    summary_api_v1_product_billing_summary_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    usage_api_v1_product_billing_usage_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_settings_api_v1_product_billing_settings_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["api__product__billing_router__SettingsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_topup_api_v1_product_billing_topups_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TopupBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopupOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_topup_api_v1_product_billing_topups_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    razorpay_webhook_api_v1_product_billing_webhooks_razorpay_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-razorpay-signature"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    payments_api_v1_product_billing_payments_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    invoices_api_v1_product_billing_invoices_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    invoice_pdf_api_v1_product_billing_invoices__number__pdf_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                number: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

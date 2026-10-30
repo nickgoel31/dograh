@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from api.db import models, product_models
-from api.product import agents_router, calls_router, config, conversations_router, deps, gateway, numbers_router, voices_router
+from api.product import agents_router, billing_router, calls_router, config, conversations_router, deps, gateway, numbers_router, payments, voices_router
 from api.product import router as product_router
 
 TABLES = [
@@ -27,6 +27,10 @@ TABLES = [
     models.WorkflowRunModel.__table__,
     models.TelephonyConfigurationModel.__table__,
     models.TelephonyPhoneNumberModel.__table__,
+    models.WalletLedgerModel.__table__,
+    product_models.ProductBillingSettingsModel.__table__,
+    product_models.ProductPaymentModel.__table__,
+    product_models.ProductInvoiceModel.__table__,
 ]
 
 
@@ -83,6 +87,24 @@ PROFILES = {
 PRESET_MAP = '{"default": "std", "fast": "lite", "balanced": "std", "smartest": "pro"}'
 
 
+class FakeWallet:
+    def __init__(self):
+        self.balance, self.minutes, self.keys = 0.0, 0.0, set()
+
+    async def summary(self, org_id):
+        return {"balance": self.balance, "minutes_available": self.minutes, "low_balance": self.balance < 10}
+
+    async def credit(self, org_id, amount, description, key):
+        if key not in self.keys:
+            self.keys.add(key)
+            self.balance += amount
+
+    async def grant_minutes(self, org_id, minutes, description, key):
+        if key not in self.keys:
+            self.keys.add(key)
+            self.minutes += minutes
+
+
 @asynccontextmanager
 async def make_client(monkeypatch, seed_profiles=True):
     engine = create_async_engine(
@@ -121,11 +143,16 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(calls_router.router)
     app.include_router(conversations_router.router)
     app.include_router(numbers_router.router)
+    app.include_router(billing_router.router)
     app.dependency_overrides[deps.get_session] = _session
     app.dependency_overrides[gateway.get_gateway] = lambda: fake
+    wallet = FakeWallet()
+    app.dependency_overrides[payments.get_wallet] = lambda: wallet
+    c_wallet = wallet
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
         c.session_factory = Session
         c.fake = fake
+        c.wallet = c_wallet
         yield c
     await engine.dispose()
 

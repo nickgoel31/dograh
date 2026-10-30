@@ -75,6 +75,13 @@ async def inbound_gate(phone_row) -> str | None:
                         )
                     )
                 )
-        return gate_message(phone_row.extra_metadata, status, datetime.now().astimezone())
+        msg = gate_message(phone_row.extra_metadata, status, datetime.now().astimezone())
+        if msg is None:
+            from api.product import billing
+
+            async with db_client.async_session() as s:
+                if await billing.limit_reached(s, phone_row.organization_id):
+                    return DEFAULT_PAUSED  # monthly spend limit reached: a polite message, never a charge
+        return msg
     except Exception:  # noqa: BLE001 - a broken gate must never stop calls from being answered
         return None

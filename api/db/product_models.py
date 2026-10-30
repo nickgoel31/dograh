@@ -3,7 +3,10 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    JSON,
+    Boolean,
     Column,
+    Float,
     DateTime,
     ForeignKey,
     Index,
@@ -103,3 +106,54 @@ class ProductUserProfileModel(Base):
 
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     display_name = Column(String(120), nullable=True)
+
+
+class ProductBillingSettingsModel(Base):
+    __tablename__ = "product_billing_settings"
+
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), primary_key=True)
+    spend_limit = Column(Float, nullable=True)  # monthly, in the billing currency
+    auto_topup_enabled = Column(Boolean, nullable=False, default=False)
+    auto_topup_threshold = Column(Float, nullable=True)
+    auto_topup_amount = Column(Float, nullable=True)
+    billing_name = Column(String(160), nullable=True)
+    billing_gstin = Column(String(20), nullable=True)
+    billing_state = Column(String(2), nullable=True)  # GST state code, e.g. "29"
+    billing_address = Column(String(400), nullable=True)
+    first_grant_done = Column(Boolean, nullable=False, default=False)
+
+
+class ProductPaymentModel(Base):
+    __tablename__ = "product_payments"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    provider = Column(String(16), nullable=False)
+    order_id = Column(String(64), unique=True, nullable=False)
+    payment_id = Column(String(64), nullable=True)
+    amount = Column(Float, nullable=False)
+    currency = Column(String(8), nullable=False)
+    status = Column(String(8), nullable=False, default="created")  # created | paid
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (Index("ix_product_payments_workspace", "workspace_id"),)
+
+
+class ProductInvoiceModel(Base):
+    """One immutable invoice per workspace per month."""
+
+    __tablename__ = "product_invoices"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    period = Column(String(7), nullable=False)  # YYYY-MM
+    number = Column(String(32), unique=True, nullable=True)
+    minutes = Column(Float, nullable=False)
+    taxable = Column(Float, nullable=False)
+    tax = Column(JSON, nullable=False)  # {"rate":18,"cgst":..,"sgst":..,"igst":..}
+    total = Column(Float, nullable=False)
+    currency = Column(String(8), nullable=False)
+    bill_to = Column(JSON, nullable=False)  # snapshot of the billing details at issue time
+    issued_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (UniqueConstraint("workspace_id", "period", name="uq_product_invoice_period"),)

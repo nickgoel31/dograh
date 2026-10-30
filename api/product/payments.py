@@ -1,0 +1,98 @@
+"""Payment provider seam (Razorpay first) and the wallet seam to the platform's minutes/money ledger."""
+
+import hashlib
+import hmac
+import os
+from typing import Protocol
+
+import httpx
+
+
+class PaymentError(Exception):
+    """A problem with a message that is safe to show customers."""
+
+
+class PaymentProvider(Protocol):
+    name: str
+    public_key: str
+
+    async def create_order(self, amount: float, currency: str, receipt: str) -> str:
+        """Returns the provider's order id."""
+        ...
+
+    def verify_checkout(self, order_id: str, payment_id: str, signature: str) -> bool: ...
+
+    def verify_webhook(self, body: bytes, signature: str) -> bool: ...
+
+
+def _eq(a: str, b: str) -> bool:
+    return hmac.compare_digest(a.encode(), b.encode())
+
+
+class Razorpay:
+    name = "razorpay"
+
+    def __init__(self, key_id: str, key_secret: str, webhook_secret: str | None):
+        self.public_key, self._secret, self._hook = key_id, key_secret, webhook_secret
+
+    async def create_order(self, amount, currency, receipt):
+        try:
+            async with httpx.AsyncClient(timeout=15) as c:
+                r = await c.post(
+                    "https://api.razorpay.com/v1/orders", auth=(self.public_key, self._secret),
+                    json={"amount": int(round(amount * 100)), "currency": currency, "receipt": receipt},
+                )
+            r.raise_for_status()
+            return r.json()["id"]
+        except Exception as e:  # noqa: BLE001
+            raise PaymentError("We couldn't start the payment. Please try again in a moment.") from e
+
+    def verify_checkout(self, order_id, payment_id, signature):
+        want = hmac.new(self._secret.encode(), f"{order_id}|{payment_id}".encode(), hashlib.sha256).hexdigest()
+        return _eq(want, signature or "")
+
+    def verify_webhook(self, body, signature):
+        if not self._hook:
+            return False
+        return _eq(hmac.new(self._hook.encode(), body, hashlib.sha256).hexdigest(), signature or "")
+
+
+def get_payments() -> PaymentProvider | None:
+    kid, sec = os.getenv("RAZORPAY_KEY_ID"), os.getenv("RAZORPAY_KEY_SECRET")
+    return Razorpay(kid, sec, os.getenv("RAZORPAY_WEBHOOK_SECRET")) if kid and sec else None
+
+
+class WalletGateway(Protocol):
+    async def summary(self, org_id: int) -> dict: ...
+
+    async def credit(self, org_id: int, amount: float, description: str, key: str) -> None:
+        """Add money to the wallet. Safe to repeat with the same key."""
+        ...
+
+    async def grant_minutes(self, org_id: int, minutes: float, description: str, key: str) -> None: ...
+
+
+class CoreWallet:
+    """The platform's wallet (opens its own database sessions)."""
+
+    async def summary(self, org_id):
+        from api.services.billing import wallet_service
+
+        return await wallet_service.get_summary(org_id)
+
+    async def credit(self, org_id, amount, description, key):
+        from api.services.billing import wallet_service
+
+        await wallet_service.credit_money(org_id, amount, description=description, idempotency_key=key)
+
+    async def grant_minutes(self, org_id, minutes, description, key):
+        from api.services.billing import wallet_service
+
+        await wallet_service.grant_minutes(org_id, minutes, kind="grant", description=description, idempotency_key=key)
+
+
+_wallet: WalletGateway = CoreWallet()
+
+
+def get_wallet() -> WalletGateway:
+    return _wallet
