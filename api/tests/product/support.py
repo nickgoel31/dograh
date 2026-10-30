@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from api.db import models, product_models
-from api.product import agents_router, calls_router, config, conversations_router, deps, gateway, voices_router
+from api.product import agents_router, calls_router, config, conversations_router, deps, gateway, numbers_router, voices_router
 from api.product import router as product_router
 
 TABLES = [
@@ -25,6 +25,8 @@ TABLES = [
     models.ModelProfileModel.__table__,
     models.WorkflowModel.__table__,
     models.WorkflowRunModel.__table__,
+    models.TelephonyConfigurationModel.__table__,
+    models.TelephonyPhoneNumberModel.__table__,
 ]
 
 
@@ -118,6 +120,7 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(voices_router.router)
     app.include_router(calls_router.router)
     app.include_router(conversations_router.router)
+    app.include_router(numbers_router.router)
     app.dependency_overrides[deps.get_session] = _session
     app.dependency_overrides[gateway.get_gateway] = lambda: fake
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:

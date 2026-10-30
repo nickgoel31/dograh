@@ -52,3 +52,13 @@ Decisions taken for the white-label product (brand: `PRODUCT_NAME`, default "Voc
   - **Cost** = minutes x `PRICE_PER_MIN` in Live, 0 in Test, split by the platform's vendor-cost proportions (phone is 0 until telephony). Replaced by real ledger numbers in the billing phase.
   - **Filters**: no filter = full SQL paging. Outcome/search filters scan the newest 2,000 calls (`truncated` is returned). The UI loads the newest 100 calls and filters inside them; CSV export streams everything.
   - **Audio** is a one-hour signed link from storage; never the stored path.
+
+## Phone numbers (Phase 4)
+- **Provider**: Twilio via the operator's own account (`PRODUCT_TWILIO_ACCOUNT_SID`, `PRODUCT_TWILIO_AUTH_TOKEN`; the vendor name never reaches customers). Live numbers are bought into that account with the platform's inbound webhook (`/api/v1/telephony/inbound/run`) already set; the platform then routes by the number's agent. The operator's credentials are copied into each workspace's telephony connection row, created on first use. `PRODUCT_NUMBER_MONTHLY_LOCAL` / `_TOLL_FREE` set the shown monthly price (default 0 = shown as "—"; billing arrives in Phase 5).
+- **Test mode uses a sandbox** (fake numbers, never buys or rings anything). A sandbox number can be pointed at an agent but cannot receive real calls.
+- **Assigning**: Live numbers only attach to agents that have been put live (the live copy); Test numbers attach to the test copy.
+- **Opening hours + paused agents**: enforced by one small hook in the platform's inbound webhook (`routes/telephony.py`, calls `product/hours.py::inbound_gate`, fails open). A closed number or a paused agent plays a short message and hangs up. The message is spoken through the platform's generic error response, which on some providers is prefixed with an apology.
+- **Fallback to a human is stored but not used yet.** Transferring a call needs the transfer tool, which arrives with Tools (Phase 6).
+- **Spam reputation**: shown as "Not monitored yet"; no spam-score source is connected.
+- **Bring-your-own SIP** is marked "Coming soon": the fork has no per-workspace SIP credential generation to show.
+- **Not verified**: a real purchase, a real inbound call, or the hook against a live webhook (needs Postgres, Twilio credentials and a public URL). The Twilio number code (`number_providers.py`) is unexecuted; the sandbox path, assignment rules, hours logic and tenant scoping are tested (64 product tests).

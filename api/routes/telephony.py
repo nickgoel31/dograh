@@ -775,6 +775,13 @@ async def handle_inbound_run(request: Request):
             )
         user_id = workflow.user_id
 
+        # Product gate: opening hours and paused agents. Fails open.
+        from api.product.hours import inbound_gate
+
+        closed_msg = await inbound_gate(phone_row)
+        if closed_msg:
+            return provider_class.generate_error_response("UNAVAILABLE", closed_msg)
+
         # 3. Verify webhook signature against the matched config's credentials.
         provider_instance = await get_telephony_provider_by_id(
             telephony_configuration_id, config.organization_id

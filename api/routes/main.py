@@ -34,6 +34,7 @@ from api.routes.whatsapp_logs import router as whatsapp_logs_router
 from api.product.agents_router import router as product_agents_router
 from api.product.calls_router import router as product_calls_router
 from api.product.conversations_router import router as product_conversations_router
+from api.product.numbers_router import router as product_numbers_router
 from api.product.voices_router import router as product_voices_router
 from api.product.router import router as product_router
 from api.services.integrations import all_routers
@@ -77,6 +78,7 @@ router.include_router(product_agents_router)
 router.include_router(product_voices_router)
 router.include_router(product_calls_router)
 router.include_router(product_conversations_router)
+router.include_router(product_numbers_router)
 
 
 for _integration_router in all_routers():

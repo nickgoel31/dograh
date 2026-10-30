@@ -40,3 +40,29 @@ def decode_call_id(public_id: str) -> int | None:
     except ValueError:
         return None
     return run_id if hmac.compare_digest(tag, _call_tag(run_id)) else None
+
+
+def _tag(prefix: str, n: int) -> str:
+    import hmac
+
+    from api.constants import OSS_JWT_SECRET
+
+    return hmac.new(OSS_JWT_SECRET.encode(), f"{prefix}:{n}".encode(), "sha256").hexdigest()[:8]
+
+
+def encode_id(prefix: str, n: int) -> str:
+    """Opaque, tamper-evident public id for an internal integer id."""
+    return f"{prefix}_{n:x}{_tag(prefix, n)}"
+
+
+def decode_id(prefix: str, public_id: str) -> int | None:
+    import hmac
+
+    if not public_id.startswith(prefix + "_") or len(public_id) < len(prefix) + 10:
+        return None
+    body = public_id[len(prefix) + 1:]
+    try:
+        n = int(body[:-8], 16)
+    except ValueError:
+        return None
+    return n if hmac.compare_digest(body[-8:], _tag(prefix, n)) else None

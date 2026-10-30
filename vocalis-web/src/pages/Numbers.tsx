@@ -8,10 +8,12 @@ import { availableNumbers } from '@/mock/misc'
 import { useData } from '@/store/data'
 import { money } from '@/lib/utils'
 import type { PhoneNumber } from '@/mock/types'
+import { USE_MOCKS } from '@/lib/api/env'
+import RealNumbers from './NumbersReal'
 
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
-export default function NumbersPage() {
+function DemoNumbers() {
   const { data, loading } = useAsync(() => api.numbers(), [])
   const agents = useData((s) => s.agents)
   const [extra, setExtra] = React.useState<PhoneNumber[]>([])
@@ -50,4 +52,8 @@ export default function NumbersPage() {
       </Dialog>
     </>
   )
+}
+
+export default function NumbersPage() {
+  return USE_MOCKS ? <DemoNumbers /> : <RealNumbers />
 }
