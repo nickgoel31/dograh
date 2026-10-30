@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 240 20% 98.5%; --surface: 0 0% 100%; --muted: 240 14% 95.5%; --line: 240 12% 90%;
+  --ink: 240 20% 11%; --soft: 240 7% 42%;
+  --accent: 245 82% 60%; --accent-fg: 0 0% 100%; --accent-soft: 245 90% 96%;
+  --ok: 152 62% 36%; --warn: 28 92% 48%; --bad: 0 72% 52%; --shadow: 240 30% 10%;
+}
+.dark {
+  --bg: 240 18% 7%; --surface: 240 16% 10%; --muted: 240 12% 14%; --line: 240 10% 19%;
+  --ink: 240 14% 95%; --soft: 240 8% 66%;
+  --accent: 245 90% 70%; --accent-fg: 240 30% 8%; --accent-soft: 245 40% 18%;
+  --ok: 152 55% 50%; --warn: 30 92% 58%; --bad: 0 80% 66%; --shadow: 0 0% 0%;
+}
+* { border-color: hsl(var(--line)); }
+html { font-feature-settings: 'cv11', 'ss01'; }
+body { @apply bg-bg text-ink font-sans antialiased; font-size: 14px; }
+:focus-visible { outline: 2px solid hsl(var(--accent)); outline-offset: 2px; border-radius: 6px; }
+.num { font-variant-numeric: tabular-nums; }
+.skeleton { @apply relative overflow-hidden rounded-lg bg-muted; }
+.skeleton::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, hsl(var(--surface) / .7), transparent); animation: shimmer 1.4s infinite; }
+.react-flow__attribution { display: none; }
+.react-flow__node-default, .react-flow__node-input, .react-flow__node-output { border-radius: 12px; border: 1px solid hsl(var(--line)); background: hsl(var(--surface)); color: hsl(var(--ink)); box-shadow: 0 1px 2px hsl(var(--shadow) / .06); padding: 10px 14px; font-size: 13px; font-weight: 500; }
+.react-flow__edge-path { stroke: hsl(var(--accent)); }
+.react-flow__controls button { background: hsl(var(--surface)); color: hsl(var(--ink)); border-color: hsl(var(--line)); }
+.tok-k { color: hsl(var(--accent)); } .tok-s { color: hsl(var(--ok)); } .tok-n { color: hsl(var(--warn)); }
+@media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
