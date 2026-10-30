@@ -90,6 +90,14 @@ class ProductAgentModel(Base):
     __table_args__ = (Index("ix_product_agents_workspace", "workspace_id"),)
 
 
+class ProductVoiceFavoriteModel(Base):
+    __tablename__ = "product_voice_favorites"
+
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    voice_id = Column(String(32), primary_key=True)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+
 class ProductUserProfileModel(Base):
     __tablename__ = "product_user_profiles"
 

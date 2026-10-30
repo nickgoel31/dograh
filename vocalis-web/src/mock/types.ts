@@ -15,7 +15,7 @@ export interface Call {
   costSplit: { name: string; value: number }[]; test: boolean
 }
 export interface Voice {
-  id: string; name: string; gender: 'Female' | 'Male'; age: 'Young' | 'Adult' | 'Mature'; lang: string
+  id: string; name: string; gender: 'Female' | 'Male' | ''; age: 'Young' | 'Adult' | 'Mature' | ''; lang: string
   accent: string; style: string; provider: string
 }
 export interface PhoneNumber {

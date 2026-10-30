@@ -2,14 +2,17 @@ import * as React from 'react'
 import { Heart, Lock, Play, Plus, Square, Columns3 } from 'lucide-react'
 import { Badge, Button, Card, Chip, Dialog, Select, Textarea } from '@/components/ui'
 import { AdvancedOnly, Bars, CardSkeletons, PageHeader, speak, stopSpeaking, useAsync } from '@/components/shared'
-import { api } from '@/lib/api'
+import { api, USE_MOCKS } from '@/lib/api'
+import { voicesApi } from '@/lib/api/voices'
 import { useData } from '@/store/data'
 import { cn } from '@/lib/utils'
 import type { Voice } from '@/mock/types'
 
 export default function VoicesPage() {
   const { data, loading } = useAsync(() => api.voices(), [])
-  const { favorites, toggleFav } = useData()
+  const { favorites, toggleFav, setFavorites } = useData()
+  // Real mode: favourites live on the server.
+  React.useEffect(() => { if (!USE_MOCKS) voicesApi.list().then((vs) => setFavorites(vs.filter((v) => v.favorite).map((v) => v.id))).catch(() => {}) }, [setFavorites])
   const [f, setF] = React.useState({ lang: '', gender: '', age: '', accent: '', style: '' })
   const [playing, setPlaying] = React.useState<string | null>(null)
   const [favOnly, setFavOnly] = React.useState(false)
@@ -18,7 +21,7 @@ export default function VoicesPage() {
   const [sentence, setSentence] = React.useState('Hi there! Thanks for calling. How can I help you today?')
 
   const list = (data ?? []).filter((v) => (!f.lang || v.lang === f.lang) && (!f.gender || v.gender === f.gender) && (!f.age || v.age === f.age) && (!f.accent || v.accent === f.accent) && (!f.style || v.style === f.style) && (!favOnly || favorites.includes(v.id)))
-  const opts = (k: keyof Voice) => [...new Set((data ?? []).map((v) => v[k]))] as string[]
+  const opts = (k: keyof Voice) => [...new Set((data ?? []).map((v) => v[k]))].filter(Boolean) as string[]
   const play = (v: Voice, text = 'Hello! I can be the voice of your business.') => {
     if (playing === v.id) { stopSpeaking(); setPlaying(null); return }
     setPlaying(v.id); speak(text, { female: v.gender === 'Female', onEnd: () => setPlaying((p) => (p === v.id ? null : p)) })
@@ -47,9 +50,9 @@ export default function VoicesPage() {
           {list.map((v) => (
             <Card key={v.id} className="p-4">
               <div className="flex items-start gap-3">
-                <Button variant={playing === v.id ? 'primary' : 'secondary'} size="icon" className="h-11 w-11 rounded-full" onClick={() => play(v)} aria-label={`${playing === v.id ? 'Stop' : 'Play'} ${v.name}`}>{playing === v.id ? <Square size={14} /> : <Play size={15} className="ml-0.5" />}</Button>
-                <div className="flex-1"><div className="flex items-center gap-2 font-semibold">{v.name}{playing === v.id && <Bars className="text-accent" />}</div><div className="text-[13px] text-soft">{v.lang} · {v.accent}</div>
-                  <div className="mt-2 flex flex-wrap gap-1.5"><Badge>{v.gender}</Badge><Badge>{v.age}</Badge><Badge tone="accent">{v.style}</Badge><AdvancedOnly><Badge>{v.provider}</Badge></AdvancedOnly></div></div>
+                <Button variant={playing === v.id ? 'primary' : 'secondary'} size="icon" className="h-11 w-11 rounded-full" onClick={() => play(v)} disabled={!USE_MOCKS} title={USE_MOCKS ? undefined : 'Voice samples are coming soon'} aria-label={`${playing === v.id ? 'Stop' : 'Play'} ${v.name}`}>{playing === v.id ? <Square size={14} /> : <Play size={15} className="ml-0.5" />}</Button>
+                <div className="flex-1"><div className="flex items-center gap-2 font-semibold">{v.name}{playing === v.id && <Bars className="text-accent" />}</div><div className="text-[13px] text-soft">{[v.lang, v.accent].filter(Boolean).join(' · ')}</div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">{v.gender && <Badge>{v.gender}</Badge>}{v.age && <Badge>{v.age}</Badge>}{v.style && <Badge tone="accent">{v.style}</Badge>}<AdvancedOnly><Badge>{v.provider}</Badge></AdvancedOnly></div></div>
                 <div className="flex flex-col gap-1">
                   <button onClick={() => toggleFav(v.id)} aria-label="Favorite" aria-pressed={favorites.includes(v.id)} className={cn('rounded-md p-1.5 hover:bg-muted', favorites.includes(v.id) ? 'text-bad' : 'text-soft')}><Heart size={16} fill={favorites.includes(v.id) ? 'currentColor' : 'none'} /></button>
                   <button onClick={() => setCmp(cmp.includes(v.id) ? cmp.filter((x) => x !== v.id) : cmp.length < 3 ? [...cmp, v.id] : cmp)} aria-label="Add to compare" className={cn('rounded-md p-1.5 hover:bg-muted', cmp.includes(v.id) ? 'text-accent' : 'text-soft')}><Plus size={16} /></button></div>
@@ -62,7 +65,7 @@ export default function VoicesPage() {
         <Textarea value={sentence} onChange={(e) => setSentence(e.target.value)} aria-label="Sentence" />
         <div className="mt-4 space-y-2">{cmp.length === 0 && <p className="text-soft">No voices picked yet.</p>}
           {cmp.map((id) => { const v = data!.find((x) => x.id === id)!; return <div key={id} className="flex items-center gap-3 rounded-lg border p-3"><Button size="icon" variant="secondary" className="rounded-full" onClick={() => play(v, sentence)}><Play size={14} /></Button><div className="flex-1 font-medium">{v.name}<div className="text-xs font-normal text-soft">{v.lang}</div></div>{playing === id && <Bars className="text-accent" />}<Button size="sm" variant="ghost" onClick={() => setCmp(cmp.filter((x) => x !== id))}>Remove</Button></div> })}</div>
-        <Button variant="primary" className="mt-4 w-full" disabled={!cmp.length} onClick={playAll}>Play all in a row</Button>
+        <Button variant="primary" className="mt-4 w-full" disabled={!cmp.length || !USE_MOCKS} onClick={playAll}>Play all in a row</Button>
       </Dialog>
     </>
   )

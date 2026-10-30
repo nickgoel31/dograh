@@ -4,6 +4,7 @@ import type { Agent } from '@/mock/types'
 import { agents as seed } from '@/mock/agents'
 import { USE_MOCKS } from '@/lib/api/env'
 import { agentsApi, toAgent } from '@/lib/api/agents'
+import { voicesApi } from '@/lib/api/voices'
 
 interface Data {
   agents: Agent[]
@@ -15,6 +16,7 @@ interface Data {
   updateAgent: (id: string, p: Partial<Agent>) => void
   duplicate: (id: string) => void
   toggleFav: (id: string) => void
+  setFavorites: (ids: string[]) => void
 }
 
 const oops = (e: unknown) => toast.error(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
@@ -27,7 +29,7 @@ export const useData = create<Data>((set, get) => {
     // Real mode starts empty; sample agents are for demo mode only.
     agents: USE_MOCKS ? seed : [],
     agentsLoaded: USE_MOCKS,
-    favorites: ['v3', 'v8'],
+    favorites: USE_MOCKS ? ['v3', 'v8'] : [],
     setAgents: (agents) => set({ agents, agentsLoaded: true }),
     upsertAgent: (a) => set((s) => ({ agents: s.agents.some((x) => x.id === a.id) ? s.agents.map((x) => (x.id === a.id ? a : x)) : [a, ...s.agents] })),
     addAgent: (a) => set((s) => ({ agents: [a, ...s.agents] })),
@@ -49,6 +51,11 @@ export const useData = create<Data>((set, get) => {
       }
       agentsApi.duplicate(id).then((a) => get().upsertAgent(toAgent(a))).catch(oops)
     },
-    toggleFav: (id) => set((s) => ({ favorites: s.favorites.includes(id) ? s.favorites.filter((x) => x !== id) : [...s.favorites, id] })),
+    setFavorites: (favorites) => set({ favorites }),
+    toggleFav: (id) => {
+      const on = get().favorites.includes(id)
+      set((s) => ({ favorites: on ? s.favorites.filter((x) => x !== id) : [...s.favorites, id] }))
+      if (!USE_MOCKS) (on ? voicesApi.unfavorite(id) : voicesApi.favorite(id)).catch((e) => { oops(e); set((s) => ({ favorites: on ? [...s.favorites, id] : s.favorites.filter((x) => x !== id) })) })
+    },
   }
 })

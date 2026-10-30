@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.db.product_models import ProductAgentModel, ProductWorkspaceModel
 from api.product import definition as defn
 from api.product import prompt as prompts
+from api.product import voices as voice_catalogue
 from api.product.errors import product_error
 from api.product.gateway import PlatformGateway
 from api.product.ids import new_public_id
@@ -106,6 +107,8 @@ async def update_agent(
             "Someone else changed this agent while you were editing. Reload to see their changes.",
         )
     custom_prompt = changes.pop("prompt", None)
+    if changes.get("voice_id") and voice_catalogue.find(changes["voice_id"]) is None:
+        raise product_error(400, "unknown_voice", "That voice isn't available. Pick one from the voice list.")
     for field in ("name", "emoji", "color", "role", "tone", "business", "what_you_do", "voice_id"):
         if field in changes and changes[field] is not None:
             setattr(agent, field, changes[field].strip() if isinstance(changes[field], str) else changes[field])

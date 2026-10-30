@@ -10,7 +10,8 @@ import { useData } from '@/store/data'
 import { USE_MOCKS } from '@/lib/api/env'
 import { agentsApi, toAgent } from '@/lib/api/agents'
 import { useUI } from '@/store/ui'
-import { voices } from '@/mock/voices'
+import { api } from '@/lib/api'
+import { useAsync } from '@/components/shared'
 import { knowledge, numbers } from '@/mock/misc'
 import { cn } from '@/lib/utils'
 import type { Agent } from '@/mock/types'
@@ -34,6 +35,7 @@ export default function AgentDetail() {
   const [sp, setSp] = useSearchParams()
   const agent = useData((s) => s.agents.find((a) => a.id === id))
   const updateAgent = useData((s) => s.updateAgent)
+  const voices = useAsync(() => api.voices(), []).data ?? []
   const upsertAgent = useData((s) => s.upsertAgent)
   // The list omits the prompt and edit version; load them when an agent is opened.
   React.useEffect(() => {
@@ -49,7 +51,7 @@ export default function AgentDetail() {
   if (!agent || !d || !saved) return <EmptyState emoji="🔍" title="We couldn't find that agent" text="It may have been deleted. Head back to see all your agents." action={<Button variant="primary" size="lg" onClick={() => nav('/agents')}>See all agents</Button>} />
   const dirty = JSON.stringify(d) !== JSON.stringify(saved)
   const up = (p: Partial<Draft>) => setD({ ...d, ...p })
-  const voice = voices.find((v) => v.id === d.voiceId) ?? voices[0]
+  const voice = voices.find((v) => v.id === d.voiceId) ?? voices[0] ?? { id: '', name: 'Default', lang: '', gender: '', age: '', accent: '', style: '', provider: '' }
   const tab = sp.get('tab') ?? 'personality'
   const save = () => { updateAgent(agent.id, { name: d.name, voiceId: d.voiceId, brain: d.brain, tone: d.tone, business: d.business, whatYouDo: d.whatYouDo, prompt: d.prompt }); setSaved(d); toast.success('Saved!') }
 

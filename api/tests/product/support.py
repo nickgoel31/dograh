@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from api.db import models, product_models
-from api.product import agents_router, config, deps, gateway
+from api.product import agents_router, calls_router, config, deps, gateway, voices_router
 from api.product import router as product_router
 
 TABLES = [
@@ -21,6 +21,7 @@ TABLES = [
     product_models.ProductMembershipModel.__table__,
     product_models.ProductUserProfileModel.__table__,
     product_models.ProductAgentModel.__table__,
+    product_models.ProductVoiceFavoriteModel.__table__,
 ]
 
 
@@ -32,6 +33,8 @@ class FakeGateway:
         self.published: dict[tuple[int, int], dict] = {}
         self.drafts: dict[tuple[int, int], dict] = {}
         self.names: dict[tuple[int, int], str] = {}
+        self.runs: list[tuple[int, int, int]] = []
+        self.served: list[tuple[int, int, int]] = []
 
     async def create_agent(self, org_id, user_id, name, definition):
         i = next(self._ids)
@@ -85,6 +88,8 @@ async def make_client(monkeypatch):
     app = FastAPI()
     app.include_router(product_router.router)
     app.include_router(agents_router.router)
+    app.include_router(voices_router.router)
+    app.include_router(calls_router.router)
     app.dependency_overrides[deps.get_session] = _session
     app.dependency_overrides[gateway.get_gateway] = lambda: fake
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
@@ -104,3 +109,21 @@ async def signup(client, email, name="Ann"):
 
 def bearer(token, **extra):
     return {"Authorization": f"Bearer {token}", **extra}
+
+
+async def _start_test_run(self, org_id, user_id, agent_ref):
+    if (org_id, agent_ref) not in self.published:
+        raise LookupError("wrong org")
+    self.runs.append((org_id, user_id, agent_ref))
+    return len(self.runs)
+
+
+async def _serve_signaling(self, ws, org_id, user_id, agent_ref, run_id):
+    self.served.append((org_id, agent_ref, run_id))
+    await ws.accept()
+    await ws.send_json({"type": "answer", "payload": {"run": run_id}})
+    await ws.close()
+
+
+FakeGateway.start_test_run = _start_test_run
+FakeGateway.serve_signaling = _serve_signaling

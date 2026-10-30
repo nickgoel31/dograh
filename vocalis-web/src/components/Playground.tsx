@@ -5,6 +5,8 @@ import { VoiceOrb, speak, stopSpeaking } from './shared'
 import { useData } from '@/store/data'
 import { useUI } from '@/store/ui'
 import { cn } from '@/lib/utils'
+import { USE_MOCKS } from '@/lib/api/env'
+import { useAgentCall } from '@/lib/call'
 
 type Msg = { who: 'agent' | 'you'; text: string }
 const replies = [
@@ -17,7 +19,53 @@ const replies = [
 // Browser speech recognition (Chrome/Edge/Safari). Falls back to typing when missing.
 const SR: any = typeof window !== 'undefined' ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition : null
 
+/** Real practice call: live audio with the agent's test copy. */
+function RealCall({ agentId, compact }: { agentId: string; compact?: boolean }) {
+  const call = useAgentCall(agentId)
+  const end = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth' }) }, [call.lines])
+  const live = call.status === 'live', busy = call.status === 'connecting'
+  const orb = busy ? 'thinking' : live ? 'listening' : 'idle'
+  const label = busy ? 'Connecting…' : live ? 'You are on a call. Just talk.' : call.status === 'ended' ? 'Call ended' : 'Press Talk and say hello'
+  return (
+    <div className={cn('grid gap-6', !compact && 'md:grid-cols-[220px_1fr]')}>
+      <div className="flex flex-col items-center justify-center gap-4 py-2">
+        <VoiceOrb state={orb} size={compact ? 140 : 170} />
+        <div className="text-sm text-soft" aria-live="polite">{label}</div>
+        {live || busy ? (
+          <div className="flex gap-2">
+            <Button variant="danger" size="lg" onClick={call.end}><MicOff size={18} />End call</Button>
+            <Button size="lg" onClick={() => call.setMuted(!call.muted)} disabled={!live} aria-pressed={call.muted}>{call.muted ? 'Unmute' : 'Mute'}</Button>
+          </div>
+        ) : (
+          <Button variant="primary" size="lg" onClick={call.start}><Mic size={18} />{call.status === 'idle' ? 'Talk' : 'Talk again'}</Button>
+        )}
+        <p className="max-w-[200px] text-center text-xs text-soft">Practice calls are free and never reach real callers.</p>
+      </div>
+      <div className="flex min-h-[280px] flex-col rounded-xl border bg-muted/40">
+        <div className="flex-1 space-y-2.5 overflow-y-auto p-4" style={{ maxHeight: compact ? 220 : 320 }} aria-live="polite">
+          {call.error && <p role="alert" className="rounded-lg bg-bad/10 p-3 text-sm text-bad">{call.error}</p>}
+          {call.lines.length === 0 && !call.error && <p className="text-sm text-soft">What you and the agent say will show up here.</p>}
+          {call.lines.map((m) => (
+            <div key={m.id} className={cn('flex', m.who === 'you' && 'justify-end')}>
+              <div className={cn('max-w-[85%] rounded-2xl px-3.5 py-2 text-sm', m.who === 'you' ? 'bg-accent text-accent-fg' : 'border bg-surface')}>{m.text}</div>
+            </div>
+          ))}
+          <div ref={end} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function VoicePlayground({ agentId, compact }: { agentId?: string; compact?: boolean }) {
+  const agents = useData((s) => s.agents)
+  const resolved = agents.find((a) => a.id === agentId) ?? agents[0]
+  if (!USE_MOCKS && resolved) return <RealCall agentId={resolved.id} compact={compact} />
+  return <DemoPlayground agentId={agentId} compact={compact} />
+}
+
+function DemoPlayground({ agentId, compact }: { agentId?: string; compact?: boolean }) {
   const agents = useData((s) => s.agents)
   const agent = agents.find((a) => a.id === agentId) ?? agents[0]
   const [msgs, setMsgs] = React.useState<Msg[]>([{ who: 'agent', text: `Hi, you've reached ${agent.business}. How can I help you today?` }])

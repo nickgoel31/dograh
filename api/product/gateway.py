@@ -21,6 +21,14 @@ class PlatformGateway(Protocol):
         """Draft if one exists, else the published graph."""
         ...
 
+    async def start_test_run(self, org_id: int, user_id: int, agent_ref: int) -> int:
+        """Create a browser test call against the draft (or published) graph."""
+        ...
+
+    async def serve_signaling(self, ws, org_id: int, user_id: int, agent_ref: int, run_id: int) -> None:
+        """Run the browser<->agent audio signalling on an authenticated, not-yet-accepted socket."""
+        ...
+
 
 class CoreGateway:
     """Real implementation on the core workflow store. Not covered by the SQLite tests."""
@@ -62,6 +70,26 @@ class CoreGateway:
         if draft is not None:
             return draft.workflow_json
         return await self.published_definition(org_id, agent_ref)
+
+    async def start_test_run(self, org_id, user_id, agent_ref) -> int:
+        import time
+
+        run = await self._db().create_workflow_run(
+            f"TEST-{int(time.time())}", agent_ref, "smallwebrtc", user_id,
+            use_draft=True, organization_id=org_id,
+        )
+        return run.id
+
+    async def serve_signaling(self, ws, org_id, user_id, agent_ref, run_id) -> None:
+        from api.routes.webrtc_signaling import signaling_manager
+
+        user = await self._db().get_user_by_id(user_id)
+        if user is None:
+            await ws.close(code=1008, reason="session_expired")
+            return
+        # The platform scopes quota and config lookups by the user's active org.
+        user.selected_organization_id = org_id
+        await signaling_manager.handle_websocket(ws, agent_ref, run_id, user)
 
 
 _gateway: PlatformGateway = CoreGateway()
