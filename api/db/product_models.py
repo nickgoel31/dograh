@@ -37,6 +37,8 @@ class ProductWorkspaceModel(Base):
     parent_workspace_id = Column(
         Integer, ForeignKey("product_workspaces.id", ondelete="SET NULL"), nullable=True
     )
+    # True when an existing organization was brought over as the Live side (its billing and models are left as they were).
+    adopted = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), default=_now)
 
 

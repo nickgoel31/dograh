@@ -38,3 +38,10 @@ class MeOut(BaseModel):
     plan: str
     feature_flags: dict[str, bool]
     brand: str
+
+
+class SetupOut(BaseModel):
+    """Signed in, but not in a workspace yet: the app shows the "bring over your organization or start fresh" screen."""
+
+    setup_required: bool = True
+    user: UserOut

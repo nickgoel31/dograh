@@ -12,6 +12,7 @@ import { useMe } from '@/lib/useMe'
 import { http } from '@/lib/api/http'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { USE_MOCKS, authApi } from '@/lib/api'
+import { CLASSIC_URL } from '@/lib/api/env'
 import { queryClient } from '@/lib/query'
 import { useUI } from '@/store/ui'
 import { useData } from '@/store/data'
@@ -150,11 +151,19 @@ function Topbar({ openNav }: { openNav: () => void }) {
           <MenuSep />
           <MenuItem onSelect={() => set({ theme: theme === 'dark' ? 'light' : 'dark' })}>{theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}{theme === 'dark' ? 'Light mode' : 'Dark mode'}</MenuItem>
           <MenuItem onSelect={() => nav('/settings')}><Settings size={15} />Settings</MenuItem>
+          {!USE_MOCKS && CLASSIC_URL && <MenuItem onSelect={switchToClassic}>Switch to classic UI</MenuItem>}
           <MenuItem onSelect={signOut}>Sign out</MenuItem>
         </MenuContent>
       </Menu>
     </header>
   )
+}
+
+async function switchToClassic() {
+  try {
+    const { code } = await authApi.handoffStart('classic')
+    window.location.assign(`${CLASSIC_URL}/handoff?code=${encodeURIComponent(code)}`)
+  } catch { toast.error('We could not switch right now. Please try again.') }
 }
 
 async function signOut() {

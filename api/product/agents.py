@@ -167,7 +167,8 @@ async def duplicate_agent(
 async def readiness(
     session: AsyncSession, gw: PlatformGateway, ws: ProductWorkspaceModel, agent: ProductAgentModel
 ) -> list[Check]:
-    models_ok = await models_config.ensure_org_profiles(session, ws.test_org_id, ws.live_org_id)
+    orgs = (ws.test_org_id,) if ws.adopted else (ws.test_org_id, ws.live_org_id)  # an adopted Live org keeps its own models
+    models_ok = await models_config.ensure_org_profiles(session, *orgs)
     graph = await gw.working_definition(ws.test_org_id, agent.test_workflow_id) or {}
     checks = [
         Check(

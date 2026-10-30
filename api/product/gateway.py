@@ -21,6 +21,10 @@ class PlatformGateway(Protocol):
         """Draft if one exists, else the published graph."""
         ...
 
+    async def list_agents(self, org_id: int) -> list[dict]:
+        """Every agent in an organization: {id, name, active, definition}."""
+        ...
+
     async def list_versions(self, org_id: int, agent_ref: int) -> list[dict]:
         """Newest first: {number, status, created_at, published_at, definition}."""
         ...
@@ -78,6 +82,14 @@ class CoreGateway:
         if draft is not None:
             return draft.workflow_json
         return await self.published_definition(org_id, agent_ref)
+
+    async def list_agents(self, org_id) -> list[dict]:
+        rows = await self._db().get_all_workflows(organization_id=org_id)
+        return [
+            {"id": w.id, "name": w.name, "active": str(getattr(w.status, "value", w.status)) == "active",
+             "definition": (w.current_definition.workflow_json if w.current_definition else w.workflow_definition) or {}}
+            for w in rows
+        ]
 
     async def list_versions(self, org_id, agent_ref) -> list[dict]:
         db = self._db()

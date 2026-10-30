@@ -14,6 +14,7 @@ from api.product.roles import MATRIX, Role
 from api.product.schemas import (
     LoginBody,
     MeOut,
+    SetupOut,
     SignupBody,
     UserOut,
     WorkspaceCreateBody,
@@ -109,7 +110,7 @@ async def signup(
     return await _me(session, user, None, config.DEFAULT_ENVIRONMENT)
 
 
-@router.post("/auth/login", response_model=MeOut)
+@router.post("/auth/login", response_model=MeOut | SetupOut)
 async def login(
     body: LoginBody,
     request: Request,
@@ -125,9 +126,9 @@ async def login(
         raise product_error(401, "bad_credentials", "That email or password isn't right.")
     if not verify_password(body.password, user.password_hash):
         raise product_error(401, "bad_credentials", "That email or password isn't right.")
-    if not await list_workspaces(session, user.id):
-        raise product_error(403, "no_workspace", "This account doesn't have a workspace yet.")
     _set_session(response, user)
+    if not await list_workspaces(session, user.id):  # an existing account that hasn't been brought over yet
+        return SetupOut(user=UserOut(id=user_public_id(user.provider_id), email=user.email, name=await get_display_name(session, user.id)))
     return await _me(session, user, None, config.DEFAULT_ENVIRONMENT)
 
 

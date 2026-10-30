@@ -46,7 +46,7 @@ async def get_settings(session: AsyncSession, ws: ProductWorkspaceModel) -> Prod
 async def ensure_billing(session: AsyncSession, wallet: WalletGateway, ws: ProductWorkspaceModel) -> None:
     """Live org bills at the product price; Test org never bills. Also gives any free trial minutes once. Caller commits."""
     org = await session.get(OrganizationModel, ws.live_org_id)
-    if org is not None and not org.wallet_enabled:
+    if org is not None and not org.wallet_enabled and not ws.adopted:
         org.wallet_enabled = True
         org.billing_rate = config.PRICE_PER_MIN
         org.billing_currency = config.CURRENCY

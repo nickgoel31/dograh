@@ -69,7 +69,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MeOut"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MeOut"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SetupOut"
+                    }
+                  ],
+                  "title": "Response Login Api V1 Product Auth Login Post"
                 }
               }
             }
@@ -3040,6 +3048,214 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/auth/handoff": {
+      "post": {
+        "tags": [
+          "handoff"
+        ],
+        "summary": "Start",
+        "description": "Needs a signed-in session on either side (cookie or bearer token).",
+        "operationId": "start_api_v1_product_auth_handoff_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/auth/handoff/redeem": {
+      "post": {
+        "tags": [
+          "handoff"
+        ],
+        "summary": "Redeem",
+        "operationId": "redeem_api_v1_product_auth_handoff_redeem_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedeemBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/import/candidates": {
+      "get": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Candidates",
+        "description": "Organizations the signed-in person administers that aren't part of a workspace yet.",
+        "operationId": "candidates_api_v1_product_import_candidates_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Candidate"
+                  },
+                  "title": "Response Candidates Api V1 Product Import Candidates Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/import": {
+      "post": {
+        "tags": [
+          "import"
+        ],
+        "summary": "Import Org",
+        "operationId": "import_org_api_v1_product_import_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -6980,6 +7196,29 @@
         ],
         "title": "CampaignOut"
       },
+      "Candidate": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "agents": {
+            "type": "integer",
+            "title": "Agents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "agents"
+        ],
+        "title": "Candidate"
+      },
       "CatalogItem": {
         "properties": {
           "id": {
@@ -7454,6 +7693,31 @@
         ],
         "title": "IceServer"
       },
+      "ImportBody": {
+        "properties": {
+          "organization_id": {
+            "type": "string",
+            "title": "Organization Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_id"
+        ],
+        "title": "ImportBody"
+      },
       "InvoiceOut": {
         "properties": {
           "number": {
@@ -7913,6 +8177,26 @@
         ],
         "title": "QuestionBody"
       },
+      "RedeemBody": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Code"
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^(product|classic)$",
+            "title": "To"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "to"
+        ],
+        "title": "RedeemBody"
+      },
       "SettingsOut": {
         "properties": {
           "spend_limit": {
@@ -8010,6 +8294,24 @@
         ],
         "title": "SettingsOut"
       },
+      "SetupOut": {
+        "properties": {
+          "setup_required": {
+            "type": "boolean",
+            "title": "Setup Required",
+            "default": true
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user"
+        ],
+        "title": "SetupOut",
+        "description": "Signed in, but not in a workspace yet: the app shows the \"bring over your organization or start fresh\" screen."
+      },
       "SignupBody": {
         "properties": {
           "email": {
@@ -8076,6 +8378,20 @@
           "end_time"
         ],
         "title": "SlotIn"
+      },
+      "StartBody": {
+        "properties": {
+          "to": {
+            "type": "string",
+            "pattern": "^(product|classic)$",
+            "title": "To"
+          }
+        },
+        "type": "object",
+        "required": [
+          "to"
+        ],
+        "title": "StartBody"
       },
       "Step": {
         "properties": {

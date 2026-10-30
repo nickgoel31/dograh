@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "product-api", "runtimeExecutable": "python", "runtimeArgs": ["scripts/product_dev.py"], "port": 8000 },
+    { "name": "vocalis-web", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "--prefix", "vocalis-web", "--", "--port", "5174", "--strictPort"], "port": 5174 }
+  ]
+}

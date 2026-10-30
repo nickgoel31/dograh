@@ -234,6 +234,15 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                       <Settings className="w-4 h-4 text-gray-500" />
                       <span>Platform Settings</span>
                     </button>
+                    {process.env.NEXT_PUBLIC_VOCALIS_ENABLED === "true" && (
+                      <a
+                        href="/switch-ui"
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-[#c8ccc5] hover:bg-gray-100 dark:hover:bg-white/8 rounded-xl transition-colors text-left"
+                      >
+                        <Settings className="w-4 h-4 text-gray-500" />
+                        <span>Switch to the new UI</span>
+                      </a>
+                    )}
                     <button
                       onClick={() => { setShowProfileMenu(false); handleNav(); logout(); }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors text-left"

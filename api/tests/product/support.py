@@ -11,7 +11,7 @@ from sqlalchemy.pool import StaticPool
 
 from api.db import models, product_models
 from api.product import (agents_router, billing_router, calls_router, campaigns_router, config, conversations_router, deps, gateway,
-                         home_router, knowledge_router, notifications, numbers_router, payments, tools_router, voices_router)
+                         handoff_router, home_router, import_router, knowledge_router, notifications, numbers_router, payments, tools_router, voices_router)
 from api.product import router as product_router
 
 TABLES = [
@@ -47,6 +47,7 @@ class FakeGateway:
         self.names: dict[tuple[int, int], str] = {}
         self.overrides: dict[tuple[int, int], dict | None] = {}
         self.history: dict[tuple[int, int], list[dict]] = {}
+        self.archived: set[tuple[int, int]] = set()
         self.runs: list[tuple[int, int, int]] = []
         self.served: list[tuple[int, int, int]] = []
 
@@ -221,7 +222,7 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(conversations_router.router)
     app.include_router(numbers_router.router)
     app.include_router(billing_router.router)
-    for r in (campaigns_router, home_router, knowledge_router, notifications, tools_router):
+    for r in (handoff_router, import_router, campaigns_router, home_router, knowledge_router, notifications, tools_router):
         app.include_router(r.router)
     kb, tl, cp = FakeKB(), FakeTools(), FakeCampaigns()
     app.dependency_overrides[knowledge_router.get_knowledge] = lambda: kb
@@ -288,6 +289,12 @@ async def _list_versions(self, org_id, agent_ref):
     return list(reversed(out))
 
 
+async def _list_agents(self, org_id):
+    return [{"id": i, "name": self.names[(o, i)], "active": (o, i) not in self.archived, "definition": deepcopy(self.published[(o, i)])}
+            for (o, i) in self.published if o == org_id]
+
+
+FakeGateway.list_agents = _list_agents
 FakeGateway.list_versions = _list_versions
 FakeGateway.set_model_overrides = _set_model_overrides
 FakeGateway.start_test_run = _start_test_run

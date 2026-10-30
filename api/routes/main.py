@@ -37,6 +37,8 @@ from api.product.conversations_router import router as product_conversations_rou
 from api.product.billing_router import router as product_billing_router
 from api.product.campaigns_router import router as product_campaigns_router
 from api.product.home_router import router as product_home_router
+from api.product.handoff_router import router as product_handoff_router
+from api.product.import_router import router as product_import_router
 from api.product.knowledge_router import router as product_knowledge_router
 from api.product.notifications import router as product_notifications_router
 from api.product.tools_router import router as product_tools_router
@@ -86,7 +88,7 @@ router.include_router(product_calls_router)
 router.include_router(product_conversations_router)
 router.include_router(product_numbers_router)
 router.include_router(product_billing_router)
-for _r in (product_campaigns_router, product_home_router, product_knowledge_router, product_notifications_router, product_tools_router):
+for _r in (product_handoff_router, product_import_router, product_campaigns_router, product_home_router, product_knowledge_router, product_notifications_router, product_tools_router):
     router.include_router(_r)
 
 

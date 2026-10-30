@@ -473,6 +473,80 @@ export interface paths {
         patch: operations["settings_api_v1_product_numbers__number_id__patch"];
         trace?: never;
     };
+    "/api/v1/product/auth/handoff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start
+         * @description Needs a signed-in session on either side (cookie or bearer token).
+         */
+        post: operations["start_api_v1_product_auth_handoff_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/auth/handoff/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Redeem */
+        post: operations["redeem_api_v1_product_auth_handoff_redeem_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/import/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Candidates
+         * @description Organizations the signed-in person administers that aren't part of a workspace yet.
+         */
+        get: operations["candidates_api_v1_product_import_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import Org */
+        post: operations["import_org_api_v1_product_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/product/billing/summary": {
         parameters: {
             query?: never;
@@ -1278,6 +1352,15 @@ export interface components {
              */
             converted: number;
         };
+        /** Candidate */
+        Candidate: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Agents */
+            agents: number;
+        };
         /** CatalogItem */
         CatalogItem: {
             /** Id */
@@ -1468,6 +1551,13 @@ export interface components {
             /** Credential */
             credential?: string | null;
         };
+        /** ImportBody */
+        ImportBody: {
+            /** Organization Id */
+            organization_id: string;
+            /** Name */
+            name?: string | null;
+        };
         /** InvoiceOut */
         InvoiceOut: {
             /** Number */
@@ -1623,6 +1713,13 @@ export interface components {
             /** Agent Id */
             agent_id?: string | null;
         };
+        /** RedeemBody */
+        RedeemBody: {
+            /** Code */
+            code: string;
+            /** To */
+            to: string;
+        };
         /** SettingsOut */
         SettingsOut: {
             /** Spend Limit */
@@ -1641,6 +1738,18 @@ export interface components {
             billing_state: string | null;
             /** Billing Address */
             billing_address: string | null;
+        };
+        /**
+         * SetupOut
+         * @description Signed in, but not in a workspace yet: the app shows the "bring over your organization or start fresh" screen.
+         */
+        SetupOut: {
+            /**
+             * Setup Required
+             * @default true
+             */
+            setup_required: boolean;
+            user: components["schemas"]["UserOut"];
         };
         /** SignupBody */
         SignupBody: {
@@ -1664,6 +1773,11 @@ export interface components {
             start_time: string;
             /** End Time */
             end_time: string;
+        };
+        /** StartBody */
+        StartBody: {
+            /** To */
+            to: string;
         };
         /** Step */
         Step: {
@@ -2015,7 +2129,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MeOut"];
+                    "application/json": components["schemas"]["MeOut"] | components["schemas"]["SetupOut"];
                 };
             };
             /** @description Validation Error */
@@ -3141,6 +3255,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NumberOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_api_v1_product_auth_handoff_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    redeem_api_v1_product_auth_handoff_redeem_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RedeemBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    candidates_api_v1_product_import_candidates_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Candidate"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_org_api_v1_product_import_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
