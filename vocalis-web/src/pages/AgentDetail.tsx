@@ -9,6 +9,7 @@ import { VoicePlayground } from '@/components/Playground'
 import { useData } from '@/store/data'
 import { USE_MOCKS } from '@/lib/api/env'
 import { agentsApi, toAgent } from '@/lib/api/agents'
+import { fromWorkflowDefinition, toWorkflowDefinition } from '@/lib/flowConvert'
 import { useUI } from '@/store/ui'
 import { api } from '@/lib/api'
 import { useAsync } from '@/components/shared'
@@ -43,7 +44,16 @@ export default function AgentDetail() {
     agentsApi.get(id).then((a) => upsertAgent(toAgent(a, useData.getState().agents.find((x) => x.id === id)))).catch(() => {})
   }, [id, upsertAgent])
   const setUI = useUI((s) => s.set)
-  const base = React.useMemo<Draft | null>(() => agent ? ({ ...agent, speed: 50, emotion: 'Warm', model: 'gpt-4o-mini', kb: ['k1', 'k4'], tools: ['calendar', 'book', 'end'], patience: 60, interrupt: 50, chatty: 40, maxMin: 10, voicemail: 'leave', tested: false, flow: defaultFlow() }) : null, [agent?.id])
+  // Real mode: the call flow and version history come from the server.
+  const [loadedFlow, setLoadedFlow] = React.useState<FlowData | null>(null)
+  const [realVersions, setRealVersions] = React.useState<Awaited<ReturnType<typeof agentsApi.versions>> | null>(null)
+  const loadVersions = React.useCallback(() => { if (!USE_MOCKS && id) agentsApi.versions(id).then(setRealVersions).catch(() => {}) }, [id])
+  React.useEffect(() => {
+    if (USE_MOCKS || !id) return
+    agentsApi.flow(id).then((f) => setLoadedFlow(fromWorkflowDefinition(f.definition as never) as unknown as FlowData)).catch(() => {})
+    loadVersions()
+  }, [id, loadVersions])
+  const base = React.useMemo<Draft | null>(() => agent ? ({ ...agent, speed: 50, emotion: 'Warm', model: 'gpt-4o-mini', kb: ['k1', 'k4'], tools: ['calendar', 'book', 'end'], patience: 60, interrupt: 50, chatty: 40, maxMin: 10, voicemail: 'leave', tested: false, flow: loadedFlow ?? defaultFlow() }) : null, [agent?.id, loadedFlow])
   const [saved, setSaved] = React.useState<Draft | null>(base)
   const [d, setD] = React.useState<Draft | null>(base)
   const [diff, setDiff] = React.useState<number | null>(null)
@@ -53,7 +63,34 @@ export default function AgentDetail() {
   const up = (p: Partial<Draft>) => setD({ ...d, ...p })
   const voice = voices.find((v) => v.id === d.voiceId) ?? voices[0] ?? { id: '', name: 'Default', lang: '', gender: '', age: '', accent: '', style: '', provider: '' }
   const tab = sp.get('tab') ?? 'personality'
-  const save = () => { updateAgent(agent.id, { name: d.name, voiceId: d.voiceId, brain: d.brain, tone: d.tone, business: d.business, whatYouDo: d.whatYouDo, prompt: d.prompt }); setSaved(d); toast.success('Saved!') }
+  const save = async () => {
+    if (!USE_MOCKS && JSON.stringify(d.flow) !== JSON.stringify(saved.flow)) {
+      try {
+        await agentsApi.saveFlow(agent.id, toWorkflowDefinition(d.flow as never), agent.version)
+        upsertAgent(toAgent(await agentsApi.get(agent.id), agent))
+        loadVersions()
+      } catch (e) { toast.error(e instanceof Error ? e.message : 'We could not save your call flow.'); return }
+    }
+    updateAgent(agent.id, { name: d.name, voiceId: d.voiceId, brain: d.brain, tone: d.tone, business: d.business, whatYouDo: d.whatYouDo, prompt: d.prompt }); setSaved(d); toast.success('Saved!')
+  }
+
+  const versionList = USE_MOCKS ? versions : (realVersions ?? []).map((v) => ({
+    v: v.number,
+    when: new Date(v.published_at ?? v.created_at ?? Date.now()).toLocaleString(),
+    who: v.status === 'draft' ? 'Not live yet' : v.status === 'published' ? 'Current' : 'Earlier',
+    note: v.status === 'draft' ? 'Working draft' : v.status === 'published' ? 'Published version' : 'Earlier version',
+    prompt: v.prompt,
+  }))
+  const restore = async (v: { v: number; prompt: string }) => {
+    if (USE_MOCKS) { up({ prompt: v.prompt }); toast.success(`Restored version ${v.v}. Save to keep it.`); return }
+    try {
+      const a = await agentsApi.restoreVersion(agent.id, v.v)
+      upsertAgent(toAgent(a, agent))
+      setLoadedFlow(fromWorkflowDefinition((await agentsApi.flow(agent.id)).definition as never) as unknown as FlowData)
+      loadVersions()
+      toast.success(`Restored version ${v.v} as your working draft. Go live when you're ready.`)
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'We could not restore that version.') }
+  }
 
   const brainCards = [['fast', '⚡ Fast', 'Replies very quickly. Great for simple jobs.', 'Best for: FAQs'], ['balanced', '⚖️ Balanced', 'A good mix of speed and smarts.', 'Best for: most businesses'], ['smartest', '🧠 Smartest', 'Thinks harder. A little slower.', 'Best for: tricky conversations']] as const
   const checks = [
@@ -120,8 +157,8 @@ export default function AgentDetail() {
         <TabPanel value="test"><Q title="Try it out"><VoicePlayground agentId={agent.id} /><div className="mt-4 text-right"><Button onClick={() => { up({ tested: true }); toast.success('Nice! Marked as tested.') }}>I tried it — looks good</Button></div></Q></TabPanel>
 
         <TabPanel value="versions"><Q title="Version history" hint="Go back to an earlier version any time.">
-          <div className="space-y-2">{versions.map((v) => <div key={v.v} className="rounded-lg border p-3"><div className="flex flex-wrap items-center gap-3"><History size={16} className="text-soft" /><div className="flex-1"><span className="font-medium">Version {v.v}</span> <span className="text-soft">— {v.note}</span><div className="text-xs text-soft">{v.when} · {v.who}</div></div>
-            <Button size="sm" variant="ghost" onClick={() => setDiff(diff === v.v ? null : v.v)}>{diff === v.v ? 'Hide changes' : 'See changes'}</Button><Button size="sm" onClick={() => { up({ prompt: v.prompt }); toast.success(`Restored version ${v.v}. Save to keep it.`) }}>Restore</Button></div>
+          <div className="space-y-2">{versionList.map((v) => <div key={v.v} className="rounded-lg border p-3"><div className="flex flex-wrap items-center gap-3"><History size={16} className="text-soft" /><div className="flex-1"><span className="font-medium">Version {v.v}</span> <span className="text-soft">— {v.note}</span><div className="text-xs text-soft">{v.when} · {v.who}</div></div>
+            <Button size="sm" variant="ghost" onClick={() => setDiff(diff === v.v ? null : v.v)}>{diff === v.v ? 'Hide changes' : 'See changes'}</Button><Button size="sm" onClick={() => restore(v)}>Restore</Button></div>
             {diff === v.v && <pre className="mt-3 overflow-x-auto rounded-lg bg-muted p-3 font-mono text-xs">{(() => { const a = new Set(v.prompt.split('\n')), b = new Set(d.prompt.split('\n')); return [...new Set([...b, ...a])].map((l, i) => <div key={i} className={cn(a.has(l) && !b.has(l) && 'bg-ok/15 text-ok', b.has(l) && !a.has(l) && 'bg-bad/15 text-bad')}>{a.has(l) && !b.has(l) ? '+ ' : b.has(l) && !a.has(l) ? '− ' : '  '}{l}</div>) })()}</pre>}</div>)}</div></Q></TabPanel>
 
         <TabPanel value="publish"><Q title="Ready to go live?" hint="Green means ready. Orange means it will still work, but could be better.">

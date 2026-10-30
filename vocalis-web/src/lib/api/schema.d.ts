@@ -228,6 +228,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/product/agents/{agent_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Versions */
+        get: operations["versions_api_v1_product_agents__agent_id__versions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/agents/{agent_id}/versions/{number}/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Version Diff
+         * @description What changed from version ``number`` to ``against`` (default: the current working version).
+         */
+        get: operations["version_diff_api_v1_product_agents__agent_id__versions__number__diff_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/agents/{agent_id}/versions/{number}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore */
+        post: operations["restore_api_v1_product_agents__agent_id__versions__number__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/agents/{agent_id}/flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Flow */
+        get: operations["get_flow_api_v1_product_agents__agent_id__flow_get"];
+        /** Put Flow */
+        put: operations["put_flow_api_v1_product_agents__agent_id__flow_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/product/voices": {
         parameters: {
             query?: never;
@@ -379,6 +451,26 @@ export interface components {
             /** Hint */
             hint?: string | null;
         };
+        /** DiffOut */
+        DiffOut: {
+            /** Prompt */
+            prompt: {
+                [key: string]: unknown;
+            }[];
+            /** Steps */
+            steps: {
+                [key: string]: unknown;
+            };
+        };
+        /** FlowOut */
+        FlowOut: {
+            /** Definition */
+            definition: {
+                [key: string]: unknown;
+            };
+            /** Version */
+            version: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -479,6 +571,19 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VersionOut */
+        VersionOut: {
+            /** Number */
+            number: number;
+            /** Status */
+            status: string;
+            /** Created At */
+            created_at: string | null;
+            /** Published At */
+            published_at: string | null;
+            /** Prompt */
+            prompt: string;
         };
         /** VoiceOut */
         VoiceOut: {
@@ -1054,6 +1159,192 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    versions_api_v1_product_agents__agent_id__versions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    version_diff_api_v1_product_agents__agent_id__versions__number__diff_get: {
+        parameters: {
+            query?: {
+                against?: number | null;
+            };
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                agent_id: string;
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiffOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_api_v1_product_agents__agent_id__versions__number__restore_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                agent_id: string;
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_flow_api_v1_product_agents__agent_id__flow_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_flow_api_v1_product_agents__agent_id__flow_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowOut"];
                 };
             };
             /** @description Validation Error */

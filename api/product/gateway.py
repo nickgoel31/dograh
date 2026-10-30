@@ -21,6 +21,10 @@ class PlatformGateway(Protocol):
         """Draft if one exists, else the published graph."""
         ...
 
+    async def list_versions(self, org_id: int, agent_ref: int) -> list[dict]:
+        """Newest first: {number, status, created_at, published_at, definition}."""
+        ...
+
     async def set_model_overrides(self, org_id: int, agent_ref: int, overrides: dict | None) -> None:
         """Set (or clear) the agent's per-agent model/voice overrides on its draft."""
         ...
@@ -74,6 +78,22 @@ class CoreGateway:
         if draft is not None:
             return draft.workflow_json
         return await self.published_definition(org_id, agent_ref)
+
+    async def list_versions(self, org_id, agent_ref) -> list[dict]:
+        db = self._db()
+        if await db.get_workflow(agent_ref, organization_id=org_id) is None:
+            raise LookupError("agent not found")
+        return [
+            {
+                "number": v.version_number,
+                "status": v.status,
+                "created_at": v.created_at,
+                "published_at": v.published_at,
+                "definition": v.workflow_json or {},
+            }
+            for v in await db.get_workflow_versions(agent_ref)
+            if v.version_number is not None
+        ]
 
     async def set_model_overrides(self, org_id, agent_ref, overrides) -> None:
         db = self._db()

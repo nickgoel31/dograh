@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.db.product_models import ProductAgentModel, ProductWorkspaceModel
 from api.product import definition as defn
+from api.product import flows
 from api.product import models_config
 from api.product import prompt as prompts
 from api.product import voices as voice_catalogue
@@ -213,6 +214,57 @@ async def go_live(
     )
     await gw.publish(ws.live_org_id, agent.live_workflow_id)
     agent.status = "live"
+    agent.version += 1
+    await session.flush()
+    return agent
+
+
+async def versions_of(gw: PlatformGateway, ws: ProductWorkspaceModel, agent: ProductAgentModel) -> list[dict]:
+    return await gw.list_versions(ws.test_org_id, agent.test_workflow_id)
+
+
+def find_version(versions: list[dict], number: int) -> dict:
+    v = next((v for v in versions if v["number"] == number), None)
+    if v is None:
+        raise product_error(404, "version_not_found", "We couldn't find that version.")
+    return v
+
+
+async def restore_version(
+    session: AsyncSession, gw: PlatformGateway, ws: ProductWorkspaceModel, agent: ProductAgentModel, number: int
+) -> ProductAgentModel:
+    """Make the chosen version the new working draft. Nothing goes live until Go live."""
+    v = find_version(await versions_of(gw, ws, agent), number)
+    # The restored text is arbitrary, so stop regenerating the prompt from the simple fields.
+    agent.prompt_mode = "custom"
+    await gw.save_draft(ws.test_org_id, agent.test_workflow_id, agent.name, v["definition"])
+    agent.version += 1
+    await session.flush()
+    return agent
+
+
+async def get_flow(gw: PlatformGateway, ws: ProductWorkspaceModel, agent: ProductAgentModel) -> dict:
+    return await gw.working_definition(ws.test_org_id, agent.test_workflow_id) or {"nodes": [], "edges": []}
+
+
+async def save_flow(
+    session: AsyncSession,
+    gw: PlatformGateway,
+    ws: ProductWorkspaceModel,
+    agent: ProductAgentModel,
+    definition: dict,
+    expected_version: int | None,
+) -> ProductAgentModel:
+    if expected_version is not None and expected_version != agent.version:
+        raise product_error(
+            409,
+            "edited_elsewhere",
+            "Someone else changed this agent while you were editing. Reload to see their changes.",
+        )
+    current = await get_flow(gw, ws, agent)
+    merged = flows.keep_agent_prompt(definition, current)
+    flows.check_flow(merged)
+    await gw.save_draft(ws.test_org_id, agent.test_workflow_id, agent.name, merged)
     agent.version += 1
     await session.flush()
     return agent

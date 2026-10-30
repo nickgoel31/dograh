@@ -11,7 +11,7 @@ import { AdvancedOnly, CodeBlock } from './shared'
 import { cn, sleep } from '@/lib/utils'
 
 export interface FlowData { nodes: Node[]; edges: Edge[] }
-type Kind = 'greeting' | 'ask' | 'tool' | 'condition' | 'transfer' | 'end'
+type Kind = 'greeting' | 'ask' | 'tool' | 'condition' | 'transfer' | 'end' | 'advanced'
 const kinds: Record<Kind, { emoji: string; name: string; hint: string; color: string; text: string }> = {
   greeting: { emoji: '👋', name: 'Greeting', hint: 'Say hello', color: '#6356f1', text: 'Hi, thanks for calling! How can I help?' },
   ask: { emoji: '❓', name: 'Ask a question', hint: 'Collect info', color: '#0ea5e9', text: 'May I have your name, please?' },
@@ -19,6 +19,7 @@ const kinds: Record<Kind, { emoji: string; name: string; hint: string; color: st
   condition: { emoji: '🔀', name: 'Yes / No check', hint: 'Branch the call', color: '#f59e0b', text: 'Did the caller ask for a person?' },
   transfer: { emoji: '🧑', name: 'Hand to a human', hint: 'Transfer', color: '#ef4444', text: 'Let me connect you with a teammate.' },
   end: { emoji: '✅', name: 'Close', hint: 'End the call', color: '#64748b', text: 'Thanks for calling. Have a lovely day!' },
+  advanced: { emoji: '⚙️', name: 'Advanced step', hint: 'Set up outside this editor', color: '#475569', text: 'This step was set up elsewhere. You can move it, but its settings are kept as they are.' },
 }
 
 function StepNode({ data, selected }: NodeProps<{ kind: Kind; label: string; text: string; active?: boolean }>) {
@@ -43,8 +44,8 @@ const edgeStyle = { type: 'smoothstep', animated: true, markerEnd: { type: Marke
 const mk = (id: string, kind: Kind, x: number, y: number, label?: string, text?: string): Node => ({ id, type: 'step', position: { x, y }, data: { kind, label: label ?? kinds[kind].name, text: text ?? kinds[kind].text } })
 
 export const defaultFlow = (): FlowData => ({
-  nodes: [mk('1', 'greeting', 0, 120), mk('2', 'ask', 280, 120, 'Qualify', 'Ask what they need and for whom.'), mk('3', 'condition', 560, 120, 'Wants a person?'), mk('4', 'tool', 860, 30, 'Book', 'Check the calendar and book a slot.'), mk('5', 'transfer', 860, 230), mk('6', 'end', 1140, 30)],
-  edges: [['1', '2'], ['2', '3'], ['3', '4', 'no'], ['3', '5', 'yes'], ['4', '6']].map(([s, t, h]) => ({ id: `e${s}-${t}`, source: s, target: t, sourceHandle: h, label: h === 'yes' ? 'Yes' : h === 'no' ? 'No' : undefined, ...edgeStyle })),
+  nodes: [mk('greeting-1', 'greeting', 0, 120), mk('ask-2', 'ask', 280, 120, 'Qualify', 'Ask what they need and for whom.'), mk('condition-3', 'condition', 560, 120, 'Wants a person?'), mk('tool-4', 'tool', 860, 30, 'Book', 'Check the calendar and book a slot.'), mk('transfer-5', 'transfer', 860, 230), mk('end-6', 'end', 1140, 30)],
+  edges: [['greeting-1', 'ask-2'], ['ask-2', 'condition-3'], ['condition-3', 'tool-4', 'no'], ['condition-3', 'transfer-5', 'yes'], ['tool-4', 'end-6']].map(([s, t, h]) => ({ id: `${s}>${t}${h ? '#' + h : ''}`, source: s, target: t, sourceHandle: h, label: h === 'yes' ? 'Yes' : h === 'no' ? 'No' : undefined, ...edgeStyle })),
 })
 
 function Editor({ value, onChange }: { value: FlowData; onChange: (v: FlowData) => void }) {
@@ -54,7 +55,7 @@ function Editor({ value, onChange }: { value: FlowData; onChange: (v: FlowData) 
   const [running, setRunning] = React.useState(false)
   const rf = useReactFlow()
   const n = nodes.find((x) => x.id === sel)
-  const clean = (ns: Node[], es: Edge[]): FlowData => ({ nodes: ns.map(({ id, type, position, data }) => ({ id, type, position, data: { kind: data.kind, label: data.label, text: data.text } })), edges: es.map(({ id, source, target, sourceHandle, label }) => ({ id, source, target, sourceHandle, label, ...edgeStyle })) })
+  const clean = (ns: Node[], es: Edge[]): FlowData => ({ nodes: ns.map(({ id, type, position, data }) => ({ id, type, position, data: { kind: data.kind, label: data.label, text: data.text, ...(data.raw ? { raw: data.raw } : {}) } })), edges: es.map(({ id, source, target, sourceHandle, label, data }) => ({ id, source, target, sourceHandle, label, ...(data ? { data } : {}), ...edgeStyle })) })
   React.useEffect(() => {
     const c = clean(nodes, edges)
     if (JSON.stringify(c) !== JSON.stringify(clean(value.nodes, value.edges))) onChange(c)
@@ -64,7 +65,7 @@ function Editor({ value, onChange }: { value: FlowData; onChange: (v: FlowData) 
 
   const connect = (c: Connection) => setEdges((es) => addEdge({ ...c, ...edgeStyle, label: c.sourceHandle === 'yes' ? 'Yes' : c.sourceHandle === 'no' ? 'No' : undefined }, es))
   const add = (kind: Kind) => {
-    const id = String(Date.now())
+    const id = `${kind}-${Date.now()}`
     const p = rf.project({ x: 300, y: 200 })
     setNodes((ns) => [...ns, { ...mk(id, kind, p.x + ns.length * 6, p.y + ns.length * 6), selected: true }]); setSel(id)
   }
@@ -103,7 +104,7 @@ function Editor({ value, onChange }: { value: FlowData; onChange: (v: FlowData) 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        {(Object.keys(kinds) as Kind[]).map((k) => <Button key={k} size="sm" onClick={() => add(k)} title={kinds[k].hint}>{kinds[k].emoji} {kinds[k].name}</Button>)}
+        {(Object.keys(kinds) as Kind[]).filter((k) => k !== 'advanced').map((k) => <Button key={k} size="sm" onClick={() => add(k)} title={kinds[k].hint}>{kinds[k].emoji} {kinds[k].name}</Button>)}
         <div className="ml-auto flex gap-2">
           <Button size="sm" variant="ghost" onClick={tidy}><LayoutGrid size={14} />Tidy up</Button>
           <Button size="sm" variant="ghost" onClick={() => { const f = defaultFlow(); setNodes(f.nodes); setEdges(f.edges); setSel(null); toast('Back to the starter flow') }}><RotateCcw size={14} />Reset</Button>
@@ -122,7 +123,7 @@ function Editor({ value, onChange }: { value: FlowData; onChange: (v: FlowData) 
             <div className="space-y-3">
               <div className="flex items-center justify-between"><div className="text-sm font-semibold">{kinds[n.data.kind as Kind].emoji} Edit step</div><Button size="sm" variant="ghost" className="text-bad" onClick={remove} aria-label="Delete step"><Trash2 size={14} />Delete</Button></div>
               <Field label="Step name"><Input value={n.data.label} onChange={(e) => patch({ label: e.target.value })} /></Field>
-              <Field label="What should the agent say or do?"><Textarea className="min-h-[120px]" value={n.data.text} onChange={(e) => patch({ text: e.target.value })} /></Field>
+              <Field label="What should the agent say or do?"><Textarea className="min-h-[120px]" value={n.data.text} disabled={n.data.kind === 'advanced'} onChange={(e) => patch({ text: e.target.value })} /></Field>
               {n.data.kind === 'condition' && <p className="text-xs text-soft">Drag from the green dot for “Yes” and the red dot for “No”.</p>}
             </div>
           ) : (

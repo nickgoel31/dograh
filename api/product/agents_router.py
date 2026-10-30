@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, Header, Response
+from fastapi import APIRouter, Body, Depends, Header, Response
 from pydantic import BaseModel, Field
 
 from api.db.product_models import ProductAgentModel
 from api.product import agents as svc
 from api.product import definition as defn
+from api.product import versions as vdiff
 from api.product.deps import Ctx, get_ctx, require
 from api.product.errors import product_error
 from api.product.gateway import PlatformGateway, get_gateway
@@ -192,3 +193,91 @@ async def publish(
     await svc.go_live(ctx.session, gw, ctx.workspace, ctx.user.id, agent)
     await ctx.session.commit()
     return _out(agent)
+
+
+class VersionOut(BaseModel):
+    number: int
+    status: str  # draft | published | archived
+    created_at: str | None
+    published_at: str | None
+    prompt: str
+
+
+class DiffOut(BaseModel):
+    prompt: list[dict]
+    steps: dict
+
+
+def _iso(d) -> str | None:
+    return d.isoformat() if d else None
+
+
+@router.get("/{agent_id}/versions", response_model=list[VersionOut])
+async def versions(agent_id: str, ctx: Ctx = Depends(get_ctx), gw: PlatformGateway = Depends(get_gateway)):
+    agent = await svc.get_agent(ctx.session, ctx.workspace, agent_id)
+    return [
+        VersionOut(
+            number=v["number"], status=v["status"], created_at=_iso(v["created_at"]),
+            published_at=_iso(v["published_at"]), prompt=defn.get_prompt(v["definition"]),
+        )
+        for v in await svc.versions_of(gw, ctx.workspace, agent)
+    ]
+
+
+@router.get("/{agent_id}/versions/{number}/diff", response_model=DiffOut)
+async def version_diff(
+    agent_id: str, number: int, against: int | None = None,
+    ctx: Ctx = Depends(get_ctx), gw: PlatformGateway = Depends(get_gateway),
+):
+    """What changed from version ``number`` to ``against`` (default: the current working version)."""
+    agent = await svc.get_agent(ctx.session, ctx.workspace, agent_id)
+    vs = await svc.versions_of(gw, ctx.workspace, agent)
+    old = svc.find_version(vs, number)["definition"]
+    if against is not None:
+        new = svc.find_version(vs, against)["definition"]
+    else:
+        new = await gw.working_definition(ctx.workspace.test_org_id, agent.test_workflow_id) or {}
+    return DiffOut(prompt=vdiff.prompt_diff(defn.get_prompt(old), defn.get_prompt(new)), steps=vdiff.node_diff(old, new))
+
+
+@router.post("/{agent_id}/versions/{number}/restore", response_model=AgentOut)
+async def restore(
+    agent_id: str, number: int,
+    ctx: Ctx = Depends(require(Perm.AGENTS_WRITE)), gw: PlatformGateway = Depends(get_gateway),
+):
+    agent = await svc.get_agent(ctx.session, ctx.workspace, agent_id)
+    await svc.restore_version(ctx.session, gw, ctx.workspace, agent, number)
+    await ctx.session.commit()
+    graph = await gw.working_definition(ctx.workspace.test_org_id, agent.test_workflow_id) or {}
+    return _out(agent, defn.get_prompt(graph))
+
+
+class FlowOut(BaseModel):
+    definition: dict
+    version: int
+
+
+@router.get("/{agent_id}/flow", response_model=FlowOut)
+async def get_flow(agent_id: str, ctx: Ctx = Depends(get_ctx), gw: PlatformGateway = Depends(get_gateway)):
+    agent = await svc.get_agent(ctx.session, ctx.workspace, agent_id)
+    return FlowOut(definition=await svc.get_flow(gw, ctx.workspace, agent), version=agent.version)
+
+
+@router.put("/{agent_id}/flow", response_model=FlowOut)
+async def put_flow(
+    agent_id: str,
+    definition: dict = Body(...),
+    if_match: str | None = Header(default=None),
+    ctx: Ctx = Depends(require(Perm.AGENTS_WRITE)),
+    gw: PlatformGateway = Depends(get_gateway),
+):
+    agent = await svc.get_agent(ctx.session, ctx.workspace, agent_id)
+    expected = None
+    if if_match is not None:
+        try:
+            expected = int(if_match.strip('"'))
+        except ValueError:
+            raise product_error(400, "bad_etag", "That edit was out of date. Reload and try again.")
+    await svc.save_flow(ctx.session, gw, ctx.workspace, agent, definition, expected)
+    await ctx.session.commit()
+    return FlowOut(definition=await svc.get_flow(gw, ctx.workspace, agent), version=agent.version)

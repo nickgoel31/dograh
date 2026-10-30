@@ -35,6 +35,7 @@ class FakeGateway:
         self.drafts: dict[tuple[int, int], dict] = {}
         self.names: dict[tuple[int, int], str] = {}
         self.overrides: dict[tuple[int, int], dict | None] = {}
+        self.history: dict[tuple[int, int], list[dict]] = {}
         self.runs: list[tuple[int, int, int]] = []
         self.served: list[tuple[int, int, int]] = []
 
@@ -55,6 +56,7 @@ class FakeGateway:
         if key not in self.published:
             raise LookupError("wrong org")
         if key in self.drafts:
+            self.history.setdefault(key, []).append(self.published[key])
             self.published[key] = self.drafts.pop(key)
 
     async def published_definition(self, org_id, agent_ref):
@@ -153,6 +155,22 @@ async def _set_model_overrides(self, org_id, agent_ref, overrides):
     self.overrides[(org_id, agent_ref)] = overrides
 
 
+async def _list_versions(self, org_id, agent_ref):
+    key = (org_id, agent_ref)
+    if key not in self.published:
+        raise LookupError("wrong org")
+    out = [
+        {"number": i + 1, "status": "archived", "created_at": None, "published_at": None, "definition": d}
+        for i, d in enumerate(self.history.get(key, []))
+    ]
+    n = len(out)
+    out.append({"number": n + 1, "status": "published", "created_at": None, "published_at": None, "definition": self.published[key]})
+    if key in self.drafts:
+        out.append({"number": n + 2, "status": "draft", "created_at": None, "published_at": None, "definition": self.drafts[key]})
+    return list(reversed(out))
+
+
+FakeGateway.list_versions = _list_versions
 FakeGateway.set_model_overrides = _set_model_overrides
 FakeGateway.start_test_run = _start_test_run
 FakeGateway.serve_signaling = _serve_signaling
