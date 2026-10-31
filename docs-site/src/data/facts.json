@@ -1,0 +1,919 @@
+{
+ "templates": [
+  {
+   "key": "receptionist",
+   "name": "Front Desk",
+   "role": "answer calls, answer common questions and take messages",
+   "tone": "Friendly",
+   "blurb": "Greets callers and answers questions."
+  },
+  {
+   "key": "appointments",
+   "name": "Bookings",
+   "role": "book, move and cancel appointments",
+   "tone": "Professional",
+   "blurb": "Books appointments for you."
+  },
+  {
+   "key": "leads",
+   "name": "Sales Qualifier",
+   "role": "qualify new leads by asking about need, budget and timing",
+   "tone": "Playful",
+   "blurb": "Finds out which leads are serious."
+  },
+  {
+   "key": "support",
+   "name": "Support Hero",
+   "role": "help customers solve problems and escalate to a person when needed",
+   "tone": "Friendly",
+   "blurb": "Solves common problems."
+  },
+  {
+   "key": "orders",
+   "name": "Order Taker",
+   "role": "take orders accurately and confirm the total",
+   "tone": "Playful",
+   "blurb": "Takes orders by phone."
+  },
+  {
+   "key": "survey",
+   "name": "Survey Bot",
+   "role": "run a short customer survey, one question at a time",
+   "tone": "Professional",
+   "blurb": "Collects feedback."
+  },
+  {
+   "key": "reminders",
+   "name": "Payment Reminder",
+   "role": "politely remind customers about pending payments and offer ways to pay",
+   "tone": "Professional",
+   "blurb": "Gently chases payments."
+  },
+  {
+   "key": "salon",
+   "name": "Salon Concierge",
+   "role": "book salon and spa appointments, explain services and prices, and reschedule politely",
+   "tone": "Friendly",
+   "blurb": "Books services and answers price questions."
+  },
+  {
+   "key": "realestate",
+   "name": "Property Assistant",
+   "role": "answer property enquiries, ask about budget, location and timing, and book site visits",
+   "tone": "Professional",
+   "blurb": "Qualifies buyers and books visits."
+  },
+  {
+   "key": "restaurant",
+   "name": "Restaurant Host",
+   "role": "take table reservations, answer questions about the menu and opening hours, and note special requests",
+   "tone": "Friendly",
+   "blurb": "Takes reservations and answers menu questions."
+  },
+  {
+   "key": "coaching",
+   "name": "Admissions Counsellor",
+   "role": "answer course questions, explain fees and batches, and book a counselling call",
+   "tone": "Friendly",
+   "blurb": "Handles course enquiries and bookings."
+  },
+  {
+   "key": "hotel",
+   "name": "Hotel Reservations",
+   "role": "answer room and rate questions, check what guests need, and take booking enquiries",
+   "tone": "Professional",
+   "blurb": "Answers guest and booking calls."
+  },
+  {
+   "key": "clinic",
+   "name": "Clinic Assistant",
+   "role": "help patients with appointments and clinic information, never giving medical advice",
+   "tone": "Friendly",
+   "blurb": "Handles patient calls."
+  }
+ ],
+ "slabs": [
+  {
+   "upto": 1000,
+   "rate": 6.75
+  },
+  {
+   "upto": 5000,
+   "rate": 6.0
+  },
+  {
+   "upto": 15000,
+   "rate": 5.5
+  },
+  {
+   "upto": 25000,
+   "rate": 5.0
+  },
+  {
+   "upto": 37500,
+   "rate": 4.6
+  },
+  {
+   "upto": 50000,
+   "rate": 4.2
+  },
+  {
+   "upto": 75000,
+   "rate": 3.8
+  },
+  {
+   "upto": 100000,
+   "rate": 3.4
+  }
+ ],
+ "phone_per_min": 0.4,
+ "shares": [
+  {
+   "name": "Voice",
+   "share": 0.6
+  },
+  {
+   "name": "Speech to text",
+   "share": 0.3
+  },
+  {
+   "name": "AI brain",
+   "share": 0.1
+  }
+ ],
+ "roles": {
+  "owner": [
+   "agents.write",
+   "api_keys.manage",
+   "billing.manage",
+   "read",
+   "team.manage",
+   "tools.write",
+   "webhooks.manage",
+   "workspace.create_child",
+   "workspace.delete"
+  ],
+  "admin": [
+   "agents.write",
+   "api_keys.manage",
+   "billing.manage",
+   "read",
+   "team.manage",
+   "tools.write",
+   "webhooks.manage",
+   "workspace.create_child"
+  ],
+  "developer": [
+   "agents.write",
+   "api_keys.manage",
+   "read",
+   "tools.write",
+   "webhooks.manage"
+  ],
+  "viewer": [
+   "read"
+  ]
+ },
+ "perms": [
+  "read",
+  "agents.write",
+  "tools.write",
+  "api_keys.manage",
+  "webhooks.manage",
+  "team.manage",
+  "billing.manage",
+  "workspace.delete",
+  "workspace.create_child"
+ ],
+ "connectors": [
+  {
+   "id": "google_calendar",
+   "name": "Google Calendar",
+   "blurb": "Check free times and book appointments straight into your calendar.",
+   "fields": [
+    {
+     "key": "calendar_id",
+     "label": "Calendar ID",
+     "secret": false,
+     "hint": "Google Calendar \u2192 Settings \u2192 your calendar \u2192 Integrate \u2192 Calendar ID. Share the calendar with our address below first.",
+     "default": "",
+     "optional": false
+    },
+    {
+     "key": "timezone",
+     "label": "Time zone",
+     "secret": false,
+     "hint": "",
+     "default": "Asia/Kolkata",
+     "optional": true
+    },
+    {
+     "key": "start_hour",
+     "label": "Opening hour (0-23)",
+     "secret": false,
+     "hint": "",
+     "default": "9",
+     "optional": true
+    },
+    {
+     "key": "end_hour",
+     "label": "Closing hour (0-23)",
+     "secret": false,
+     "hint": "",
+     "default": "18",
+     "optional": true
+    },
+    {
+     "key": "slot_minutes",
+     "label": "Appointment length (minutes)",
+     "secret": false,
+     "hint": "",
+     "default": "30",
+     "optional": true
+    }
+   ],
+   "actions": [
+    {
+     "name": "Check free appointment times",
+     "key": "slots",
+     "description": "Check which appointment times are free on a given day. Use before offering times to the caller.",
+     "params": [
+      {
+       "name": "date",
+       "type": "string",
+       "description": "The day to check, as YYYY-MM-DD",
+       "required": true
+      }
+     ]
+    },
+    {
+     "name": "Book an appointment",
+     "key": "book",
+     "description": "Book an appointment once the caller has agreed a time. Only use a time that was offered as free.",
+     "params": [
+      {
+       "name": "start",
+       "type": "string",
+       "description": "The agreed time, as YYYY-MM-DD HH:MM (24 hour, local time)",
+       "required": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "description": "The caller's name",
+       "required": true
+      },
+      {
+       "name": "phone",
+       "type": "string",
+       "description": "The caller's phone number",
+       "required": false
+      },
+      {
+       "name": "email",
+       "type": "string",
+       "description": "The caller's email",
+       "required": false
+      }
+     ]
+    }
+   ],
+   "pushes": false
+  },
+  {
+   "id": "calendly",
+   "name": "Calendly",
+   "blurb": "Check free times and book into your Calendly event.",
+   "fields": [
+    {
+     "key": "token",
+     "label": "Personal access token",
+     "secret": true,
+     "hint": "Calendly \u2192 Integrations \u2192 API & Webhooks \u2192 Personal access tokens. Booking needs a paid Calendly plan.",
+     "default": "",
+     "optional": false
+    },
+    {
+     "key": "event_type",
+     "label": "Event type link",
+     "secret": false,
+     "hint": "The event's API address, like https://api.calendly.com/event_types/XXXX (see Calendly's event types API).",
+     "default": "",
+     "optional": false
+    },
+    {
+     "key": "timezone",
+     "label": "Time zone",
+     "secret": false,
+     "hint": "",
+     "default": "Asia/Kolkata",
+     "optional": true
+    }
+   ],
+   "actions": [
+    {
+     "name": "Check free appointment times",
+     "key": "slots",
+     "description": "Check which appointment times are free on a given day.",
+     "params": [
+      {
+       "name": "date",
+       "type": "string",
+       "description": "The day to check, as YYYY-MM-DD",
+       "required": true
+      }
+     ]
+    },
+    {
+     "name": "Book an appointment",
+     "key": "book",
+     "description": "Book an appointment once the caller agreed a time. Calendly needs the caller's email.",
+     "params": [
+      {
+       "name": "start",
+       "type": "string",
+       "description": "The agreed time, as YYYY-MM-DD HH:MM",
+       "required": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "description": "The caller's name",
+       "required": true
+      },
+      {
+       "name": "email",
+       "type": "string",
+       "description": "The caller's email address",
+       "required": true
+      }
+     ]
+    }
+   ],
+   "pushes": false
+  },
+  {
+   "id": "hubspot",
+   "name": "HubSpot",
+   "blurb": "Add every caller to HubSpot with a note of what happened.",
+   "fields": [
+    {
+     "key": "token",
+     "label": "Private app token",
+     "secret": true,
+     "hint": "HubSpot \u2192 Settings \u2192 Integrations \u2192 Private Apps. Allow contacts and notes.",
+     "default": "",
+     "optional": false
+    }
+   ],
+   "actions": [],
+   "pushes": true
+  },
+  {
+   "id": "salesforce",
+   "name": "Salesforce",
+   "blurb": "Create a Lead in Salesforce after each call.",
+   "fields": [
+    {
+     "key": "instance_url",
+     "label": "Your Salesforce address",
+     "secret": false,
+     "hint": "Like https://yourcompany.my.salesforce.com",
+     "default": "",
+     "optional": false
+    },
+    {
+     "key": "client_id",
+     "label": "Consumer key",
+     "secret": true,
+     "hint": "",
+     "default": "",
+     "optional": false
+    },
+    {
+     "key": "client_secret",
+     "label": "Consumer secret",
+     "secret": true,
+     "hint": "From a Connected App with client credentials turned on.",
+     "default": "",
+     "optional": false
+    }
+   ],
+   "actions": [],
+   "pushes": true
+  },
+  {
+   "id": "zoho",
+   "name": "Zoho CRM",
+   "blurb": "Create a Lead in Zoho CRM after each call.",
+   "fields": [
+    {
+     "key": "client_id",
+     "label": "Client ID",
+     "secret": true,
+     "hint": "",
+     "default": "",
+     "optional": false
+    },
+    {
+     "key": "client_secret",
+     "label": "Client secret",
+     "secret": true,
+     "hint": "",
+     "default": "",
+     "optional": false
+    },
+    {
+     "key": "refresh_token",
+     "label": "Refresh token",
+     "secret": true,
+     "hint": "From the Zoho API console (self client).",
+     "default": "",
+     "optional": false
+    },
+    {
+     "key": "region",
+     "label": "Zoho region",
+     "secret": false,
+     "hint": "in, com, eu or com.au",
+     "default": "in",
+     "optional": true
+    }
+   ],
+   "actions": [],
+   "pushes": true
+  },
+  {
+   "id": "shopify",
+   "name": "Shopify",
+   "blurb": "Let the agent look up an order and say where it is.",
+   "fields": [
+    {
+     "key": "shop",
+     "label": "Store address",
+     "secret": false,
+     "hint": "yourstore.myshopify.com",
+     "default": "",
+     "optional": false
+    },
+    {
+     "key": "token",
+     "label": "Admin API access token",
+     "secret": true,
+     "hint": "Shopify admin \u2192 Apps \u2192 Develop apps. Allow reading orders.",
+     "default": "",
+     "optional": false
+    }
+   ],
+   "actions": [
+    {
+     "name": "Look up an order",
+     "key": "order",
+     "description": "Look up a customer's order by its number and tell them its payment and shipping status.",
+     "params": [
+      {
+       "name": "order_number",
+       "type": "string",
+       "description": "The order number, like 1001",
+       "required": true
+      }
+     ]
+    }
+   ],
+   "pushes": false
+  },
+  {
+   "id": "slack",
+   "name": "Slack",
+   "blurb": "Post a summary of every call to a Slack channel.",
+   "fields": [
+    {
+     "key": "webhook_url",
+     "label": "Incoming webhook address",
+     "secret": true,
+     "hint": "Slack \u2192 Apps \u2192 Incoming Webhooks. Start with https://",
+     "default": "",
+     "optional": false
+    }
+   ],
+   "actions": [],
+   "pushes": true
+  },
+  {
+   "id": "whatsapp",
+   "name": "WhatsApp",
+   "blurb": "Send each caller a follow-up WhatsApp message after the call.",
+   "fields": [
+    {
+     "key": "phone_number_id",
+     "label": "Phone number ID",
+     "secret": false,
+     "hint": "Meta for Developers \u2192 WhatsApp \u2192 API setup.",
+     "default": "",
+     "optional": false
+    },
+    {
+     "key": "token",
+     "label": "Access token",
+     "secret": true,
+     "hint": "",
+     "default": "",
+     "optional": false
+    },
+    {
+     "key": "template",
+     "label": "Approved template name",
+     "secret": false,
+     "hint": "Messages outside a chat need a template Meta has approved.",
+     "default": "",
+     "optional": false
+    },
+    {
+     "key": "language",
+     "label": "Template language",
+     "secret": false,
+     "hint": "",
+     "default": "en",
+     "optional": true
+    },
+    {
+     "key": "uses_name",
+     "label": "Template has the caller's name in {{1}}? (yes/no)",
+     "secret": false,
+     "hint": "",
+     "default": "no",
+     "optional": true
+    }
+   ],
+   "actions": [],
+   "pushes": true
+  },
+  {
+   "id": "google_sheets",
+   "name": "Google Sheets",
+   "blurb": "Add a row to a sheet for every call.",
+   "fields": [
+    {
+     "key": "sheet",
+     "label": "Sheet link",
+     "secret": false,
+     "hint": "Paste the sheet's link. Share it with our address below as an editor.",
+     "default": "",
+     "optional": false
+    },
+    {
+     "key": "tab",
+     "label": "Tab name",
+     "secret": false,
+     "hint": "",
+     "default": "Sheet1",
+     "optional": true
+    }
+   ],
+   "actions": [],
+   "pushes": true
+  },
+  {
+   "id": "razorpay_links",
+   "name": "Razorpay payment links",
+   "blurb": "Let the agent text a payment link during a call. Uses your own Razorpay account.",
+   "fields": [
+    {
+     "key": "key_id",
+     "label": "Key ID",
+     "secret": false,
+     "hint": "Razorpay dashboard \u2192 API keys.",
+     "default": "",
+     "optional": false
+    },
+    {
+     "key": "key_secret",
+     "label": "Key secret",
+     "secret": true,
+     "hint": "",
+     "default": "",
+     "optional": false
+    }
+   ],
+   "actions": [
+    {
+     "name": "Send a payment link",
+     "key": "pay",
+     "description": "Text the caller a payment link once they agree to pay.",
+     "params": [
+      {
+       "name": "amount",
+       "type": "string",
+       "description": "Amount in rupees",
+       "required": true
+      },
+      {
+       "name": "phone",
+       "type": "string",
+       "description": "The caller's phone number with country code",
+       "required": true
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "description": "The caller's name",
+       "required": false
+      },
+      {
+       "name": "description",
+       "type": "string",
+       "description": "What the payment is for",
+       "required": false
+      }
+     ]
+    }
+   ],
+   "pushes": false
+  }
+ ],
+ "carriers": [
+  {
+   "id": "twilio",
+   "name": "Twilio",
+   "auto": true,
+   "fields": [
+    {
+     "key": "account_sid",
+     "label": "Account SID",
+     "secret": false,
+     "optional": false
+    },
+    {
+     "key": "auth_token",
+     "label": "Auth token",
+     "secret": true,
+     "optional": false
+    }
+   ]
+  },
+  {
+   "id": "plivo",
+   "name": "Plivo",
+   "auto": true,
+   "fields": [
+    {
+     "key": "auth_id",
+     "label": "Auth ID",
+     "secret": false,
+     "optional": false
+    },
+    {
+     "key": "auth_token",
+     "label": "Auth token",
+     "secret": true,
+     "optional": false
+    }
+   ]
+  },
+  {
+   "id": "vobiz",
+   "name": "Vobiz",
+   "auto": false,
+   "fields": [
+    {
+     "key": "auth_id",
+     "label": "Account ID",
+     "secret": false,
+     "optional": false
+    },
+    {
+     "key": "auth_token",
+     "label": "Auth token",
+     "secret": true,
+     "optional": false
+    },
+    {
+     "key": "application_id",
+     "label": "Application ID",
+     "secret": false,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "telnyx",
+   "name": "Telnyx",
+   "auto": false,
+   "fields": [
+    {
+     "key": "api_key",
+     "label": "API key",
+     "secret": true,
+     "optional": false
+    },
+    {
+     "key": "connection_id",
+     "label": "Connection ID",
+     "secret": false,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "vonage",
+   "name": "Vonage",
+   "auto": false,
+   "fields": [
+    {
+     "key": "api_key",
+     "label": "API key",
+     "secret": false,
+     "optional": false
+    },
+    {
+     "key": "api_secret",
+     "label": "API secret",
+     "secret": true,
+     "optional": false
+    },
+    {
+     "key": "application_id",
+     "label": "Application ID",
+     "secret": false,
+     "optional": false
+    },
+    {
+     "key": "private_key",
+     "label": "Private key",
+     "secret": true,
+     "optional": false
+    }
+   ]
+  },
+  {
+   "id": "cloudonix",
+   "name": "Cloudonix",
+   "auto": false,
+   "fields": [
+    {
+     "key": "bearer_token",
+     "label": "Bearer token",
+     "secret": true,
+     "optional": false
+    },
+    {
+     "key": "domain_id",
+     "label": "Domain ID",
+     "secret": false,
+     "optional": false
+    }
+   ]
+  },
+  {
+   "id": "ari",
+   "name": "Asterisk (SIP)",
+   "auto": false,
+   "fields": [
+    {
+     "key": "ari_endpoint",
+     "label": "Asterisk address (ARI)",
+     "secret": false,
+     "optional": false
+    },
+    {
+     "key": "app_name",
+     "label": "ARI application name",
+     "secret": false,
+     "optional": false
+    },
+    {
+     "key": "app_password",
+     "label": "ARI password",
+     "secret": true,
+     "optional": false
+    },
+    {
+     "key": "ws_client_name",
+     "label": "WebSocket client name",
+     "secret": false,
+     "optional": true
+    }
+   ]
+  }
+ ],
+ "env": {
+  "CURRENCY": [
+   "config.py"
+  ],
+  "GOOGLE_API_KEY": [
+   "make_profile.py"
+  ],
+  "GOOGLE_CLIENT_ID": [
+   "google_auth.py"
+  ],
+  "HUMAN_COST_PER_MIN_DEFAULT": [
+   "analytics_router.py"
+  ],
+  "INWORLD_API_KEY": [
+   "make_profile.py"
+  ],
+  "PRICE_PER_MIN": [
+   "config.py"
+  ],
+  "PRODUCT_ALLOWED_ORIGINS": [
+   "calls_router.py"
+  ],
+  "PRODUCT_ALLOW_PRIVATE_WEBHOOKS": [
+   "developers.py"
+  ],
+  "PRODUCT_APP_URL": [
+   "emailer.py"
+  ],
+  "PRODUCT_CALL_WINDOW": [
+   "campaigns.py"
+  ],
+  "PRODUCT_COOKIE_SAMESITE": [
+   "config.py"
+  ],
+  "PRODUCT_COOKIE_SECURE": [
+   "config.py"
+  ],
+  "PRODUCT_EMAIL_FROM": [
+   "emailer.py"
+  ],
+  "PRODUCT_GOOGLE_SA_JSON": [
+   "connectors.py"
+  ],
+  "PRODUCT_INWORLD_MODELS": [
+   "models_config.py"
+  ],
+  "PRODUCT_MAX_CAMPAIGN_ROWS": [
+   "campaigns.py"
+  ],
+  "PRODUCT_NAME": [
+   "config.py",
+   "help_router.py"
+  ],
+  "PRODUCT_NEW_UI_ORGS": [
+   "rollout.py"
+  ],
+  "PRODUCT_NUMBER_PROVIDER": [
+   "number_providers.py"
+  ],
+  "PRODUCT_OPS_SECRET": [
+   "developers_router.py"
+  ],
+  "PRODUCT_PLIVO_AUTH_ID": [
+   "number_providers.py",
+   "post_call.py"
+  ],
+  "PRODUCT_PLIVO_AUTH_TOKEN": [
+   "number_providers.py",
+   "post_call.py"
+  ],
+  "PRODUCT_PRICE_SLABS": [
+   "pricing.py"
+  ],
+  "PRODUCT_PROFILES": [
+   "models_config.py"
+  ],
+  "PRODUCT_SAMPLE_DIR": [
+   "voice_samples.py"
+  ],
+  "PRODUCT_SESSION_COOKIE": [
+   "config.py"
+  ],
+  "PRODUCT_SESSION_HOURS": [
+   "config.py"
+  ],
+  "PRODUCT_SMTP_HOST": [
+   "emailer.py"
+  ],
+  "PRODUCT_SMTP_PASSWORD": [
+   "emailer.py"
+  ],
+  "PRODUCT_SMTP_PORT": [
+   "emailer.py"
+  ],
+  "PRODUCT_SMTP_USER": [
+   "emailer.py"
+  ],
+  "PRODUCT_TWILIO_ACCOUNT_SID": [
+   "help_router.py",
+   "number_providers.py"
+  ],
+  "PRODUCT_TWILIO_AUTH_TOKEN": [
+   "help_router.py",
+   "number_providers.py"
+  ],
+  "PRODUCT_VOICE_ENGINES": [
+   "voices.py"
+  ],
+  "RAZORPAY_KEY_ID": [
+   "help_router.py",
+   "payments.py"
+  ],
+  "RAZORPAY_KEY_SECRET": [
+   "help_router.py",
+   "payments.py"
+  ],
+  "RAZORPAY_WEBHOOK_SECRET": [
+   "payments.py"
+  ]
+ }
+}

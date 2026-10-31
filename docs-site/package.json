@@ -1,0 +1,37 @@
+{
+  "name": "swarvo-docs",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "gen": "python scripts/extract_facts.py && node scripts/gen-pages.mjs",
+    "gen:api": "python -m api.product.export_openapi vocalis-web/openapi.json && node scripts/sync-openapi.mjs",
+    "dev": "node scripts/gen-pages.mjs && astro dev",
+    "build": "node scripts/gen-pages.mjs && astro build",
+    "preview": "astro preview",
+    "lint": "astro check && node scripts/lint-content.mjs",
+    "check:links": "node scripts/check-links.mjs",
+    "check:facts": "tsx scripts/verify-facts.ts",
+    "spell": "cspell \"src/content/**/*.{md,mdx}\"",
+    "screens": "tsx scripts/capture-screens.ts"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "cspell": "^10.4.0",
+    "playwright": "^1.64.1",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.42.8",
+    "astro": "^7.4.4",
+    "astro-mermaid": "^2.2.0",
+    "mermaid": "^12.2.0",
+    "sharp": "^0.35.5",
+    "starlight-image-zoom": "^0.16.2",
+    "starlight-openapi": "^0.27.0"
+  }
+}
