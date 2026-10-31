@@ -129,9 +129,10 @@ class CatalogItem(BaseModel):
 
 
 CATALOG = [
+    CatalogItem(id="calcom", name="Cal.com appointments", blurb="Check free times and book appointments while on the call.", status="available"),
     CatalogItem(id="webhook", name="Zapier, n8n or any web address", blurb="Send what the agent learned to any tool that accepts a webhook.", status="available"),
     *[CatalogItem(id=i, name=n, blurb=b, status="coming_soon") for i, n, b in [
-        ("google_calendar", "Google Calendar", "Check availability and book appointments."), ("calendly", "Calendly", "Offer booking links."),
+        ("google_calendar", "Google Calendar", "Connect it to Cal.com above to book into it."), ("calendly", "Calendly", "Coming as its own link. Cal.com works today."),
         ("hubspot", "HubSpot", "Create and update contacts."), ("salesforce", "Salesforce", "Log calls and leads."),
         ("shopify", "Shopify", "Look up orders."), ("slack", "Slack", "Post call summaries."), ("whatsapp", "WhatsApp", "Send follow-up messages."),
         ("sheets", "Google Sheets", "Add rows from calls."), ("zoho", "Zoho CRM", "Sync contacts."), ("razorpay", "Razorpay", "Send payment links.")]],

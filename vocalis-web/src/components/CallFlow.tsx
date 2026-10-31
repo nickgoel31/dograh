@@ -9,9 +9,10 @@ import { toast } from 'sonner'
 import { Button, Card, Field, Input, Textarea } from './ui'
 import { AdvancedOnly, CodeBlock } from './shared'
 import { cn, sleep } from '@/lib/utils'
+import { StepOptions } from './FlowStepOptions'
 
 export interface FlowData { nodes: Node[]; edges: Edge[] }
-type Kind = 'greeting' | 'ask' | 'tool' | 'condition' | 'transfer' | 'end' | 'advanced'
+type Kind = 'greeting' | 'ask' | 'tool' | 'condition' | 'transfer' | 'end' | 'global' | 'webhook' | 'advanced'
 const kinds: Record<Kind, { emoji: string; name: string; hint: string; color: string; text: string }> = {
   greeting: { emoji: '👋', name: 'Greeting', hint: 'Say hello', color: '#6356f1', text: 'Hi, thanks for calling! How can I help?' },
   ask: { emoji: '❓', name: 'Ask a question', hint: 'Collect info', color: '#0ea5e9', text: 'May I have your name, please?' },
@@ -19,6 +20,8 @@ const kinds: Record<Kind, { emoji: string; name: string; hint: string; color: st
   condition: { emoji: '🔀', name: 'Yes / No check', hint: 'Branch the call', color: '#f59e0b', text: 'Did the caller ask for a person?' },
   transfer: { emoji: '🧑', name: 'Hand to a human', hint: 'Transfer', color: '#ef4444', text: 'Let me connect you with a teammate.' },
   end: { emoji: '✅', name: 'Close', hint: 'End the call', color: '#64748b', text: 'Thanks for calling. Have a lovely day!' },
+  global: { emoji: '📌', name: 'Rules for every step', hint: 'Always-on instructions', color: '#8b5cf6', text: 'Always be polite and keep answers short. Never make up prices.' },
+  webhook: { emoji: '📤', name: 'Send call data', hint: 'Send details to a web address', color: '#0d9488', text: 'Sends what we learned on the call to your web address when it ends.' },
   advanced: { emoji: '⚙️', name: 'Advanced step', hint: 'Set up outside this editor', color: '#475569', text: 'This step was set up elsewhere. You can move it, but its settings are kept as they are.' },
 }
 
@@ -26,7 +29,7 @@ function StepNode({ data, selected }: NodeProps<{ kind: Kind; label: string; tex
   const k = kinds[data.kind]
   return (
     <div className={cn('w-52 rounded-xl border-2 bg-surface p-3 shadow-card transition', selected ? 'border-accent' : 'border-line', data.active && 'scale-105 border-ok shadow-pop')}>
-      {data.kind !== 'greeting' && <Handle type="target" position={Position.Left} />}
+      {data.kind !== 'greeting' && data.kind !== 'global' && data.kind !== 'webhook' && <Handle type="target" position={Position.Left} />}
       <div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg text-sm" style={{ background: k.color + '22' }}>{k.emoji}</span><div className="truncate text-[13px] font-semibold">{data.label}</div></div>
       <p className="mt-1.5 line-clamp-2 text-[11.5px] leading-snug text-soft">{data.text}</p>
       {data.kind === 'condition' ? (
@@ -35,7 +38,7 @@ function StepNode({ data, selected }: NodeProps<{ kind: Kind; label: string; tex
           <Handle id="no" type="source" position={Position.Right} style={{ top: '75%', background: '#ef4444' }} />
           <div className="absolute -right-8 top-[22%] text-[10px] font-semibold text-ok">Yes</div><div className="absolute -right-6 top-[62%] text-[10px] font-semibold text-bad">No</div>
         </>
-      ) : data.kind !== 'end' && data.kind !== 'transfer' ? <Handle type="source" position={Position.Right} /> : null}
+      ) : data.kind !== 'end' && data.kind !== 'transfer' && data.kind !== 'global' && data.kind !== 'webhook' ? <Handle type="source" position={Position.Right} /> : null}
     </div>
   )
 }
@@ -69,6 +72,8 @@ function Editor({ value, onChange }: { value: FlowData; onChange: (v: FlowData) 
     const p = rf.project({ x: 300, y: 200 })
     setNodes((ns) => [...ns, { ...mk(id, kind, p.x + ns.length * 6, p.y + ns.length * 6), selected: true }]); setSel(id)
   }
+  const typeFor = (k: string) => (k === 'greeting' ? 'startCall' : k === 'end' ? 'endCall' : k === 'global' ? 'globalNode' : k === 'webhook' ? 'webhook' : 'agentNode')
+  const setRaw = (key: string, value: unknown) => setNodes((ns) => ns.map((x) => (x.id === sel ? { ...x, data: { ...x.data, raw: { id: x.id, type: x.data.raw?.type ?? typeFor(x.data.kind), position: x.position, data: { ...(x.data.raw?.data ?? {}), [key]: value } } } } : x)))
   const patch = (p: Record<string, string>) => setNodes((ns) => ns.map((x) => (x.id === sel ? { ...x, data: { ...x.data, ...p } } : x)))
   const remove = () => { if (!sel) return; setNodes((ns) => ns.filter((x) => x.id !== sel)); setEdges((es) => es.filter((e) => e.source !== sel && e.target !== sel)); setSel(null) }
   const tidy = () => {
@@ -98,7 +103,7 @@ function Editor({ value, onChange }: { value: FlowData; onChange: (v: FlowData) 
   const issues = [
     !nodes.some((x) => x.data.kind === 'greeting') && 'Add a Greeting so your agent knows how to start.',
     !nodes.some((x) => ['end', 'transfer'].includes(x.data.kind)) && 'Add a Close step so calls end politely.',
-    nodes.some((x) => x.data.kind !== 'greeting' && !edges.some((e) => e.target === x.id)) && 'Some steps are not connected to anything.',
+    nodes.some((x) => !['greeting', 'global', 'webhook'].includes(x.data.kind) && !edges.some((e) => e.target === x.id)) && 'Some steps are not connected to anything.',
   ].filter(Boolean) as string[]
 
   return (
@@ -124,6 +129,7 @@ function Editor({ value, onChange }: { value: FlowData; onChange: (v: FlowData) 
               <div className="flex items-center justify-between"><div className="text-sm font-semibold">{kinds[n.data.kind as Kind].emoji} Edit step</div><Button size="sm" variant="ghost" className="text-bad" onClick={remove} aria-label="Delete step"><Trash2 size={14} />Delete</Button></div>
               <Field label="Step name"><Input value={n.data.label} onChange={(e) => patch({ label: e.target.value })} /></Field>
               <Field label="What should the agent say or do?"><Textarea className="min-h-[120px]" value={n.data.text} disabled={n.data.kind === 'advanced'} onChange={(e) => patch({ text: e.target.value })} /></Field>
+              {n.data.kind !== 'advanced' && <StepOptions kind={n.data.kind} data={(n.data.raw?.data ?? {}) as Record<string, unknown>} set={setRaw} />}
               {n.data.kind === 'condition' && <p className="text-xs text-soft">Drag from the green dot for “Yes” and the red dot for “No”.</p>}
             </div>
           ) : (

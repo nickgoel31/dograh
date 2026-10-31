@@ -74,10 +74,10 @@ describe('definition -> flow -> definition (imported platform graphs)', () => {
     expect(toWorkflowDefinition(fromWorkflowDefinition(def))).toEqual(def)
   })
 
-  it('shows unsupported steps as an Advanced step and keeps them out of the way', () => {
+  it('shows webhook steps as their own step and keeps every field', () => {
     const flow = fromWorkflowDefinition(platformDef())
     const w = flow.nodes.find((n) => n.id === 'w3')!
-    expect(w.data.kind).toBe('advanced')
+    expect(w.data.kind).toBe('webhook')
     expect(w.data.label).toBe('Notify CRM')
   })
 

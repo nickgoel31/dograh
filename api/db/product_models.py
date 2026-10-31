@@ -438,3 +438,18 @@ class ProductCallInsightModel(Base):
     created_at = Column(DateTime(timezone=True), default=_now)
 
     __table_args__ = (Index("ix_product_call_insights_ws", "workspace_id"),)
+
+
+class ProductIntegrationModel(Base):
+    """A connected outside service (so far Cal.com). Agents reach it through tools that carry only a secret address."""
+
+    __tablename__ = "product_integrations"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    kind = Column(String(16), nullable=False)
+    token_hash = Column(String(64), unique=True, nullable=False)
+    config = Column(JSON, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (UniqueConstraint("workspace_id", "kind", name="uq_product_integration"),)

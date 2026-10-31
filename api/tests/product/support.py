@@ -11,7 +11,7 @@ from sqlalchemy.pool import StaticPool
 
 from api.db import models, product_models
 from api.product import (agents_router, analytics_router, billing_router, calls_router, campaigns_router, config, conversations_router, deps, gateway,
-                         developers, developers_router, emailer, account_router, google_auth, handoff_router, phonetest_router, help_router, home_router, import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, public_api, team_router, tools_router, voices_router, widget_router)
+                         developers, developers_router, emailer, account_router, google_auth, handoff_router, integrations_router, phonetest_router, help_router, home_router, import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, public_api, team_router, tools_router, voices_router, widget_router)
 from api.product import router as product_router
 
 TABLES = [
@@ -48,6 +48,7 @@ TABLES = [
     product_models.ProductSettingsModel.__table__,
     product_models.ProductSupportMessageModel.__table__,
     product_models.ProductAuthTokenModel.__table__,
+    product_models.ProductIntegrationModel.__table__,
     product_models.ProductCallInsightModel.__table__,
 ]
 
@@ -340,8 +341,9 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(numbers_router.router)
     app.include_router(billing_router.router)
     app.include_router(developers_router.ops_router)
+    app.include_router(integrations_router.hooks)
     for r in (analytics_router, labs_router, handoff_router, import_router, campaigns_router, home_router, knowledge_router, notifications, tools_router,
-              developers_router, help_router, public_api, team_router, widget_router, google_auth, account_router, phonetest_router):
+              developers_router, help_router, public_api, team_router, widget_router, google_auth, account_router, phonetest_router, integrations_router):
         app.include_router(r.router)
     kb, tl, cp = FakeKB(), FakeTools(), FakeCampaigns()
     app.dependency_overrides[knowledge_router.get_knowledge] = lambda: kb

@@ -9,6 +9,7 @@ import { Badge, Button, Card, Dialog, Field, Input, Select, Tab, TabPanel, Tabs,
 import { EmptyState, PageHeader, StatusBadge, TableSkeleton } from '@/components/shared'
 import { http } from '@/lib/api/http'
 import { API_URL } from '@/lib/api/env'
+import { CalendarCard } from '@/pages/CalendarCard'
 import { useData } from '@/store/data'
 import { useUI } from '@/store/ui'
 import { useMe } from '@/lib/useMe'
@@ -127,6 +128,7 @@ export function ToolsReal() {
   return (
     <>
       <PageHeader title="Tools & Integrations" subtitle="Connect the apps your agent should work with." actions={<Button variant="primary" onClick={() => setOpen(true)}><Plus size={16} />Make a tool</Button>} />
+      <CalendarCard />
       <h2 className="mb-3 font-semibold">Ready-made</h2>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{(cat.data ?? []).map((i) => (
         <Card key={i.id} className="p-5"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent"><Plug size={18} /></div><div className="mt-3 font-medium">{i.name}</div><div className="text-[13px] text-soft">{i.blurb}</div>

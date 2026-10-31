@@ -286,3 +286,45 @@ async def test_hand_over_to_a_person_and_call_me(client):
     ok = await client.post(f"/product/agents/{aid}/call-me", json=body, headers=ha)
     assert ok.json()["status"] == "calling" and client.phone.calls[0][2] == "+919800000002"
     assert (await client.post(f"/product/agents/{aid}/call-me", json={"phone": "12345"}, headers=ha)).json()["detail"]["code"] == "bad_number"
+
+
+async def test_calendar_booking_through_calcom(client):
+    import json as _json
+    from datetime import date, timedelta
+
+    import httpx
+
+    from api.product import calcom, integrations_router
+
+    day = (date.today() + timedelta(days=3)).isoformat()
+    seen = []
+
+    def handler(req: httpx.Request):
+        seen.append((req.method, req.url.path, dict(req.headers), _json.loads(req.content) if req.content else None))
+        if req.url.path == "/v2/slots":
+            return httpx.Response(200, json={"status": "success", "data": {day: [{"start": f"{day}T10:00:00.000+05:30"}, {"start": f"{day}T10:30:00.000+05:30"}]}})
+        if req.url.path == "/v2/bookings":
+            return httpx.Response(201, json={"status": "success", "data": {"uid": "bk_1"}})
+        return httpx.Response(404)
+
+    client._transport.app.dependency_overrides[integrations_router.get_calcom] = lambda: (lambda key: calcom.CalCom(key, transport=httpx.MockTransport(handler)))
+    _, tok = await signup(client, "a@x.com")
+    ha = bearer(tok)
+    assert (await client.get("/product/integrations/calendar", headers=ha)).json()["connected"] is False
+    assert (await client.put("/product/integrations/calendar", json={"api_key": "cal_live_abc123456", "event_type_id": 77, "timezone": "Mars/Base"}, headers=ha)).json()["detail"]["code"] == "bad_timezone"
+    assert (await client.put("/product/integrations/calendar", json={"api_key": "cal_live_abc123456", "event_type_id": 77}, headers=ha)).json()["connected"] is True
+    tools = (await client.get("/product/tools", headers=ha)).json()
+    assert sorted(t["name"] for t in tools) == ["Book an appointment", "Check free appointment times"]
+    assert all("cal_live" not in _json.dumps(t) for t in tools)  # the key never appears in the tool list
+    url = next(t["url"] for t in tools if t["name"] == "Check free appointment times")
+    token = url.split("/calendar/")[1].split("/")[0]
+
+    slots = (await client.get(f"/product/hooks/calendar/{token}/slots", params={"date": day})).json()
+    assert slots["times"] == [f"{day} 10:00", f"{day} 10:30"] or slots["times"] == []  # times in the past are left out
+    booked = (await client.post(f"/product/hooks/calendar/{token}/book", json={"start": f"{day} 10:30", "name": "Asha", "phone": "+919800000001"})).json()
+    assert booked["booked"] is True
+    method, path, headers, body = next(x for x in seen if x[1] == "/v2/bookings")
+    assert headers["cal-api-version"] == "2026-02-25" and body["eventTypeId"] == 77 and body["start"] == f"{day}T05:00:00Z" and body["attendee"]["name"] == "Asha"
+    assert (await client.get("/product/hooks/calendar/wrong-token/slots", params={"date": day})).status_code == 404
+    assert (await client.delete("/product/integrations/calendar", headers=ha)).status_code == 204
+    assert (await client.get("/product/tools", headers=ha)).json() == []

@@ -110,3 +110,23 @@ async def test_flow_api_is_tenant_scoped_and_write_protected(client):
     assert (await client.put(f"/product/agents/{a}/flow", json=good(), headers=hb)).status_code == 404
     bad = await client.put(f"/product/agents/{a}/flow", json={"nodes": [], "edges": []}, headers=bearer(tok_a))
     assert bad.status_code == 400 and bad.json()["detail"]["code"] == "flow_invalid"
+
+
+def test_flow_with_rules_webhook_and_collected_details_is_accepted_by_the_platform():
+    from api.product.flows import check_flow
+
+    def node(i, t, **d):
+        return {"id": i, "type": t, "position": {"x": 0, "y": 0}, "data": {"name": i, "prompt": "p", **d}}
+
+    flow = {"nodes": [
+        node("greeting-1", "startCall", greeting="Hi", greeting_type="text", is_start=True, allow_interrupt=True, add_global_prompt=False, delayed_start=True, delayed_start_duration=1.5),
+        node("ask-2", "agentNode", allow_interrupt=False, add_global_prompt=False, extraction_enabled=True,
+             extraction_variables=[{"name": "caller_name", "type": "string", "prompt": "The caller's name"}]),
+        node("end-3", "endCall", is_end=True, allow_interrupt=False, add_global_prompt=False),
+        node("global-4", "globalNode", allow_interrupt=True, add_global_prompt=False),
+        {"id": "webhook-5", "type": "webhook", "position": {"x": 0, "y": 0}, "data": {"name": "Send", "enabled": True, "http_method": "POST", "endpoint_url": "https://example.com/hook", "payload_template": {"name": "{{caller_name}}"}}},
+    ], "edges": [
+        {"id": "greeting-1>ask-2", "source": "greeting-1", "target": "ask-2", "data": {"label": "Next", "condition": "Continue"}},
+        {"id": "ask-2>end-3", "source": "ask-2", "target": "end-3", "data": {"label": "Done", "condition": "Finished"}},
+    ]}
+    check_flow(flow)
