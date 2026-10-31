@@ -34,10 +34,11 @@ const FREE = ['global', 'webhook', 'trigger', 'qa']
 function StepNode({ data, selected }: NodeProps<{ kind: Kind; label: string; text: string; active?: boolean }>) {
   const k = kinds[data.kind]
   return (
-    <div className={cn('w-52 rounded-xl border-2 bg-surface p-3 shadow-card transition', selected ? 'border-accent' : 'border-line', data.active && 'scale-105 border-ok shadow-pop')}>
+    <div className={cn('w-56 rounded-xl border bg-surface p-3 shadow-card transition', selected ? 'border-accent ring-4 ring-accent/10' : 'border-line', data.active && 'scale-105 border-ok shadow-pop')}>
       {data.kind !== 'greeting' && !FREE.includes(data.kind) && <Handle type="target" position={Position.Left} />}
-      <div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg text-sm" style={{ background: k.color + '22' }}>{k.emoji}</span><div className="truncate text-[13px] font-semibold">{data.label}</div></div>
-      <p className="mt-1.5 line-clamp-2 text-[11.5px] leading-snug text-soft">{data.text}</p>
+      <div className="flex items-center gap-1.5 text-[11px] font-medium text-soft"><span className="flex h-5 w-5 items-center justify-center rounded-md text-[11px]" style={{ background: k.color + '22' }}>{k.emoji}</span>{k.name}</div>
+      <div className="mt-2 truncate text-[13.5px] font-semibold">{data.label}</div>
+      <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-snug text-soft">{data.text}</p>
       {data.kind === 'condition' ? (
         <>
           <Handle id="yes" type="source" position={Position.Right} style={{ top: '35%', background: '#10b981' }} />
@@ -50,7 +51,7 @@ function StepNode({ data, selected }: NodeProps<{ kind: Kind; label: string; tex
 }
 const nodeTypes = { step: StepNode }
 
-const edgeStyle = { type: 'smoothstep', animated: true, markerEnd: { type: MarkerType.ArrowClosed } }
+const edgeStyle = { type: 'smoothstep', animated: false, markerEnd: { type: MarkerType.ArrowClosed } }
 const mk = (id: string, kind: Kind, x: number, y: number, label?: string, text?: string): Node => ({ id, type: 'step', position: { x, y }, data: { kind, label: label ?? kinds[kind].name, text: text ?? kinds[kind].text } })
 
 export const defaultFlow = (): FlowData => ({
@@ -122,22 +123,26 @@ function Editor({ value, onChange, onSimulate }: { value: FlowData; onChange: (v
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {(Object.keys(kinds) as Kind[]).filter((k) => k !== 'advanced').map((k) => <Button key={k} size="sm" onClick={() => add(k)} title={kinds[k].hint}>{kinds[k].emoji} {kinds[k].name}</Button>)}
-        <div className="ml-auto flex gap-2">
-          <Button size="sm" variant="ghost" onClick={tidy}><LayoutGrid size={14} />Tidy up</Button>
-          <Button size="sm" variant="ghost" onClick={() => { const f = defaultFlow(); setNodes(f.nodes); setEdges(f.edges); setSel(null); toast('Back to the starter flow') }}><RotateCcw size={14} />Reset</Button>
-          <Button size="sm" variant="primary" disabled={running} onClick={onSimulate ?? simulate}><Play size={14} />{running ? 'Running…' : onSimulate ? 'Try a call' : 'Simulate a call'}</Button>
-        </div>
-      </div>
-      <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
-        <div className="h-[460px] overflow-hidden rounded-xl border bg-surface">
+      <div className="grid gap-3 lg:grid-cols-[1fr_320px]">
+        <div className="relative h-[680px] overflow-hidden rounded-xl border bg-muted/40">
+          <div className="absolute left-3 top-3 z-10 max-h-[calc(100%-1.5rem)] w-44 overflow-y-auto rounded-xl border bg-surface p-1.5 shadow-pop">
+            {(Object.keys(kinds) as Kind[]).filter((k) => k !== 'advanced').map((k) => (
+              <button key={k} onClick={() => add(k)} title={kinds[k].hint} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium transition hover:bg-muted">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs" style={{ background: kinds[k].color + '22' }}>{kinds[k].emoji}</span><span className="truncate">{kinds[k].name}</span>
+              </button>
+            ))}
+          </div>
+          <div className="absolute right-3 top-3 z-10 flex gap-1.5">
+            <Button size="sm" onClick={tidy}><LayoutGrid size={14} />Tidy up</Button>
+            <Button size="sm" onClick={() => { const f = defaultFlow(); setNodes(f.nodes); setEdges(f.edges); setSel(null); toast('Back to the starter flow') }}><RotateCcw size={14} />Reset</Button>
+            <Button size="sm" variant="primary" disabled={running} onClick={onSimulate ?? simulate}><Play size={14} />{running ? 'Running…' : onSimulate ? 'Try a call' : 'Simulate a call'}</Button>
+          </div>
           <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={connect}
-            onNodeClick={(_, x) => setSel(x.id)} onPaneClick={() => setSel(null)} fitView deleteKeyCode={['Backspace', 'Delete']} proOptions={{ hideAttribution: true }}>
-            <Background gap={20} /><Controls showInteractive={false} />
+            onNodeClick={(_, x) => setSel(x.id)} onPaneClick={() => setSel(null)} fitView fitViewOptions={{ padding: 0.3, minZoom: 0.6, maxZoom: 1 }} deleteKeyCode={['Backspace', 'Delete']} proOptions={{ hideAttribution: true }}>
+            <Background gap={22} size={1.2} /><Controls showInteractive={false} />
           </ReactFlow>
         </div>
-        <Card className="p-4">
+        <Card className="flex max-h-[680px] flex-col overflow-y-auto p-4">
           {n ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between"><div className="text-sm font-semibold">{kinds[n.data.kind as Kind].emoji} Edit step</div><Button size="sm" variant="ghost" className="text-bad" onClick={remove} aria-label="Delete step"><Trash2 size={14} />Delete</Button></div>
@@ -151,10 +156,11 @@ function Editor({ value, onChange, onSimulate }: { value: FlowData; onChange: (v
           ) : (
             <div className="space-y-3 text-sm">
               <div className="font-semibold">How this works</div>
-              <ul className="list-disc space-y-1.5 pl-4 text-soft"><li>Click a step to edit what it says.</li><li>Drag from a dot to connect steps.</li><li>Press Delete to remove a step.</li></ul>
+              <ul className="list-disc space-y-1.5 pl-4 text-soft"><li>Pick a step on the left to add it.</li><li>Click a step to edit what it says.</li><li>Drag from a dot to connect steps.</li><li>Press Delete to remove a step.</li></ul>
               {issues.length === 0 ? <div className="rounded-lg bg-ok/10 p-2.5 text-ok">✓ Your flow looks complete.</div> : issues.map((i) => <div key={i} className="rounded-lg bg-warn/10 p-2.5 text-warn">{i}</div>)}
             </div>
           )}
+          <div className="mt-auto pt-4"><div className="rounded-xl bg-muted p-3 text-[12.5px] text-soft"><div className="mb-0.5 font-semibold text-ink">💡 Tips</div>Use the person's name and details in what the agent says. Short sentences sound more natural on a call.</div></div>
         </Card>
       </div>
       <AdvancedOnly><CodeBlock json code={JSON.stringify(clean(nodes, edges), null, 2)} className="max-h-72 overflow-auto" /></AdvancedOnly>

@@ -141,7 +141,7 @@ function Topbar({ openNav }: { openNav: () => void }) {
   const initials = USE_MOCKS ? 'AS' : (me?.user.name || me?.user.email || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
   const nav = useNavigate()
   return (
-    <header className="glass sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line/70 px-4 md:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 rounded-t-2xl border-b border-line/70 bg-surface/90 px-4 backdrop-blur md:px-5">
       <Button variant="ghost" size="icon" className="md:hidden" onClick={openNav} aria-label="Open menu"><MenuIcon size={18} /></Button>
       <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={() => set({ collapsed: !collapsed })} aria-label="Collapse sidebar">{collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</Button>
       <div className="min-w-0 flex-1"><Breadcrumbs /></div>
@@ -274,8 +274,8 @@ export default function Shell() {
   React.useEffect(() => { set({ mobileNav: false }); window.scrollTo(0, 0) }, [pathname, set])
   return (
     <TooltipProvider>
-      <div className="flex min-h-screen">
-        <aside className={cn('sticky top-0 hidden h-screen shrink-0 border-r border-line/70 bg-surface/80 backdrop-blur transition-[width] md:block', collapsed ? 'w-[68px]' : 'w-64')}><SidebarBody collapsed={collapsed} /></aside>
+      <div className="flex min-h-screen gap-3 p-0 md:p-3">
+        <aside className={cn('sticky top-3 hidden h-[calc(100vh-1.5rem)] shrink-0 rounded-2xl border border-line/70 bg-surface shadow-card transition-[width] md:block', collapsed ? 'w-[68px]' : 'w-64')}><SidebarBody collapsed={collapsed} /></aside>
         <AnimatePresence>
           {mobileNav && (
             <>
@@ -284,9 +284,9 @@ export default function Shell() {
             </>
           )}
         </AnimatePresence>
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col rounded-none border-line/70 bg-surface md:rounded-2xl md:border md:shadow-card">
           <Topbar openNav={() => set({ mobileNav: true })} />
-          <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-8 pb-28 md:px-8">
+          <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-6 pb-28 md:px-8">
             <AnimatePresence mode="wait">
               <motion.div key={pathname.split('/')[1] + (pathname.split('/')[2] ?? '')} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}><Outlet /></motion.div>
             </AnimatePresence>

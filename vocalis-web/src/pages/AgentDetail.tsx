@@ -104,7 +104,7 @@ export default function AgentDetail() {
   const dirty = JSON.stringify(d) !== JSON.stringify(saved)
   const up = (p: Partial<Draft>) => setD({ ...d, ...p })
   const voice = voices.find((v) => v.id === d.voiceId) ?? voices[0] ?? { id: '', name: 'Default', lang: '', gender: '', age: '', accent: '', style: '', provider: '' }
-  const tab = sp.get('tab') ?? 'personality'
+  const tab = sp.get('tab') ?? 'flow'
   const save = async () => {
     if (!USE_MOCKS && JSON.stringify(d.flow) !== JSON.stringify(saved.flow)) {
       try {
@@ -145,12 +145,22 @@ export default function AgentDetail() {
 
   return (
     <>
-      <PageHeader title={d.name} subtitle={d.whatYouDo} actions={<>
-        <StatusBadge status={agent.status} />
-        <Button onClick={() => setUI({ playground: agent.id })}><Mic size={15} />Talk</Button>
-        <Button variant="primary" onClick={() => setSp({ tab: 'publish' })}><Rocket size={15} />Go live</Button></>} />
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0"><div className="flex items-center gap-2.5"><h1 className="truncate text-2xl font-bold tracking-tight">{d.name}</h1><StatusBadge status={agent.status} /></div>{d.whatYouDo && <p className="mt-1 max-w-2xl truncate text-[13.5px] text-soft">{d.whatYouDo}</p>}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button disabled={!dirty} onClick={save}>Save</Button>
+          <Button onClick={() => setUI({ playground: agent.id })}><Mic size={15} />Preview</Button>
+          <Button variant="primary" onClick={() => setSp({ tab: 'publish' })}><Rocket size={15} />Publish</Button>
+        </div>
+      </div>
+      <div className="mb-5 inline-flex rounded-xl bg-muted p-1" role="tablist" aria-label="Agent view">
+        {[['flow', 'Flow'], ['config', 'Configuration']].map(([k, label]) => {
+          const on = k === 'flow' ? tab === 'flow' : tab !== 'flow'
+          return <button key={k} role="tab" aria-selected={on} onClick={() => setSp({ tab: k === 'flow' ? 'flow' : tab === 'flow' ? 'personality' : tab })} className={cn('rounded-lg px-4 py-1.5 text-sm font-medium transition', on ? 'bg-surface text-ink shadow-card' : 'text-soft hover:text-ink')}>{label}</button>
+        })}
+      </div>
       <Tabs value={tab} onValueChange={(t) => setSp({ tab: t })}>
-        <TabsList>{['personality', 'voice', 'brain', 'knowledge', 'tools', 'flow', 'behavior', 'phone', 'test', 'versions', 'publish'].filter((t) => (t !== 'brain' || voice.brainLevels !== false) && (advanced || !['behavior', 'versions'].includes(t) || t === tab)).map((t) => <Tab key={t} value={t} className="capitalize">{t === 'flow' ? 'Call flow' : t}</Tab>)}</TabsList>
+        {tab !== 'flow' && <TabsList>{['personality', 'voice', 'brain', 'knowledge', 'tools', 'behavior', 'phone', 'test', 'versions', 'publish'].filter((t) => (t !== 'brain' || voice.brainLevels !== false) && (advanced || !['behavior', 'versions'].includes(t) || t === tab)).map((t) => <Tab key={t} value={t} className="capitalize">{t}</Tab>)}</TabsList>}
 
         <TabPanel value="personality"><SimpleAdvanced
           simple={<Q title="Who is your agent?" hint="Just fill in the blanks. We write the instructions for you.">
@@ -181,7 +191,7 @@ export default function AgentDetail() {
         <TabPanel value="tools">{USE_MOCKS ? (<><Q title="What can your agent do?" hint="Switch on the abilities you want.">
           <div className="divide-y">{toolList.map(([k, t, p]) => <div key={k} className="flex items-center justify-between py-3"><div><div className="font-medium">{t}</div><div className="text-[13px] text-soft">{p}</div></div><Switch label={t} checked={d.tools.includes(k)} onChange={(v) => up({ tools: v ? [...d.tools, k] : d.tools.filter((x) => x !== k) })} /></div>)}</div></Q></>) : <Q title="What can your agent do?" hint="Tick the tools it may use during a call."><AttachPicker kind="tools" agentId={agent.id} /></Q>}</TabPanel>
 
-        <TabPanel value="flow"><Q title="Call flow" hint="Plan how a call moves from hello to goodbye. Click a step to edit it."><CallFlowEditor value={d.flow} onChange={(flow) => up({ flow })} onSimulate={USE_MOCKS ? undefined : () => setTryOpen(true)} />{!USE_MOCKS && <TryAgent agentId={agent.id} open={tryOpen} onOpenChange={setTryOpen} />}</Q></TabPanel>
+        <TabPanel value="flow"><CallFlowEditor value={d.flow} onChange={(flow) => up({ flow })} onSimulate={USE_MOCKS ? undefined : () => setTryOpen(true)} />{!USE_MOCKS && <TryAgent agentId={agent.id} open={tryOpen} onOpenChange={setTryOpen} />}</TabPanel>
 
         <TabPanel value="behavior"><Q title="How should it behave?">
           <div className="grid gap-6 sm:grid-cols-2">
