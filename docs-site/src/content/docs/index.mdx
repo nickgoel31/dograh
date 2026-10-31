@@ -1,0 +1,41 @@
+---
+title: Swarvo AI Docs
+description: Voice agents that answer every call. Guides, reference and API for Swarvo AI.
+template: splash
+hero:
+  tagline: Voice agents that answer every call.
+  actions:
+    - text: Get started
+      link: /start/quickstart/
+      icon: right-arrow
+    - text: API reference
+      link: /api-reference/
+      variant: minimal
+      icon: external
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## Choose your path
+
+<CardGrid>
+  <LinkCard title="I run a business" description="Create your first agent and take calls in 10 minutes." href="/start/quickstart/" />
+  <LinkCard title="I manage a team" description="Roles, billing, branding and security." href="/team/roles-and-permissions/" />
+  <LinkCard title="I am a developer" description="API keys, webhooks, the trigger and the widget." href="/developers/api-keys/" />
+  <LinkCard title="I host Swarvo AI" description="Install, environment, the scheduled job and upgrades." href="/operators/architecture/" />
+</CardGrid>
+
+## Popular guides
+
+<CardGrid>
+  <LinkCard title="Agent templates" description="All 13 starting points." href="/agents/templates/" />
+  <LinkCard title="Call flow editor" description="Every step type and common patterns." href="/agents/call-flow-editor/" />
+  <LinkCard title="Bring your own number" description="Twilio, Plivo, Vobiz, Telnyx, Vonage, Cloudonix, Asterisk." href="/numbers/bring-your-own-number/" />
+  <LinkCard title="Volume pricing" description="Price per minute by monthly usage." href="/billing/volume-pricing/" />
+  <LinkCard title="Integrations at a glance" description="Calendars, CRMs, Slack, WhatsApp and more." href="/integrations/at-a-glance/" />
+  <LinkCard title="Webhooks" description="Signed events with retries." href="/developers/webhooks/" />
+</CardGrid>
+
+## What's new
+
+See the [changelog](/changelog/): bring your own number with five more carriers, ten integrations, a rebuilt call flow editor and per-minute billing everywhere.

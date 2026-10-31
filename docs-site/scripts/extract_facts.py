@@ -28,9 +28,11 @@ except Exception as e:
     print("carriers:", repr(e)); facts["carriers"] = []
 # env vars read by the code
 envs = {}
-for p in pathlib.Path("api/product").glob("*.py"):
-    for m in re.finditer(r'(?:getenv|environ\.get|environ\[)\(?\s*["\']([A-Z][A-Z0-9_]+)["\']', p.read_text(encoding="utf-8")):
-        envs.setdefault(m.group(1), set()).add(p.name)
+pat = re.compile(r"""["']((?:PRODUCT|RAZORPAY|GOOGLE|VOCALIS|HUMAN|PRICE|INWORLD)_[A-Z0-9_]+|CURRENCY)["']""")
+for p in list(pathlib.Path("api/product").glob("*.py")) + [pathlib.Path("api/routes/telephony.py")]:
+    if p.exists():
+        for m in pat.finditer(p.read_text(encoding="utf-8")):
+            envs.setdefault(m.group(1), set()).add(p.name)
 facts["env"] = {k: sorted(v) for k, v in sorted(envs.items())}
 pathlib.Path("docs-site/src/data/facts.json").write_text(json.dumps(facts, indent=1), encoding="utf-8")
 print({k: (len(v) if hasattr(v,"__len__") else v) for k, v in facts.items()})

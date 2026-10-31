@@ -1,0 +1,28 @@
+---
+title: "Sign-in security"
+description: "Two-step sign-in, allowed networks, company sign-in with Google and the audit log."
+sidebar:
+  order: 3
+audience: admin
+readingTime: "6 min"
+---
+
+import Shot from '../../../components/Shot.astro';
+
+## Two-step sign-in
+1. Open **Team & Settings** and turn on two-step sign-in.
+2. Scan the code with an authenticator app.
+3. Enter the 6-digit code it shows.
+
+<Shot name="settings" alt="Team and Settings page" caption="Team and Settings." />
+
+From then on you need a code each time you sign in. There are **no recovery codes** yet: if you lose your authenticator, your host must switch it off for you.
+
+## Allowed networks (IP allow-list)
+Restrict the workspace to approved networks, for example `203.0.113.7` or `203.0.113.0/24`. Bad entries show "isn't an address we can read". To stop you locking yourself out, a list that does not include your current address is refused until you add it. Someone outside the list sees "This workspace can only be used from approved networks. Ask a workspace owner to add yours."
+
+## Company sign-in with Google
+Set your company email domain (like acme.com). People with that email domain can sign in with Google. You must use an email at that domain yourself, so you are not locked out. It is a sign-in method; it does not manage roles or provision users.
+
+## Audit log
+Records keys, webhooks, invites, role changes, settings, two-step changes, going live and support messages.

@@ -1,0 +1,17 @@
+---
+title: "Changelog and versioning policy"
+description: "How changes to the API are announced, and the proposed policy for breaking changes."
+sidebar:
+  order: 6
+audience: developer
+readingTime: "2 min"
+---
+
+:::note
+This is a **proposed** policy. It is not enforced by the product.
+:::
+
+- The API has a version in its address (`/api/v1`). Breaking changes would move to `/api/v2`.
+- Additive changes (new fields, new endpoints) can happen at any time. Write clients that ignore fields they do not know.
+- Error `code` values are stable. `message` text may change.
+- Breaking changes are announced in the [changelog](/changelog/) at least 30 days ahead.

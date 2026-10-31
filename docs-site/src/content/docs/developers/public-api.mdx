@@ -1,0 +1,95 @@
+---
+title: "Public API"
+description: "Read your agents and calls with API keys: endpoints, examples in curl, Python and JavaScript, limits and errors."
+sidebar:
+  order: 2
+audience: developer
+readingTime: "8 min"
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+The public API is **read-only** today. Base address: `https://YOUR-API-ADDRESS/api/v1/public`.
+
+:::caution[Not available yet]
+Starting outbound calls, managing agents or numbers through the public API, and published SDK packages are not available. Generate a client from the [API reference](/api-reference/) if you want one.
+:::
+
+## Endpoints
+| Method | Path | Returns |
+|---|---|---|
+| GET | `/me` | `{workspace, environment}` , handy to check a key |
+| GET | `/agents` | `[{id, name, status}]` for agents in this environment |
+| GET | `/calls?page=1&limit=25&agent=agt_...` | `{calls, total, page, limit}`, newest first (limit up to 100) |
+| GET | `/calls/{id}` | One call with transcript turns, extracted answers, the cost split and (if allowed) a short-lived audio link |
+
+Call fields include `id`, `time`, `caller`, `phone`, `agent_id`, `agent_name`, `duration` (seconds), `outcome` (booked, resolved, qualified, transferred, voicemail, no-answer, failed ...), `cost`, `fail_reason` and `test`.
+
+## Examples: list calls
+<Tabs>
+<TabItem label="curl">
+
+```bash
+curl "https://YOUR-API-ADDRESS/api/v1/public/calls?limit=5" \
+  -H "Authorization: Bearer $KEY"
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```python
+import requests
+
+r = requests.get(
+    "https://YOUR-API-ADDRESS/api/v1/public/calls",
+    params={"limit": 5},
+    headers={"Authorization": f"Bearer {KEY}"},
+    timeout=10,
+)
+r.raise_for_status()
+print(r.json()["calls"])
+```
+
+</TabItem>
+<TabItem label="JavaScript">
+
+```js
+const res = await fetch("https://YOUR-API-ADDRESS/api/v1/public/calls?limit=5", {
+  headers: { Authorization: `Bearer ${KEY}` },
+});
+if (!res.ok) throw new Error((await res.json()).detail.message);
+console.log((await res.json()).calls);
+```
+
+</TabItem>
+</Tabs>
+
+## Fetch one call (transcript)
+```bash
+curl "https://YOUR-API-ADDRESS/api/v1/public/calls/call_xxx" -H "Authorization: Bearer $KEY"
+```
+
+## Pagination
+Use `page` and `limit`. The response gives `total`, so you know when to stop.
+
+## Rate limit
+**120 requests per minute per key.** Over the limit you get status `429` with a plain message. Wait and retry.
+
+## Errors
+Every error is JSON: `{"detail": {"code": "bad_api_key", "message": "..."}}`. `code` is stable. `message` is for people.
+
+| Status | `code` | Meaning |
+|---|---|---|
+| 401 | `bad_api_key` | Missing, wrong or revoked key |
+| 404 | `call_not_found` | No such call for this key |
+| 429 | | Too many requests |
+
+## Privacy settings apply
+With "hide personal details" on, phone numbers and transcript text are masked. With recordings hidden, `audio_url` is `null`.
+
+## Idempotency
+All public endpoints are reads, so repeating a request is always safe.
+
+## Related
+- [Webhooks](/developers/webhooks/)
+- [API keys](/developers/api-keys/)

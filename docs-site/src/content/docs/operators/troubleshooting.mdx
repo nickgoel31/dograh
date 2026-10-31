@@ -1,0 +1,21 @@
+---
+title: "Operator troubleshooting"
+description: "Symptom, likely cause and fix for common hosting problems."
+sidebar:
+  order: 8
+audience: operator
+readingTime: "4 min"
+---
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| "Calling isn't enabled for your workspace" | No model profile or mapping | Create a profile, set `PRODUCT_PROFILES`, restart |
+| Practice call closes at once with `origin_not_allowed` | The web origin is missing | Add it to `PRODUCT_ALLOWED_ORIGINS` |
+| Customer cannot sign in after turning on two-step sign-in | Lost authenticator | Clear their two-step setting in the database (`product_user_profiles`) |
+| Webhook says "points inside a private network" | Intentional protection | Use a public https address |
+| Top-up button missing | Razorpay not configured | Set the Razorpay variables |
+| Widget says "website not allowed" | Site not in Settings → Privacy | Add `https://their-site` |
+| Webhooks, alerts or summaries never arrive | The every-minute job is not running | See [The scheduled job](/operators/scheduled-job/) |
+| Google Calendar or Sheets says "Google isn't switched on for this platform yet." | No Google service account | Run `setup_google_account.sh` |
+| No email arrives | SMTP not set | Run `setup_email.sh` |
+| Existing customer sees "not_enabled" | Not in `PRODUCT_NEW_UI_ORGS` | Use `set_new_ui_customers.sh` |

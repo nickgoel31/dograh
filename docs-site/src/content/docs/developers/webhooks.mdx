@@ -1,0 +1,97 @@
+---
+title: "Webhooks"
+description: "Get told when calls start or end, with signed messages, retries, resend and code to verify signatures."
+sidebar:
+  order: 3
+audience: developer
+readingTime: "8 min"
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Webhooks send a message to your server when something happens. You need the **webhooks.manage** permission.
+
+## Add one
+1. Open **Developers → Webhooks**.
+2. Enter an **https** address and choose events.
+3. Copy the signing secret now. It is shown once.
+
+A webhook follows the Test or Live toggle it was created in. Addresses that point inside a private network, and plain `http`, are refused.
+
+## Events
+| Event | When |
+|---|---|
+| `call.started` | A call starts |
+| `call.ended` | A call finishes |
+| `campaign.completed` | A campaign finishes (Live only) |
+| `tool.failed` | Listed, **not sent yet** |
+
+## Payload
+```json
+{
+  "id": "evt_xxx",
+  "type": "call.ended",
+  "created": "2026-10-31T10:00:00+00:00",
+  "environment": "live",
+  "data": {
+    "call_id": "call_xxx",
+    "agent_id": "agt_xxx",
+    "test": false,
+    "duration": 92,
+    "outcome": "booked",
+    "summary": "Caller booked a haircut for Friday.",
+    "mood": 5,
+    "details": {}
+  }
+}
+```
+
+## Verify the signature
+The header is `X-Swarvo-AI-Signature: t=<unix time>,v1=<hex>` where `v1 = HMAC_SHA256(secret, "<t>.<raw body>")`. The header name follows the brand name with spaces replaced by dashes. Reject anything older than a few minutes.
+
+<Tabs>
+<TabItem label="Python">
+
+```python
+import hmac, hashlib, time
+
+def valid(secret: str, header: str, body: bytes) -> bool:
+    parts = dict(p.split("=", 1) for p in header.split(","))
+    if abs(time.time() - int(parts["t"])) > 300:
+        return False
+    expected = hmac.new(secret.encode(), f"{parts['t']}.".encode() + body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(parts["v1"], expected)
+```
+
+</TabItem>
+<TabItem label="Node.js">
+
+```js
+import crypto from "node:crypto";
+
+export function valid(secret, header, rawBody) {
+  const parts = Object.fromEntries(header.split(",").map((p) => p.split("=")));
+  if (Math.abs(Date.now() / 1000 - Number(parts.t)) > 300) return false;
+  const expected = crypto.createHmac("sha256", secret).update(`${parts.t}.`).update(rawBody).digest("hex");
+  return crypto.timingSafeEqual(Buffer.from(parts.v1), Buffer.from(expected));
+}
+```
+
+</TabItem>
+</Tabs>
+
+## Retries
+Answer with any `2xx` within 8 seconds. Otherwise we retry after 1 minute, 5 minutes, 30 minutes, 2 hours and 12 hours (6 tries in all), then mark it failed and alert the workspace. Events can arrive more than once; use `id` to remove duplicates.
+
+## Replay and test
+On **Developers → Webhooks → Deliveries** you can resend any message and send a test event. Press **Check for new events** to send waiting messages now.
+
+## Test with a local tunnel
+Run a tunnelling tool that gives you a public https address for your laptop, and add that address as a webhook.
+
+:::note
+Messages are sent by a scheduled job that your host runs every minute. If it stops, webhooks stop; **Check for new events** still works.
+:::
+
+## Related
+- [Public API](/developers/public-api/)

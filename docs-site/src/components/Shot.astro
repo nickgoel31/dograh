@@ -1,0 +1,23 @@
+---
+// A real screenshot of the app in demo mode (sample data), with light and dark versions.
+import { Image } from 'astro:assets';
+interface Props { name: string; alt: string; caption: string; mobile?: boolean }
+const { name, alt, caption, mobile = false } = Astro.props;
+const all = import.meta.glob<{ default: ImageMetadata }>('../assets/screens/*.png', { eager: true });
+const get = (suffix: string) => all[`../assets/screens/${name}-${suffix}.png`]?.default;
+const light = get(mobile ? 'mobile' : 'light');
+const dark = mobile ? undefined : get('dark');
+---
+{light && (
+  <figure class="shot">
+    <Image src={light} alt={alt} class={dark ? 'shot-light' : ''} widths={[720, 1200]} sizes="(min-width: 50rem) 700px, 100vw" loading="lazy" />
+    {dark && <Image src={dark} alt={alt} class="shot-dark" widths={[720, 1200]} sizes="(min-width: 50rem) 700px, 100vw" loading="lazy" />}
+    <figcaption>{caption} <em>(Demo data.)</em></figcaption>
+  </figure>
+)}
+<style is:global>
+  .shot img { border: 1px solid var(--sl-color-hairline); border-radius: .75rem; max-width: 100%; height: auto; }
+  .shot-dark { display: none; }
+  :root[data-theme='dark'] .shot-light { display: none; }
+  :root[data-theme='dark'] .shot-dark { display: block; }
+</style>

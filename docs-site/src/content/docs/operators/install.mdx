@@ -1,0 +1,38 @@
+---
+title: "Requirements and first install"
+description: "Install Swarvo AI with Docker, run migrations, create model profiles and put the new app under /new/."
+sidebar:
+  order: 2
+audience: operator
+readingTime: "8 min"
+---
+
+:::note
+This section is for the person hosting Swarvo AI.
+:::
+
+## What runs
+- **API:** the platform's FastAPI app. Product routes are under `/api/v1/product/*` and `/api/v1/public/*`.
+- **Web app:** `vocalis-web/`, static files after `npm run build`, in its own container (`vocalis`).
+- **Classic interface:** unchanged; people can switch between the two.
+
+## First install
+1. Apply migrations: `./scripts/migrate.sh`.
+2. Create at least one **model profile** and map it with `PRODUCT_PROFILES` (for example `{"default":"<slug>"}`). Without it, calls and practice runs say "calling isn't set up".
+3. Build the web app: `cd vocalis-web && npm ci && npm run build`.
+4. Set the [environment variables](/operators/environment-variables/) and restart the API.
+5. Existing customers sign in to the new app and see "bring over your organization", which adopts it in place without copying or losing anything.
+
+## Docker install with the new app under /new/
+The quick way, on the server, after the code is on `main`:
+
+```bash
+cd ~/dograh && git pull origin main && bash scripts/deploy_new_ui.sh
+```
+
+It backs up the database, the API image and `.env`, adds missing settings, deploys the API and the new app, makes nginx serve `/new/`, and adds the every-minute job. It asks for confirmation first. It switches nobody on.
+
+Manual steps and undo are in the [runbook steps](/operators/troubleshooting/).
+
+## Check
+Open `https://YOUR-HOST/new/`, confirm the classic interface still works, then create a test account.

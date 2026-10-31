@@ -1,0 +1,20 @@
+---
+title: "Rolling out the new interface"
+description: "Switch existing customers to the new interface by organization with PRODUCT_NEW_UI_ORGS."
+sidebar:
+  order: 6
+audience: operator
+readingTime: "3 min"
+---
+
+`PRODUCT_NEW_UI_ORGS` decides which **existing** customers can use the new interface:
+
+| Value | Meaning |
+|---|---|
+| empty (default) | Nobody |
+| `12,15` | Organizations 12 and 15 |
+| `*` | Everyone |
+
+It is checked on the server for the classic interface's switch link, the hand-off, bringing an organization over, and sign-in on the new site for existing accounts (answered with `not_enabled`). New accounts made on the new site are never held back. Going back to the classic interface is never blocked. Changing it needs an API restart.
+
+Use `bash scripts/set_new_ui_customers.sh` to list customers and change it.

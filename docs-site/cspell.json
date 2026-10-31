@@ -1,0 +1,7 @@
+{
+  "version": "0.2",
+  "language": "en-GB,en",
+  "words": ["Swarvo", "Razorpay", "Calendly", "HubSpot", "Salesforce", "Zoho", "Shopify", "Vobiz", "Telnyx", "Vonage", "Cloudonix", "Asterisk", "Plivo", "Twilio", "Zapier", "n8n", "webhook", "webhooks", "Pagefind", "Starlight", "GSTIN", "CGST", "SGST", "IGST", "TRAI", "DLT", "UPI", "TOTP", "MinIO", "Postgres", "nginx", "Hinglish", "SDK", "HMAC", "hmac", "Sheets", "pytest", "unbundle", "authorisation", "customise", "Zoho"],
+  "ignoreRegExpList": ["`[^`]*`", "```[\\s\\S]*?```", "https?://\\S+", "\\b[A-Z][A-Z0-9_]{3,}\\b"],
+  "ignorePaths": ["node_modules", "dist", ".astro", "src/data", "src/content/docs/api-reference/**"]
+}

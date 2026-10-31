@@ -1,0 +1,41 @@
+---
+title: "Authentication and API keys"
+description: "Create, use, rotate and revoke API keys. Test keys see Test data and live keys see Live data."
+sidebar:
+  order: 1
+audience: developer
+readingTime: "3 min"
+---
+
+import Shot from '../../../components/Shot.astro';
+
+Open **Developers** to manage keys. You need the **api_keys.manage** permission (Developer role or above).
+
+<Shot name="developers" alt="Developers page with API keys and webhooks" caption="The Developers page." />
+
+## Key types
+| Prefix | Sees |
+|---|---|
+| `sk_test_` | Your Test data (practice calls) |
+| `sk_live_` | Your Live data |
+
+## Create a key
+1. Open **Developers → API keys** and create a key.
+2. Copy it now. **The full key is shown once.** Only a hash of it is stored.
+
+## Use a key
+Send it on every request:
+
+```http
+Authorization: Bearer sk_live_xxx
+```
+
+## Rotate and revoke
+To rotate, create a new key, switch your software to it, then revoke the old one. A revoked key stops working immediately.
+
+## Keep it secret
+Never put a key in a web page or a mobile app. Keys are for servers.
+
+## Related
+- [Public API](/developers/public-api/)
+- [Roles](/team/roles-and-permissions/)

@@ -1,0 +1,22 @@
+---
+title: "API trigger node"
+description: "Start calls from your own software using an API trigger step in the call flow."
+sidebar:
+  order: 4
+audience: developer
+readingTime: "4 min"
+---
+
+Add an **API trigger** step in the [Call flow editor](/agents/call-flow-editor/). It gives the agent a unique address your software can call to start an outbound call.
+
+:::caution[Not fully verified]
+The details below follow the call engine's trigger behaviour. How API-trigger calls are authenticated with Swarvo AI keys could not be confirmed from the code. See `UNVERIFIED.md`.
+:::
+
+- **Production address** runs the **published** (live) agent.
+- **Test address** runs the latest draft.
+- Send a `POST` with JSON containing `phone_number` (with country code), and optionally `initial_context` (extra details the agent can use).
+- A successful request answers `{"status": "initiated", "workflow_run_id": ..., "workflow_run_name": "..."}`.
+- Errors: `400` (calling not set up or the call could not start), `401` (missing or wrong key), `403` (no access to this agent), `404` (trigger not found or inactive).
+
+Editing a draft does not change the production address until you go live.

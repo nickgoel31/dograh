@@ -1,0 +1,34 @@
+---
+title: "Upgrades, backups and restore"
+description: "Safe upgrade steps, backups, restore, logs, health checks and undo."
+sidebar:
+  order: 7
+audience: operator
+readingTime: "4 min"
+---
+
+## Back up first
+```bash
+sudo docker exec dograh-postgres-1 pg_dump -U postgres postgres > ~/backup-before-upgrade.sql
+sudo docker tag dograh-local/dograh-api:local dograh-local/dograh-api:before-upgrade
+```
+
+## Upgrade
+Do it in a quiet hour: restarting the API drops calls in progress.
+
+```bash
+cd ~/dograh && git pull origin main && bash scripts/deploy_new_ui.sh
+```
+
+## Undo
+Set `PRODUCT_NEW_UI_ORGS` empty and restart the API, or retag the saved image and bring the API up again.
+
+## Restore
+Restore the database from the dump with `psql`, then bring the API up.
+
+## Health and logs
+- `GET /api/v1/product/help/status` for a configuration check.
+- Webhook problems: **Developers → Webhooks → Deliveries**; a bell alert is raised when one gives up.
+
+## Scaling
+Background jobs for practice calls and A/B tests run inside the API process, so a restart interrupts them, and several API workers each run their own. This has not been tested at scale.

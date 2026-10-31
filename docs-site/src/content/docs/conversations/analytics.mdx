@@ -1,0 +1,29 @@
+---
+title: "Analytics and the weekly report"
+description: "What the Analytics page shows, what is not tracked, and the weekly emailed report."
+sidebar:
+  order: 4
+audience: admin
+readingTime: "4 min"
+---
+
+import Shot from '../../../components/Shot.astro';
+
+**Analytics** is computed from your calls. Live and Test are separate.
+
+<Shot name="analytics" alt="Analytics page with call, quality and cost charts" caption="The Analytics page." />
+
+| Section | Shows |
+|---|---|
+| Business | Calls, bookings, leads qualified, hours of work replaced, estimated money saved |
+| Quality | Share of calls that went well, average reply speed, funnel through the flow |
+| Cost | Total, per call, per minute and a per-day split |
+
+"Money saved" is minutes multiplied by an hourly figure for a person's cost that **you can edit**. It is an assumption, not a fact.
+
+**Not tracked yet:** interruption rate and caller mood trend. The page says so instead of showing invented numbers.
+
+**Compare** shows the previous period of equal length. Each view reads up to 20,000 calls.
+
+## Weekly report
+A weekly report is emailed by the scheduled job if your host has set up email. See [Alerts and emailed summaries](/conversations/alerts-and-summaries/).

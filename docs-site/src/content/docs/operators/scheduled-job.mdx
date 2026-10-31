@@ -1,0 +1,33 @@
+---
+title: "The scheduled job"
+description: "What POST /api/v1/product/ops/tick does and how to check it is running."
+sidebar:
+  order: 5
+audience: operator
+readingTime: "4 min"
+---
+
+Call this **every minute**:
+
+```bash
+curl -fsS -X POST https://YOUR-API/api/v1/product/ops/tick -H "X-Ops-Secret: $PRODUCT_OPS_SECRET"
+```
+
+Without `PRODUCT_OPS_SECRET` the route answers "not found". A wrong secret answers `401`.
+
+## What it does each minute
+1. Sends **webhooks** (and queues new events).
+2. Raises **alerts** (failed calls, low balance).
+3. Sends emailed **summaries**.
+4. Updates **contacts** and sends **texts** to callers.
+5. Charges **practice calls**.
+6. Refreshes each workspace's price per minute (**rate sync**).
+7. Sends the **weekly reports**.
+8. **Pushes** finished calls to connected apps (CRM, Slack, Sheets, WhatsApp).
+9. Sends **auto top-up links**.
+10. **Purges** old recordings and transcripts for workspaces with a retention period.
+
+The answer lists counts, for example `queued`, `sent`, `alerts`, `summaries`, `practice_charged`, `reports`, `pushed`, `topup_links` and `purged`.
+
+## Confirm it is running
+Run the command by hand and check for a JSON answer. Then check your scheduler's log. If it stops, webhooks, alerts, summaries and pushes stop.

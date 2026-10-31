@@ -1,0 +1,27 @@
+---
+title: "Behavior and limits"
+description: "Set the longest call, silence timeout, daily call cap, monthly spend cap and what happens if nobody answers."
+sidebar:
+  order: 11
+audience: owner
+readingTime: "4 min"
+---
+
+| Setting | Values | Notes |
+|---|---|---|
+| **Longest call (minutes)** | 1 to 60, default 15 | The call ends politely at this length. |
+| **Hang up after silence (seconds)** | 5 to 60, default 10 | Ends a call when nobody speaks. |
+| **Most calls per day** | Whole number, 0 = no limit | After the limit, callers hear: "Sorry, we can't take more calls today. Please try again tomorrow." |
+| **Most spend per month** | Whole number, 0 = no limit | Counts this agent's calls only. Callers hear: "Sorry, we can't take your call right now. Please try again later." |
+
+Limits must be whole numbers from 0 to 1,000,000: "Limits must be whole numbers, or 0 for no limit."
+
+## Opening hours and quiet hours
+Opening hours are set per phone number. See [Call hours and fallback](/numbers/call-hours-and-fallback/). Campaigns only call between 09:00 and 21:00 in the contact's local time by default ([Campaigns](/conversations/campaigns/)).
+
+## If nobody picks up
+For outbound calls, the agent can leave a short voicemail, hang up, or try again later.
+
+## Related
+- [Spend limit](/billing/adding-money/)
+- [Human feel](/agents/human-feel/)

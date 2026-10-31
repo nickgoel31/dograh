@@ -1,0 +1,35 @@
+---
+title: "Adding money and auto top-up"
+description: "Top up with Razorpay, set low-balance auto top-up links, and manage the spend limit and invoices."
+sidebar:
+  order: 3
+audience: admin
+readingTime: "5 min"
+---
+
+import Shot from '../../../components/Shot.astro';
+
+## Add money
+1. Open **Billing & Usage**.
+2. Choose **Add money** and an amount from ₹100 to ₹1,00,000. Outside that range you will see "Choose an amount between 100 and 100000."
+3. Pay with Razorpay (cards, UPI and more).
+
+<Shot name="billing" alt="Billing page with balance, spending limit and a usage chart" caption="The Billing and Usage page." />
+
+Your balance updates once the payment is confirmed. Payments are never credited twice.
+
+## Auto top-up
+Turn on **auto top-up**, set a low-balance threshold and an amount. When your balance falls below the threshold, **we email you a one-tap payment link** for your amount, at most once a day. **Nothing is charged until you pay the link.**
+
+## Spend limit
+Set a monthly limit. Calls pause politely when it is reached.
+
+## Invoices and GST
+Every finished month with charges gets an invoice, numbered like INV-YYYYMM-id. Add your billing details (name, address and GSTIN if you have one) so they appear on it. GST is added as CGST and SGST or IGST depending on states. Taxable amount is money actually taken from your balance; minutes covered by free grants are not invoiced.
+
+:::caution
+Ask your accountant to check the tax treatment of invoices before you rely on them.
+:::
+
+## Related
+- [How billing works](/billing/how-billing-works/)

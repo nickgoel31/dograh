@@ -1,0 +1,46 @@
+---
+title: "Knowledge"
+description: "Teach your agent from a website, PDF, text or question-and-answer pairs, and close gaps."
+sidebar:
+  order: 8
+audience: owner
+readingTime: "7 min"
+---
+
+import Shot from '../../../components/Shot.astro';
+
+**Knowledge** is what your agent looks up while talking.
+
+<Shot name="knowledge" alt="Knowledge page" caption="The Knowledge page." />
+
+## Add knowledge
+1. Open **Knowledge**.
+2. Choose how to add:
+   - **Website:** the address of a page. It is re-read automatically about every 24 hours by default.
+   - **PDF** (or a text-like file): upload it from your browser.
+   - **Text:** paste it in.
+   - **Q&A:** type a question and its answer. These are stored as "QA - ..." entries.
+3. Give each a clear, unique name. Names must be unique in your workspace; you will see a message if one is taken.
+
+## Attach it to an agent
+Open the agent and, on its **Knowledge** tab, tick the sources it may use. This saves as you tick.
+
+## Test a question
+Use **Test a question** on the Knowledge page. It shows the best matching passage and its source. It does not write out a full answer, so use it to check that the right text is found.
+
+## Test and Live
+Knowledge exists in both Test and Live. When you add a source, a twin is made for Live. When you go live, the agent's links are carried over by name.
+
+## Unanswered questions
+The **unanswered questions** report lists questions callers asked that your knowledge could not answer. To close a gap, add the answer as Q&A or text, attach it, and try the question again.
+
+## If something goes wrong
+| Symptom | What to do |
+|---|---|
+| Test a question finds nothing | Add the information, or word the source the way callers ask. |
+| A source is missing in Live | Go live again so links are carried over. |
+| Knowledge added before you moved to the new app is missing | Sources that existed earlier stay on the agent's Live copy but are not listed on the new Knowledge page. Add them again. |
+
+## Related
+- [Tools](/agents/tools/)
+- [Test your agent](/agents/test-your-agent/)

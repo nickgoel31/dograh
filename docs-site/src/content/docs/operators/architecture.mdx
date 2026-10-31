@@ -1,0 +1,31 @@
+---
+title: "Architecture overview"
+description: "How the browser, nginx, product API, call engine, database, cache, storage, carriers and AI providers fit together."
+sidebar:
+  order: 1
+audience: operator
+readingTime: "4 min"
+---
+
+:::note
+This section is for the person hosting Swarvo AI. Customers can ignore it.
+:::
+
+```mermaid
+flowchart LR
+  B[Browser] --> N[nginx]
+  N -->|/new/| W[Web app container]
+  N -->|/api/| A[Product API and call engine]
+  A --> P[(Postgres)]
+  A --> R[(Redis)]
+  A --> S[(Object storage MinIO)]
+  A <--> C[Phone carriers]
+  A --> V[Voice and AI providers]
+  J[Scheduler: every minute] -->|POST ops/tick| A
+```
+
+- **Web app:** static files in a small container, served under `/new/`.
+- **Product API:** routes under `/api/v1/product/*` and `/api/v1/public/*`, inside the platform's API.
+- **Postgres:** all data. **Redis:** rate limits and background coordination. **Storage:** audio files.
+- **Carriers:** Twilio, Plivo or customers' own carriers deliver calls.
+- **Voice and AI providers:** keys are kept in model profiles in the database, never shown to customers.

@@ -1,0 +1,39 @@
+---
+title: "Tools"
+description: "Let your agent do things during a call: call a web address, transfer to a person, or use an integration."
+sidebar:
+  order: 9
+audience: developer
+readingTime: "5 min"
+---
+
+import Shot from '../../../components/Shot.astro';
+
+A **tool** lets an agent act during a call, for example booking an appointment.
+
+<Shot name="tools" alt="Tools and Integrations page" caption="Tools and Integrations." />
+
+## Kinds of tool
+- **Web address tool** ("Zapier, n8n or any web address"): the agent calls an address you provide. See [Any web address](/integrations/any-web-address/).
+- **Transfer to a human:** passes the call to a phone number. See [Hand over to a person](/agents/handover/).
+- **Integrations:** see [Integrations at a glance](/integrations/at-a-glance/).
+
+## Add a tool
+1. Open **Tools & Integrations**.
+2. Choose the tool type and fill in the details.
+3. Use **Test this tool**. Tests refuse private and internal addresses.
+4. Attach the tool to an agent on the agent's **Tools** tab.
+5. Go live again.
+
+## What the agent sees
+The agent sees the tool's **name** and **description** and the parameters you defined. Write the description so it says when to use the tool.
+
+## Secrets are masked
+Secret headers (such as an authorisation header) are stored safely and never sent back to your browser. They show as dots.
+
+## Names must be unique
+Tools exist on both the Test and Live side, so names must be unique per workspace.
+
+## Related
+- [Integrations](/integrations/at-a-glance/)
+- [API trigger node](/developers/api-trigger/)

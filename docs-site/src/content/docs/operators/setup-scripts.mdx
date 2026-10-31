@@ -1,0 +1,30 @@
+---
+title: "Setup scripts"
+description: "What each setup script asks, in what order, and how to check the result."
+sidebar:
+  order: 4
+audience: operator
+readingTime: "5 min"
+---
+
+All scripts live in `scripts/`, are safe to run again, and back up `.env` first.
+
+| Script | Run it to | It asks for |
+|---|---|---|
+| `setup_voices.sh` | Set up the voice engines | Email of your main account, the Studio voice key, optionally the Google key (typing is hidden; keys are saved inside the database) |
+| `setup_numbers.sh` | Let customers buy numbers from your Plivo account | Plivo Auth ID and Auth Token; saves them in `.env`, restarts the API |
+| `setup_email.sh` | Turn on outgoing email | SMTP server, port (587), username, password, "from" line, address of the new app |
+| `setup_logins_payments.sh` | Add Google sign-in and Razorpay | Google client ID, Razorpay key id, key secret, webhook secret (Enter skips any) |
+| `setup_google_account.sh` | Turn on Google Calendar and Sheets for customers | The whole Google service account key file, pasted |
+| `set_new_ui_customers.sh` | Choose which existing customers see the new interface | `all`, `none`, or ids like `12,15` ; asks you to type YES; restarts the API |
+
+## Suggested order
+1. `setup_voices.sh`
+2. `setup_email.sh`
+3. `setup_logins_payments.sh`
+4. `setup_numbers.sh`
+5. `setup_google_account.sh`
+6. `set_new_ui_customers.sh`
+
+## Check the result
+`GET /api/v1/product/help/status` reports database, model profiles, payments and phone numbers from configuration (it does not probe outside services).

@@ -1,0 +1,22 @@
+---
+title: "Testing vs live data and tenant isolation"
+description: "How each workspace's data is kept separate, in plain words, and its known limits."
+sidebar:
+  order: 6
+audience: admin
+readingTime: "4 min"
+---
+
+- Every workspace is two separate organizations on the platform: Test and Live.
+- Every question the system asks of its database is filtered to your workspace and to Test or Live. A workspace you are not in answers "not found".
+- Public ids are opaque and tamper-evident.
+- Roles are checked on the server for every action.
+- Test calls run only in your browser.
+
+:::caution
+Nothing here has had an outside security review or penetration test. Known gaps: the widget's website check relies on the visitor's browser; two-step sign-in has no recovery codes; webhook secrets are stored in plain text because they are needed to sign messages.
+:::
+
+## Related
+- [Privacy](/team/privacy/)
+- [Sign-in security](/team/security/)

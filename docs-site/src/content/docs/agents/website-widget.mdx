@@ -1,0 +1,46 @@
+---
+title: "Website widget"
+description: "Add a voice or chat button to your website, allow your sites and customise it."
+sidebar:
+  order: 16
+audience: developer
+readingTime: "5 min"
+---
+
+The widget puts a button on your website. Visitors click it and talk (or chat) with your live agent in their browser.
+
+## Before you start
+- A **live** agent.
+- Your website address added under **Settings → Privacy** as an allowed website, for example `https://www.example.com`.
+- Balance: widget calls use your Live balance.
+
+## Steps
+1. Open **Developers → Website button**.
+2. Choose the agent and the mode: **voice** or **chat**.
+3. Copy the snippet and paste it into your page.
+
+```html
+<script src="https://YOUR-API-ADDRESS/api/v1/public/widget.js"
+  data-app="https://app.swarvoai.com/new"
+  data-agent="AGENT_ID"
+  data-mode="voice" async></script>
+```
+
+## Options
+| Attribute | Meaning |
+|---|---|
+| `data-agent` | The agent's id. |
+| `data-app` | The address of your Swarvo AI app. |
+| `data-mode` | `voice` (default) or `chat`. |
+| `data-label` | Text on the button. Default "Talk to us". |
+
+## Security
+- Only **live** agents can be called this way.
+- The site must be in your allowed list, otherwise the visitor sees "website not allowed".
+- The website address comes from the visitor's browser, so this deters casual misuse but is not a hard guarantee. Keep a **spend limit** set.
+
+## If something goes wrong
+| Symptom | Fix |
+|---|---|
+| "website not allowed" | Add the exact address (with `https://`) in Settings → Privacy. |
+| Button appears but call fails | The agent must be live and your balance above zero. |

@@ -836,8 +836,17 @@
   "PRODUCT_EMAIL_FROM": [
    "emailer.py"
   ],
+  "PRODUCT_FREE_MINUTES": [
+   "billing.py"
+  ],
   "PRODUCT_GOOGLE_SA_JSON": [
    "connectors.py"
+  ],
+  "PRODUCT_GST_RATE": [
+   "billing.py"
+  ],
+  "PRODUCT_INVOICE_SAC": [
+   "billing.py"
   ],
   "PRODUCT_INWORLD_MODELS": [
    "models_config.py"
@@ -874,6 +883,18 @@
   ],
   "PRODUCT_SAMPLE_DIR": [
    "voice_samples.py"
+  ],
+  "PRODUCT_SELLER_ADDRESS": [
+   "billing.py"
+  ],
+  "PRODUCT_SELLER_GSTIN": [
+   "billing.py"
+  ],
+  "PRODUCT_SELLER_NAME": [
+   "billing.py"
+  ],
+  "PRODUCT_SELLER_STATE": [
+   "billing.py"
   ],
   "PRODUCT_SESSION_COOKIE": [
    "config.py"
