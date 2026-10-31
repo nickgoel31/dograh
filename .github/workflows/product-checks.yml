@@ -1,0 +1,60 @@
+name: Product layer checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "api/product/**"
+      - "api/tests/product/**"
+      - "api/db/product_models.py"
+      - "vocalis-web/**"
+      - "scripts/check_branding.py"
+      - ".github/workflows/product-checks.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  product:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DATABASE_URL: postgresql+asyncpg://dev/dev
+      REDIS_URL: redis://dev
+      MINIO_PUBLIC_ENDPOINT: http://localhost:9000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: vocalis-web/package-lock.json
+      - name: Install API dependencies
+        run: |
+          pip install -r api/requirements.txt
+          pip install pytest pytest-asyncio aiosqlite httpx
+      - name: Web app (types, build)
+        working-directory: vocalis-web
+        run: |
+          npm ci
+          npx tsc --noEmit
+          npm run build
+          npx vitest run
+      - name: Branding guard (source, built files, API schema)
+        run: python scripts/check_branding.py --api
+      - name: Product tests
+        run: python -m pytest api/tests/product --noconftest -q
+      - name: Browser golden path
+        working-directory: vocalis-web
+        env:
+          E2E_BROWSER: chromium
+        run: |
+          pip install -r ../api/requirements.txt >/dev/null
+          npx playwright install --with-deps chromium
+          npx playwright test

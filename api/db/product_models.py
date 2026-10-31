@@ -244,7 +244,7 @@ class ProductSimRunModel(Base):
     transcript = Column(JSON, nullable=False, default=list)
     created_at = Column(DateTime(timezone=True), default=_now)
 
-    __table_args__ = (Index("ix_product_sim_runs_agent", "agent_id", "id"),)
+    __table_args__ = (Index("ix_product_sim_runs_agent", "agent_id", "id"), Index("ix_product_sim_runs_ws", "workspace_id"))
 
 
 class ProductAbTestModel(Base):
@@ -262,6 +262,8 @@ class ProductAbTestModel(Base):
     status = Column(String(8), nullable=False, default="running")
     result = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (Index("ix_product_ab_tests_ws", "workspace_id"),)
 
 
 class ProductInsightModel(Base):
@@ -291,6 +293,8 @@ class ProductApiKeyModel(Base):
     revoked_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_now)
 
+    __table_args__ = (Index("ix_product_api_keys_ws", "workspace_id", "environment"),)
+
 
 class ProductApiLogModel(Base):
     __tablename__ = "product_api_logs"
@@ -319,6 +323,8 @@ class ProductWebhookModel(Base):
     events = Column(JSON, nullable=False)
     active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (Index("ix_product_webhooks_ws", "workspace_id", "environment"),)
 
 
 class ProductDeliveryModel(Base):
@@ -372,6 +378,8 @@ class ProductInviteModel(Base):
     revoked_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_now)
 
+    __table_args__ = (Index("ix_product_invites_ws", "workspace_id"),)
+
 
 class ProductSettingsModel(Base):
     """Per-workspace privacy and embed settings."""
@@ -395,3 +403,5 @@ class ProductSupportMessageModel(Base):
     subject = Column(String(160), nullable=False)
     body = Column(String(4000), nullable=False)
     created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (Index("ix_product_support_messages_ws", "workspace_id", "id"),)
