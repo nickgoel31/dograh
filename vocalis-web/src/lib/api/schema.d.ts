@@ -90,6 +90,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/product/agents/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ai Models */
+        get: operations["ai_models_api_v1_product_agents_models_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/product/agents/templates": {
         parameters: {
             query?: never;
@@ -2022,6 +2039,15 @@ export interface components {
             /** Brand */
             brand: string;
         };
+        /** ModelOut */
+        ModelOut: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Level */
+            level?: string | null;
+        };
         /** NotificationOut */
         NotificationOut: {
             /** Id */
@@ -2736,6 +2762,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ai_models_api_v1_product_agents_models_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelOut"][];
                 };
             };
             /** @description Validation Error */

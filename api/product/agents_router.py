@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from api.db.product_models import ProductAgentModel
 from api.product import agents as svc
 from api.product import models_config, voices
+from api.product import style as style_mod
 from api.product import definition as defn
 from api.product import versions as vdiff
 from api.product.deps import Ctx, get_ctx, require
@@ -87,6 +88,18 @@ def _out(a: ProductAgentModel, prompt: str | None = None) -> AgentOut:
         voice_id=a.voice_id, style=a.style or {}, brain_applies=models_config.brain_applies(getattr(voices.find(a.voice_id) if a.voice_id else None, 'engine', None)),
         prompt_mode=a.prompt_mode, prompt=prompt, version=a.version,
     )
+
+
+class ModelOut(BaseModel):
+    id: str
+    label: str
+    level: str | None = None  # fast | balanced | smartest, when this is what a Brain level uses
+
+
+@router.get("/models", response_model=list[ModelOut])
+async def ai_models(ctx: Ctx = Depends(get_ctx)):
+    levels = {v: k for k, v in models_config.INWORLD_BRAINS.items()}
+    return [ModelOut(id=m, label=style_mod.model_label(m), level=levels.get(m)) for m in style_mod.allowed_models()]
 
 
 @router.get("/templates", response_model=list[TemplateOut])

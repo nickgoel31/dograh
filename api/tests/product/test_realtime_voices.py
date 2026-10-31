@@ -132,3 +132,21 @@ async def test_voice_samples_come_from_the_engine_and_are_kept(client, monkeypat
     assert r.status_code == 200 and r.content == b"MP3DATA" and r.headers["content-type"] == "audio/mpeg"
     assert (await client.get(f"/product/voices/{seema['id']}/sample", headers=h)).content == b"MP3DATA" and len(calls) == 1  # the second play comes from disk
     assert "KEY-IW" in calls[0].headers["authorization"] and (await client.get(f"/product/voices/{zephyr['id']}/sample", headers=h)).status_code == 404
+
+
+async def test_exact_ai_model_can_be_chosen(client):
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    models = (await client.get("/product/agents/models", headers=h)).json()
+    ids = {m["id"]: m for m in models}
+    assert ids["google-ai-studio/gemini-3.1-flash-lite"]["label"] == "Gemini 3.1 Flash Lite" and ids["google-ai-studio/gemini-3.1-flash-lite"]["level"] == "balanced"
+    assert "openai/gpt-4.1-mini" in ids
+    seema = await voice(client, h, "Seema")
+    aid = (await client.post("/product/agents", json={"name": "P", "template": "receptionist"}, headers=h)).json()["id"]
+    assert (await client.patch(f"/product/agents/{aid}", json={"style": {"model": "made-up/model"}}, headers=h)).status_code == 400
+    await client.patch(f"/product/agents/{aid}", json={"voice_id": seema["id"], "brain": "fast", "style": {"model": "openai/gpt-4.1-mini"}}, headers=h)
+    await client.post(f"/product/agents/{aid}/publish", headers=h)
+    assert live_overrides(client)["realtime"]["model"] == "openai/gpt-4.1-mini"  # beats the Fast level
+    await client.patch(f"/product/agents/{aid}", json={"style": {"model": ""}}, headers=h)
+    await client.post(f"/product/agents/{aid}/publish", headers=h)
+    assert live_overrides(client)["realtime"]["model"] == "google-ai-studio/gemini-2.5-flash-lite"  # back to the level

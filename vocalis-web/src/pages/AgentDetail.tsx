@@ -14,6 +14,7 @@ import { AttachPicker } from '@/components/AttachPicker'
 import { AgentPhone } from '@/pages/AgentPhone'
 import { HumanFeel } from '@/pages/AgentFeel'
 import { TryAgent } from '@/components/TryAgent'
+import { BrainModel } from '@/pages/BrainModel'
 import { useUI } from '@/store/ui'
 import { api } from '@/lib/api'
 import { useAsync } from '@/components/shared'
@@ -171,8 +172,8 @@ export default function AgentDetail() {
 
         <TabPanel value="brain"><SimpleAdvanced
           simple={<div className="grid gap-4 md:grid-cols-3">{brainCards.map(([k, t, p, b]) => <button key={k} onClick={() => up({ brain: k })} className={cn('rounded-xl border bg-surface p-5 text-left shadow-card transition hover:border-accent', d.brain === k && 'border-accent ring-2 ring-accent/20')}><div className="text-lg font-semibold">{t}</div><p className="mt-1 text-soft">{p}</p><Badge tone="accent" className="mt-3">{b}</Badge></button>)}</div>}
-          advanced={<Q title="Model" hint="Which language model writes the replies."><Field label="Model"><Select value={d.model} onChange={(e) => up({ model: e.target.value })}>{['gpt-4o-mini', 'gpt-4o', 'claude-haiku-5-5', 'claude-sonnet-5-5', 'gemini-2.5-flash'].map((m) => <option key={m}>{m}</option>)}</Select></Field>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="Temperature"><Slider value={30} onChange={() => undefined} /></Field><Field label="Max reply tokens"><Input defaultValue="220" type="number" /></Field></div></Q>} /></TabPanel>
+          advanced={USE_MOCKS ? <Q title="Model" hint="Which language model writes the replies."><Field label="Model"><Select value={d.model} onChange={(e) => up({ model: e.target.value })}>{['gpt-4o-mini', 'gpt-4o', 'claude-haiku-5-5', 'claude-sonnet-5-5', 'gemini-2.5-flash'].map((m) => <option key={m}>{m}</option>)}</Select></Field>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="Temperature"><Slider value={30} onChange={() => undefined} /></Field><Field label="Max reply tokens"><Input defaultValue="220" type="number" /></Field></div></Q> : <></>} />{!USE_MOCKS && voice.brainLevels !== false && <BrainModel agent={agent} />}</TabPanel>
 
         <TabPanel value="knowledge">{USE_MOCKS ? (<><Q title="What does your agent know?" hint="Tick the sources it can use when answering.">
           <div className="space-y-2">{knowledge.filter((k) => k.status === 'ready').map((k) => <label key={k.id} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-muted"><input type="checkbox" checked={d.kb.includes(k.id)} onChange={() => up({ kb: d.kb.includes(k.id) ? d.kb.filter((x) => x !== k.id) : [...d.kb, k.id] })} /><span className="flex-1 font-medium">{k.title}</span><Badge>{k.kind}</Badge></label>)}</div></Q></>) : <Q title="What does your agent know?" hint="Tick the sources it can use when answering."><AttachPicker kind="knowledge" agentId={agent.id} /></Q>}</TabPanel>

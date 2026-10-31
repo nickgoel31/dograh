@@ -14,6 +14,19 @@ TURNS = {"smart": "semantic_vad", "fast": "server_vad"}  # smart = understands w
 STEADINESS = {"steady": "STABLE", "expressive": "CREATIVE"}
 
 
+def allowed_models() -> list[str]:
+    """AI models an agent on a Studio voice may use: the three Brain levels plus the engine's other supported models."""
+    from api.product.models_config import INWORLD_BRAINS
+    from api.services.configuration.options.inworld import INWORLD_REALTIME_MODELS
+
+    return list(dict.fromkeys([*INWORLD_BRAINS.values(), *INWORLD_REALTIME_MODELS]))
+
+
+def model_label(model: str) -> str:
+    name = model.split("/")[-1].replace("-", " ")
+    return " ".join(("GPT" if w.lower() == "gpt" else w.capitalize()) for w in name.split())
+
+
 def clean(raw: dict | None) -> dict:
     """Keep only valid choices; raise ValueError with a plain message for a bad one."""
     out: dict = {}
@@ -40,6 +53,10 @@ def clean(raw: dict | None) -> dict:
             out[k] = bool(v)
         elif k == "vocabulary":
             out[k] = str(v).strip()[:300]
+        elif k == "model":
+            if v and v not in allowed_models():
+                raise ValueError("That AI model isn't available.")
+            out[k] = v or ""
         elif k == "languages":
             if not isinstance(v, list) or len(v) > 6 or not all(isinstance(x, str) and 1 <= len(x.strip()) <= 30 for x in v):
                 raise ValueError("Pick up to 6 languages.")
@@ -62,6 +79,8 @@ def clean(raw: dict | None) -> dict:
 def overlay(realtime: dict, style: dict | None) -> dict:
     """The voice settings with this agent's choices applied (Studio voices)."""
     rt, s = deepcopy(realtime), style or {}
+    if s.get("model"):
+        rt["model"] = s["model"]  # an exact model chosen on the Brain tab wins over the Fast/Balanced/Smartest level
     if "pace" in s:
         rt["tts_speed"] = s["pace"]
     if "patience" in s:
