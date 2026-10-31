@@ -110,6 +110,7 @@ class ProductUserProfileModel(Base):
     display_name = Column(String(120), nullable=True)
     totp_secret = Column(String(64), nullable=True)
     totp_enabled = Column(Boolean, nullable=False, default=False)
+    email_verified_at = Column(DateTime(timezone=True), nullable=True)
 
 
 class ProductBillingSettingsModel(Base):
@@ -405,3 +406,33 @@ class ProductSupportMessageModel(Base):
     created_at = Column(DateTime(timezone=True), default=_now)
 
     __table_args__ = (Index("ix_product_support_messages_ws", "workspace_id", "id"),)
+
+
+class ProductAuthTokenModel(Base):
+    """One-time links sent by email: password reset and email verification. Only a hash is stored."""
+
+    __tablename__ = "product_auth_tokens"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    kind = Column(String(12), nullable=False)  # reset | verify
+    token_hash = Column(String(64), unique=True, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (Index("ix_product_auth_tokens_user", "user_id", "kind"),)
+
+
+class ProductCallInsightModel(Base):
+    """A one-line summary and mood score for a finished call, written once."""
+
+    __tablename__ = "product_call_insights"
+
+    run_id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    summary = Column(String(400), nullable=False)
+    sentiment = Column(Integer, nullable=True)  # 1 (upset) .. 5 (delighted)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (Index("ix_product_call_insights_ws", "workspace_id"),)

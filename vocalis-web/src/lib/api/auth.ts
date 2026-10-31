@@ -12,6 +12,9 @@ export const authApi = {
   handoffRedeem: (code: string) => http<{ ok: boolean }>('/auth/handoff/redeem', { method: 'POST', json: { code, to: 'product' } }),
   config: () => http<{ google_client_id: string | null }>('/auth/config'),
   google: (credential: string) => http<Me | { setup_required: true }>('/auth/google', { method: 'POST', json: { credential } }),
+  forgot: (email: string) => http<{ ok: boolean; message: string }>('/auth/forgot', { method: 'POST', json: { email } }),
+  reset: (token: string, password: string) => http<{ ok: boolean }>('/auth/reset', { method: 'POST', json: { token, password } }),
+  verify: (token: string) => http<{ ok: boolean }>('/auth/verify', { method: 'POST', json: { token } }),
   logout: () => http<{ ok: boolean }>('/auth/logout', { method: 'POST' }),
   createWorkspace: (name: string) => http<WorkspaceInfo>('/workspaces', { method: 'POST', json: { name } }),
 }

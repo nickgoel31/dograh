@@ -9,7 +9,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from api.db.product_models import ProductApiKeyModel, ProductApiLogModel, ProductDeliveryModel, ProductWebhookModel
-from api.product import audit
+from api.product import audit, emailer
+from api.product.payments import get_wallet
 from api.product import developers as dev
 from api.product.campaigns_router import CampaignGateway, get_campaigns
 from api.product.deps import Ctx, get_ctx, get_session, require
@@ -208,7 +209,8 @@ async def send_now(ctx: Ctx = Depends(require(Perm.WEBHOOKS_MANAGE)), sender: de
 
 
 @ops_router.post("/tick")
-async def ops_tick(x_ops_secret: str | None = Header(default=None), session=Depends(get_session), sender: dev.Sender = Depends(dev.get_sender), gw: CampaignGateway = Depends(get_campaigns)):
+async def ops_tick(x_ops_secret: str | None = Header(default=None), session=Depends(get_session), sender: dev.Sender = Depends(dev.get_sender), gw: CampaignGateway = Depends(get_campaigns),
+                   mailer: emailer.Mailer = Depends(emailer.get_mailer), wallet=Depends(get_wallet)):
     """For the operator's scheduler (cron, every minute): send webhook events and apply data-retention for every workspace."""
     secret = os.getenv("PRODUCT_OPS_SECRET")
     if not secret:
@@ -219,6 +221,9 @@ async def ops_tick(x_ops_secret: str | None = Header(default=None), session=Depe
     from api.product import privacy
 
     out = await dev.tick(session, sender, gw)
+    from api.product import alerts
+
+    out["alerts"] = await alerts.scan(session, mailer, wallet)
     purged = 0
     for ws_id in (await session.scalars(select(ProductSettingsModel.workspace_id).where(ProductSettingsModel.retention_days.is_not(None)))).all():
         ws = await session.get(ProductWorkspaceModel, ws_id)

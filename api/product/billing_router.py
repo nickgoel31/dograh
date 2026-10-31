@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from api.db.product_models import ProductAgentModel, ProductInvoiceModel, ProductPaymentModel, ProductWorkspaceModel
 from api.product import billing as bl
-from api.product import config
+from api.product import config, emailer
 from api.product.deps import Ctx, get_ctx, get_session, require
 from api.product.notifications import notify
 from api.product.errors import product_error
@@ -211,7 +211,7 @@ async def _settle(session, wallet: WalletGateway, pay: ProductPaymentModel, paym
 
 
 @router.post("/topups/confirm")
-async def confirm_topup(body: ConfirmBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE)), wallet: WalletGateway = Depends(get_wallet)):
+async def confirm_topup(body: ConfirmBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE)), wallet: WalletGateway = Depends(get_wallet), mailer: emailer.Mailer = Depends(emailer.get_mailer)):
     pay = await ctx.session.scalar(select(ProductPaymentModel).where(
         ProductPaymentModel.order_id == body.order_id, ProductPaymentModel.workspace_id == ctx.workspace.id))
     if pay is None:
@@ -219,6 +219,8 @@ async def confirm_topup(body: ConfirmBody, ctx: Ctx = Depends(require(Perm.BILLI
     if not _provider().verify_checkout(body.order_id, body.payment_id, body.signature):
         raise product_error(400, "payment_unverified", "We couldn't confirm that payment. If money left your account, it will be added shortly.")
     await _settle(ctx.session, wallet, pay, body.payment_id)
+    await mailer.send(ctx.user.email, "We received your payment", f"Thanks! {config.CURRENCY} {pay.amount:,.2f} was added to your balance.",
+                      emailer.wrap("Payment received", f"<p>Thanks! <b>{config.CURRENCY} {pay.amount:,.2f}</b> was added to your balance. Your GST invoice is on the Billing page.</p>"))
     return {"ok": True}
 
 

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.db.models import UserModel
 from api.db.product_models import ProductUserProfileModel
-from api.product import config, rollout, totp
+from api.product import config, emailer, rollout, totp
 from api.product.deps import Ctx, get_ctx, get_session, get_user_only
 from api.product.errors import product_error
 from api.product.ids import user_public_id
@@ -84,6 +84,7 @@ async def signup(
     request: Request,
     response: Response,
     session: AsyncSession = Depends(get_session),
+    mailer: emailer.Mailer = Depends(emailer.get_mailer),
 ):
     await rate_limit.enforce(
         f"psignup:{_client_ip(request)}", 10, 3600, "Too many sign-up attempts. Try again later."
@@ -105,6 +106,10 @@ async def signup(
     await session.flush()
     session.add(ProductUserProfileModel(user_id=user.id, display_name=body.name))
     await create_workspace(session, user, body.workspace_name or f"{body.name}'s workspace")
+    if mailer.enabled:
+        from api.product.account_router import send_verification
+
+        await send_verification(session, mailer, user)
     await session.commit()
     _set_session(response, user)
     return await _me(session, user, None, config.DEFAULT_ENVIRONMENT)

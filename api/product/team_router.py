@@ -10,7 +10,7 @@ from sqlalchemy import select
 
 from api.db.models import UserModel
 from api.db.product_models import ProductAuditModel, ProductInviteModel, ProductMembershipModel, ProductUserProfileModel, ProductWorkspaceModel
-from api.product import audit, config, privacy, totp
+from api.product import audit, config, emailer, privacy, totp
 from api.product.deps import Ctx, get_ctx, get_user_only, require
 from api.product.errors import product_error
 from api.product.ids import new_public_id, user_public_id
@@ -109,7 +109,7 @@ async def team(ctx: Ctx = Depends(get_ctx)):
 
 
 @router.post("/invites", response_model=InviteOut, status_code=201)
-async def invite(body: InviteBody, ctx: Ctx = Depends(require(Perm.TEAM_MANAGE))):
+async def invite(body: InviteBody, ctx: Ctx = Depends(require(Perm.TEAM_MANAGE)), mailer: emailer.Mailer = Depends(emailer.get_mailer)):
     if body.role not in INVITABLE:
         raise product_error(400, "bad_role", "Choose admin, developer or viewer.")
     email = body.email.lower()
@@ -121,6 +121,9 @@ async def invite(body: InviteBody, ctx: Ctx = Depends(require(Perm.TEAM_MANAGE))
     ctx.session.add(inv)
     await audit.record(ctx.session, ctx.workspace.id, ctx.user.id, "invite.created", email, {"role": body.role})
     await ctx.session.commit()
+    link = f"{emailer.app_url()}/invite/{token}"
+    await mailer.send(email, f"You're invited to {ctx.workspace.name}", f"{ctx.user.email} invited you to {ctx.workspace.name}. Join: {link}",
+                      emailer.wrap("You're invited", f"<p>{ctx.user.email} invited you to <b>{ctx.workspace.name}</b>. The link works once, for {INVITE_DAYS} days, for this email only.</p>", ("Join the team", link)))
     return _invite_out(inv, token)
 
 

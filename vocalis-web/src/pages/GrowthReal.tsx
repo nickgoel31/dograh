@@ -1,6 +1,6 @@
 /** Real Home, Knowledge, Tools and Campaigns. Demo versions stay in their own files for mock mode. */
 import * as React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { AlertTriangle, Check, Circle, FileText, Globe, Megaphone, MessageSquare, Mic, Plus, Trash2, Type, Plug } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -29,6 +29,9 @@ export function HomeReal() {
   const first = me?.user.name?.split(' ')[0]
   const steps = h?.onboarding ?? []
   const doneCount = steps.filter((s) => s.done).length
+  const agentsLoaded = useData((s) => s.agentsLoaded)
+  // Brand-new workspace with no agents: start with the guided setup (once per visit unless skipped).
+  if (agentsLoaded && agents.length === 0 && !sessionStorage.getItem('skip-welcome')) return <Navigate to="/welcome" replace />
   return (
     <>
       <PageHeader title={doneCount < steps.length && h && h.kpis.calls === 0 ? `Welcome${first ? `, ${first}` : ''} 👋` : `Hello${first ? `, ${first}` : ''}`} subtitle="Here’s how your agents are doing." />

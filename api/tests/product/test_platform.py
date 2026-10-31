@@ -286,3 +286,49 @@ async def test_google_sign_in_creates_and_reuses_accounts(client, monkeypatch):
     again = await client.post("/product/auth/google", json={"credential": "good" * 10})
     assert again.status_code == 200 and again.json()["current_workspace"]["id"] == first.json()["current_workspace"]["id"]
     assert (await client.get("/product/auth/config")).json() == {"google_client_id": None}
+
+
+async def test_password_reset_and_email_verification(client, monkeypatch):
+    from api.product import account_router as ar, emailer
+
+    monkeypatch.setattr(ar.rate_limit, "enforce", lambda *a, **k: __import__("asyncio").sleep(0))
+    monkeypatch.setenv("PRODUCT_APP_URL", "https://app.example.com/new")
+    await signup(client, "a@x.com")
+    assert any("Confirm your email" in s for _, s, _ in client.mailer.sent)  # sign-up sends a verification link
+    link = next(t for _, s, t in client.mailer.sent if "Confirm" in s).split("token=")[1].split()[0]
+    assert (await client.post("/product/auth/verify", json={"token": link})).status_code == 200
+    assert (await client.post("/product/auth/verify", json={"token": link})).json()["detail"]["code"] == "link_expired"  # single use
+
+    r = await client.post("/product/auth/forgot", json={"email": "nobody@x.com"})
+    assert r.status_code == 200 and not [m for m in client.mailer.sent if "Reset" in m[1]]  # same answer, nothing sent
+    assert (await client.post("/product/auth/forgot", json={"email": "a@x.com"})).status_code == 200
+    token = next(t for _, s, t in client.mailer.sent if "Reset" in s).split("token=")[1].split()[0]
+    assert (await client.post("/product/auth/reset", json={"token": token, "password": "short"})).status_code == 422
+    assert (await client.post("/product/auth/reset", json={"token": token, "password": "brand-new-pass"})).status_code == 200
+    assert (await client.post("/product/auth/reset", json={"token": token, "password": "another-pass1"})).status_code == 400
+    assert (await client.post("/product/auth/login", json={"email": "a@x.com", "password": "password123"})).status_code == 401
+    assert (await client.post("/product/auth/login", json={"email": "a@x.com", "password": "brand-new-pass"})).status_code == 200
+
+
+async def test_call_summary_mood_and_owner_alert(client):
+    from api.product import alerts
+
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    ws = await workspace(client)
+    _, wf = await make_agent(client, h)
+    events = [{"type": "rtf-user-transcription", "payload": {"text": "Table for two please", "final": True}}, {"type": "rtf-bot-text", "payload": {"text": "Done, see you at eight."}}]
+    await add_run(client, ws.test_org_id, wf, logs={"realtime_feedback_events": events})
+    cid = (await client.get("/product/conversations", headers=h)).json()["calls"][0]["id"]
+    d = (await client.get(f"/product/conversations/{cid}", headers=h)).json()
+    assert d["summary"] == "Caller booked a table for two." and d["sentiment"] == 4
+    assert (await client.get("/product/conversations", headers=h)).json()["calls"][0]["sentiment"] == 4  # the list shows the mood too
+
+    async with client.session_factory() as s:  # a failed live call alerts the owner once
+        live_wf = 777
+        s.add(models.WorkflowModel(id=live_wf, name="w", organization_id=ws.live_org_id, workflow_definition={}))
+        s.add(models.WorkflowRunModel(name="r", workflow_id=live_wf, mode="smallwebrtc", is_completed=True, cost_info={"call_duration_seconds": 30}, gathered_context={"call_disposition": "pipeline_error"}, created_at=datetime.now(UTC)))
+        await s.commit()
+        assert await alerts.scan(s, client.mailer, client.wallet) >= 1
+        assert await alerts.scan(s, client.mailer, client.wallet) == 0
+    assert any("didn't go through" in subj for _, subj, _ in client.mailer.sent)

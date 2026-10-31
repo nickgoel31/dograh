@@ -32,7 +32,7 @@ const versions = [
 const Q = ({ title, children, hint }: { title: string; children: React.ReactNode; hint?: string }) => <Card className="p-6"><h3 className="font-semibold">{title}</h3>{hint && <p className="mb-4 mt-0.5 text-[13px] text-soft">{hint}</p>}<div className={hint ? '' : 'mt-4'}>{children}</div></Card>
 
 /** Search and choose among hundreds of voices. Voices that aren't set up yet are shown but can't be picked. */
-function VoicePick({ voices, value, onPick }: { voices: import('@/mock/types').Voice[]; value: string; onPick: (id: string) => void }) {
+export function VoicePick({ voices, value, onPick }: { voices: import('@/mock/types').Voice[]; value: string; onPick: (id: string) => void }) {
   const [q, setQ] = React.useState('')
   const [lang, setLang] = React.useState('')
   const [gender, setGender] = React.useState('')

@@ -20,6 +20,7 @@ from api.product import developers as dev
 from api.product.deps import Ctx, get_session
 from api.product.errors import product_error
 from api.product.ids import decode_call_id
+from api.product.llm_gateway import LLMGateway, get_llm
 from api.utils import rate_limit
 
 RATE_PER_MINUTE = 120
@@ -106,7 +107,7 @@ async def calls(page: int = 1, limit: int = 25, agent: str | None = None, ctx: C
 
 
 @router.get("/calls/{call_id}", response_model=cr.CallDetail)
-async def call(call_id: str, ctx: Ctx = Depends(key_ctx), sign: cr.AudioSigner = Depends(cr.get_audio_signer)):
+async def call(call_id: str, ctx: Ctx = Depends(key_ctx), sign: cr.AudioSigner = Depends(cr.get_audio_signer), llm: LLMGateway = Depends(get_llm)):
     if decode_call_id(call_id) is None:
         raise product_error(404, "call_not_found", "We couldn't find that call.")
-    return await cr.get_call(call_id, ctx, sign)
+    return await cr.get_call(call_id, ctx, sign, llm)

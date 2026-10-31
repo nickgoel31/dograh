@@ -45,6 +45,8 @@ export default function AuthPage() {
   const [busy, setBusy] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [f, setF] = React.useState({ name: '', email: '', password: '' })
+  const [forgot, setForgot] = React.useState(false)
+  const [sent, setSent] = React.useState<string | null>(null)
   const [needCode, setNeedCode] = React.useState(false)
   const [code, setCode] = React.useState('')
   const cfg = useQuery({ queryKey: ['auth-config'], queryFn: authApi.config, retry: false })
@@ -63,6 +65,10 @@ export default function AuthPage() {
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
     } finally { setBusy(false) }
   }
+  async function sendReset(e: React.FormEvent) {
+    e.preventDefault(); setBusy(true); setError(null)
+    try { setSent((await authApi.forgot(f.email)).message) } catch (err) { setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.') } finally { setBusy(false) }
+  }
   async function google(credential: string) {
     setBusy(true); setError(null)
     try { await authApi.google(credential); await done() } catch (err) { setError(err instanceof ApiError ? err.message : 'We could not sign you in with Google.') } finally { setBusy(false) }
@@ -74,6 +80,15 @@ export default function AuthPage() {
       <div className="flex items-center justify-center px-6 py-10">
         <div className="w-full max-w-[380px]">
           <div className="flex items-center gap-2.5 text-lg font-semibold tracking-tight"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-accent-fg"><Mic2 size={18} /></span>{BRAND}</div>
+          {forgot ? (<>
+            <h1 className="mt-10 text-3xl font-semibold tracking-tight">Forgot your password?</h1>
+            <p className="mt-2 text-soft">Enter your email and we'll send you a link to choose a new one.</p>
+            {sent ? <p className="mt-8 rounded-xl bg-accent-soft px-4 py-3 text-sm">{sent}</p> : (
+              <form onSubmit={sendReset} className="mt-8 space-y-3"><Field icon={Mail} type="email" placeholder="Email address" value={f.email} onChange={set('email')} required autoComplete="email" />
+                {error && <p role="alert" className="rounded-lg bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
+                <Button variant="primary" size="lg" className="h-11 w-full rounded-xl" disabled={busy}>{busy ? 'Please wait…' : 'Send reset link'}</Button></form>)}
+            <button type="button" onClick={() => { setForgot(false); setSent(null); setError(null) }} className="mt-6 text-sm font-semibold text-accent hover:underline">Back to sign in</button>
+          </>) : (<>
           <h1 className="mt-10 text-3xl font-semibold tracking-tight">{signup ? 'Create your account' : 'Welcome back'}</h1>
           <p className="mt-2 text-soft">{signup ? 'Start free. Your first agent takes a few minutes.' : 'Sign in to manage your voice agents.'}</p>
 
@@ -87,11 +102,13 @@ export default function AuthPage() {
             <Field icon={Mail} type="email" placeholder="Email address" value={f.email} onChange={set('email')} required autoComplete="email" />
             <Field icon={Lock} type="password" placeholder={signup ? 'Password (8+ characters)' : 'Password'} value={f.password} onChange={set('password')} required minLength={signup ? 8 : 1} autoComplete={signup ? 'new-password' : 'current-password'} />
             {needCode && !signup && <Field icon={ShieldCheck} inputMode="numeric" placeholder="6-digit code from your authenticator app" value={code} onChange={(e) => setCode(e.target.value)} required maxLength={8} autoComplete="one-time-code" autoFocus />}
+            {!signup && <div className="text-right"><button type="button" onClick={() => { setForgot(true); setError(null) }} className="text-sm text-accent hover:underline">Forgot password?</button></div>}
             {error && <p role="alert" className="rounded-lg bg-bad/10 px-3 py-2 text-sm text-bad">{error}</p>}
             <Button variant="primary" size="lg" className="h-11 w-full rounded-xl" disabled={busy}>{busy ? 'Please wait…' : signup ? 'Create account' : 'Sign in'}{!busy && <ArrowRight size={16} />}</Button>
           </form>
           <p className="mt-6 text-sm text-soft">{signup ? 'Already have an account?' : 'New here?'}{' '}
             <button type="button" onClick={() => { setSignup(!signup); setError(null) }} className="font-semibold text-accent hover:underline">{signup ? 'Sign in' : 'Create an account'}</button></p>
+          </>)}
         </div>
       </div>
 

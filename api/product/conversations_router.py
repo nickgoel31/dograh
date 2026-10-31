@@ -15,6 +15,7 @@ from api.product import conversations as conv
 from api.product.deps import Ctx, get_ctx
 from api.product.errors import product_error
 from api.product.ids import decode_call_id, encode_call_id
+from api.product.llm_gateway import LLMGateway, get_llm
 
 router = APIRouter(prefix="/product/conversations", tags=["conversations"])
 
@@ -116,6 +117,11 @@ async def present(ctx: Ctx, calls: list["CallOut"]) -> list["CallOut"]:
     """Apply the workspace's privacy settings to calls on their way out."""
     from api.product import privacy
 
+    from api.product import insights
+
+    mood = await insights.sentiments(ctx.session, [i for i in (decode_call_id(c.id) for c in calls) if i])
+    for c in calls:
+        c.sentiment = mood.get(decode_call_id(c.id))
     if (await privacy.get_settings(ctx.session, ctx.workspace.id)).redact_pii:
         for c in calls:
             c.phone, c.caller = privacy.mask_phone(c.phone), privacy.redact_text(c.caller)
@@ -181,7 +187,7 @@ async def list_calls(
 
 
 @router.get("/{call_id}", response_model=CallDetail)
-async def get_call(call_id: str, ctx: Ctx = Depends(get_ctx), sign: AudioSigner = Depends(get_audio_signer)):
+async def get_call(call_id: str, ctx: Ctx = Depends(get_ctx), sign: AudioSigner = Depends(get_audio_signer), llm: LLMGateway = Depends(get_llm)):
     run_id = decode_call_id(call_id)
     run = await ctx.session.scalar(_scope(ctx).where(WorkflowRunModel.id == run_id)) if run_id else None
     if run is None:
@@ -194,6 +200,14 @@ async def get_call(call_id: str, ctx: Ctx = Depends(get_ctx), sign: AudioSigner 
     settings = await privacy.get_settings(ctx.session, ctx.workspace.id)
     turns = [TurnOut(**t) for t in conv.build_transcript(events)]
     extracted = conv.extracted_answers(run.gathered_context)
+    summary = None
+    if base.outcome is not None:  # a finished call: one-line summary and mood, written once by the AI
+        from api.product import insights
+
+        ins = await insights.ensure(ctx.session, llm, workspace_id=ctx.workspace.id, org_id=ctx.org_id, user_id=ctx.user.id if ctx.user else ctx.workspace.owner_user_id,
+                                    run_id=run.id, turns=[t.model_dump() for t in turns])
+        if ins is not None:
+            summary, base.sentiment = ins.summary, ins.sentiment
     if settings.redact_pii:
         for t in turns:
             t.text = privacy.redact_text(t.text) or ""
@@ -201,7 +215,7 @@ async def get_call(call_id: str, ctx: Ctx = Depends(get_ctx), sign: AudioSigner 
         await present(ctx, [base])
     return CallDetail(
         **base.model_dump(),
-        turns=turns,
+        turns=turns, summary=privacy.redact_text(summary) if settings.redact_pii else summary,
         extracted=extracted,
         cost_split=conv.cost_split(run.cost_info, base.cost),
         audio_url=await sign(run) if settings.record_calls else None,

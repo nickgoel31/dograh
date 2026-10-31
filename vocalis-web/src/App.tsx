@@ -27,6 +27,8 @@ import Billing from '@/pages/Billing'
 import { HelpPage, SettingsPage } from '@/pages/SettingsHelp'
 import { AcceptInvite, DevelopersReal, HelpReal, SettingsReal } from '@/pages/PlatformReal'
 import WidgetPage from '@/pages/Widget'
+import Onboarding from '@/pages/Onboarding'
+import { ResetPage, VerifyPage } from '@/pages/AccountPages'
 
 /** Real mode: show sign-in until a session exists; keep the active workspace valid. */
 function Gate({ children }: { children: React.ReactNode }) {
@@ -85,6 +87,10 @@ export default function App() {
   if (window.location.pathname.startsWith(`${BASE}/widget/`)) {
     return <BrowserRouter basename={BASE}><Routes><Route path="widget/:agentId" element={<WidgetPage />} /></Routes></BrowserRouter>
   }
+  const p = window.location.pathname
+  if (p === `${BASE}/reset` || p === `${BASE}/verify`) {
+    return <QueryClientProvider client={queryClient}>{p.endsWith('/reset') ? <ResetPage /> : <VerifyPage />}</QueryClientProvider>
+  }
   return (
     <QueryClientProvider client={queryClient}>
     <CacheReset />
@@ -93,6 +99,7 @@ export default function App() {
       <Routes>
         <Route element={<Shell />}>
           <Route index element={<Home />} />
+          <Route path="welcome" element={<Onboarding />} />
           <Route path="agents" element={<Agents />} />
           <Route path="agents/new" element={<NewAgentPage />} />
           <Route path="agents/templates" element={<TemplatesPage />} />
