@@ -45,7 +45,6 @@ python -m api.product.export_openapi vocalis-web/openapi.json   # the app's own,
 The site is static. Build the image from the repo root:
 
 ```bash
-docker build -f docs-site/Dockerfile -t swarvo-docs .
 ```
 
 Example service to add to your compose file (documented only; the shipped `docker-compose.yaml` is unchanged):

@@ -13,9 +13,7 @@ let n = 0;
     if (statSync(p).isDirectory()) { walk(p); continue; }
     if (!/\.mdx?$/.test(f)) continue;
     n++;
-    const t = readFileSync(p, 'utf8').replace(/
-/g, '
-');
+    const t = readFileSync(p, 'utf8').split(String.fromCharCode(13)).join('');
     const fm = t.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
     const desc = fm.match(/^description:\s*(.*)$/m)?.[1]?.replace(/^"|"$/g, '') ?? '';
     const rel = p.replace(root, '');
