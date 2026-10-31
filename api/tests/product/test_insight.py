@@ -188,7 +188,7 @@ async def test_analytics_numbers_compare_funnel_and_assumptions(client):
     c = r["current"]
     assert (c["calls"], c["bookings"], c["qualified"], c["resolution_rate"]) == (4, 1, 1, 75) and c["minutes"] == 4.5
     assert c["hours_replaced"] == 0.1 and c["money_saved"] == 22.5 and r["human_cost_is_default"] is True  # 4.5 min x default 5
-    assert c["total_cost"] == 27.0 and c["per_minute"] == 6.0 and c["per_call"] == 6.75
+    assert c["total_cost"] == 30.38 and c["per_minute"] == 6.75 and c["per_call"] == 7.59
     assert r["previous"]["calls"] == 2 and r["previous"]["bookings"] == 1
     assert [(f["step"], f["count"]) for f in r["funnel"]] == [("Greeting", 2), ("Book", 1)] and r["avg_reply_seconds"] == 0.5
     assert r["interruption_rate"] is None and r["sentiment_trend"] is None  # not recorded by the platform: left empty

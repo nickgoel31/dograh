@@ -14,7 +14,8 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.db.models import UserModel
+from api.db.models import OrganizationModel, UserModel
+from api.product.payments import WalletGateway, get_wallet
 from api.db.product_models import ProductAgentModel
 from api.product import config, models_config
 from api.product.deps import Ctx, get_ctx, get_session
@@ -66,7 +67,7 @@ async def ice(ctx: Ctx = Depends(get_ctx)):
 
 
 async def _authorize(
-    ws: WebSocket, session: AsyncSession, agent_id: str, workspace_id: str | None
+    ws: WebSocket, session: AsyncSession, agent_id: str, workspace_id: str | None, wallet: WalletGateway | None = None
 ) -> tuple[UserModel, object, ProductAgentModel] | str:
     """Returns (user, workspace, agent) or a short reason code for closing the socket."""
     if not origin_allowed(ws.headers.get("origin"), ws.headers.get("host"), allowed_origins()):
@@ -99,6 +100,11 @@ async def _authorize(
         return "agent_not_found"
     if not await models_config.ensure_org_profiles(session, view.workspace.test_org_id):
         return "calls_not_set_up"
+    live = await session.get(OrganizationModel, view.workspace.live_org_id)
+    if wallet is not None and live is not None and live.wallet_enabled and not view.workspace.adopted:  # practice calls are charged like real ones
+        w = await wallet.summary(live.id)
+        if float(w.get("balance", 0) or 0) <= 0 and float(w.get("minutes_available", 0) or 0) <= 0:
+            return "add_money_first"
     await session.commit()
     return user, view.workspace, agent
 
@@ -110,8 +116,9 @@ async def test_call(
     workspace: str | None = None,
     session: AsyncSession = Depends(get_session),
     gw: PlatformGateway = Depends(get_gateway),
+    wallet: WalletGateway = Depends(get_wallet),
 ):
-    result = await _authorize(websocket, session, agent_id, workspace)
+    result = await _authorize(websocket, session, agent_id, workspace, wallet)
     if isinstance(result, str):
         # Accept, then close with the reason: a socket closed before accept reaches the
         # browser as a bare HTTP 403 with no reason. (The success path must NOT accept:

@@ -61,14 +61,14 @@ async def test_summary_enables_live_billing_and_gives_free_minutes_once(client, 
     _, tok = await signup(client, "a@x.com")
     h = bearer(tok)
     s = (await client.get("/product/billing/summary", headers=h)).json()
-    assert s["price_per_min"] == 6.0 and s["free_mode"] is True and s["minutes_available"] == 20
+    assert s["price_per_min"] == 6.75 and s["free_mode"] is False and s["minutes_available"] == 20
     await client.get("/product/billing/summary", headers=h)
     assert client.wallet.minutes == 20  # not granted twice
     ws = await ws_of(client)
     async with client.session_factory() as s2:
         live = await s2.get(models.OrganizationModel, ws.live_org_id)
         test = await s2.get(models.OrganizationModel, ws.test_org_id)
-    assert live.wallet_enabled and live.billing_rate == 6.0 and not test.wallet_enabled  # Test never bills
+    assert live.wallet_enabled and live.billing_rate == 6.75 and not test.wallet_enabled  # Test never bills
     assert (await client.get("/product/billing/summary", headers={**h, "X-Environment": "live"})).json()["free_mode"] is False
 
 
@@ -172,3 +172,35 @@ async def test_billing_needs_billing_permission(client):
     hb = bearer(tok_b, **{"X-Workspace": me["current_workspace"]["id"]})
     assert (await client.get("/product/billing/summary", headers=hb)).status_code == 403
     assert (await client.patch("/product/billing/settings", json={"spend_limit": 1}, headers=hb)).status_code == 403
+
+
+def test_volume_slabs_and_where_a_minute_goes():
+    from api.product import pricing
+
+    assert [pricing.rate_for(m) for m in (0, 999, 1000, 4999, 5000, 14999, 24999, 37499, 49999, 74999, 99999, 100000, 500000)] == [6.75, 6.75, 6.0, 6.0, 5.5, 5.5, 5.0, 4.6, 4.2, 3.8, 3.4, 3.4, 3.4]
+    assert pricing.next_step(500) == (1000, 6.0) and pricing.next_step(100000) is None
+    parts = {p["name"]: p["value"] for p in pricing.split(2, 6.75)}  # a two minute call
+    assert parts["Phone"] == 0.8 and round(parts["Voice"], 4) == round((13.5 - 0.8) * 0.6, 4)
+    assert round(parts["Speech to text"] / parts["AI brain"], 3) == 3.0 and round(sum(parts.values()), 4) == 13.5
+
+
+async def test_practice_calls_are_charged_once_to_the_live_wallet(client):
+    from datetime import UTC, datetime
+
+    from sqlalchemy import select as sel
+
+    from api.db import models, product_models
+    from api.product import practice
+
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    await client.get("/product/billing/summary", headers=h)  # turns billing on and grants the welcome minutes
+    client.wallet.minutes, client.wallet.balance = 1.0, 100.0
+    async with client.session_factory() as s:
+        ws = (await s.execute(sel(product_models.ProductWorkspaceModel))).scalars().first()
+        s.add(models.WorkflowModel(id=950, name="w", organization_id=ws.test_org_id, workflow_definition={}))
+        s.add(models.WorkflowRunModel(name="r", workflow_id=950, mode="smallwebrtc", is_completed=True, cost_info={"call_duration_seconds": 150}, created_at=datetime.now(UTC)))
+        await s.commit()
+        assert await practice.charge_practice_calls(s, client.wallet) == 1
+        assert await practice.charge_practice_calls(s, client.wallet) == 0  # never twice
+    assert client.wallet.minutes == 0.0 and round(client.wallet.balance, 4) == round(100 - 2 * 6.75, 4)  # 3 minutes billed: 1 free, 2 paid

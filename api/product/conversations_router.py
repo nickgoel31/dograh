@@ -12,6 +12,7 @@ from api.db.models import WorkflowModel, WorkflowRunModel
 from api.db.product_models import ProductAgentModel
 from api.product import config
 from api.product import conversations as conv
+from api.product import pricing
 from api.product.deps import Ctx, get_ctx
 from api.product.errors import product_error
 from api.product.ids import decode_call_id, encode_call_id
@@ -79,10 +80,15 @@ class CallPage(BaseModel):
     truncated: bool = False
 
 
+def _rate(ctx: Ctx) -> float:
+    return getattr(ctx, "rate", None) or config.PRICE_PER_MIN
+
+
 def _price(ctx: Ctx, duration: float | None) -> float:
-    if ctx.environment == "test" or not duration:
+    """Practice calls cost the same as real ones."""
+    if not duration:
         return 0.0
-    return round(duration / 60 * config.PRICE_PER_MIN, 2)
+    return round(duration / 60 * _rate(ctx), 2)
 
 
 def _out(ctx: Ctx, run: WorkflowRunModel, agents: dict[int, ProductAgentModel]) -> CallOut:
@@ -101,6 +107,12 @@ def _out(ctx: Ctx, run: WorkflowRunModel, agents: dict[int, ProductAgentModel]) 
         outcome=outcome, cost=_price(ctx, duration), fail_reason=conv.failure_reason(outcome),
         test=ctx.environment == "test",
     )
+
+
+async def _load_rate(ctx: Ctx) -> None:
+    from api.product import rates
+
+    ctx.rate = await rates.workspace_rate(ctx.session, ctx.workspace)
 
 
 async def _agents(ctx: Ctx) -> dict[int, ProductAgentModel]:
@@ -151,6 +163,7 @@ async def list_calls(
     ctx: Ctx = Depends(get_ctx),
 ):
     agents = await _agents(ctx)
+    await _load_rate(ctx)
     stmt = _scope(ctx).options(load_only(
         WorkflowRunModel.id, WorkflowRunModel.workflow_id, WorkflowRunModel.created_at, WorkflowRunModel.is_completed,
         WorkflowRunModel.cost_info, WorkflowRunModel.usage_info, WorkflowRunModel.initial_context,
@@ -197,6 +210,7 @@ async def get_call(call_id: str, ctx: Ctx = Depends(get_ctx), sign: AudioSigner 
     if run is None:
         raise product_error(404, "call_not_found", "We couldn't find that call.")
     agents = await _agents(ctx)
+    await _load_rate(ctx)
     base = _out(ctx, run, agents)
     events = (run.logs or {}).get("realtime_feedback_events")
     from api.product import privacy
@@ -212,6 +226,8 @@ async def get_call(call_id: str, ctx: Ctx = Depends(get_ctx), sign: AudioSigner 
                                     run_id=run.id, turns=[t.model_dump() for t in turns])
         if ins is not None:
             summary, base.sentiment = ins.summary, ins.sentiment
+        else:
+            summary = insights.fallback([t.model_dump() for t in turns])
     if settings.redact_pii:
         for t in turns:
             t.text = privacy.redact_text(t.text) or ""
@@ -221,7 +237,7 @@ async def get_call(call_id: str, ctx: Ctx = Depends(get_ctx), sign: AudioSigner 
         **base.model_dump(),
         turns=turns, summary=privacy.redact_text(summary) if settings.redact_pii else summary,
         extracted=extracted,
-        cost_split=conv.cost_split(run.cost_info, base.cost),
+        cost_split=pricing.split((conv.duration_seconds(run.cost_info, run.usage_info) or 0) / 60, _rate(ctx)),
         audio_url=await sign(run) if settings.record_calls else None,
     )
 

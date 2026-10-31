@@ -50,6 +50,7 @@ TABLES = [
     product_models.ProductAuthTokenModel.__table__,
     product_models.ProductIntegrationModel.__table__,
     product_models.ProductContactModel.__table__,
+    product_models.ProductPracticeChargeModel.__table__,
     product_models.ProductBlockModel.__table__,
     product_models.ProductCallInsightModel.__table__,
 ]
@@ -297,6 +298,16 @@ class FakeWallet:
         if key not in self.keys:
             self.keys.add(key)
             self.minutes += minutes
+
+    async def charge(self, org_id, minutes, rate, description, key):
+        if key in self.keys:
+            return 0.0
+        self.keys.add(key)
+        take = min(minutes, self.minutes)
+        self.minutes -= take
+        money = round((minutes - take) * rate, 4)
+        self.balance -= money
+        return money
 
 
 @asynccontextmanager

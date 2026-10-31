@@ -229,6 +229,10 @@ async def ops_tick(x_ops_secret: str | None = Header(default=None), session=Depe
     from api.product import post_call
 
     out.update(await post_call.contacts_and_texts(session))
+    from api.product import practice, rates
+
+    out["practice_charged"] = await practice.charge_practice_calls(session, wallet)
+    await rates.sync_all(session)
     out["reports"] = await post_call.weekly_reports(session, mailer)
     purged = 0
     for ws_id in (await session.scalars(select(ProductSettingsModel.workspace_id).where(ProductSettingsModel.retention_days.is_not(None)))).all():

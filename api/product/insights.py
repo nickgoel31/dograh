@@ -28,6 +28,16 @@ def parse(raw: str) -> tuple[str, int | None] | None:
     return (summary, sentiment) if summary else None
 
 
+def fallback(turns: list[dict]) -> str | None:
+    """A plain summary from the transcript itself, for when no AI model could write one."""
+    spoken = [t for t in turns if t.get("text")]
+    caller = next((t["text"] for t in spoken if t["who"] == "caller"), None)
+    if not caller:
+        return None
+    shortened = caller if len(caller) <= 110 else caller[:107].rsplit(" ", 1)[0] + "..."
+    return f'The caller started with: "{shortened}". {len(spoken)} messages were exchanged.'
+
+
 async def get(session, run_id: int) -> ProductCallInsightModel | None:
     return await session.get(ProductCallInsightModel, run_id)
 

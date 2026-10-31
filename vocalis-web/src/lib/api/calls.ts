@@ -16,7 +16,7 @@ export function toCall(c: CallOut | CallDetail): Call {
     inProgress: c.outcome === null,
     sentiment: (c.sentiment ?? null) as Call['sentiment'],
     cost: c.cost, failReason: c.fail_reason ?? undefined,
-    turns: (d.turns ?? []).map((t) => ({ who: t.who as 'agent' | 'caller', t: t.t, end: t.end, text: t.text, reply: t.reply ?? undefined, tool: t.tool ?? undefined })),
+    turns: (d.turns ?? []).map((t) => ({ who: t.who as 'agent' | 'caller', t: t.t, end: t.end, text: t.text, reply: t.reply != null ? Math.round(t.reply * 1000) : undefined, tool: t.tool ?? undefined })),
     summary: d.summary ?? '', extracted: d.extracted ?? {},
     costSplit: SPLIT_ORDER.map((n) => ({ name: n, value: Number(d.cost_split?.find((s) => s.name === n)?.value ?? 0) })),
     test: c.test, audioUrl: d.audio_url ?? undefined,

@@ -490,3 +490,17 @@ class ProductBlockModel(Base):
     created_at = Column(DateTime(timezone=True), default=_now)
 
     __table_args__ = (UniqueConstraint("workspace_id", "phone", name="uq_product_block"),)
+
+
+class ProductPracticeChargeModel(Base):
+    """A browser practice call that has been charged to the Live wallet (once per call)."""
+
+    __tablename__ = "product_practice_charges"
+
+    run_id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    minutes = Column(Float, nullable=False, default=0.0)
+    amount = Column(Float, nullable=False, default=0.0)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (Index("ix_product_practice_ws", "workspace_id"),)

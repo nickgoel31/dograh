@@ -16,6 +16,7 @@ const REASONS: Record<string, string> = {
   workspace_not_found: "We couldn't find that workspace.",
   not_allowed: "You don't have permission to test this agent. Ask a workspace owner.",
   agent_not_found: "We couldn't find that agent.",
+  add_money_first: "You're out of balance. Add money on the Billing page to keep practising.",
   agent_not_available: 'This agent is not taking calls right now.',
   website_not_allowed: "This website isn't allowed to start calls with this agent.",
   calls_not_set_up: "Calling isn't enabled for your workspace yet. Please contact support.",

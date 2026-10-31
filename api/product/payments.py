@@ -71,6 +71,10 @@ class WalletGateway(Protocol):
 
     async def grant_minutes(self, org_id: int, minutes: float, description: str, key: str) -> None: ...
 
+    async def charge(self, org_id: int, minutes: float, rate: float, description: str, key: str) -> float:
+        """Use up `minutes`: free minutes first, then money at `rate`. Returns the money taken."""
+        ...
+
 
 class CoreWallet:
     """The platform's wallet (opens its own database sessions)."""
@@ -96,3 +100,19 @@ _wallet: WalletGateway = CoreWallet()
 
 def get_wallet() -> WalletGateway:
     return _wallet
+
+
+async def _core_charge(self, org_id, minutes, rate, description, key):
+    from api.services.billing import wallet_service
+
+    have = float((await wallet_service.get_summary(org_id)).get("minutes_available", 0) or 0)
+    take = min(minutes, have)
+    if take > 0:
+        await wallet_service.remove_minutes(org_id, take, description=description)
+    money = round((minutes - take) * rate, 4)
+    if money > 0:
+        await wallet_service.credit_money(org_id, -money, description=description, idempotency_key=key)
+    return money
+
+
+CoreWallet.charge = _core_charge

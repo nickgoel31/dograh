@@ -28,3 +28,16 @@ body { @apply bg-bg text-ink font-sans antialiased; font-size: 14px; }
 .react-flow__controls button { background: hsl(var(--surface)); color: hsl(var(--ink)); border-color: hsl(var(--line)); }
 .tok-k { color: hsl(var(--accent)); } .tok-s { color: hsl(var(--ok)); } .tok-n { color: hsl(var(--warn)); }
 @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* Slim scrollbars that match the theme */
+* { scrollbar-width: thin; scrollbar-color: hsl(var(--soft) / .35) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: hsl(var(--soft) / .28); border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background: hsl(var(--soft) / .5); border: 3px solid transparent; background-clip: content-box; }
+
+/* Recording seek bar */
+.recording-range { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 999px; outline: none; cursor: pointer; }
+.recording-range:disabled { cursor: default; opacity: .6; }
+.recording-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: hsl(var(--accent)); border: 2px solid hsl(var(--surface)); box-shadow: 0 1px 4px hsl(var(--shadow) / .35); }
+.recording-range::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: hsl(var(--accent)); border: 2px solid hsl(var(--surface)); }

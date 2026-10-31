@@ -2286,6 +2286,22 @@ export interface components {
             settings: components["schemas"]["SettingsOut"];
             /** Payments Enabled */
             payments_enabled: boolean;
+            /**
+             * Slabs
+             * @default []
+             */
+            slabs: {
+                [key: string]: unknown;
+            }[];
+            /** Next Rate At */
+            next_rate_at?: number | null;
+            /** Next Rate */
+            next_rate?: number | null;
+            /**
+             * Contact Sales Above
+             * @default 100000
+             */
+            contact_sales_above: number;
         };
         /** TemplateOut */
         TemplateOut: {

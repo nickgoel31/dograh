@@ -113,11 +113,19 @@ export default function RealBilling() {
           </div>
         </Card>
         <Card className="p-5">
-          <h3 className="font-semibold">What you pay</h3>
+          <h3 className="font-semibold">What you pay now</h3>
           <div className="num mt-2 text-3xl font-semibold tracking-tight">{fmt(s.price_per_min, s.currency)}<span className="text-base font-normal text-soft"> / minute</span></div>
           <p className="mt-1 text-[13px] text-soft">One price, nothing hidden. It includes:</p>
           <ul className="mt-3 space-y-2 text-sm">{['The AI that talks and thinks', 'The voice and speech recognition', 'The phone line for the call', 'Recordings, transcripts and analytics'].map((x) => <li key={x} className="flex items-center gap-2"><CheckCircle2 size={15} className="text-ok" />{x}</li>)}</ul>
-          <p className="mt-3 text-xs text-soft">Practice calls from the Talk button are always free. Monthly phone number rent is billed separately.</p>
+          <div className="mt-4 overflow-hidden rounded-lg border text-sm"><div className="border-b bg-muted/50 px-3 py-1.5 text-xs font-medium text-soft">Price per minute by minutes used this month</div>
+            {(s.slabs as unknown as { up_to: number; rate: number }[]).map((x, i, all) => {
+              const from = i === 0 ? 0 : all[i - 1].up_to
+              const here = s.price_per_min === x.rate && (i === 0 || s.next_rate_at === null || s.next_rate_at === x.up_to)
+              return <div key={x.up_to} className={cn('flex justify-between px-3 py-1.5', here && 'bg-accent-soft font-semibold text-accent')}><span>{from.toLocaleString('en-IN')} – {x.up_to.toLocaleString('en-IN')} min</span><span className="num">{fmt(x.rate, s.currency)}</span></div>
+            })}
+            <div className="border-t px-3 py-1.5 text-xs text-soft">More than {s.contact_sales_above.toLocaleString('en-IN')} minutes a month? Talk to us for enterprise pricing.</div></div>
+          {s.next_rate_at && <p className="mt-2 text-xs text-soft">{Math.max(0, Math.round(s.next_rate_at - s.month_minutes)).toLocaleString('en-IN')} more minutes this month and the price drops to {fmt(s.next_rate ?? 0, s.currency)}.</p>}
+          <p className="mt-3 text-xs text-soft">Practice calls from the Talk button are charged at the same price. Monthly phone number rent is billed separately.</p>
         </Card>
       </div>
 

@@ -10,6 +10,7 @@ import { AdvancedOnly, EmptyState, PageHeader, StatusBadge, TableSkeleton, Wavef
 import { api } from '@/lib/api'
 import { useUI } from '@/store/ui'
 import { callSearch } from '@/lib/api/calls'
+import { RecordingPlayer } from '@/components/RecordingPlayer'
 import { useData } from '@/store/data'
 import { download, fmtDur, money, cn } from '@/lib/utils'
 import type { Call } from '@/mock/types'
@@ -96,12 +97,12 @@ export function CallDetail() {
             {USE_MOCKS ? (
               <WaveformPlayer duration={call.duration} time={t} playing={playing} onToggle={() => setPlaying(!playing)} onSeek={(x) => setT(Math.max(0, Math.min(call.duration, x)))} segments={call.turns} seed={+call.id.slice(1)} />
             ) : call.audioUrl ? (
-              <audio controls preload="none" src={call.audioUrl} className="w-full" aria-label="Call recording" />
+              <RecordingPlayer src={call.audioUrl} time={t} onTime={setT} />
             ) : (
               <p className="text-sm text-soft">There's no recording for this call.</p>
             )}
             {USE_MOCKS && <div className="num mt-2 text-right text-xs text-soft">{fmtDur(t)} / {fmtDur(call.duration)}</div>}
-            <div className="mt-4 max-h-[320px] space-y-2 overflow-y-auto" aria-label="Transcript">
+            <div className="mt-4 max-h-[320px] space-y-1 overflow-y-auto pr-1" aria-label="Transcript">
               {call.turns.map((x, i) => <button key={i} ref={x === active ? lineRef : undefined} onClick={() => setT(x.t)} className={cn('flex w-full gap-3 rounded-lg p-2.5 text-left text-sm transition hover:bg-muted', x === active && 'bg-accent-soft')}>
                 <span className="num w-10 shrink-0 text-xs text-soft">{fmtDur(x.t)}</span><span className={cn('w-14 shrink-0 text-xs font-semibold', x.who === 'agent' ? 'text-accent' : 'text-warn')}>{x.who === 'agent' ? 'Agent' : 'Caller'}</span><span className="flex-1">{x.text}{x.tool && <Badge tone="gray" className="ml-2">🔧 {x.tool}</Badge>}</span></button>)}
             </div>

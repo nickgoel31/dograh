@@ -95,6 +95,7 @@ async def agents(ctx: Ctx = Depends(key_ctx)):
 async def calls(page: int = 1, limit: int = 25, agent: str | None = None, ctx: Ctx = Depends(key_ctx)):
     page, limit = max(1, page), max(1, min(limit, 100))
     ags = await cr._agents(ctx)
+    await cr._load_rate(ctx)
     stmt = cr._scope(ctx)
     if agent:
         wid = next((w for w, a in ags.items() if a.public_id == agent), None)

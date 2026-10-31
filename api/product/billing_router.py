@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from api.db.product_models import ProductAgentModel, ProductInvoiceModel, ProductPaymentModel, ProductWorkspaceModel
 from api.product import billing as bl
-from api.product import config, emailer
+from api.product import config, emailer, pricing, rates
 from api.product.deps import Ctx, get_ctx, get_session, require
 from api.product.notifications import notify
 from api.product.errors import product_error
@@ -44,6 +44,10 @@ class SummaryOut(BaseModel):
     low_balance: bool
     settings: SettingsOut
     payments_enabled: bool
+    slabs: list[dict] = []
+    next_rate_at: int | None = None
+    next_rate: float | None = None
+    contact_sales_above: int = 100000
 
 
 class SettingsBody(BaseModel):
@@ -117,6 +121,9 @@ async def summary(ctx: Ctx = Depends(require(Perm.BILLING_MANAGE)), wallet: Wall
     w = await wallet.summary(ctx.workspace.live_org_id)
     start, end = bl.month_bounds(bl.current_period())
     entries = await bl.usage_entries(ctx.session, ctx.workspace.live_org_id, start, end)
+    used = sum(e["minutes"] for e in entries)
+    rate, nxt = pricing.rate_for(used), pricing.next_step(used)
+    await rates.sync_org_rate(ctx.session, ctx.workspace)
     value = round(sum(e["value"] for e in entries), 2)
     state = bl.limit_state(s.spend_limit, value)
     period = bl.current_period()
@@ -128,11 +135,12 @@ async def summary(ctx: Ctx = Depends(require(Perm.BILLING_MANAGE)), wallet: Wall
         await notify(ctx.session, ctx.workspace.id, "balance", "Your balance is running low", "Add money to keep taking calls.", "/billing", f"low:{datetime.now(UTC).strftime('%Y-%m-%d')}")
     await ctx.session.commit()
     return SummaryOut(
-        currency=config.CURRENCY, price_per_min=config.PRICE_PER_MIN, free_mode=ctx.environment == "test",
+        currency=config.CURRENCY, price_per_min=rate, free_mode=False,
         balance=float(w.get("balance", 0)), minutes_available=float(w.get("minutes_available", 0)),
         month_usage_value=value, month_minutes=round(sum(e["minutes"] for e in entries), 2), spend_limit=s.spend_limit,
         limit_state=bl.limit_state(s.spend_limit, value), low_balance=bool(w.get("low_balance")),
         settings=_settings_out(s), payments_enabled=get_payments() is not None,
+        slabs=[{"up_to": a, "rate": b} for a, b in pricing.slabs()], next_rate_at=(nxt[0] if nxt else None), next_rate=(nxt[1] if nxt else None), contact_sales_above=pricing.contact_sales_above(),
     )
 
 

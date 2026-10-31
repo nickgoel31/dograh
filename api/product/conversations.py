@@ -130,6 +130,31 @@ def build_transcript(events: list[dict] | None) -> list[dict]:
                 pending_latency += float(p.get("ttfb_seconds") or 0)
             except (TypeError, ValueError):
                 pass
+    return _timed(turns)
+
+
+def _timed(turns: list[dict]) -> list[dict]:
+    """Give every turn a real start and end, and a reply time where the platform recorded none.
+
+    A caller's turn is stamped when their words were finalised (the moment they stopped), so their speech is
+    placed just before that, sized by how many words they said. An agent's turn starts at its first words and
+    runs a little past its last. The reply time is the gap between the caller stopping and the agent starting.
+    """
+    for i, t in enumerate(turns):
+        prev_end = turns[i - 1]["end"] if i else 0.0
+        if t["who"] == "caller":
+            words = max(1, len((t["text"] or "").split()))
+            stop = t["t"]
+            t["t"], t["end"] = round(min(stop, max(prev_end, stop - min(0.45 * words, 12.0))), 2), round(stop, 2)
+        else:
+            t["end"] = round(max(t["end"], t["t"]) + 0.8, 2)
+            if i and turns[i - 1]["who"] == "caller" and "reply" not in t:
+                gap = t["t"] - turns[i - 1]["end"]
+                if 0 < gap <= 30:
+                    t["reply"] = round(gap, 2)
+    for i in range(len(turns) - 1):  # nobody talks over a turn that has not started yet
+        if turns[i]["who"] == "agent" and turns[i]["end"] > turns[i + 1]["t"] and turns[i + 1]["t"] > turns[i]["t"]:
+            turns[i]["end"] = turns[i + 1]["t"]
     return turns
 
 

@@ -10919,6 +10919,42 @@
           "payments_enabled": {
             "type": "boolean",
             "title": "Payments Enabled"
+          },
+          "slabs": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Slabs",
+            "default": []
+          },
+          "next_rate_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Rate At"
+          },
+          "next_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Rate"
+          },
+          "contact_sales_above": {
+            "type": "integer",
+            "title": "Contact Sales Above",
+            "default": 100000
           }
         },
         "type": "object",
