@@ -10,8 +10,10 @@ APP_DIR="${APP_DIR:-$HOME/dograh}"
 cd "$APP_DIR"
 
 read -r -p "Email of your main Swarvo account: " EMAIL
-read -r -s -p "Inworld API key (press Enter to keep the current one): " INWORLD_KEY; echo
-read -r -s -p "Google API key (press Enter to skip / keep the current one): " GOOGLE_KEY; echo
+S="-s"; [ "${SHOW_KEYS:-}" = "1" ] && S=""   # SHOW_KEYS=1 shows what you type, in case pasting into a hidden prompt does not work
+read -r $S -p "Inworld API key (press Enter to keep the current one): " INWORLD_KEY; echo
+read -r $S -p "Google API key (press Enter to skip / keep the current one): " GOOGLE_KEY; echo
+echo "Got ${#INWORLD_KEY} characters for the Inworld key and ${#GOOGLE_KEY} for the Google key."
 
 sudo docker exec -e INWORLD_API_KEY="$INWORLD_KEY" -e GOOGLE_API_KEY="$GOOGLE_KEY" dograh-api-1 python -m api.product.make_profile --email "$EMAIL"
 
