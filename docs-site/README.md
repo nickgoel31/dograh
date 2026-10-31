@@ -42,34 +42,7 @@ python -m api.product.export_openapi vocalis-web/openapi.json   # the app's own,
 ```
 
 ## Deploy (operator)
-The site is static. Build the image from the repo root:
-
-```bash
-```
-
-Example service to add to your compose file (documented only; the shipped `docker-compose.yaml` is unchanged):
-
-```yaml
-  docs:
-    image: swarvo-docs
-    restart: unless-stopped
-```
-
-Example nginx server block for `docs.swarvoai.com` (compare `deploy/templates/nginx.remote.conf.template`, which serves the app and proxies `/new/`). You also need a DNS record and a certificate for the new name:
-
-```nginx
-server {
-  listen 443 ssl;
-  server_name docs.swarvoai.com;
-  # ssl_certificate lines as for the app
-  location / {
-    set $docs_upstream http://docs:80;
-    proxy_pass $docs_upstream;
-  }
-}
-```
-
-Set `DOCS_SITE_URL` when building if the address differs. Replace the placeholder edit-link address `https://github.com/OWNER/REPO/...` in `astro.config.mjs`.
+The site is plain static files. Run `npm run build` and serve the `dist/` folder from any static host or from your existing nginx under `docs.swarvoai.com` (compare `deploy/templates/nginx.remote.conf.template`, which serves the app). You need a DNS record and certificate for the new name. Set `DOCS_SITE_URL` when building if the address differs, and replace the placeholder edit-link address `https://github.com/OWNER/REPO/...` in `astro.config.mjs`. No Docker files are included.
 
 ## Notes
 - The OpenAPI plugin cannot read files from folders whose path contains a space, so `astro.config.mjs` copies the spec to a temporary folder when it has to.
