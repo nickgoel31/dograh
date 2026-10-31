@@ -11,6 +11,7 @@ from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from api.db.models import WorkflowModel, WorkflowRunModel
 from api.db.product_models import ProductSettingsModel, ProductWorkspaceModel
@@ -35,9 +36,13 @@ def mask_phone(phone: str | None) -> str | None:
 async def get_settings(session, workspace_id: int) -> ProductSettingsModel:
     row = await session.get(ProductSettingsModel, workspace_id)
     if row is None:
-        row = ProductSettingsModel(workspace_id=workspace_id, record_calls=True, redact_pii=False)
-        session.add(row)
-        await session.flush()
+        try:  # two requests can arrive together on a new workspace; the loser reads the winner's row
+            async with session.begin_nested():
+                row = ProductSettingsModel(workspace_id=workspace_id, record_calls=True, redact_pii=False)
+                session.add(row)
+            await session.flush()
+        except IntegrityError:
+            row = await session.get(ProductSettingsModel, workspace_id)
     return row
 
 

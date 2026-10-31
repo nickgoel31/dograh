@@ -5,6 +5,7 @@ import os
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.db.models import OrganizationModel, WalletLedgerModel
@@ -37,9 +38,13 @@ def seller() -> dict:
 async def get_settings(session: AsyncSession, ws: ProductWorkspaceModel) -> ProductBillingSettingsModel:
     s = await session.get(ProductBillingSettingsModel, ws.id)
     if s is None:
-        s = ProductBillingSettingsModel(workspace_id=ws.id, auto_topup_enabled=False, first_grant_done=False)
-        session.add(s)
-        await session.flush()
+        try:  # two requests can arrive together on a new workspace; the loser reads the winner's row
+            async with session.begin_nested():
+                s = ProductBillingSettingsModel(workspace_id=ws.id, auto_topup_enabled=False, first_grant_done=False)
+                session.add(s)
+            await session.flush()
+        except IntegrityError:
+            s = await session.get(ProductBillingSettingsModel, ws.id)
     return s
 
 
