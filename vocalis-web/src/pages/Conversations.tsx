@@ -16,11 +16,11 @@ import type { Call } from '@/mock/types'
 const outcomes = ['booked', 'resolved', 'qualified', 'transferred', 'voicemail', 'failed', 'no-answer']
 
 export default function ConversationsPage() {
-  const mode = useUI((s) => s.mode)
+  const practice = new URLSearchParams(window.location.search).get('practice') === '1'
   const agents = useData((s) => s.agents)
   const nav = useNavigate()
   const [sp, setSp] = useSearchParams()
-  const { data, loading } = useAsync(() => api.calls(mode), [mode])
+  const { data, loading } = useAsync(() => api.calls(practice ? 'test' : 'live'), [practice])
   const [q, setQ] = React.useState('')
   const [agent, setAgent] = React.useState('')
   const [outcome, setOutcome] = React.useState('')
@@ -52,6 +52,7 @@ export default function ConversationsPage() {
         <Select className="w-auto" value={agent} onChange={(e) => setAgent(e.target.value)} aria-label="Agent"><option value="">All agents</option>{agents.slice(0, 3).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select>
         <Select className="w-auto" value={outcome} onChange={(e) => setOutcome(e.target.value)} aria-label="Result"><option value="">Any result</option>{outcomes.map((o) => <option key={o}>{o}</option>)}</Select>
         <Chip active={failedOnly} onClick={() => setSp(failedOnly ? {} : { failed: '1' })}>Failed only</Chip>
+        <Chip active={practice} onClick={() => setSp(practice ? {} : { practice: '1' })}>Practice calls</Chip>
       </div>
       <Card className="overflow-hidden">
         {loading ? <TableSkeleton /> : rows.length === 0 ? <div className="p-6"><EmptyState emoji="📭" title="No calls match" text="Try clearing a filter to see more calls." action={<Button variant="primary" size="lg" onClick={() => { setQ(''); setAgent(''); setOutcome(''); setSp({}) }}>Clear filters</Button>} /></div> : (

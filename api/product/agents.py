@@ -164,6 +164,13 @@ async def duplicate_agent(
     return copy
 
 
+async def _voice_ready_check(session: AsyncSession, agent: ProductAgentModel) -> list[Check]:
+    v = voice_catalogue.find(agent.voice_id) if agent.voice_id else None
+    if v is None or v.engine not in ("inworld", "google") or await models_config.engine_ready(session, v.engine):
+        return []
+    return [Check("voice_ready", "Your chosen voice is available", "blocker", "This voice isn't available yet. Pick another voice on the Voice tab.")]
+
+
 async def readiness(
     session: AsyncSession, gw: PlatformGateway, ws: ProductWorkspaceModel, agent: ProductAgentModel
 ) -> list[Check]:
@@ -186,6 +193,7 @@ async def readiness(
             "ok" if agent.business.strip() else "warn",
             None if agent.business.strip() else "Callers will hear a generic greeting.",
         ),
+        *await _voice_ready_check(session, agent),
         Check(
             "voice", "A voice is chosen",
             "ok" if agent.voice_id else "warn",

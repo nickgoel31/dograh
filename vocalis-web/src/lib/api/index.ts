@@ -19,7 +19,7 @@ export type { Me, WorkspaceInfo } from './auth'
 const real: Partial<typeof mockApi> = {
   voices: async () => (await voicesApi.list()).map(toVoice),
   // The server scopes calls to the active Test/Live mode itself.
-  calls: () => callsApi.list(),
+  calls: (mode) => callsApi.list(mode === 'test'),
   call: (id: string) => callsApi.get(id),
 }
 

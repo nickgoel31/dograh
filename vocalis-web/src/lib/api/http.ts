@@ -13,7 +13,7 @@ const FALLBACK = 'Something went wrong on our side. Please try again in a moment
 export async function http<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
   const { workspaceId, mode } = useUI.getState()
   const headers = new Headers(init.headers)
-  headers.set('X-Environment', mode)
+  if (!headers.has('X-Environment')) headers.set('X-Environment', mode)
   if (workspaceId) headers.set('X-Workspace', workspaceId)
   let body = init.body
   if (init.json !== undefined) {

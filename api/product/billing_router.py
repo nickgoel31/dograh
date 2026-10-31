@@ -93,6 +93,22 @@ def _settings_out(s) -> SettingsOut:
     )
 
 
+class WalletOut(BaseModel):
+    balance: float
+    minutes_available: float
+    currency: str
+    low_balance: bool
+
+
+@router.get("/wallet", response_model=WalletOut)
+async def wallet_chip(ctx: Ctx = Depends(get_ctx), wallet: WalletGateway = Depends(get_wallet)):
+    """A small balance readout for the page header. Any member may see it."""
+    await bl.ensure_billing(ctx.session, wallet, ctx.workspace)
+    await ctx.session.commit()
+    w = await wallet.summary(ctx.workspace.live_org_id)
+    return WalletOut(balance=float(w.get("balance", 0)), minutes_available=float(w.get("minutes_available", 0)), currency=config.CURRENCY, low_balance=bool(w.get("low_balance")))
+
+
 @router.get("/summary", response_model=SummaryOut)
 async def summary(ctx: Ctx = Depends(require(Perm.BILLING_MANAGE)), wallet: WalletGateway = Depends(get_wallet)):
     await bl.ensure_billing(ctx.session, wallet, ctx.workspace)

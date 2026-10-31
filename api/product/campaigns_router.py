@@ -10,10 +10,10 @@ from typing import Protocol
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import load_only
 
-from api.db.models import WorkflowModel, WorkflowRunModel
+from api.db.models import TelephonyPhoneNumberModel, WorkflowModel, WorkflowRunModel
 from api.db.product_models import ProductAgentModel, ProductCampaignAuditModel
 from api.product import agents as agent_svc
 from api.product import campaigns as camp
@@ -174,6 +174,10 @@ async def create(body: CreateBody, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE)
     agent = await agent_svc.get_agent(ctx.session, ctx.workspace, body.agent_id)
     if agent.live_workflow_id is None or agent.status != "live":
         raise product_error(400, "agent_not_live", "Put this agent live first, then start a campaign with it.")
+    has_number = await ctx.session.scalar(select(func.count()).select_from(TelephonyPhoneNumberModel).where(
+        TelephonyPhoneNumberModel.organization_id == ctx.org_id, TelephonyPhoneNumberModel.is_active.is_(True)))
+    if not has_number:
+        raise product_error(400, "no_number", "Campaigns call from your own phone numbers. Get a number on the Phone Numbers page first.")
     slots = [s.model_dump() for s in body.slots]
     try:
         camp.check_compliance(consent=body.consent_confirmed, dnc_checked=body.dnc_checked, tz=body.timezone, slots=slots)

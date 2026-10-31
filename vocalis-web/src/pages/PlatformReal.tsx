@@ -1,17 +1,19 @@
 /** Real Developers, Team & Settings and Help. Demo versions stay in Developers.tsx and SettingsHelp.tsx for mock mode. */
 import * as React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CheckCircle2, Plus, Search, Send, Sparkles, Trash2, AlertTriangle } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { AlertTriangle, BarChart3, BookOpen, ChevronRight, CheckCircle2, Code2, CreditCard, LifeBuoy, Megaphone, Mic2, Phone, Plus, Rocket, Search, Send, ShieldCheck, Trash2, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Card, Chip, Dialog, Field, Input, Select, Switch, Tab, TabPanel, Tabs, TabsList, Textarea } from '@/components/ui'
 import { CodeBlock, ConfirmDialog, CopyButton, PageHeader, Row, TableSkeleton } from '@/components/shared'
-import { platformApi as P, type Hook } from '@/lib/api/platform'
+import { platformApi as P, type Article, type Hook } from '@/lib/api/platform'
 import { API_URL, BASE } from '@/lib/api/env'
 import { useMe } from '@/lib/useMe'
 import { useData } from '@/store/data'
 import { useUI } from '@/store/ui'
 import { BRAND } from '@/config/brand'
+import { cn } from '@/lib/utils'
 
 const say = (e: unknown) => toast.error(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
 const apiBase = () => (API_URL.startsWith('http') ? API_URL : `${window.location.origin}${API_URL}`)
@@ -244,34 +246,95 @@ export function AcceptInvite() {
 }
 
 /* ---------------- Help ---------------- */
+const SECTION_ICON: Record<string, LucideIcon> = {
+  'Getting started': Rocket, 'Phone numbers': Phone, Billing: CreditCard, Campaigns: Megaphone, 'Knowledge and tools': BookOpen,
+  Insights: BarChart3, Developers: Code2, Team: Users, Account: ShieldCheck, Voices: Mic2,
+}
+const SUGGESTIONS = ['Put my agent live', 'Get a phone number', 'Add money', 'Call a list of people', 'Choose a voice']
+
 export function HelpReal() {
   const [q, setQ] = React.useState('')
   const [dq, setDq] = React.useState('')
+  const [section, setSection] = React.useState<string | null>(null)
+  const [open, setOpen] = React.useState<Article | null>(null)
   React.useEffect(() => { const t = setTimeout(() => setDq(q), 250); return () => clearTimeout(t) }, [q])
-  const arts = useQuery({ queryKey: ['help', dq], queryFn: () => P.articles(dq) })
+  const all = useQuery({ queryKey: ['help', ''], queryFn: () => P.articles('') })
+  const found = useQuery({ queryKey: ['help', dq], queryFn: () => P.articles(dq), enabled: !!dq.trim() })
   const status = useQuery({ queryKey: ['help-status'], queryFn: P.status })
-  const [open, setOpen] = React.useState<string | null>(null)
+  const [tab, setTab] = React.useState<'ask' | 'write'>('ask')
   const [question, setQuestion] = React.useState('')
   const ask = useMutation({ mutationFn: () => P.ask(question), onError: say })
   const [c, setC] = React.useState({ subject: '', body: '' })
   const send = useMutation({ mutationFn: () => P.contact(c.subject, c.body), onSuccess: (r) => { toast.success(r.message); setC({ subject: '', body: '' }) }, onError: say })
-  const bad = status.data?.filter((s) => s.state === 'down') ?? []
+  const sections = [...new Set((all.data ?? []).map((a) => a.section))]
+  const searching = !!dq.trim()
+  const list = searching ? (found.data ?? []) : section ? (all.data ?? []).filter((a) => a.section === section) : []
+  const bad = status.data?.filter((x) => x.state === 'down') ?? []
   return (
     <>
-      <PageHeader title="How can we help?" actions={status.data && (bad.length ? <Badge tone="red" className="px-3 py-1.5 text-sm"><AlertTriangle size={14} />Some things are down</Badge> : <Badge tone="green" className="px-3 py-1.5 text-sm"><CheckCircle2 size={14} />Everything we can check is working</Badge>)} />
-      <Card className="mb-6 max-w-2xl p-6"><h3 className="flex items-center gap-2 font-semibold"><Sparkles size={16} className="text-accent" />Ask the helper</h3>
-        <p className="mt-1 text-[13px] text-soft">It answers from our help pages only.</p>
-        <form className="mt-3 flex gap-2" onSubmit={(e) => { e.preventDefault(); if (question.trim()) ask.mutate() }}><Input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="e.g. How do I put my agent live?" aria-label="Your question" /><Button variant="primary" disabled={ask.isPending}>{ask.isPending ? 'Thinking…' : 'Ask'}</Button></form>
-        {ask.data && <div className="mt-4 rounded-lg bg-muted/50 p-4 text-sm"><p>{ask.data.answer}</p>{!ask.data.from_ai && ask.data.articles.length > 0 && <p className="mt-2 text-xs text-soft">Showing the closest help page.</p>}</div>}</Card>
-      <div className="relative mb-6 max-w-xl"><Search size={16} className="absolute left-3 top-3 text-soft" /><Input className="h-11 pl-10" placeholder="Search help…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search help" /></div>
-      <div className="grid gap-3 lg:grid-cols-2">{arts.data?.length === 0 ? <p className="text-sm text-soft">Nothing matches. Try other words, or send us a message below.</p> : arts.data?.map((a) => (
-        <Card key={a.id} className="p-4"><button className="w-full text-left" onClick={() => setOpen(open === a.id ? null : a.id)}><div className="text-xs text-soft">{a.section}</div><div className="font-medium">{a.title}</div></button>{open === a.id && <p className="mt-2 text-sm text-soft">{a.body}</p>}</Card>))}</div>
-      <h2 className="mb-3 mt-10 font-semibold">System status</h2>
-      <Card className="max-w-xl divide-y">{status.data?.map((s) => <div key={s.name} className="flex items-center justify-between gap-4 p-3 text-sm"><span><b>{s.name}</b><span className="ml-2 text-soft">{s.detail}</span></span><Badge tone={s.state === 'ok' ? 'green' : s.state === 'down' ? 'red' : 'gray'}>{s.state === 'ok' ? 'Working' : s.state === 'down' ? 'Down' : 'Not set up'}</Badge></div>)}</Card>
-      <Card className="mt-10 max-w-xl p-6"><h3 className="font-semibold">Contact support</h3><div className="mt-3 space-y-3">
-        <Input placeholder="Subject" aria-label="Subject" value={c.subject} onChange={(e) => setC({ ...c, subject: e.target.value })} />
-        <Textarea placeholder="Tell us what's happening…" aria-label="Message" value={c.body} onChange={(e) => setC({ ...c, body: e.target.value })} />
-        <Button variant="primary" disabled={!c.subject.trim() || !c.body.trim() || send.isPending} onClick={() => send.mutate()}>Send</Button></div></Card>
+      <div className="mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-accent to-[#8b5cf6] p-8 text-white md:p-10">
+        <div className="mb-1 flex items-center gap-2 text-sm text-white/80"><LifeBuoy size={16} />{BRAND} Help</div>
+        <h1 className="text-3xl font-semibold tracking-tight">How can we help?</h1>
+        <div className="relative mt-5 max-w-2xl"><Search size={18} className="absolute left-4 top-3.5 text-soft" />
+          <Input className="h-12 bg-surface pl-11 text-base text-ink" placeholder="Search for an answer, like “add a phone number”" value={q} onChange={(e) => { setQ(e.target.value); setSection(null) }} aria-label="Search help" /></div>
+        <div className="mt-4 flex flex-wrap gap-2">{SUGGESTIONS.map((x) => <button key={x} onClick={() => { setQ(x); setSection(null) }} className="rounded-full bg-white/15 px-3 py-1 text-[13px] hover:bg-white/25">{x}</button>)}</div>
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
+        <div>
+          {!searching && !section && (
+            <>
+              <h2 className="mb-3 font-semibold">Browse by topic</h2>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{sections.map((sec) => { const Icon = SECTION_ICON[sec] ?? BookOpen; const n = (all.data ?? []).filter((a) => a.section === sec).length
+                return <button key={sec} onClick={() => setSection(sec)} className="flex items-center gap-3 rounded-xl border bg-surface p-4 text-left shadow-card transition hover:border-accent">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-soft text-accent"><Icon size={19} /></span>
+                  <span><span className="block font-medium">{sec}</span><span className="text-xs text-soft">{n} {n === 1 ? 'article' : 'articles'}</span></span></button> })}</div>
+              <h2 className="mb-3 mt-8 font-semibold">Popular questions</h2>
+              <div className="divide-y rounded-xl border bg-surface">{(all.data ?? []).slice(0, 6).map((a) => <button key={a.id} onClick={() => setOpen(a)} className="flex w-full items-center justify-between gap-3 p-4 text-left hover:bg-muted/50"><span className="font-medium">{a.title}</span><ChevronRight size={16} className="shrink-0 text-soft" /></button>)}</div>
+            </>
+          )}
+          {(searching || section) && (
+            <>
+              <div className="mb-3 flex items-center justify-between"><h2 className="font-semibold">{searching ? `Results for “${dq}”` : section}</h2>
+                <Button variant="ghost" size="sm" onClick={() => { setQ(''); setSection(null) }}>Back to topics</Button></div>
+              {list.length === 0 && !found.isPending ? <Card className="p-8 text-center text-soft">We couldn't find that. Try different words, or ask the helper or write to us on the right.</Card> : (
+                <div className="divide-y rounded-xl border bg-surface">{list.map((a) => <button key={a.id} onClick={() => setOpen(a)} className="block w-full p-4 text-left hover:bg-muted/50"><div className="text-xs text-soft">{a.section}</div><div className="font-medium">{a.title}</div><p className="mt-1 line-clamp-2 text-sm text-soft">{a.body}</p></button>)}</div>)}
+            </>
+          )}
+          <div className="mt-8 flex flex-wrap items-center gap-2 text-sm text-soft">
+            {status.data && (bad.length ? <Badge tone="red"><AlertTriangle size={12} />Something is down</Badge> : <Badge tone="green"><CheckCircle2 size={12} />All systems working</Badge>)}
+            {status.data?.filter((x) => x.state !== 'ok').map((x) => <span key={x.name}>{x.name}: {x.detail}</span>)}
+          </div>
+        </div>
+
+        <aside>
+          <Card className="p-5">
+            <h3 className="font-semibold">Still stuck?</h3>
+            <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 text-[13px] font-medium">
+              {([['ask', 'Ask the helper'], ['write', 'Write to us']] as const).map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={cn('rounded-md py-1.5', tab === k ? 'bg-surface shadow-card' : 'text-soft')}>{l}</button>)}</div>
+            {tab === 'ask' ? (
+              <div className="mt-4">
+                <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (question.trim()) ask.mutate() }}>
+                  <Input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask in your own words" aria-label="Your question" /><Button variant="primary" disabled={ask.isPending}>{ask.isPending ? '…' : 'Ask'}</Button></form>
+                {ask.data && <div className="mt-3 rounded-lg bg-muted/60 p-3 text-sm"><p>{ask.data.answer}</p>
+                  {ask.data.articles.slice(0, 2).map((a) => <button key={a.id} onClick={() => setOpen(a)} className="mt-2 block text-left text-xs text-accent hover:underline">Read: {a.title}</button>)}</div>}
+                <p className="mt-3 text-xs text-soft">The helper answers from our help articles only.</p>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                <Input placeholder="What is this about?" aria-label="Subject" value={c.subject} onChange={(e) => setC({ ...c, subject: e.target.value })} />
+                <Textarea placeholder="Tell us what's happening" aria-label="Message" value={c.body} onChange={(e) => setC({ ...c, body: e.target.value })} />
+                <Button variant="primary" className="w-full" disabled={!c.subject.trim() || !c.body.trim() || send.isPending} onClick={() => send.mutate()}>Send message</Button>
+                <p className="text-xs text-soft">We reply to your account email.</p>
+              </div>)}
+          </Card>
+        </aside>
+      </div>
+
+      <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)} title={open?.title ?? ''} description={open?.section}>
+        <p className="whitespace-pre-line text-[15px] leading-relaxed">{open?.body}</p>
+        <div className="mt-5 flex items-center gap-2 border-t pt-4 text-sm text-soft">Not what you needed? <button className="text-accent hover:underline" onClick={() => { setOpen(null); setTab('write') }}>Write to us</button></div>
+      </Dialog>
     </>
   )
 }

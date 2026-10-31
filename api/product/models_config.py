@@ -27,6 +27,38 @@ from api.product import voices as voice_catalogue
 
 PRESETS = ("fast", "balanced", "smartest")
 
+# The AI model behind each Brain level on the 'inworld' realtime profile. Override with PRODUCT_INWORLD_MODELS (JSON).
+INWORLD_BRAINS = {
+    "fast": "google-ai-studio/gemini-2.5-flash-lite",
+    "balanced": "google-ai-studio/gemini-3.1-flash-lite",
+    "smartest": "google-ai-studio/gemini-3.8-flash",
+}
+
+
+def inworld_model(brain: str) -> str:
+    try:
+        custom = json.loads(os.getenv("PRODUCT_INWORLD_MODELS", "") or "{}")
+    except ValueError:
+        custom = {}
+    return (custom.get(brain) if isinstance(custom, dict) else None) or INWORLD_BRAINS.get(brain) or INWORLD_BRAINS["balanced"]
+
+
+async def engine_profile(session: AsyncSession, engine: str) -> ModelProfileModel | None:
+    """The profile that serves a voice engine ('inworld' / 'google'), mapped in PRODUCT_PROFILES."""
+    return await _by_slug(session, profile_slugs().get(engine))
+
+
+async def engine_ready(session: AsyncSession, engine: str) -> bool:
+    """True when that engine's profile exists and has an API key."""
+    prof = await engine_profile(session, engine)
+    rt = (prof.config or {}).get("realtime") if prof else None
+    return bool(rt and rt.get("api_key"))
+
+
+def brain_applies(engine: str | None) -> bool:
+    """Brain levels pick the AI model on the 'inworld' engine only; the Google realtime model is a single model."""
+    return engine != "google"
+
 
 def profile_slugs() -> dict[str, str]:
     try:
@@ -75,12 +107,26 @@ async def build_overrides(session: AsyncSession, *, brain: str, voice_id: str | 
         return None
     overrides: dict = {}
 
+    voice = voice_catalogue.find(voice_id) if voice_id else None
+    if voice is not None and voice.engine in ("inworld", "google"):
+        prof = await engine_profile(session, voice.engine)
+        rt = (prof.config or {}).get("realtime") if prof else None
+        if not rt:
+            return None
+        rt = deepcopy(rt)
+        rt["voice"] = voice.tts["voice"]
+        if voice.engine == "inworld":
+            rt["model"] = inworld_model(brain)
+        return {"is_realtime": True, "realtime": rt}
+    rt = (base.config or {}).get("realtime")
+    if voice is None and rt and rt.get("provider") == "inworld_realtime":  # no voice picked: the profile's own voice, at the chosen Brain level
+        return {"is_realtime": True, "realtime": {**deepcopy(rt), "model": inworld_model(brain)}}
+
     chosen = await _by_slug(session, profile_slugs().get(brain))
     llm = (chosen.config or {}).get("llm") if chosen else None
     if chosen is not None and chosen.id != base.id and llm:
         overrides["llm"] = deepcopy(llm)
 
-    voice = voice_catalogue.find(voice_id) if voice_id else None
     tts = (base.config or {}).get("tts")
     if voice is not None and tts and tts.get("provider") == voice.tts.get("provider"):
         merged = deepcopy(tts)

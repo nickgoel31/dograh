@@ -31,6 +31,34 @@ const versions = [
 ]
 const Q = ({ title, children, hint }: { title: string; children: React.ReactNode; hint?: string }) => <Card className="p-6"><h3 className="font-semibold">{title}</h3>{hint && <p className="mb-4 mt-0.5 text-[13px] text-soft">{hint}</p>}<div className={hint ? '' : 'mt-4'}>{children}</div></Card>
 
+/** Search and choose among hundreds of voices. Voices that aren't set up yet are shown but can't be picked. */
+function VoicePick({ voices, value, onPick }: { voices: import('@/mock/types').Voice[]; value: string; onPick: (id: string) => void }) {
+  const [q, setQ] = React.useState('')
+  const [lang, setLang] = React.useState('')
+  const [gender, setGender] = React.useState('')
+  const [shown, setShown] = React.useState(24)
+  const langs = [...new Set(voices.map((v) => v.lang))].sort()
+  const list = voices.filter((v) => (!lang || v.lang === lang) && (!gender || v.gender === gender) && (!q || `${v.name} ${v.style} ${v.description ?? ''}`.toLowerCase().includes(q.toLowerCase())))
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <Input className="w-56" placeholder="Search voices" aria-label="Search voices" value={q} onChange={(e) => { setQ(e.target.value); setShown(24) }} />
+        <Select className="w-auto" value={lang} onChange={(e) => { setLang(e.target.value); setShown(24) }} aria-label="Language"><option value="">All languages</option>{langs.map((l) => <option key={l}>{l}</option>)}</Select>
+        <Select className="w-auto" value={gender} onChange={(e) => { setGender(e.target.value); setShown(24) }} aria-label="Gender"><option value="">Any gender</option><option>Female</option><option>Male</option></Select>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{list.slice(0, shown).map((v) => (
+        <button key={v.id} disabled={v.available === false} onClick={() => onPick(v.id)} title={v.description}
+          className={cn('flex items-center gap-3 rounded-xl border p-3 text-left transition', value === v.id ? 'border-accent bg-accent-soft' : 'hover:border-accent', v.available === false && 'cursor-not-allowed opacity-50')}>
+          <div className="min-w-0 flex-1"><div className="font-medium">{v.name}</div><div className="truncate text-xs text-soft">{[v.lang, v.gender, v.style].filter(Boolean).join(' · ')}</div></div>
+          {v.available === false ? <Badge tone="accent">Soon</Badge> : value === v.id && <Check size={16} className="text-accent" />}
+        </button>))}
+        {list.length === 0 && <p className="text-sm text-soft">No voices match. Try other words.</p>}
+      </div>
+      {list.length > shown && <Button variant="ghost" className="mt-3" onClick={() => setShown(shown + 24)}>Show more ({list.length - shown} left)</Button>}
+    </div>
+  )
+}
+
 export default function AgentDetail() {
   const { id } = useParams()
   const nav = useNavigate()
@@ -38,6 +66,7 @@ export default function AgentDetail() {
   const agent = useData((s) => s.agents.find((a) => a.id === id))
   const updateAgent = useData((s) => s.updateAgent)
   const voices = useAsync(() => api.voices(), []).data ?? []
+  const advanced = useUI((s) => s.view) === 'advanced'
   const upsertAgent = useData((s) => s.upsertAgent)
   // The list omits the prompt and edit version; load them when an agent is opened.
   React.useEffect(() => {
@@ -109,7 +138,7 @@ export default function AgentDetail() {
         <Button onClick={() => setUI({ playground: agent.id })}><Mic size={15} />Talk</Button>
         <Button variant="primary" onClick={() => setSp({ tab: 'publish' })}><Rocket size={15} />Go live</Button></>} />
       <Tabs value={tab} onValueChange={(t) => setSp({ tab: t })}>
-        <TabsList>{['personality', 'voice', 'brain', 'knowledge', 'tools', 'flow', 'behavior', 'phone', 'test', 'versions', 'publish'].map((t) => <Tab key={t} value={t} className="capitalize">{t === 'flow' ? 'Call flow' : t}</Tab>)}</TabsList>
+        <TabsList>{['personality', 'voice', 'brain', 'knowledge', 'tools', 'flow', 'behavior', 'phone', 'test', 'versions', 'publish'].filter((t) => (t !== 'brain' || voice.brainLevels !== false) && (advanced || !['flow', 'behavior', 'versions'].includes(t) || t === tab)).map((t) => <Tab key={t} value={t} className="capitalize">{t === 'flow' ? 'Call flow' : t}</Tab>)}</TabsList>
 
         <TabPanel value="personality"><SimpleAdvanced
           simple={<Q title="Who is your agent?" hint="Just fill in the blanks. We write the instructions for you.">
@@ -121,14 +150,12 @@ export default function AgentDetail() {
             <Textarea className="min-h-[280px] font-mono text-[13px]" value={d.prompt} onChange={(e) => up({ prompt: e.target.value })} aria-label="Prompt" /></Q>} /></TabPanel>
 
         <TabPanel value="voice"><Q title="Pick a voice" hint="Press play to hear each one.">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{voices.slice(0, 9).map((v) => (
-            <div key={v.id} className={cn('flex items-center gap-3 rounded-xl border p-3', d.voiceId === v.id && 'border-accent bg-accent-soft')}>
-              <Button size="icon" variant="secondary" className="rounded-full" aria-label={`Play ${v.name}`} onClick={() => speak(`Hello, I'm ${v.name}. How can I help you today?`, { female: v.gender === 'Female' })}><Play size={14} /></Button>
-              <button className="flex-1 text-left" onClick={() => up({ voiceId: v.id })}><div className="font-medium">{v.name}</div><div className="text-xs text-soft">{v.lang} · {v.style}</div></button>{d.voiceId === v.id && <Check size={16} className="text-accent" />}</div>))}</div>
+          <VoicePick voices={voices} value={d.voiceId} onPick={(id) => up({ voiceId: id })} />
+          {USE_MOCKS && <>
           <div className="mt-6 grid gap-6 sm:grid-cols-3">
             <Field label="Language"><Select defaultValue={voice.lang}>{[...new Set(voices.map((v) => v.lang))].map((l) => <option key={l}>{l}</option>)}</Select></Field>
             <Field label="Speaking speed" hint={<span className="text-xs text-soft">{d.speed < 40 ? 'Slow' : d.speed > 60 ? 'Fast' : 'Normal'}</span>}><Slider value={d.speed} onChange={(v) => up({ speed: v })} label="Speed" /></Field>
-            <Field label="Mood"><Select value={d.emotion} onChange={(e) => up({ emotion: e.target.value })}>{['Warm', 'Calm', 'Cheerful', 'Serious'].map((l) => <option key={l}>{l}</option>)}</Select></Field></div></Q></TabPanel>
+            <Field label="Mood"><Select value={d.emotion} onChange={(e) => up({ emotion: e.target.value })}>{['Warm', 'Calm', 'Cheerful', 'Serious'].map((l) => <option key={l}>{l}</option>)}</Select></Field></div></>}</Q></TabPanel>
 
         <TabPanel value="brain"><SimpleAdvanced
           simple={<div className="grid gap-4 md:grid-cols-3">{brainCards.map(([k, t, p, b]) => <button key={k} onClick={() => up({ brain: k })} className={cn('rounded-xl border bg-surface p-5 text-left shadow-card transition hover:border-accent', d.brain === k && 'border-accent ring-2 ring-accent/20')}><div className="text-lg font-semibold">{t}</div><p className="mt-1 text-soft">{p}</p><Badge tone="accent" className="mt-3">{b}</Badge></button>)}</div>}

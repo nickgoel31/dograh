@@ -5,6 +5,7 @@ export interface Agent {
   callsToday: number; successRate: number; spark: number[]
   voiceId: string; brain: 'fast' | 'balanced' | 'smartest'; tone: string; business: string; whatYouDo: string
   prompt: string; numbers: string[]
+  brainApplies?: boolean // false when the chosen voice runs on one fixed AI model
 }
 export type Outcome = 'booked' | 'resolved' | 'qualified' | 'transferred' | 'voicemail' | 'failed' | 'no-answer'
 export interface Turn { who: 'agent' | 'caller'; t: number; end: number; text: string; reply?: number; tool?: string; interrupted?: boolean }
@@ -17,6 +18,7 @@ export interface Call {
 export interface Voice {
   id: string; name: string; gender: 'Female' | 'Male' | ''; age: 'Young' | 'Adult' | 'Mature' | ''; lang: string
   accent: string; style: string; provider: string
+  available?: boolean; description?: string; brainLevels?: boolean
 }
 export interface PhoneNumber {
   id: string; number: string; country: string; type: 'Local' | 'Toll-free' | 'SIP'; agentId?: string

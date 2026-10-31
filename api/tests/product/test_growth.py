@@ -212,6 +212,15 @@ async def test_campaign_flow_gate_audit_counters_and_scope(client):
     assert (await client.post("/product/campaigns", json=body, headers=ha)).json()["detail"]["code"] == "live_only"
     assert (await client.post("/product/campaigns", json=body, headers=live)).json()["detail"]["code"] == "agent_not_live"
     await client.post(f"/product/agents/{aid}/publish", headers=ha)
+    assert (await client.post("/product/campaigns", json=body, headers=live)).json()["detail"]["code"] == "no_number"  # campaigns call from the customer's own numbers
+    async with client.session_factory() as s:
+        ws = (await s.execute(select(product_models.ProductWorkspaceModel))).scalars().first()
+        cfg = models.TelephonyConfigurationModel(organization_id=ws.live_org_id, name="c", provider="twilio", credentials={})
+        s.add(cfg)
+        await s.flush()
+        s.add(models.TelephonyPhoneNumberModel(organization_id=ws.live_org_id, telephony_configuration_id=cfg.id, address="+919800000001", address_normalized="919800000001",
+                                               address_type="PSTN", country_code="IN", is_active=True))
+        await s.commit()
     for patch, code in (({"consent_confirmed": False}, "compliance_blocked"), ({"dnc_checked": False}, "compliance_blocked"),
                         ({"slots": [{"day_of_week": 1, "start_time": "05:00", "end_time": "09:00"}]}, "compliance_blocked"), ({"csv_text": "a,b\n1,2\n"}, "compliance_blocked")):
         r = await client.post("/product/campaigns", json={**body, **patch}, headers=live)

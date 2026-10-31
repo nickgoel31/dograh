@@ -3,21 +3,25 @@
 ARTICLES = [
     ("start-agent", "Create your first agent", "Getting started",
      "Open Agents and press New agent. Pick a starting point (for example Receptionist or Appointment booker), tell us about your business, and choose a voice. "
-     "Use the Test call button to talk to your agent from your browser. Test calls are free and never reach real people."),
-    ("test-live", "Test mode and Live mode", "Getting started",
-     "Test mode is a safe copy: calls are free and only happen in your browser. Live mode is the real thing: real phone calls that use your minutes or balance. "
-     "Switch with the Test/Live toggle at the top. Edit and try things in Test, then press Go live on the agent to copy it to Live."),
+     "Press Talk on the agent to have a free practice call from your browser. Practice calls never reach real people and cost nothing."),
+    ("test-live", "Practice calls and going live", "Getting started",
+     "You change your agent safely on a private copy and try it with the Talk button. Nothing there calls real people or uses your balance. "
+     "When you're happy, press Go live: callers then reach the new version. Your practice calls are listed under Conversations, in Practice calls."),
     ("go-live", "Putting an agent live", "Getting started",
      "An agent is ready when it has a name, a prompt, a voice and, if it uses documents or tools, those are attached. Press Go live and fix anything marked as a blocker first. "
      "Going live again later publishes your newest changes. Older versions are kept so you can restore one."),
     ("numbers", "Getting a phone number", "Phone numbers",
-     "Open Numbers, search for a number, and buy it (Live mode). Assign it to an agent and callers who dial it reach that agent. In Test mode numbers are practice ones and never ring a real phone. "
+     "Open Phone Numbers, search for a number you like, and buy it. Then choose which agent should answer it, and callers who dial it reach that agent. "
+     "Some numbers, especially in India, need identity documents before they are switched on; if that happens we'll tell you what to do. "
      "You can set opening hours and a message for outside those hours."),
     ("hours", "Opening hours and the after-hours message", "Phone numbers",
      "Each number can have opening hours. Outside them, callers hear your after-hours message instead of the agent. Hours use the time zone you pick on the number."),
     ("billing", "Minutes, balance and top-ups", "Billing",
-     "You start with free minutes. After that, calls use your balance. Add money from Billing; payments are by card or UPI. Test calls are always free. "
-     "You can set a monthly spend limit so calls pause politely when it is reached."),
+     "You start with free minutes. Your balance and minutes left are always shown at the top of the page. After the free minutes, calls use your balance. "
+     "Add money from Billing. You can set a monthly spend limit so calls pause politely when it is reached."),
+    ("voices", "Choosing a voice", "Voices",
+     "Open Voices to browse hundreds of voices. Search by name, then filter by language or gender. Pick one on your agent's Voice tab. "
+     "Some voices run on a single fixed AI model; for the others you can choose how fast or smart your agent should be on the Brain tab."),
     ("invoices", "Invoices and GST", "Billing",
      "Every top-up creates a tax invoice you can download from Billing. Add your billing details (name, address and GSTIN if you have one) so they appear on it."),
     ("knowledge", "Teaching your agent from documents", "Knowledge and tools",

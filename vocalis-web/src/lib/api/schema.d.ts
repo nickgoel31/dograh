@@ -686,6 +686,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/product/auth/handoff/eligible": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Eligible
+         * @description Whether this person may be offered the switch to the new experience (the classic UI asks before showing it).
+         */
+        get: operations["eligible_api_v1_product_auth_handoff_eligible_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/product/auth/handoff/redeem": {
         parameters: {
             query?: never;
@@ -734,6 +754,26 @@ export interface paths {
         put?: never;
         /** Import Org */
         post: operations["import_org_api_v1_product_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/billing/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Wallet Chip
+         * @description A small balance readout for the page header. Any member may see it.
+         */
+        get: operations["wallet_chip_api_v1_product_billing_wallet_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1386,6 +1426,11 @@ export interface components {
             brain: string;
             /** Voice Id */
             voice_id: string | null;
+            /**
+             * Brain Applies
+             * @default true
+             */
+            brain_applies: boolean;
             /** Prompt Mode */
             prompt_mode: string;
             /** Prompt */
@@ -1891,6 +1936,8 @@ export interface components {
             email: string;
             /** Password */
             password: string;
+            /** Code */
+            code?: string | null;
         };
         /** MeOut */
         MeOut: {
@@ -2337,8 +2384,31 @@ export interface components {
              * @default false
              */
             favorite: boolean;
+            /**
+             * Available
+             * @default true
+             */
+            available: boolean;
+            /** Description */
+            description?: string | null;
+            /**
+             * Brain Levels
+             * @default true
+             */
+            brain_levels: boolean;
             /** Preview Url */
             preview_url?: string | null;
+        };
+        /** WalletOut */
+        WalletOut: {
+            /** Balance */
+            balance: number;
+            /** Minutes Available */
+            minutes_available: number;
+            /** Currency */
+            currency: string;
+            /** Low Balance */
+            low_balance: boolean;
         };
         /** WorkspaceCreateBody */
         WorkspaceCreateBody: {
@@ -4139,6 +4209,37 @@ export interface operations {
             };
         };
     };
+    eligible_api_v1_product_auth_handoff_eligible_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     redeem_api_v1_product_auth_handoff_redeem_post: {
         parameters: {
             query?: never;
@@ -4225,6 +4326,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    wallet_chip_api_v1_product_billing_wallet_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletOut"];
                 };
             };
             /** @description Validation Error */

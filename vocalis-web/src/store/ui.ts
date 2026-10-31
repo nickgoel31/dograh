@@ -18,7 +18,7 @@ interface UI {
 export const useUI = create<UI>()(
   persist(
     (set) => ({
-      mode: 'test', view: 'simple', theme: 'light', collapsed: false, mobileNav: false,
+      mode: 'live', view: 'simple', theme: 'light', collapsed: false, mobileNav: false,
       helper: false, palette: false, playground: null, workspace: 0, workspaceId: null, dirty: false,
       set: (p) => set(p),
     }),

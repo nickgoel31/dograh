@@ -1,0 +1,4994 @@
+[
+{
+"id": "Nour",
+"name": "Nour",
+"lang": "ar-SA",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Polished female Arabic voice with a friendly tone, great for voice over or support.",
+"tags": [
+"polished",
+"friendly",
+"customer support"
+]
+},
+{
+"id": "Omar",
+"name": "Omar",
+"lang": "ar-SA",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Bright, confident Arabic male voice, great for announcements, broadcasts, and voice overs.",
+"tags": [
+"bright",
+"confident"
+]
+},
+{
+"id": "Annika",
+"name": "Annika",
+"lang": "de-DE",
+"gender": "female",
+"age": "young",
+"desc": "Warm, engaging German female voice, ideal for business, e-learning, and narration.",
+"tags": [
+"warm",
+"engaging",
+"clear",
+"german",
+"business",
+"education & training",
+"narration",
+"enterprise"
+]
+},
+{
+"id": "Bastian",
+"name": "Bastian",
+"lang": "de-DE",
+"gender": "male",
+"age": "young",
+"desc": "Warm, natural German male voice, ideal for business, e-learning, and narration.",
+"tags": [
+"warm",
+"natural",
+"engaging",
+"german",
+"business",
+"education & training",
+"narration",
+"enterprise"
+]
+},
+{
+"id": "Birgit",
+"name": "Birgit",
+"lang": "de-DE",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Composed, professional German female voice, ideal for business, e-learning, and narration.",
+"tags": [
+"composed",
+"professional",
+"measured",
+"german",
+"business",
+"education & training",
+"narration",
+"enterprise"
+]
+},
+{
+"id": "Carina",
+"name": "Carina",
+"lang": "de-DE",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Friendly, expressive German female voice, ideal for business, e-learning, and narration.",
+"tags": [
+"friendly",
+"expressive",
+"approachable",
+"german",
+"business",
+"education & training",
+"narration",
+"enterprise"
+]
+},
+{
+"id": "Fabian",
+"name": "Fabian",
+"lang": "de-DE",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Clear, composed German male voice, ideal for business, e-learning, and narration.",
+"tags": [
+"clear",
+"composed",
+"professional",
+"german",
+"business",
+"education & training",
+"narration",
+"enterprise"
+]
+},
+{
+"id": "Franziska",
+"name": "Franziska",
+"lang": "de-DE",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Confident, grounded German female voice, ideal for business, e-learning, and narration.",
+"tags": [
+"confident",
+"grounded",
+"articulate",
+"german",
+"business",
+"education & training",
+"narration",
+"enterprise"
+]
+},
+{
+"id": "Heidi",
+"name": "Heidi",
+"lang": "de-DE",
+"gender": "female",
+"age": "young",
+"desc": "Warm, engaging German female voice, ideal for business, e-learning, and narration.",
+"tags": [
+"warm",
+"engaging",
+"clear",
+"german",
+"business",
+"education & training",
+"narration",
+"enterprise"
+]
+},
+{
+"id": "Heike",
+"name": "Heike",
+"lang": "de-DE",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Bright, natural German female voice, ideal for business, e-learning, and narration.",
+"tags": [
+"bright",
+"natural",
+"poised",
+"german",
+"business",
+"education & training",
+"narration",
+"enterprise"
+]
+},
+{
+"id": "Hendrik",
+"name": "Hendrik",
+"lang": "de-DE",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Bright, approachable German male voice, ideal for business, e-learning, and narration.",
+"tags": [
+"bright",
+"approachable",
+"articulate",
+"german",
+"business",
+"education & training",
+"narration",
+"enterprise"
+]
+},
+{
+"id": "Jannik",
+"name": "Jannik",
+"lang": "de-DE",
+"gender": "male",
+"age": "young",
+"desc": "Youthful, easygoing German male voice with a conversational pace, ideal for assistants, gaming, and casual social content.",
+"tags": [
+"youthful",
+"easygoing",
+"conversational",
+"german"
+]
+},
+{
+"id": "Johanna",
+"name": "Johanna",
+"lang": "de-DE",
+"gender": "female",
+"age": "middle_aged",
+"desc": "A calm older German female with a low, smoky voice",
+"tags": [
+"rich",
+"deep"
+]
+},
+{
+"id": "Josef",
+"name": "Josef",
+"lang": "de-DE",
+"gender": "male",
+"age": "middle_aged",
+"desc": "An articulate German male voice with an announcer-like quality",
+"tags": [
+"resonant",
+"clear"
+]
+},
+{
+"id": "Kilian",
+"name": "Kilian",
+"lang": "de-DE",
+"gender": "male",
+"age": "young",
+"desc": "Warm, natural German male voice, ideal for business, e-learning, and narration.",
+"tags": [
+"warm",
+"natural",
+"engaging",
+"german",
+"business",
+"education & training",
+"narration",
+"enterprise"
+]
+},
+{
+"id": "Matthias",
+"name": "Matthias",
+"lang": "de-DE",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Resonant, authoritative German male voice, ideal for business, e-learning, and narration.",
+"tags": [
+"resonant",
+"authoritative",
+"steady",
+"german",
+"business",
+"education & training",
+"narration",
+"enterprise"
+]
+},
+{
+"id": "Miriam",
+"name": "Miriam",
+"lang": "de-DE",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Bright, expressive German female voice with an animated, friendly delivery, ideal for customer support, companion chats, and interactive characters.",
+"tags": [
+"bright",
+"expressive",
+"friendly",
+"german"
+]
+},
+{
+"id": "Reinhard",
+"name": "Reinhard",
+"lang": "de-DE",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Calm, refined German male voice, ideal for business, e-learning, and narration.",
+"tags": [
+"calm",
+"refined",
+"poised",
+"german",
+"business",
+"education & training",
+"narration",
+"enterprise"
+]
+},
+{
+"id": "Sabine",
+"name": "Sabine",
+"lang": "de-DE",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Calm, refined German female voice, ideal for business, e-learning, and narration.",
+"tags": [
+"calm",
+"refined",
+"steady",
+"german",
+"business",
+"education & training",
+"narration",
+"enterprise"
+]
+},
+{
+"id": "Steffi",
+"name": "Steffi",
+"lang": "de-DE",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Composed, professional German female voice, ideal for business, e-learning, and narration.",
+"tags": [
+"composed",
+"professional",
+"measured",
+"german",
+"business",
+"education & training",
+"narration",
+"enterprise"
+]
+},
+{
+"id": "Tobias",
+"name": "Tobias",
+"lang": "de-DE",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Confident, grounded German male voice, ideal for business, e-learning, and narration.",
+"tags": [
+"confident",
+"grounded",
+"measured",
+"german",
+"business",
+"education & training",
+"narration",
+"enterprise"
+]
+},
+{
+"id": "Banjo",
+"name": "Banjo",
+"lang": "en-AU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Laid-back, genial Australian male voice, ideal for lifestyle content, travel, and casual narration.",
+"tags": [
+"laid-back",
+"genial",
+"natural",
+"australian",
+"lifestyle",
+"travel",
+"narration",
+"interactive media"
+]
+},
+{
+"id": "Callum",
+"name": "Callum",
+"lang": "en-AU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Casual and friendly Australian male voice, ideal for informal instructional content.",
+"tags": [
+"casual",
+"friendly",
+"informal",
+"australian",
+"education & training",
+"tutoring",
+"interactive media"
+]
+},
+{
+"id": "Cooper",
+"name": "Cooper",
+"lang": "en-AU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Casual, warm Australian male voice, ideal for lifestyle content, travel, and casual narration.",
+"tags": [
+"casual",
+"warm",
+"conversational",
+"australian",
+"lifestyle",
+"travel",
+"narration",
+"interactive media"
+]
+},
+{
+"id": "Hamish",
+"name": "Hamish",
+"lang": "en-AU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Friendly and casual Australian male voice, ideal for character-driven roles and upbeat fitness.",
+"tags": [
+"calm",
+"trustworthy",
+"comforting",
+"australian",
+"interactive media",
+"character",
+"companion",
+"fitness coach"
+]
+},
+{
+"id": "Indi",
+"name": "Indi",
+"lang": "en-AU",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Bright, casual Australian female voice, ideal for lifestyle content, travel, and casual narration.",
+"tags": [
+"bright",
+"casual",
+"relaxed",
+"australian",
+"lifestyle",
+"travel",
+"narration",
+"interactive media"
+]
+},
+{
+"id": "Jarrah",
+"name": "Jarrah",
+"lang": "en-AU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Easygoing, grounded Australian male voice, ideal for lifestyle content, travel, and casual narration.",
+"tags": [
+"easygoing",
+"grounded",
+"friendly",
+"australian",
+"lifestyle",
+"travel",
+"narration",
+"interactive media"
+]
+},
+{
+"id": "Liam",
+"name": "Liam",
+"lang": "en-AU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Upbeat, motivating Australian male voice, perfect for energizing workout sessions, lively event promotions, and informal lifestyle content.",
+"tags": [
+"upbeat",
+"motivating",
+"informal",
+"australian",
+"companion",
+"fitness coach",
+"personal growth"
+]
+},
+{
+"id": "Matilda",
+"name": "Matilda",
+"lang": "en-AU",
+"gender": "female",
+"age": "young",
+"desc": "Friendly, upbeat Australian female voice, ideal for lifestyle content, travel, and casual narration.",
+"tags": [
+"friendly",
+"upbeat",
+"warm",
+"australian",
+"lifestyle",
+"travel",
+"narration",
+"interactive media"
+]
+},
+{
+"id": "Pippa",
+"name": "Pippa",
+"lang": "en-AU",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Friendly and casual Australian female voice, ideal for relaxed instructional content.",
+"tags": [
+"friendly",
+"casual",
+"australian",
+"education & training",
+"professional training",
+"tutoring"
+]
+},
+{
+"id": "Seraphine",
+"name": "Seraphine",
+"lang": "en-AU",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Smoky, low-key Australian female voice, ideal for late-night storytelling, moody narration, and noir characters.",
+"tags": [
+"smoky",
+"low-key",
+"moody",
+"storytelling",
+"narration"
+]
+},
+{
+"id": "Sienna",
+"name": "Sienna",
+"lang": "en-AU",
+"gender": "female",
+"age": "young",
+"desc": "Breathy, playful young Australian female voice, ideal for companion chats, lifestyle content, and easygoing conversation.",
+"tags": [
+"breathy",
+"playful",
+"youthful",
+"companion",
+"lifestyle"
+]
+},
+{
+"id": "Tahlia",
+"name": "Tahlia",
+"lang": "en-AU",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Sunny, easygoing Australian female voice, ideal for lifestyle content, travel, and casual narration.",
+"tags": [
+"sunny",
+"easygoing",
+"natural",
+"australian",
+"lifestyle",
+"travel",
+"narration",
+"interactive media"
+]
+},
+{
+"id": "Tessa",
+"name": "Tessa",
+"lang": "en-AU",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Upbeat, conversational Australian female voice, perfect for lifestyle vlogs, playful advertisements, and engaging social media content.",
+"tags": [
+"upbeat",
+"conversational",
+"lighthearted",
+"australian",
+"interactive media",
+"narrative"
+]
+},
+{
+"id": "Alistair",
+"name": "Alistair",
+"lang": "en-GB",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Clear, articulate British male voice ideal for educational content and healthcare narration.",
+"tags": [
+"articulate",
+"clear",
+"engaging",
+"polished",
+"professional"
+]
+},
+{
+"id": "Ambrose",
+"name": "Ambrose",
+"lang": "en-GB",
+"gender": "male",
+"age": "elderly",
+"desc": "Distinguished, gentle elderly British male voice, ideal for audiobooks, documentaries, and grandfatherly storytelling.",
+"tags": [
+"distinguished",
+"gentle",
+"elderly",
+"audiobooks",
+"documentary"
+]
+},
+{
+"id": "Archie",
+"name": "Archie",
+"lang": "en-GB",
+"gender": "male",
+"age": "young",
+"desc": "Youthful, spirited British boy's voice, ideal for children's stories, fantasy adventures, and animated characters.",
+"tags": [
+"youthful",
+"spirited",
+"child",
+"adventure",
+"animation"
+]
+},
+{
+"id": "Beatrice",
+"name": "Beatrice",
+"lang": "en-GB",
+"gender": "female",
+"age": "elderly",
+"desc": "Rich, authoritative British female voice, ideal for audiobooks, documentary, and narration.",
+"tags": [
+"rich",
+"authoritative",
+"graceful",
+"british",
+"audiobook",
+"narration",
+"documentary",
+"interactive media"
+]
+},
+{
+"id": "Clive",
+"name": "Clive",
+"lang": "en-GB",
+"gender": "male",
+"age": "middle_aged",
+"desc": "British-accented English-language male voice with a calm, cordial quality",
+"tags": [
+"calm",
+"friendly",
+"british",
+"customer support",
+"enterprise",
+"healthcare",
+"patient support",
+"companion",
+"general purpose assistant"
+]
+},
+{
+"id": "Cordelia",
+"name": "Cordelia",
+"lang": "en-GB",
+"gender": "female",
+"age": "elderly",
+"desc": "Refined, composed British female voice, ideal for audiobooks, documentary, and narration.",
+"tags": [
+"refined",
+"composed",
+"literary",
+"british",
+"audiobook",
+"narration",
+"documentary",
+"interactive media"
+]
+},
+{
+"id": "Craig",
+"name": "Craig",
+"lang": "en-GB",
+"gender": "male",
+"age": "elderly",
+"desc": "Older British male with a refined and articulate voice",
+"tags": [
+"posh",
+"raspy",
+"british",
+"companion",
+"social companion",
+"interactive media",
+"narrative",
+"healthcare",
+"mental health"
+]
+},
+{
+"id": "Duncan",
+"name": "Duncan",
+"lang": "en-GB",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Warm, articulate British male voice for customer support and education.",
+"tags": [
+"warm",
+"articulate",
+"customer support",
+"education & training",
+"knowledge sharing"
+]
+},
+{
+"id": "Eileen",
+"name": "Eileen",
+"lang": "en-GB",
+"gender": "female",
+"age": "elderly",
+"desc": "Gentle, softly breathy elderly female voice with a Belfast accent, ideal for memoirs, bedtime stories, and warm companionship.",
+"tags": [
+"gentle",
+"breathy",
+"irish",
+"storytelling",
+"companion"
+]
+},
+{
+"id": "Eleanor",
+"name": "Eleanor",
+"lang": "en-GB",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Polished, approachable British female voice for support and learning.",
+"tags": [
+"polished",
+"approachable",
+"customer support",
+"education & training",
+"tutoring",
+"knowledge sharing"
+]
+},
+{
+"id": "Felix",
+"name": "Felix",
+"lang": "en-GB",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Calm, friendly British male voice, ideal for help and tutorials.",
+"tags": [
+"calm",
+"friendly",
+"customer support",
+"education & training",
+"professional training",
+"general purpose assistant"
+]
+},
+{
+"id": "Freddie",
+"name": "Freddie",
+"lang": "en-GB",
+"gender": "male",
+"age": "young",
+"desc": "Young, casual British male voice, ideal for conversational assistants, podcasts, and narration.",
+"tags": [
+"young",
+"casual",
+"conversational",
+"british",
+"podcast",
+"narration",
+"companion",
+"interactive media"
+]
+},
+{
+"id": "Graham",
+"name": "Graham",
+"lang": "en-GB",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Profound, authoritative British male voice, perfect for historical documentaries, luxury brand advertisements, and educational content.",
+"tags": [
+"profound",
+"authoritative",
+"sophisticated",
+"british",
+"interactive media",
+"narrative",
+"character"
+]
+},
+{
+"id": "Imogen",
+"name": "Imogen",
+"lang": "en-GB",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Refined British female voice with a professional, articulate delivery",
+"tags": [
+"professional",
+"refined",
+"articulate",
+"british",
+"narration",
+"education & training"
+]
+},
+{
+"id": "Lachlan",
+"name": "Lachlan",
+"lang": "en-GB",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Warm, friendly Scottish male voice with a thick Glasgow accent, ideal for storytelling, gaming, and conversational agents.",
+"tags": [
+"warm",
+"friendly",
+"scottish",
+"storytelling",
+"gaming"
+]
+},
+{
+"id": "Maisie",
+"name": "Maisie",
+"lang": "en-GB",
+"gender": "female",
+"age": "young",
+"desc": "Engaging young British female voice, perfect for interactive media and casual narration.",
+"tags": [
+"approachable",
+"clear",
+"conversational",
+"engaging",
+"expressive",
+"natural"
+]
+},
+{
+"id": "Nigel",
+"name": "Nigel",
+"lang": "en-GB",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Formal British male voice with a precise, measured delivery",
+"tags": [
+"formal",
+"precise",
+"british",
+"education & training",
+"professional training",
+"enterprise"
+]
+},
+{
+"id": "Olivia",
+"name": "Olivia",
+"lang": "en-GB",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Young, British female with a friendly and helpful tone, conveying confidence and efficiency.",
+"tags": [
+"cute",
+"british",
+"customer support",
+"healthcare",
+"patient support",
+"education & training",
+"tutoring"
+]
+},
+{
+"id": "Penelope",
+"name": "Penelope",
+"lang": "en-GB",
+"gender": "female",
+"age": "middle_aged",
+"desc": "A clear, refined British female voice suited for health and lifestyle assistance.",
+"tags": [
+"articulate",
+"clear",
+"polite",
+"refined",
+"helpful",
+"informative"
+]
+},
+{
+"id": "Poppy",
+"name": "Poppy",
+"lang": "en-GB",
+"gender": "female",
+"age": "young",
+"desc": "Bright, lively British girl's voice, ideal for children's content, animated characters, and educational games.",
+"tags": [
+"bright",
+"lively",
+"child",
+"children's content",
+"education"
+]
+},
+{
+"id": "Ronald",
+"name": "Ronald",
+"lang": "en-GB",
+"gender": "male",
+"age": "elderly",
+"desc": "Confident, British man with a deep, gravelly voice",
+"tags": [
+"confident",
+"expressive",
+"british",
+"interactive media",
+"character",
+"narrative"
+]
+},
+{
+"id": "Rosalind",
+"name": "Rosalind",
+"lang": "en-GB",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Mature, warm British female voice, ideal for audiobooks, documentary, and narration.",
+"tags": [
+"mature",
+"warm",
+"measured",
+"british",
+"audiobook",
+"narration",
+"documentary",
+"interactive media"
+]
+},
+{
+"id": "Rupert",
+"name": "Rupert",
+"lang": "en-GB",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Resonant, commanding British male voice, ideal for motivational speeches, epic film trailers, and dynamic corporate presentations.",
+"tags": [
+"resonant",
+"commanding",
+"motivational",
+"british",
+"interactive media",
+"character",
+"narrative"
+]
+},
+{
+"id": "Sophie",
+"name": "Sophie",
+"lang": "en-GB",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Friendly British female voice, great for assistance and knowledge sharing.",
+"tags": [
+"friendly",
+"warm",
+"customer support",
+"education & training",
+"general purpose assistant",
+"knowledge sharing"
+]
+},
+{
+"id": "Victoria",
+"name": "Victoria",
+"lang": "en-GB",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Silky, cunning British female voice, ideal for narrating intricate plots",
+"tags": [
+"silky",
+"cunning",
+"elegant",
+"interactive media",
+"narrative",
+"british"
+]
+},
+{
+"id": "Wendy",
+"name": "Wendy",
+"lang": "en-GB",
+"gender": "female",
+"age": "elderly",
+"desc": "Posh, middle-aged British female voice",
+"tags": [
+"pleasant",
+"casual",
+"british",
+"healthcare",
+"mental health",
+"spiritual support"
+]
+},
+{
+"id": "Winifred",
+"name": "Winifred",
+"lang": "en-GB",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Mature, warm British female voice, ideal for audiobooks, documentary, and narration.",
+"tags": [
+"mature",
+"warm",
+"measured",
+"british",
+"audiobook",
+"narration",
+"documentary",
+"interactive media"
+]
+},
+{
+"id": "Winston",
+"name": "Winston",
+"lang": "en-GB",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Mature British male voice with a warm storytelling quality",
+"tags": [
+"mature",
+"warm",
+"british",
+"narrative",
+"storytelling",
+"narration"
+]
+},
+{
+"id": "Aditya",
+"name": "Aditya",
+"lang": "en-IN",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Confident, natural Indian male voice, ideal for customer support, corporate, and education.",
+"tags": [
+"confident",
+"natural",
+"approachable",
+"indian",
+"customer support",
+"corporate",
+"education & training",
+"enterprise"
+]
+},
+{
+"id": "Anjali",
+"name": "Anjali",
+"lang": "en-IN",
+"gender": "female",
+"age": "middle_aged",
+"desc": "A confident and articulate Indian female voice, ideal for professional training materials.",
+"tags": [
+"professional",
+"confident",
+"articulate",
+"indian",
+"education & training",
+"tutoring",
+"professional training"
+]
+},
+{
+"id": "Arjun",
+"name": "Arjun",
+"lang": "en-IN",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Clear, composed Indian male voice, well-suited for instructional webinars and technology explainers.",
+"tags": [
+"smooth",
+"informative",
+"indian",
+"education & training",
+"tutoring"
+]
+},
+{
+"id": "Dhruv",
+"name": "Dhruv",
+"lang": "en-IN",
+"gender": "male",
+"age": "young",
+"desc": "Professional, measured Indian male voice, ideal for customer support, corporate, and education.",
+"tags": [
+"professional",
+"measured",
+"clear",
+"indian",
+"customer support",
+"corporate",
+"education & training",
+"enterprise"
+]
+},
+{
+"id": "Ishaan",
+"name": "Ishaan",
+"lang": "en-IN",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Confident, natural Indian male voice, ideal for customer support, corporate, and education.",
+"tags": [
+"confident",
+"natural",
+"approachable",
+"indian",
+"customer support",
+"corporate",
+"education & training",
+"enterprise"
+]
+},
+{
+"id": "Kabir",
+"name": "Kabir",
+"lang": "en-IN",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Bright, helpful Indian male voice, ideal for customer support, corporate, and education.",
+"tags": [
+"bright",
+"helpful",
+"poised",
+"indian",
+"customer support",
+"corporate",
+"education & training",
+"enterprise"
+]
+},
+{
+"id": "Nikhil",
+"name": "Nikhil",
+"lang": "en-IN",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Articulate, warm Indian male voice, ideal for customer support, corporate, and education.",
+"tags": [
+"articulate",
+"warm",
+"engaging",
+"indian",
+"customer support",
+"corporate",
+"education & training",
+"enterprise"
+]
+},
+{
+"id": "Saanvi",
+"name": "Saanvi",
+"lang": "en-IN",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Crisp, articulate Indian female voice, ideal for dynamic e-learning modules, articulate documentary narrations, and vibrant travel vlogs.",
+"tags": [
+"crisp",
+"articulate",
+"dynamic",
+"indian",
+"education & training",
+"tutoring",
+"professional training",
+"enterprise"
+]
+},
+{
+"id": "Vikram",
+"name": "Vikram",
+"lang": "en-IN",
+"gender": "male",
+"age": "young",
+"desc": "Professional, measured Indian male voice, ideal for customer support, corporate, and education.",
+"tags": [
+"professional",
+"measured",
+"clear",
+"indian",
+"customer support",
+"corporate",
+"education & training",
+"enterprise"
+]
+},
+{
+"id": "Yash",
+"name": "Yash",
+"lang": "en-IN",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Articulate, warm Indian male voice, ideal for customer support, corporate, and education.",
+"tags": [
+"articulate",
+"warm",
+"engaging",
+"indian",
+"customer support",
+"corporate",
+"education & training",
+"enterprise"
+]
+},
+{
+"id": "Amara",
+"name": "Amara",
+"lang": "en-NG",
+"gender": "female",
+"age": "young",
+"desc": "Warm, professional Nigerian female voice, ideal for customer service, narration, and support.",
+"tags": [
+"warm",
+"professional",
+"engaging",
+"nigerian",
+"customer support",
+"narration",
+"enterprise",
+"interactive media"
+]
+},
+{
+"id": "Chioma",
+"name": "Chioma",
+"lang": "en-NG",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Bright, friendly Nigerian female voice, ideal for customer service, narration, and support.",
+"tags": [
+"bright",
+"friendly",
+"confident",
+"nigerian",
+"customer support",
+"narration",
+"enterprise",
+"interactive media"
+]
+},
+{
+"id": "Emeka",
+"name": "Emeka",
+"lang": "en-NG",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Warm, conversational Nigerian male voice, ideal for customer service, narration, and support.",
+"tags": [
+"warm",
+"conversational",
+"engaging",
+"nigerian",
+"customer support",
+"narration",
+"enterprise",
+"interactive media"
+]
+},
+{
+"id": "Folake",
+"name": "Folake",
+"lang": "en-NG",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Clear, approachable Nigerian female voice, ideal for customer service, narration, and support.",
+"tags": [
+"clear",
+"approachable",
+"poised",
+"nigerian",
+"customer support",
+"narration",
+"enterprise",
+"interactive media"
+]
+},
+{
+"id": "Tunde",
+"name": "Tunde",
+"lang": "en-NG",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Grounded, friendly Nigerian male voice, ideal for customer service, narration, and support.",
+"tags": [
+"grounded",
+"friendly",
+"clear",
+"nigerian",
+"customer support",
+"narration",
+"enterprise",
+"interactive media"
+]
+},
+{
+"id": "Andoy",
+"name": "Andoy",
+"lang": "en-PH",
+"gender": "male",
+"age": "young",
+"desc": "Friendly, easygoing Filipino male voice, ideal for customer service, e-learning, and support.",
+"tags": [
+"friendly",
+"easygoing",
+"warm",
+"filipino",
+"customer support",
+"education & training",
+"enterprise"
+]
+},
+{
+"id": "Dalisay",
+"name": "Dalisay",
+"lang": "en-PH",
+"gender": "female",
+"age": "young",
+"desc": "Bright, approachable Filipino female voice, ideal for customer service, e-learning, and support.",
+"tags": [
+"bright",
+"approachable",
+"cheerful",
+"filipino",
+"customer support",
+"education & training",
+"enterprise"
+]
+},
+{
+"id": "Emil",
+"name": "Emil",
+"lang": "en-PH",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Bright, upbeat Filipino male voice, ideal for customer service, e-learning, and support.",
+"tags": [
+"bright",
+"upbeat",
+"helpful",
+"filipino",
+"customer support",
+"education & training",
+"enterprise"
+]
+},
+{
+"id": "Liwa",
+"name": "Liwa",
+"lang": "en-PH",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Gentle, patient Filipino female voice, ideal for customer service, e-learning, and support.",
+"tags": [
+"gentle",
+"patient",
+"clear",
+"filipino",
+"customer support",
+"education & training",
+"enterprise"
+]
+},
+{
+"id": "Maricel",
+"name": "Maricel",
+"lang": "en-PH",
+"gender": "female",
+"age": "young",
+"desc": "Friendly, warm Filipino female voice, ideal for customer service, e-learning, and support.",
+"tags": [
+"friendly",
+"warm",
+"helpful",
+"filipino",
+"customer support",
+"education & training",
+"enterprise"
+]
+},
+{
+"id": "Tala",
+"name": "Tala",
+"lang": "en-PH",
+"gender": "female",
+"age": "young",
+"desc": "Friendly, warm Filipino female voice, ideal for customer service, e-learning, and support.",
+"tags": [
+"friendly",
+"warm",
+"helpful",
+"filipino",
+"customer support",
+"education & training",
+"enterprise"
+]
+},
+{
+"id": "Boonleng",
+"name": "Boonleng",
+"lang": "en-SG",
+"gender": "male",
+"age": "young",
+"desc": "Confident, conversational Singaporean male voice, ideal for e-learning, customer service, and support.",
+"tags": [
+"confident",
+"conversational",
+"clear",
+"singaporean",
+"education & training",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Huiling",
+"name": "Huiling",
+"lang": "en-SG",
+"gender": "female",
+"age": "young",
+"desc": "Bright, approachable Singaporean female voice, ideal for e-learning, customer service, and support.",
+"tags": [
+"bright",
+"approachable",
+"warm",
+"singaporean",
+"education & training",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Junhao",
+"name": "Junhao",
+"lang": "en-SG",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Bright, easygoing Singaporean male voice, ideal for e-learning, customer service, and support.",
+"tags": [
+"bright",
+"easygoing",
+"warm",
+"singaporean",
+"education & training",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Serene",
+"name": "Serene",
+"lang": "en-SG",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Natural, poised Singaporean female voice, ideal for e-learning, customer service, and support.",
+"tags": [
+"natural",
+"poised",
+"cheerful",
+"singaporean",
+"education & training",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Shu",
+"name": "Shu",
+"lang": "en-SG",
+"gender": "female",
+"age": "young",
+"desc": "Confident, friendly Singaporean female voice, ideal for e-learning, customer service, and support.",
+"tags": [
+"confident",
+"friendly",
+"clear",
+"singaporean",
+"education & training",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Wei",
+"name": "Wei",
+"lang": "en-SG",
+"gender": "male",
+"age": "young",
+"desc": "Confident, conversational Singaporean male voice, ideal for e-learning, customer service, and support.",
+"tags": [
+"confident",
+"conversational",
+"clear",
+"singaporean",
+"education & training",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Zherong",
+"name": "Zherong",
+"lang": "en-SG",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Natural, helpful Singaporean male voice, ideal for e-learning, customer service, and support.",
+"tags": [
+"natural",
+"helpful",
+"relaxed",
+"singaporean",
+"education & training",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Abby",
+"name": "Abby",
+"lang": "en-US",
+"gender": "female",
+"age": "young",
+"desc": "Bright, eager American female child voice, ideal for animated characters, upbeat educational content, and lively kids' commercials.",
+"tags": [
+"bright",
+"eager",
+"youthful",
+"education & training",
+"language learning",
+"companion",
+"social",
+"children"
+]
+},
+{
+"id": "Alaric",
+"name": "Alaric",
+"lang": "en-US",
+"gender": "male",
+"age": "elderly",
+"desc": "Wise, gravelly male voice, ideal for RPG narration, audiobooks, and gaming.",
+"tags": [
+"wise",
+"gravelly",
+"theatrical",
+"gaming",
+"rpg",
+"narration",
+"interactive media",
+"companion"
+]
+},
+{
+"id": "Alex",
+"name": "Alex",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Energetic and expressive mid-range male voice, with a mildly nasal quality",
+"tags": [
+"friendly",
+"expressive",
+"companion",
+"general purpose assistant",
+"education & training",
+"tutoring",
+"professional training"
+]
+},
+{
+"id": "Amina",
+"name": "Amina",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Warm, inviting West African female voice, ideal for community outreach, cultural storytelling, and educational workshops.",
+"tags": [
+"warm",
+"inviting",
+"articulate",
+"measured",
+"confident",
+"west african"
+]
+},
+{
+"id": "Arthur",
+"name": "Arthur",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "A warm and mature male voice with clear articulation and an encouraging, knowledgeable demeanor.",
+"tags": [
+"mature",
+"knowledgeable",
+"warm",
+"articulate",
+"informative",
+"healthcare"
+]
+},
+{
+"id": "Ashley",
+"name": "Ashley",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "A warm, natural female voice",
+"tags": [
+"warm",
+"mellow",
+"customer support",
+"companion",
+"general purpose assistant",
+"education & training",
+"tutoring",
+"healthcare",
+"patient support"
+]
+},
+{
+"id": "Avery",
+"name": "Avery",
+"lang": "en-US",
+"gender": "male",
+"age": "young",
+"desc": "Youthful, performative male voice, suited for gameshow-style hosting, energetic presenter reads, and expressive young character parts.",
+"tags": [
+"youthful",
+"performative",
+"upbeat",
+"character",
+"ads",
+"social companion"
+]
+},
+{
+"id": "Bianca",
+"name": "Bianca",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Deep, controlled female voice, ideal for serious corporate reads, composed documentary segments, and measured authority-led explainers.",
+"tags": [
+"deep",
+"controlled",
+"understated",
+"customer support",
+"professional training",
+"narrative"
+]
+},
+{
+"id": "Blake",
+"name": "Blake",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Rich, intimate male voice, perfect for audiobooks, romantic content, and reassuring narration",
+"tags": [
+"intimate",
+"romantic",
+"healthcare",
+"spiritual support",
+"companion app",
+"social",
+"interactive media",
+"narrative"
+]
+},
+{
+"id": "Brandon",
+"name": "Brandon",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Bold, strident male voice, ideal for structured announcements, news-style reads, and direct promotional messaging.",
+"tags": [
+"bold",
+"energetic",
+"strident",
+"news",
+"ads",
+"announcements"
+]
+},
+{
+"id": "Brian",
+"name": "Brian",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Friendly, encouraging American male voice, ideal for educational tutorials, motivational content, and instructional videos.",
+"tags": [
+"friendly",
+"encouraging",
+"clear",
+"education & training",
+"tutorials",
+"enterprise",
+"customer support"
+]
+},
+{
+"id": "Brick",
+"name": "Brick",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Playful, bombastic male voice, ideal for game shows, interactive entertainment, and hosting.",
+"tags": [
+"playful",
+"bombastic",
+"charismatic",
+"game show",
+"hosting",
+"entertainment",
+"interactive media"
+]
+},
+{
+"id": "Brooke",
+"name": "Brooke",
+"lang": "en-US",
+"gender": "female",
+"age": "young",
+"desc": "A clear, professional young female voice with a polite and helpful delivery.",
+"tags": [
+"clear",
+"polite",
+"professional",
+"helpful",
+"conversational",
+"customer support"
+]
+},
+{
+"id": "Bryce",
+"name": "Bryce",
+"lang": "en-US",
+"gender": "male",
+"age": "young",
+"desc": "Confident, energetic young male voice with a dynamic social feel",
+"tags": [
+"confident",
+"energetic",
+"social media",
+"sports commentary",
+"interactive media",
+"gaming"
+]
+},
+{
+"id": "Calvin",
+"name": "Calvin",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Casual, grounded African American male voice, ideal for storytelling, documentaries, and conversational apps.",
+"tags": [
+"casual",
+"grounded",
+"conversational",
+"storytelling",
+"documentary"
+]
+},
+{
+"id": "Camille",
+"name": "Camille",
+"lang": "en-US",
+"gender": "female",
+"age": "young",
+"desc": "Clear, professional young female voice with a composed delivery",
+"tags": [
+"professional",
+"composed",
+"clear",
+"customer support",
+"general purpose assistant",
+"media & entertainment"
+]
+},
+{
+"id": "Carter",
+"name": "Carter",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Energetic, mature radio announcer-style male voice, great for storytelling, pep talks, and voiceovers.",
+"tags": [
+"intense",
+"motivational",
+"interactive media",
+"ads",
+"news",
+"sports"
+]
+},
+{
+"id": "Casey",
+"name": "Casey",
+"lang": "en-US",
+"gender": "male",
+"age": "young",
+"desc": "Laid-back young male voice with a chill, friendly vibe",
+"tags": [
+"chill",
+"laid-back",
+"friendly",
+"conversational",
+"companion",
+"social companion"
+]
+},
+{
+"id": "Cedric",
+"name": "Cedric",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Crisp, measured male voice, ideal for formal announcements, premium trailer narration, and command-forward presentation scripts.",
+"tags": [
+"crisp",
+"measured",
+"authoritative",
+"news",
+"narrative",
+"ads"
+]
+},
+{
+"id": "Celeste",
+"name": "Celeste",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Soft, whispery female voice, ideal for ASMR videos, soothing lullabies, and gentle mindfulness sessions.",
+"tags": [
+"soft",
+"whispery",
+"tranquil",
+"healthcare",
+"spiritual support",
+"companion app",
+"social"
+]
+},
+{
+"id": "Chip",
+"name": "Chip",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Cheerful, witty male voice, ideal for game shows, interactive entertainment, and hosting.",
+"tags": [
+"cheerful",
+"witty",
+"energetic",
+"game show",
+"hosting",
+"entertainment",
+"interactive media"
+]
+},
+{
+"id": "Chloe",
+"name": "Chloe",
+"lang": "en-US",
+"gender": "female",
+"age": "young",
+"desc": "Thoughtful, introspective youthful female voice, perfect for coming-of-age narratives, personal growth stories, and emotional teen dramas.",
+"tags": [
+"thoughtful",
+"introspective",
+"youthful",
+"interactive media",
+"narrative",
+"companion",
+"social"
+]
+},
+{
+"id": "Claire",
+"name": "Claire",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Warm, gentle Eastern European female voice, ideal for bedtime stories, relaxation podcasts",
+"tags": [
+"warm",
+"gentle",
+"soothing",
+"interactive media",
+"narrative",
+"healthcare",
+"spiritual support",
+"east European"
+]
+},
+{
+"id": "Conrad",
+"name": "Conrad",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Gruff, weathered male voice, perfect for detective archetypes, hard-edged audiobook roles, and serious investigative narration.",
+"tags": [
+"gruff",
+"weathered",
+"somber",
+"character",
+"narrative"
+]
+},
+{
+"id": "Damon",
+"name": "Damon",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Calm, raspy male voice, suited for moody narration, atmospheric roleplay characters, and grounded meditative reads with subtle tension.",
+"tags": [
+"calm",
+"mysterious",
+"raspy",
+"meditation",
+"narrative",
+"customer support"
+]
+},
+{
+"id": "Daniel",
+"name": "Daniel",
+"lang": "en-US",
+"gender": "male",
+"age": "young",
+"desc": "A polite and helpful mid-range male voice with a friendly and reassuring tone, perfect for customer service.",
+"tags": [
+"friendly",
+"polite",
+"helpful",
+"empathetic",
+"customer support"
+]
+},
+{
+"id": "Dante",
+"name": "Dante",
+"lang": "en-US",
+"gender": "male",
+"age": "young",
+"desc": "Breathy, intimate American male voice, ideal for companion chats, late-night storytelling, and soft-spoken roleplay.",
+"tags": [
+"breathy",
+"intimate",
+"soft",
+"companion",
+"storytelling"
+]
+},
+{
+"id": "Darlene",
+"name": "Darlene",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Spirited Southern belle with a rich country drawl, able to shift from warm and reassuring to strong and powerful. Ideal for characters, narration, and regional ads.",
+"tags": [
+"warm",
+"bold",
+"expressive",
+"southern",
+"twangy",
+"folksy",
+"sassy",
+"interactive media",
+"character",
+"narrative"
+]
+},
+{
+"id": "Deborah",
+"name": "Deborah",
+"lang": "en-US",
+"gender": "female",
+"age": "young",
+"desc": "Warm, peaceful female voice with a calm tone",
+"tags": [
+"gentle",
+"companion",
+"personal growth"
+]
+},
+{
+"id": "Dennis",
+"name": "Dennis",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Middle-aged man with a smooth, calm and friendly voice",
+"tags": [
+"outgoing",
+"upbeat",
+"customer support",
+"education & training",
+"tutoring",
+"companion",
+"general purpose assistant"
+]
+},
+{
+"id": "Derek",
+"name": "Derek",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Steady, professional, composed American male voice, ideal for banking support, account inquiries, and service escalation calls.",
+"tags": [
+"steady",
+"professional",
+"composed",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Dominus",
+"name": "Dominus",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Robotic, deep male voice with a menacing quality. Perfect for villains",
+"tags": [
+"robotic",
+"monotone",
+"interactive media",
+"character"
+]
+},
+{
+"id": "Edward",
+"name": "Edward",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "American male with a emphatic, confident and streetwise tone",
+"tags": [
+"emphatic",
+"shouty",
+"interactive media",
+"character",
+"companion",
+"fitness coach"
+]
+},
+{
+"id": "Eldrin",
+"name": "Eldrin",
+"lang": "en-US",
+"gender": "male",
+"age": "elderly",
+"desc": "Sage, resonant male voice, ideal for RPG narration, audiobooks, and gaming.",
+"tags": [
+"sage",
+"resonant",
+"weathered",
+"gaming",
+"rpg",
+"narration",
+"interactive media",
+"companion"
+]
+},
+{
+"id": "Elliot",
+"name": "Elliot",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "A calm, steady male voice, suitable for nature documentaries, general informational content, and relaxed narrations.",
+"tags": [
+"calm",
+"neutral",
+"steady",
+"interactive media",
+"narrative"
+]
+},
+{
+"id": "Ethan",
+"name": "Ethan",
+"lang": "en-US",
+"gender": "male",
+"age": "young",
+"desc": "Assured, precise male voice, perfect for tech tutorials, detailed gadget overviews, and captivating product demonstrations.",
+"tags": [
+"assured",
+"precise",
+"captivating",
+"companion",
+"general purpose assistant",
+"enterprise"
+]
+},
+{
+"id": "Evan",
+"name": "Evan",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Friendly, approachable, easygoing male voice, ideal for onboarding calls, retail assistance, and customer check-ins.",
+"tags": [
+"friendly",
+"approachable",
+"easygoing",
+"customer support",
+"companion",
+"general purpose assistant",
+"enterprise"
+]
+},
+{
+"id": "Evelyn",
+"name": "Evelyn",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "A gentle and intimate female voice, ideal for personal ASMR content, affirmations, and close, calming conversations.",
+"tags": [
+"gentle",
+"intimate",
+"warm",
+"soothing",
+"soft-spoken",
+"healthcare",
+"spiritual support"
+]
+},
+{
+"id": "Gareth",
+"name": "Gareth",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Soothing, gentle male voice, ideal for guided meditations, mindfulness exercises, and relaxation-focused wellness content.",
+"tags": [
+"soothing",
+"gentle",
+"steady",
+"healthcare",
+"mental health",
+"spiritual"
+]
+},
+{
+"id": "Grayson",
+"name": "Grayson",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Confident, smooth American male voice with a low, easy delivery, ideal for promos, product showcases, and narration.",
+"tags": [
+"confident",
+"smooth",
+"deep",
+"advertising",
+"narration"
+]
+},
+{
+"id": "Hades",
+"name": "Hades",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Commanding and gruff male voice, think an omniscient narrator or castle guard",
+"tags": [
+"commanding",
+"gruff",
+"interactive media",
+"character",
+"narrative"
+]
+},
+{
+"id": "Hana",
+"name": "Hana",
+"lang": "en-US",
+"gender": "female",
+"age": "young",
+"desc": "Bright, expressive young female voice, perfect for storytelling, gaming, and playful content",
+"tags": [
+"bright",
+"playful",
+"interactive media",
+"character",
+"narrative"
+]
+},
+{
+"id": "Hank",
+"name": "Hank",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Warm, laid-back Southern male voice, ideal for travel documentaries, heritage storytelling, and down-to-earth podcast ads.",
+"tags": [
+"warm",
+"laid-back",
+"authentic",
+"southern",
+"interactive media",
+"narrative",
+"character"
+]
+},
+{
+"id": "Harold",
+"name": "Harold",
+"lang": "en-US",
+"gender": "male",
+"age": "elderly",
+"desc": "Crisp, seasoned older male voice with a trustworthy delivery",
+"tags": [
+"crisp",
+"seasoned",
+"trustworthy",
+"advertisement",
+"narration",
+"storytelling"
+]
+},
+{
+"id": "Hazel",
+"name": "Hazel",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Warm, upbeat female voice with a friendly, engaging tone",
+"tags": [
+"upbeat",
+"warm",
+"friendly",
+"education & training",
+"tutoring",
+"customer support"
+]
+},
+{
+"id": "James",
+"name": "James",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Vibrant, expressive male voice, perfect for animated video content, lively event hosting, and captivating children's stories.",
+"tags": [
+"vibrant",
+"expressive",
+"captivating",
+"interactive media",
+"character"
+]
+},
+{
+"id": "Jason",
+"name": "Jason",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Lucid, engrossing male voice, ideal for tech tips, creative productivity hacks, and supportive user interface tutorials.",
+"tags": [
+"lucid",
+"engrossing",
+"supportive",
+"companion",
+"general purpose assistant",
+"developer assistant",
+"education & training",
+"tutoring"
+]
+},
+{
+"id": "Jessica",
+"name": "Jessica",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Encouraging, articulate American female voice, perfect for self-help audiobooks, warm customer service messages, and clear e-learning modules.",
+"tags": [
+"encouraging",
+"articulate",
+"warm",
+"customer support",
+"companion",
+"personal growth"
+]
+},
+{
+"id": "Jonah",
+"name": "Jonah",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Soothing, calm male voice, great for tutorial guidance, reassuring support flows, and gentle instructional narration with steady pacing.",
+"tags": [
+"soothing",
+"breathy",
+"calm",
+"customer support",
+"tutoring",
+"general purpose assistant"
+]
+},
+{
+"id": "Josh",
+"name": "Josh",
+"lang": "en-US",
+"gender": "male",
+"age": "young",
+"desc": "Relaxed, welcoming African American male voice, ideal for conversational agents, companion chats, and friendly customer conversations.",
+"tags": [
+"relaxed",
+"welcoming",
+"warm",
+"african american",
+"conversational",
+"companion"
+]
+},
+{
+"id": "Joy",
+"name": "Joy",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Gentle, steady female voice, ideal for customer support, sensitive contexts, and help lines.",
+"tags": [
+"gentle",
+"steady",
+"reassuring",
+"customer support",
+"sensitive support",
+"enterprise",
+"healthcare"
+]
+},
+{
+"id": "Kelsey",
+"name": "Kelsey",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Warm, empathetic, reassuring female voice, ideal for phone support, appointment confirmations, and customer success calls.",
+"tags": [
+"warm",
+"empathetic",
+"reassuring",
+"customer support",
+"companion",
+"general purpose assistant",
+"education & training",
+"professional training",
+"enterprise"
+]
+},
+{
+"id": "Kenji",
+"name": "Kenji",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Stylized, low-key male voice, ideal for anime content, gaming, and dubbing.",
+"tags": [
+"stylized",
+"low-key",
+"composed",
+"gaming",
+"anime",
+"character",
+"interactive media",
+"companion"
+]
+},
+{
+"id": "Lauren",
+"name": "Lauren",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Confident, friendly American female voice, ideal for corporate presentations, upbeat commercials, and engaging podcasts.",
+"tags": [
+"confident",
+"friendly",
+"engaging",
+"education & training",
+"tutoring",
+"professional training",
+"enterprise",
+"customer support"
+]
+},
+{
+"id": "Levi",
+"name": "Levi",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Measured, ominous male voice, ideal for suspense narration, dark fantasy storytelling, and composed dramatic monologues.",
+"tags": [
+"ominous",
+"deliberate",
+"measured",
+"meditation",
+"narrative",
+"spiritual support"
+]
+},
+{
+"id": "Loretta",
+"name": "Loretta",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Inviting, folksy Southern female voice, perfect for cooking shows, heartwarming family tales, and cozy radio ads.",
+"tags": [
+"inviting",
+"folksy",
+"charming",
+"southern",
+"interactive media",
+"character",
+"narrative"
+]
+},
+{
+"id": "Lucian",
+"name": "Lucian",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Brooding, foreboding male voice, suited for villainous character arcs, gothic drama scenes, and dark narrative worldbuilding.",
+"tags": [
+"brooding",
+"intense",
+"foreboding",
+"character",
+"narrative"
+]
+},
+{
+"id": "Luna",
+"name": "Luna",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Calm, relaxing female voice, perfect for meditations, sleep stories, and mindfulness exercises",
+"tags": [
+"calm",
+"relaxed",
+"companion app",
+"social",
+"healthcare",
+"spiritual support"
+]
+},
+{
+"id": "Malcolm",
+"name": "Malcolm",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Authoritative, manipulative male voice, perfect for cunning leaders, intense negotiation scenes, and persuasive villain speeches.",
+"tags": [
+"authoritative",
+"manipulative",
+"persuasive",
+"interactive media",
+"character",
+"companion",
+"social"
+]
+},
+{
+"id": "Marcus",
+"name": "Marcus",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Authoritative, empathetic male voice, great for civic campaigns, community outreach explainers, and trustworthy commercial reads with emotional credibility.",
+"tags": [
+"authoritative",
+"empathetic",
+"believable",
+"ads",
+"customer support",
+"general purpose assistant"
+]
+},
+{
+"id": "Marek",
+"name": "Marek",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Gruff, steady Polish-accented male voice, ideal for dramatic characters, documentaries, and serious narration.",
+"tags": [
+"gruff",
+"steady",
+"polish accent",
+"narration",
+"character"
+]
+},
+{
+"id": "Mark",
+"name": "Mark",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Energetic, expressive man with a rapid-fire delivery",
+"tags": [
+"articulate",
+"engaging",
+"enterprise",
+"customer support",
+"education & training",
+"professional training"
+]
+},
+{
+"id": "Marlene",
+"name": "Marlene",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Friendly, relaxed Southern female voice, ideal for home-style cooking tutorials, community event promotions, and downhome commercials.",
+"tags": [
+"friendly",
+"relaxed",
+"down-to-earth",
+"southern",
+"interactive media",
+"character",
+"narrative",
+"education & training",
+"tutorials"
+]
+},
+{
+"id": "Mia",
+"name": "Mia",
+"lang": "en-US",
+"gender": "female",
+"age": "young",
+"desc": "Youthful, expressive female voice, ideal for adolescent characters, school-age animation dialogue, and bright coming-of-age narrative scenes.",
+"tags": [
+"youthful",
+"expressive",
+"natural",
+"character",
+"kids media"
+]
+},
+{
+"id": "Miranda",
+"name": "Miranda",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Menacing, cold-hearted female voice, perfect for strategic villains, mysterious narratives",
+"tags": [
+"menacing",
+"dominant",
+"interactive media",
+"character"
+]
+},
+{
+"id": "Morgana",
+"name": "Morgana",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Cold, calculated female voice, ideal for gaming, audiobook villains, and horror.",
+"tags": [
+"cold",
+"calculated",
+"theatrical",
+"gaming",
+"villain",
+"character",
+"interactive media",
+"companion"
+]
+},
+{
+"id": "Mortimer",
+"name": "Mortimer",
+"lang": "en-US",
+"gender": "male",
+"age": null,
+"desc": "Gravelly, aggressive male character voice, ideal for fantasy villains and high-intensity game dialogue.",
+"tags": [
+"gravelly",
+"menacing",
+"whimsical",
+"interactive media",
+"character"
+]
+},
+{
+"id": "Nadia",
+"name": "Nadia",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Personable, lively female voice, perfect for tutorial walkthroughs, friendly support messaging, and engaging narration for creator-led product content.",
+"tags": [
+"breathy",
+"personable",
+"lively",
+"customer support",
+"tutoring",
+"narrative"
+]
+},
+{
+"id": "Naomi",
+"name": "Naomi",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Warm, grounded female voice, perfect for narrative podcasting, people-first customer guidance, and emotionally real brand storytelling.",
+"tags": [
+"warm",
+"grounded",
+"versatile",
+"narrative",
+"customer support",
+"general purpose assistant"
+]
+},
+{
+"id": "Nate",
+"name": "Nate",
+"lang": "en-US",
+"gender": "male",
+"age": "young",
+"desc": "Conversational, sociable male voice, great for customer support and friendly guidance",
+"tags": [
+"laid-back",
+"engaging",
+"sociable",
+"enterprise",
+"customer support",
+"healthcare",
+"patient support",
+"companion",
+"general purpose assistant"
+]
+},
+{
+"id": "Oliver",
+"name": "Oliver",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Neutral and clear male voice, ideal for public announcements and educational information.",
+"tags": [
+"neutral",
+"informative",
+"clear",
+"companion",
+"general purpose assistant",
+"education & training",
+"language learning"
+]
+},
+{
+"id": "Piper",
+"name": "Piper",
+"lang": "en-US",
+"gender": "female",
+"age": "young",
+"desc": "Bright, playful young female voice with an upbeat conversational energy",
+"tags": [
+"cute",
+"bright",
+"playful",
+"conversational",
+"companion",
+"social companion",
+"interactive media"
+]
+},
+{
+"id": "Pixie",
+"name": "Pixie",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "High-pitched, childlike female voice with a squeaky quality - great for a cartoon character",
+"tags": [
+"cartoonish",
+"high-pitched",
+"interactive media",
+"character",
+"education & training",
+"children"
+]
+},
+{
+"id": "Reed",
+"name": "Reed",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Clear, professional American male voice, well-suited for support and training.",
+"tags": [
+"clear",
+"professional",
+"customer support",
+"education & training",
+"tutoring",
+"general purpose assistant"
+]
+},
+{
+"id": "Ren",
+"name": "Ren",
+"lang": "en-US",
+"gender": "male",
+"age": "young",
+"desc": "Cool, aloof male voice, ideal for anime content, gaming, and dubbing.",
+"tags": [
+"cool",
+"aloof",
+"controlled",
+"gaming",
+"anime",
+"character",
+"interactive media",
+"companion"
+]
+},
+{
+"id": "Riley",
+"name": "Riley",
+"lang": "en-US",
+"gender": "female",
+"age": "young",
+"desc": "Playful, youthful female voice, perfect for animated storytelling, upbeat game characters, and high-energy kid-focused digital content.",
+"tags": [
+"playful",
+"youthful",
+"energetic",
+"character",
+"kids media",
+"tutoring"
+]
+},
+{
+"id": "Sarah",
+"name": "Sarah",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Fast-talking young adult woman, with a questioning and curious tone",
+"tags": [
+"upbeat",
+"excited",
+"enterprise",
+"customer support",
+"sales automation",
+"companion",
+"general purpose assistant"
+]
+},
+{
+"id": "Sebastian",
+"name": "Sebastian",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Intimidating, steely male voice, perfect for ruthless antagonists, strategic power struggles, and chilling monologues.",
+"tags": [
+"intimidating",
+"steely",
+"calculating",
+"interactive media",
+"character"
+]
+},
+{
+"id": "Selene",
+"name": "Selene",
+"lang": "en-US",
+"gender": "female",
+"age": "young",
+"desc": "Soft, flirtatious female voice, ideal for companion-style interactions, charming game dialogue, and emotionally playful character-driven story scenes.",
+"tags": [
+"soft",
+"breathy",
+"flirtatious",
+"social companion",
+"character"
+]
+},
+{
+"id": "Serena",
+"name": "Serena",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Soft, nurturing female voice, perfect for mindfulness sessions, nature-inspired visualizations, and gentle wellness podcasts.",
+"tags": [
+"soft",
+"nurturing",
+"gentle",
+"healthcare",
+"mental health",
+"spiritual",
+"companion",
+"social"
+]
+},
+{
+"id": "Simon",
+"name": "Simon",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Articulate, insightful male voice, perfect for corporate presentations, technical tutorials, and steady news reporting.",
+"tags": [
+"articulate",
+"insightful",
+"steady",
+"companion",
+"general purpose assistant",
+"interactive media",
+"narrative",
+"enterprise"
+]
+},
+{
+"id": "Snik",
+"name": "Snik",
+"lang": "en-US",
+"gender": "male",
+"age": null,
+"desc": "Hoarse, cunning male voice, perfect for devious goblin roles, fantasy heist scenarios, and trickster-themed animations.",
+"tags": [
+"hoarse",
+"cunning",
+"avaricious",
+"interactive media",
+"character"
+]
+},
+{
+"id": "Theodore",
+"name": "Theodore",
+"lang": "en-US",
+"gender": "male",
+"age": "elderly",
+"desc": "Gravelly male voice, with a time-worn quality",
+"tags": [
+"elderly",
+"wise",
+"interactive media",
+"character",
+"narrative"
+]
+},
+{
+"id": "Timothy",
+"name": "Timothy",
+"lang": "en-US",
+"gender": "male",
+"age": "young",
+"desc": "Lively, upbeat American male voice",
+"tags": [
+"hyped",
+"upbeat",
+"education & training",
+"tutoring"
+]
+},
+{
+"id": "Tonya",
+"name": "Tonya",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Professional, direct African American female voice with a friendly warmth, ideal for customer support, business assistants, and narration.",
+"tags": [
+"professional",
+"direct",
+"friendly",
+"african american",
+"customer support",
+"business"
+]
+},
+{
+"id": "Trevor",
+"name": "Trevor",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Punchy, expressive male voice, perfect for energetic promos, announcer-driven reveals, and fast-moving scripted event intros.",
+"tags": [
+"punchy",
+"expressive",
+"upbeat",
+"news",
+"ads",
+"sports"
+]
+},
+{
+"id": "Tristan",
+"name": "Tristan",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Deliberate, controlled male voice, ideal for documentary narration, polished voiceover campaigns, and clear long-form infomercial storytelling.",
+"tags": [
+"soothing",
+"deliberate",
+"controlled",
+"narrative",
+"ads",
+"customer support"
+]
+},
+{
+"id": "Tyler",
+"name": "Tyler",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Authoritative, insightful male voice, ideal for tech explainer videos, in-depth software reviews, and dynamic coding guides.",
+"tags": [
+"authoritative",
+"insightful",
+"dynamic",
+"interactive media",
+"news",
+"education & training",
+"professional training"
+]
+},
+{
+"id": "Veronica",
+"name": "Veronica",
+"lang": "en-US",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Intimidating, commanding female voice, perfect for ruthless antagonists, high-stakes negotiations, and chilling monologues.",
+"tags": [
+"intimidating",
+"commanding",
+"icy",
+"companion",
+"social",
+"interactive media",
+"character"
+]
+},
+{
+"id": "Victor",
+"name": "Victor",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Ominous, sinister male voice, ideal for dark conspiracies, eerie suspense scenes, and enigmatic villain roles.",
+"tags": [
+"ominous",
+"sinister",
+"controlled",
+"interactive media",
+"narrative",
+"character"
+]
+},
+{
+"id": "Vincent",
+"name": "Vincent",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Polished, classy male voice with a smooth, measured delivery",
+"tags": [
+"classy",
+"polished",
+"smooth",
+"narration",
+"general purpose assistant",
+"enterprise"
+]
+},
+{
+"id": "Vinny",
+"name": "Vinny",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Gritty, assertive New York male voice, perfect for crime dramas, urban documentaries, and no-nonsense character roles.",
+"tags": [
+"gritty",
+"assertive",
+"authentic",
+"new york",
+"interactive media",
+"narrative",
+"character"
+]
+},
+{
+"id": "Wade",
+"name": "Wade",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Casual, natural male voice with an easygoing conversational style",
+"tags": [
+"casual",
+"relaxed",
+"natural",
+"conversational",
+"companion",
+"social companion"
+]
+},
+{
+"id": "Warren",
+"name": "Warren",
+"lang": "en-US",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Mature, resonant male voice with a classic announcer quality",
+"tags": [
+"classy",
+"mature",
+"resonant",
+"narration",
+"advertisement",
+"enterprise"
+]
+},
+{
+"id": "Yuki",
+"name": "Yuki",
+"lang": "en-US",
+"gender": "female",
+"age": "young",
+"desc": "Soft, melancholic anime-style female voice, ideal for animated characters, gaming, and wistful storytelling.",
+"tags": [
+"melancholic",
+"anime",
+"soft",
+"gaming",
+"animation"
+]
+},
+{
+"id": "Zadie",
+"name": "Zadie",
+"lang": "en-US",
+"gender": "female",
+"age": "young",
+"desc": "Punchy, expressive female voice, ideal for short-form social, UGC, and viral content.",
+"tags": [
+"punchy",
+"expressive",
+"gen-z",
+"social",
+"viral",
+"ugc",
+"interactive media",
+"companion"
+]
+},
+{
+"id": "Zoe",
+"name": "Zoe",
+"lang": "en-US",
+"gender": "female",
+"age": "young",
+"desc": "Upbeat, expressive young female voice with a clear, friendly delivery",
+"tags": [
+"upbeat",
+"expressive",
+"clear",
+"friendly",
+"interactive media",
+"companion"
+]
+},
+{
+"id": "Carmen",
+"name": "Carmen",
+"lang": "es-419",
+"gender": "female",
+"age": "young",
+"desc": "Bright, youthful Latin American Spanish female voice with an easy, natural delivery, ideal for assistants, lifestyle content, and companion chats.",
+"tags": [
+"bright",
+"youthful",
+"natural",
+"latin american"
+]
+},
+{
+"id": "Florencia",
+"name": "Florencia",
+"lang": "es-AR",
+"gender": "female",
+"age": "young",
+"desc": "Smooth, natural young Argentine Spanish-speaking female voice with a Rioplatense accent, ideal for companion chats, narration, and interactive characters.",
+"tags": [
+"smooth",
+"natural",
+"rioplatense",
+"argentine"
+]
+},
+{
+"id": "Lautaro",
+"name": "Lautaro",
+"lang": "es-AR",
+"gender": "male",
+"age": "young",
+"desc": "Steady, even-toned young Argentine Spanish-speaking male voice with a natural Rioplatense accent, ideal for assistants, customer support, and narration.",
+"tags": [
+"steady",
+"even",
+"rioplatense",
+"argentine"
+]
+},
+{
+"id": "Alvaro",
+"name": "Alvaro",
+"lang": "es-ES",
+"gender": "male",
+"age": "young",
+"desc": "Warm, articulate Castilian Spanish male voice, ideal for education, narration, and business.",
+"tags": [
+"warm",
+"articulate",
+"engaging",
+"castilian",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Borja",
+"name": "Borja",
+"lang": "es-ES",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Natural, poised Castilian Spanish male voice, ideal for education, narration, and business.",
+"tags": [
+"natural",
+"poised",
+"approachable",
+"castilian",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Curro",
+"name": "Curro",
+"lang": "es-ES",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Clear, composed Castilian Spanish male voice, ideal for education, narration, and business.",
+"tags": [
+"clear",
+"composed",
+"professional",
+"castilian",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Diego",
+"name": "Diego",
+"lang": "es-ES",
+"gender": "male",
+"age": "young",
+"desc": "Spanish-speaking male voice with a soothing, gentle quality",
+"tags": [
+"soft",
+"nervous"
+]
+},
+{
+"id": "Gonzalo",
+"name": "Gonzalo",
+"lang": "es-ES",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Bright, expressive Castilian Spanish male voice, ideal for education, narration, and business.",
+"tags": [
+"bright",
+"expressive",
+"friendly",
+"castilian",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Ignacio",
+"name": "Ignacio",
+"lang": "es-ES",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Calm, refined Castilian Spanish male voice, ideal for education, narration, and business.",
+"tags": [
+"calm",
+"refined",
+"steady",
+"castilian",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Inigo",
+"name": "Inigo",
+"lang": "es-ES",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Clear, composed Castilian Spanish male voice, ideal for education, narration, and business.",
+"tags": [
+"clear",
+"composed",
+"professional",
+"castilian",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Inmaculada",
+"name": "Inmaculada",
+"lang": "es-ES",
+"gender": "female",
+"age": "young",
+"desc": "Warm, articulate Castilian Spanish female voice, ideal for education, narration, and business.",
+"tags": [
+"warm",
+"articulate",
+"engaging",
+"castilian",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Joaquin",
+"name": "Joaquin",
+"lang": "es-ES",
+"gender": "male",
+"age": "young",
+"desc": "Warm, articulate Castilian Spanish male voice, ideal for education, narration, and business.",
+"tags": [
+"warm",
+"articulate",
+"engaging",
+"castilian",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Manuel",
+"name": "Manuel",
+"lang": "es-ES",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Deep, smooth Castilian Spanish male voice with a mature, confident tone, ideal for narration, documentaries, and customer support.",
+"tags": [
+"deep",
+"smooth",
+"mature",
+"castilian"
+]
+},
+{
+"id": "Marta",
+"name": "Marta",
+"lang": "es-ES",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Friendly, expressive Castilian Spanish female voice, ideal for education, narration, and business.",
+"tags": [
+"friendly",
+"expressive",
+"approachable",
+"castilian",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Mercedes",
+"name": "Mercedes",
+"lang": "es-ES",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Bright, natural Castilian Spanish female voice, ideal for education, narration, and business.",
+"tags": [
+"bright",
+"natural",
+"poised",
+"castilian",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Miguel",
+"name": "Miguel",
+"lang": "es-ES",
+"gender": "male",
+"age": "middle_aged",
+"desc": "A calm adult Spanish-speaking male voice, perfect for storytelling",
+"tags": [
+"warm",
+"bright"
+]
+},
+{
+"id": "Nacho",
+"name": "Nacho",
+"lang": "es-ES",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Confident, grounded Castilian Spanish male voice, ideal for education, narration, and business.",
+"tags": [
+"confident",
+"grounded",
+"measured",
+"castilian",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Pilar",
+"name": "Pilar",
+"lang": "es-ES",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Clear, composed Castilian Spanish female voice, ideal for education, narration, and business.",
+"tags": [
+"clear",
+"composed",
+"professional",
+"castilian",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Rafael",
+"name": "Rafael",
+"lang": "es-ES",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Middle-aged Spanish-speaking male with a deep, composed voice. Great for narrations",
+"tags": [
+"warm",
+"bright"
+]
+},
+{
+"id": "Rocio",
+"name": "Rocio",
+"lang": "es-ES",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Calm, refined Castilian Spanish female voice, ideal for education, narration, and business.",
+"tags": [
+"calm",
+"refined",
+"measured",
+"castilian",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Ruben",
+"name": "Ruben",
+"lang": "es-ES",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Natural, poised Castilian Spanish male voice, ideal for education, narration, and business.",
+"tags": [
+"natural",
+"poised",
+"approachable",
+"castilian",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Sergio",
+"name": "Sergio",
+"lang": "es-ES",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Confident, grounded Castilian Spanish male voice, ideal for education, narration, and business.",
+"tags": [
+"confident",
+"grounded",
+"measured",
+"castilian",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Bruno",
+"name": "Bruno",
+"lang": "es-MX",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Clear, approachable Mexican Spanish male voice, ideal for education, narration, and customer service.",
+"tags": [
+"clear",
+"approachable",
+"relaxed",
+"mexican",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Camila",
+"name": "Camila",
+"lang": "es-MX",
+"gender": "female",
+"age": "young",
+"desc": "A young female with a smooth, clear voice speaking at a moderate pace in a quiet environment.",
+"tags": [
+"clear",
+"informative"
+]
+},
+{
+"id": "Citlali",
+"name": "Citlali",
+"lang": "es-MX",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Calm, engaging Mexican Spanish female voice, ideal for education, narration, and customer service.",
+"tags": [
+"calm",
+"engaging",
+"poised",
+"mexican",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Cuauhtemoc",
+"name": "Cuauhtemoc",
+"lang": "es-MX",
+"gender": "male",
+"age": "young",
+"desc": "Warm, conversational Mexican Spanish male voice, ideal for education, narration, and customer service.",
+"tags": [
+"warm",
+"conversational",
+"friendly",
+"mexican",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Fernanda",
+"name": "Fernanda",
+"lang": "es-MX",
+"gender": "female",
+"age": "young",
+"desc": "Natural, relaxed Mexican Spanish-speaking female voice with an easygoing delivery, ideal for customer support, education, and everyday conversation.",
+"tags": [
+"natural",
+"relaxed",
+"easygoing",
+"mexican"
+]
+},
+{
+"id": "Gabriela",
+"name": "Gabriela",
+"lang": "es-MX",
+"gender": "female",
+"age": "young",
+"desc": "Relaxed Mexican Spanish-speaking female voice with a gentle, unhurried pace, ideal for companion chats, wellness content, and storytelling.",
+"tags": [
+"relaxed",
+"gentle",
+"unhurried",
+"mexican"
+]
+},
+{
+"id": "Guadalupe",
+"name": "Guadalupe",
+"lang": "es-MX",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Clear, approachable Mexican Spanish female voice, ideal for education, narration, and customer service.",
+"tags": [
+"clear",
+"approachable",
+"cheerful",
+"mexican",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Itzel",
+"name": "Itzel",
+"lang": "es-MX",
+"gender": "female",
+"age": "young",
+"desc": "Warm, conversational Mexican Spanish female voice, ideal for education, narration, and customer service.",
+"tags": [
+"warm",
+"conversational",
+"friendly",
+"mexican",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Lupita",
+"name": "Lupita",
+"lang": "es-MX",
+"gender": "female",
+"age": "young",
+"desc": "Vibrant, energetic young Mexican Spanish-speaking female voice",
+"tags": [
+"lively",
+"bright"
+]
+},
+{
+"id": "Mateo",
+"name": "Mateo",
+"lang": "es-MX",
+"gender": "male",
+"age": "young",
+"desc": "A young adult male with a smooth, clear voice speaking thoughtfully in a quiet studio setting.",
+"tags": [
+"friendly",
+"conversational"
+]
+},
+{
+"id": "Mauricio",
+"name": "Mauricio",
+"lang": "es-MX",
+"gender": "male",
+"age": "middle_aged",
+"desc": "A serious adult male with a smooth, clear voice speaking slowly and deliberately in a quiet studio environment.",
+"tags": [
+"narrative",
+"spiritual"
+]
+},
+{
+"id": "Maximiliano",
+"name": "Maximiliano",
+"lang": "es-MX",
+"gender": "male",
+"age": "young",
+"desc": "Bright, natural Mexican Spanish male voice, ideal for education, narration, and customer service.",
+"tags": [
+"bright",
+"natural",
+"engaging",
+"mexican",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Mayte",
+"name": "Mayte",
+"lang": "es-MX",
+"gender": "female",
+"age": "young",
+"desc": "Clear, approachable Mexican Spanish female voice, ideal for education, narration, and customer service.",
+"tags": [
+"clear",
+"approachable",
+"cheerful",
+"mexican",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Paloma",
+"name": "Paloma",
+"lang": "es-MX",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Warm, conversational Mexican Spanish female voice, ideal for education, narration, and customer service.",
+"tags": [
+"warm",
+"conversational",
+"friendly",
+"mexican",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Regina",
+"name": "Regina",
+"lang": "es-MX",
+"gender": "female",
+"age": "young",
+"desc": "Bright, youthful Mexican Spanish-speaking female voice with a lively, engaging delivery, ideal for social content, gaming, and companion chats.",
+"tags": [
+"bright",
+"youthful",
+"lively",
+"mexican"
+]
+},
+{
+"id": "Salvador",
+"name": "Salvador",
+"lang": "es-MX",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Confident, expressive Mexican Spanish male voice, ideal for education, narration, and customer service.",
+"tags": [
+"confident",
+"expressive",
+"poised",
+"mexican",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Sofia",
+"name": "Sofia",
+"lang": "es-MX",
+"gender": "female",
+"age": "middle_aged",
+"desc": "A fast-paced, clear, and engaging adult female voice with a neutral Latin American Spanish accent, recorded in a high-quality studio environment.",
+"tags": [
+"warm",
+"conversational"
+]
+},
+{
+"id": "Valeria",
+"name": "Valeria",
+"lang": "es-MX",
+"gender": "female",
+"age": "young",
+"desc": "Bright, friendly Mexican Spanish-speaking female voice with a natural, conversational delivery, ideal for assistants, customer support, and everyday apps.",
+"tags": [
+"bright",
+"friendly",
+"conversational",
+"mexican"
+]
+},
+{
+"id": "Ximena",
+"name": "Ximena",
+"lang": "es-MX",
+"gender": "female",
+"age": "young",
+"desc": "Bright, natural Mexican Spanish female voice, ideal for education, narration, and customer service.",
+"tags": [
+"bright",
+"natural",
+"expressive",
+"mexican",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Xochitl",
+"name": "Xochitl",
+"lang": "es-MX",
+"gender": "female",
+"age": "young",
+"desc": "Bright, natural Mexican Spanish female voice, ideal for education, narration, and customer service.",
+"tags": [
+"bright",
+"natural",
+"expressive",
+"mexican",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Alain",
+"name": "Alain",
+"lang": "fr-FR",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Deep, smooth middle-aged male French voice. Composed and calm",
+"tags": [
+"deep",
+"warm"
+]
+},
+{
+"id": "Hélène",
+"name": "Hélène",
+"lang": "fr-FR",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Middle-aged French woman, with a smooth, musical, and graceful voice",
+"tags": [
+"expressive",
+"soothing"
+]
+},
+{
+"id": "Mathieu",
+"name": "Mathieu",
+"lang": "fr-FR",
+"gender": "male",
+"age": "middle_aged",
+"desc": "A French male voice carrying a nasal quality",
+"tags": [
+"robust",
+"strong"
+]
+},
+{
+"id": "Étienne",
+"name": "Étienne",
+"lang": "fr-FR",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Calm young adult French male",
+"tags": [
+"robust",
+"strong"
+]
+},
+{
+"id": "Oren",
+"name": "Oren",
+"lang": "he-IL",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Steady male Hebrew voice, great for podcasts, voice overs, or announcers.",
+"tags": [
+"steady",
+"professional"
+]
+},
+{
+"id": "Yael",
+"name": "Yael",
+"lang": "he-IL",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Mid-range female Hebrew voice, suitable for narrations, storytelling, and more.",
+"tags": [
+"neutral",
+"articulate"
+]
+},
+{
+"id": "Aanya",
+"name": "Aanya",
+"lang": "hi-IN",
+"gender": "female",
+"age": "middle_aged",
+"desc": "A professional adult female with a clear, formal, and authoritative voice, speaking Hindi in a studio environment.",
+"tags": [
+"news",
+"informative"
+]
+},
+{
+"id": "Aarav",
+"name": "Aarav",
+"lang": "hi-IN",
+"gender": "male",
+"age": "middle_aged",
+"desc": "A thoughtful adult male with an Indian accent speaking earnestly in a room with some background hum.",
+"tags": [
+"motivational",
+"professional"
+]
+},
+{
+"id": "Manoj",
+"name": "Manoj",
+"lang": "hi-IN",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Clear, professional Hindi male voice. Great for narrations, news anchors, and customer service.",
+"tags": [
+"professional",
+"clean",
+"customer support"
+]
+},
+{
+"id": "Meher",
+"name": "Meher",
+"lang": "hi-IN",
+"gender": "female",
+"age": "young",
+"desc": "A warm, friendly young adult female with a North Indian urban accent, speaking naturally and conversationally.",
+"tags": [
+"warm",
+"friendly",
+"conversational",
+"natural",
+"customer support",
+"assistant"
+]
+},
+{
+"id": "Riya",
+"name": "Riya",
+"lang": "hi-IN",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Professional and clean female voice, with a clear and articulate tone, moderate pace, and a polished, approachable quality.",
+"tags": [
+"professional",
+"clean",
+"customer support"
+]
+},
+{
+"id": "Seema",
+"name": "Seema",
+"lang": "hi-IN",
+"gender": "female",
+"age": "young",
+"desc": "Clear, bright young female Hindi voice with a friendly, engaging tone and moderate pace, great for education and interactive media.",
+"tags": [
+"clear",
+"friendly",
+"engaging",
+"conversational",
+"informative"
+]
+},
+{
+"id": "Shreya",
+"name": "Shreya",
+"lang": "hi-IN",
+"gender": "female",
+"age": "young",
+"desc": "Clear, bright young female Hindi voice with a friendly, helpful tone, ideal for virtual assistants and customer support.",
+"tags": [
+"friendly",
+"conversational",
+"assistant",
+"customer support"
+]
+},
+{
+"id": "Gianni",
+"name": "Gianni",
+"lang": "it-IT",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Deep, smooth Italian male voice that speaks rapidly",
+"tags": [
+"warm",
+"deep"
+]
+},
+{
+"id": "Giovanna",
+"name": "Giovanna",
+"lang": "it-IT",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Mature, composed Italian female voice with an unhurried, measured delivery, ideal for narration, audiobooks, and customer support.",
+"tags": [
+"mature",
+"composed",
+"unhurried",
+"italian"
+]
+},
+{
+"id": "Lorenzo",
+"name": "Lorenzo",
+"lang": "it-IT",
+"gender": "male",
+"age": "young",
+"desc": "Calm Italian male voice with a subtle dramatic flair, ideal for storytelling, narration, and interactive characters.",
+"tags": [
+"calm",
+"measured",
+"dramatic",
+"italian"
+]
+},
+{
+"id": "Orietta",
+"name": "Orietta",
+"lang": "it-IT",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Calm adult female Italian voice, with a soothing cadence",
+"tags": [
+"warm",
+"smooth"
+]
+},
+{
+"id": "Asuka",
+"name": "Asuka",
+"lang": "ja-JP",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Friendly, young adult Japanese female voice",
+"tags": [
+"energetic",
+"clear"
+]
+},
+{
+"id": "Haruto",
+"name": "Haruto",
+"lang": "ja-JP",
+"gender": "male",
+"age": "elderly",
+"desc": "A slow, deliberate, and gravelly old male voice speaking in a reminiscent tone.",
+"tags": [
+"narrative",
+"character"
+]
+},
+{
+"id": "Hina",
+"name": "Hina",
+"lang": "ja-JP",
+"gender": "female",
+"age": "young",
+"desc": "A young adult female with a smooth, clear voice speaking in a formal, narrative tone.",
+"tags": [
+"clear",
+"articulate"
+]
+},
+{
+"id": "Satoshi",
+"name": "Satoshi",
+"lang": "ja-JP",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Dramatic, expressive male Japanese voice filled with energy",
+"tags": [
+"nervous",
+"curious"
+]
+},
+{
+"id": "Hyunwoo",
+"name": "Hyunwoo",
+"lang": "ko-KR",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Young adult Korean male voice",
+"tags": [
+"polite",
+"warm"
+]
+},
+{
+"id": "Minji",
+"name": "Minji",
+"lang": "ko-KR",
+"gender": "female",
+"age": "young",
+"desc": "Energetic, friendly young Korean female voice",
+"tags": [
+"light",
+"bright"
+]
+},
+{
+"id": "Seojun",
+"name": "Seojun",
+"lang": "ko-KR",
+"gender": "male",
+"age": "young",
+"desc": "Clear, deep mature Korean male voice",
+"tags": [
+"deep",
+"authoritative"
+]
+},
+{
+"id": "Yoona",
+"name": "Yoona",
+"lang": "ko-KR",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Korean woman with a gentle, soothing voice",
+"tags": [
+"sad",
+"clear"
+]
+},
+{
+"id": "Erik",
+"name": "Erik",
+"lang": "nl-NL",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Older Dutch male voice with a weathered edge",
+"tags": [
+"smooth",
+"strong"
+]
+},
+{
+"id": "Katrien",
+"name": "Katrien",
+"lang": "nl-NL",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Dutch woman with an expressive voice",
+"tags": [
+"bright",
+"melodic"
+]
+},
+{
+"id": "Lennart",
+"name": "Lennart",
+"lang": "nl-NL",
+"gender": "male",
+"age": "middle_aged",
+"desc": "A confident Dutch male voice. Calm and relaxed",
+"tags": [
+"authoritative",
+"robust"
+]
+},
+{
+"id": "Lore",
+"name": "Lore",
+"lang": "nl-NL",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Clear, calm Dutch female voice, great for narrations and professional use cases",
+"tags": [
+"strong",
+"clear"
+]
+},
+{
+"id": "Szymon",
+"name": "Szymon",
+"lang": "pl-PL",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Polish adult male voice with a warm, friendly quality",
+"tags": [
+"fast",
+"soft"
+]
+},
+{
+"id": "Wojciech",
+"name": "Wojciech",
+"lang": "pl-PL",
+"gender": "male",
+"age": "middle_aged",
+"desc": "A middle-aged Polish male voice",
+"tags": [
+"confident",
+"strong"
+]
+},
+{
+"id": "Adriana",
+"name": "Adriana",
+"lang": "pt-BR",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Expressive, animated Brazilian Portuguese female voice with a subtle Northeastern accent and a mature, friendly tone, ideal for customer support, storytelling, and companion chats.",
+"tags": [
+"expressive",
+"animated",
+"friendly",
+"brazilian"
+]
+},
+{
+"id": "Beatriz",
+"name": "Beatriz",
+"lang": "pt-BR",
+"gender": "female",
+"age": "middle_aged",
+"desc": "A clear, mid-pitched adult female voice with a Brazilian accent, speaking fluently in a quiet indoor environment.",
+"tags": [
+"casual",
+"conversational"
+]
+},
+{
+"id": "Bruna",
+"name": "Bruna",
+"lang": "pt-BR",
+"gender": "female",
+"age": "young",
+"desc": "Warm, conversational Brazilian Portuguese female voice, ideal for education, narration, and customer service.",
+"tags": [
+"warm",
+"conversational",
+"engaging",
+"brazilian",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Davi",
+"name": "Davi",
+"lang": "pt-BR",
+"gender": "male",
+"age": "young",
+"desc": "Deep, laid-back young Brazilian Portuguese male voice with a subtle countryside São Paulo accent and a casual, relaxed delivery, ideal for narration, gaming, and companion chats.",
+"tags": [
+"deep",
+"laid-back",
+"casual",
+"brazilian"
+]
+},
+{
+"id": "Heitor",
+"name": "Heitor",
+"lang": "pt-BR",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Composed Portuguese-speaking male voice with a neutral tone",
+"tags": [
+"calm",
+"demanding"
+]
+},
+{
+"id": "Larissa",
+"name": "Larissa",
+"lang": "pt-BR",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Bright, friendly Brazilian Portuguese female voice, ideal for education, narration, and customer service.",
+"tags": [
+"bright",
+"friendly",
+"expressive",
+"brazilian",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Maitê",
+"name": "Maitê",
+"lang": "pt-BR",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Middle-aged Portuguese-speaking female voice",
+"tags": [
+"reassuring",
+"clear",
+"customer support"
+]
+},
+{
+"id": "Mariana",
+"name": "Mariana",
+"lang": "pt-BR",
+"gender": "female",
+"age": "young",
+"desc": "A young, enthusiastic female speaker with a clear, smooth voice and a Brazilian Portuguese accent, speaking at a moderate pace in a high-quality recording environment.",
+"tags": [
+"upbeat",
+"motivational"
+]
+},
+{
+"id": "Murilo",
+"name": "Murilo",
+"lang": "pt-BR",
+"gender": "male",
+"age": "middle_aged",
+"desc": "A calm and analytical adult male with a clear, standard Brazilian Portuguese accent, speaking at a moderate pace in a quiet environment.",
+"tags": [
+"professional",
+"articulate"
+]
+},
+{
+"id": "Patricia",
+"name": "Patricia",
+"lang": "pt-BR",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Bright, friendly Brazilian Portuguese female voice, ideal for education, narration, and customer service.",
+"tags": [
+"bright",
+"friendly",
+"expressive",
+"brazilian",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Renata",
+"name": "Renata",
+"lang": "pt-BR",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Calm, clear Brazilian Portuguese female voice, ideal for education, narration, and customer service.",
+"tags": [
+"calm",
+"clear",
+"approachable",
+"brazilian",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Tatiana",
+"name": "Tatiana",
+"lang": "pt-BR",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Lively, natural Brazilian Portuguese female voice, ideal for education, narration, and customer service.",
+"tags": [
+"lively",
+"natural",
+"welcoming",
+"brazilian",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Vanessa",
+"name": "Vanessa",
+"lang": "pt-BR",
+"gender": "female",
+"age": "young",
+"desc": "Warm, conversational Brazilian Portuguese female voice, ideal for education, narration, and customer service.",
+"tags": [
+"warm",
+"conversational",
+"engaging",
+"brazilian",
+"education & training",
+"narration",
+"customer support",
+"enterprise"
+]
+},
+{
+"id": "Leonor",
+"name": "Leonor",
+"lang": "pt-PT",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Clear, composed European Portuguese female voice, ideal for education, narration, and business.",
+"tags": [
+"clear",
+"composed",
+"refined",
+"european portuguese",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Madalena",
+"name": "Madalena",
+"lang": "pt-PT",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Bright, natural European Portuguese female voice, ideal for education, narration, and business.",
+"tags": [
+"bright",
+"natural",
+"poised",
+"european portuguese",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Matilde",
+"name": "Matilde",
+"lang": "pt-PT",
+"gender": "female",
+"age": "young",
+"desc": "Warm, melodic European Portuguese female voice, ideal for education, narration, and business.",
+"tags": [
+"warm",
+"melodic",
+"measured",
+"european portuguese",
+"education & training",
+"narration",
+"business",
+"enterprise"
+]
+},
+{
+"id": "Alyona",
+"name": "Alyona",
+"lang": "ru-RU",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Soft, clear Russian female voice, ideal for narration, education, and customer service.",
+"tags": [
+"soft",
+"clear",
+"reassuring",
+"russian",
+"narration",
+"education & training",
+"customer support",
+"interactive media"
+]
+},
+{
+"id": "Arkady",
+"name": "Arkady",
+"lang": "ru-RU",
+"gender": "male",
+"age": "young",
+"desc": "Natural, conversational Russian male voice, ideal for narration, customer support, and business.",
+"tags": [
+"natural",
+"conversational",
+"warm",
+"russian",
+"narration",
+"customer support",
+"business",
+"interactive media",
+"enterprise"
+]
+},
+{
+"id": "Dmitry",
+"name": "Dmitry",
+"lang": "ru-RU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Deep, gravelly male voice, delivered at a moderate pace with a commanding and narrative tone.",
+"tags": [
+"gravelly",
+"authoritative"
+]
+},
+{
+"id": "Elena",
+"name": "Elena",
+"lang": "ru-RU",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Clear, mid-range female voice, with a smooth texture and a neutral, informational tone.",
+"tags": [
+"clear",
+"moderately-paced"
+]
+},
+{
+"id": "Galina",
+"name": "Galina",
+"lang": "ru-RU",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Soft, clear Russian female voice, ideal for narration, education, and customer service.",
+"tags": [
+"soft",
+"clear",
+"reassuring",
+"russian",
+"narration",
+"education & training",
+"customer support",
+"interactive media"
+]
+},
+{
+"id": "Gleb",
+"name": "Gleb",
+"lang": "ru-RU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Bright, engaging Russian male voice, ideal for narration, customer support, and business.",
+"tags": [
+"bright",
+"engaging",
+"relaxed",
+"russian",
+"narration",
+"customer support",
+"business",
+"interactive media",
+"enterprise"
+]
+},
+{
+"id": "Grigory",
+"name": "Grigory",
+"lang": "ru-RU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Clear, grounded Russian male voice, ideal for narration, customer support, and business.",
+"tags": [
+"clear",
+"grounded",
+"measured",
+"russian",
+"narration",
+"customer support",
+"business",
+"interactive media",
+"enterprise"
+]
+},
+{
+"id": "Lev",
+"name": "Lev",
+"lang": "ru-RU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Confident, approachable Russian male voice, ideal for narration, customer support, and business.",
+"tags": [
+"confident",
+"approachable",
+"steady",
+"russian",
+"narration",
+"customer support",
+"business",
+"interactive media",
+"enterprise"
+]
+},
+{
+"id": "Nikolai",
+"name": "Nikolai",
+"lang": "ru-RU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Deep, resonant male voice, delivered at a measured pace with a clear, theatrical, and narrative quality.",
+"tags": [
+"deep",
+"dramatic"
+]
+},
+{
+"id": "Oksana",
+"name": "Oksana",
+"lang": "ru-RU",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Composed, poised Russian female voice, ideal for narration, education, and customer service.",
+"tags": [
+"composed",
+"poised",
+"approachable",
+"russian",
+"narration",
+"education & training",
+"customer support",
+"interactive media"
+]
+},
+{
+"id": "Polina",
+"name": "Polina",
+"lang": "ru-RU",
+"gender": "female",
+"age": "young",
+"desc": "Calm, warm Russian female voice, ideal for narration, education, and customer service.",
+"tags": [
+"calm",
+"warm",
+"soothing",
+"russian",
+"narration",
+"education & training",
+"customer support",
+"interactive media"
+]
+},
+{
+"id": "Rodion",
+"name": "Rodion",
+"lang": "ru-RU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Calm, articulate Russian male voice, ideal for narration, customer support, and business.",
+"tags": [
+"calm",
+"articulate",
+"poised",
+"russian",
+"narration",
+"customer support",
+"business",
+"interactive media",
+"enterprise"
+]
+},
+{
+"id": "Ruslan",
+"name": "Ruslan",
+"lang": "ru-RU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Bright, engaging Russian male voice, ideal for narration, customer support, and business.",
+"tags": [
+"bright",
+"engaging",
+"relaxed",
+"russian",
+"narration",
+"customer support",
+"business",
+"interactive media",
+"enterprise"
+]
+},
+{
+"id": "Snezhana",
+"name": "Snezhana",
+"lang": "ru-RU",
+"gender": "female",
+"age": "young",
+"desc": "Calm, warm Russian female voice, ideal for narration, education, and customer service.",
+"tags": [
+"calm",
+"warm",
+"soothing",
+"russian",
+"narration",
+"education & training",
+"customer support",
+"interactive media"
+]
+},
+{
+"id": "Stepan",
+"name": "Stepan",
+"lang": "ru-RU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Clear, grounded Russian male voice, ideal for narration, customer support, and business.",
+"tags": [
+"clear",
+"grounded",
+"measured",
+"russian",
+"narration",
+"customer support",
+"business",
+"interactive media",
+"enterprise"
+]
+},
+{
+"id": "Svetlana",
+"name": "Svetlana",
+"lang": "ru-RU",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Soft, high-pitched female voice, with a moderate pace and slightly breathy quality.",
+"tags": [
+"high-pitched",
+"soft"
+]
+},
+{
+"id": "Tamara",
+"name": "Tamara",
+"lang": "ru-RU",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Gentle, natural Russian female voice, ideal for narration, education, and customer service.",
+"tags": [
+"gentle",
+"natural",
+"measured",
+"russian",
+"narration",
+"education & training",
+"customer support",
+"interactive media"
+]
+},
+{
+"id": "Timofey",
+"name": "Timofey",
+"lang": "ru-RU",
+"gender": "male",
+"age": "young",
+"desc": "Natural, conversational Russian male voice, ideal for narration, customer support, and business.",
+"tags": [
+"natural",
+"conversational",
+"warm",
+"russian",
+"narration",
+"customer support",
+"business",
+"interactive media",
+"enterprise"
+]
+},
+{
+"id": "Vadim",
+"name": "Vadim",
+"lang": "ru-RU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Confident, approachable Russian male voice, ideal for narration, customer support, and business.",
+"tags": [
+"confident",
+"approachable",
+"steady",
+"russian",
+"narration",
+"customer support",
+"business",
+"interactive media",
+"enterprise"
+]
+},
+{
+"id": "Yegor",
+"name": "Yegor",
+"lang": "ru-RU",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Calm, articulate Russian male voice, ideal for narration, customer support, and business.",
+"tags": [
+"calm",
+"articulate",
+"poised",
+"russian",
+"narration",
+"customer support",
+"business",
+"interactive media",
+"enterprise"
+]
+},
+{
+"id": "Yulia",
+"name": "Yulia",
+"lang": "ru-RU",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Gentle, natural Russian female voice, ideal for narration, education, and customer service.",
+"tags": [
+"gentle",
+"natural",
+"measured",
+"russian",
+"narration",
+"education & training",
+"customer support",
+"interactive media"
+]
+},
+{
+"id": "Anders",
+"name": "Anders",
+"lang": "sv-SE",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Warm, relaxed Swedish male voice with a grounded, natural delivery, ideal for narration, audiobooks, and conversational assistants.",
+"tags": [
+"warm",
+"relaxed",
+"grounded",
+"swedish"
+]
+},
+{
+"id": "Astrid",
+"name": "Astrid",
+"lang": "sv-SE",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Bright, friendly Swedish female voice with an upbeat, approachable tone, ideal for customer support, onboarding, and companion chats.",
+"tags": [
+"bright",
+"friendly",
+"upbeat",
+"swedish"
+]
+},
+{
+"id": "Elsa",
+"name": "Elsa",
+"lang": "sv-SE",
+"gender": "female",
+"age": "young",
+"desc": "Bright, youthful Swedish female voice with a lively, friendly tone, ideal for companions, lifestyle content, and gaming.",
+"tags": [
+"bright",
+"youthful",
+"lively",
+"swedish"
+]
+},
+{
+"id": "Ingrid",
+"name": "Ingrid",
+"lang": "sv-SE",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Mature, composed Swedish female voice with a crisp, efficient delivery, ideal for narration, assistants, and announcements.",
+"tags": [
+"mature",
+"composed",
+"crisp",
+"swedish"
+]
+},
+{
+"id": "Johan",
+"name": "Johan",
+"lang": "sv-SE",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Easygoing, warm Swedish male voice with a natural, conversational tone, ideal for companions, assistants, and gaming.",
+"tags": [
+"easygoing",
+"warm",
+"conversational",
+"swedish"
+]
+},
+{
+"id": "Lars",
+"name": "Lars",
+"lang": "sv-SE",
+"gender": "male",
+"age": "middle_aged",
+"desc": "Lively, expressive Swedish male voice with an animated, engaging delivery, ideal for gaming, interactive characters, and promos.",
+"tags": [
+"lively",
+"expressive",
+"animated",
+"swedish"
+]
+},
+{
+"id": "Linnea",
+"name": "Linnea",
+"lang": "sv-SE",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Warm, expressive Swedish female voice with a relaxed, unhurried delivery, ideal for companion chats, storytelling, and interactive characters.",
+"tags": [
+"warm",
+"expressive",
+"unhurried",
+"swedish"
+]
+},
+{
+"id": "Maja",
+"name": "Maja",
+"lang": "sv-SE",
+"gender": "female",
+"age": "middle_aged",
+"desc": "Calm, clear Swedish female voice with a steady, professional delivery, ideal for customer support, assistants, and e-learning.",
+"tags": [
+"calm",
+"clear",
+"professional",
+"swedish"
+]
+},
+{
+"id": "Oskar",
+"name": "Oskar",
+"lang": "sv-SE",
+"gender": "male",
+"age": "young",
+"desc": "Deep, steady young Swedish male voice with an even, reassuring delivery, ideal for narration, customer support, and documentaries.",
+"tags": [
+"deep",
+"steady",
+"reassuring",
+"swedish"
+]
+},
+{
+"id": "Viktor",
+"name": "Viktor",
+"lang": "sv-SE",
+"gender": "male",
+"age": "young",
+"desc": "Calm, quietly confident young Swedish male voice with a gentle, understated delivery, ideal for companion chats, assistants, and storytelling.",
+"tags": [
+"calm",
+"confident",
+"understated",
+"swedish"
+]
+},
+{
+"id": "Jing",
+"name": "Jing",
+"lang": "zh-CN",
+"gender": "female",
+"age": "young",
+"desc": "An energetic, fast-paced young Chinese female",
+"tags": [
+"soft",
+"clear"
+]
+},
+{
+"id": "Mei",
+"name": "Mei",
+"lang": "zh-CN",
+"gender": "female",
+"age": "young",
+"desc": "A young female with a smooth, clear voice and standard Mandarin accent, speaking at a moderate pace in a quiet studio environment.",
+"tags": [
+"clear",
+"warm"
+]
+},
+{
+"id": "Ming",
+"name": "Ming",
+"lang": "zh-CN",
+"gender": "male",
+"age": "young",
+"desc": "A young adult male with a smooth, clear voice speaking slowly and deliberately in a quiet environment.",
+"tags": [
+"clear",
+"professional"
+]
+},
+{
+"id": "Xiaoyin",
+"name": "Xiaoyin",
+"lang": "zh-CN",
+"gender": "female",
+"age": "young",
+"desc": "A youthful Chinese female voice with a gentle, sweet voice",
+"tags": [
+"polite",
+"kind",
+"customer support"
+]
+},
+{
+"id": "Xinyi",
+"name": "Xinyi",
+"lang": "zh-CN",
+"gender": "female",
+"age": "young",
+"desc": "A Chinese woman with a neutral tone, perfect for narrations",
+"tags": [
+"professional",
+"warm"
+]
+},
+{
+"id": "Yichen",
+"name": "Yichen",
+"lang": "zh-CN",
+"gender": "male",
+"age": "middle_aged",
+"desc": "A calm, flat young adult male Chinese voice",
+"tags": [
+"clear",
+"friendly"
+]
+}
+]

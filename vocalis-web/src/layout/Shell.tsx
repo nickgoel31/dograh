@@ -4,7 +4,7 @@ import { Command } from 'cmdk'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   BarChart3, BookOpen, Bell, Bot, ChevronDown, ChevronRight, Code2, CreditCard, FlaskConical, HelpCircle, Home, Megaphone, Menu as MenuIcon,
-  MessageCircle, Mic2, Moon, PanelLeftClose, PanelLeftOpen, Phone, PhoneCall, Plug, Search, Send, Settings, Sparkles, Sun, X, Check, ChevronsUpDown,
+  MessageCircle, Mic2, Moon, Wallet, PanelLeftClose, PanelLeftOpen, Phone, PhoneCall, Plug, Search, Send, Settings, Sparkles, Sun, X, Check, ChevronsUpDown,
 } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
 import { BRAND } from '@/config/brand'
@@ -19,7 +19,7 @@ import { useData } from '@/store/data'
 import { calls } from '@/mock/calls'
 import { Button, Menu, MenuContent, MenuItem, MenuSep, MenuTrigger, Switch, TooltipProvider } from '@/components/ui'
 import { PlaygroundModal } from '@/components/Playground'
-import { cn } from '@/lib/utils'
+import { cn, money } from '@/lib/utils'
 
 const main = [
   { to: '/', label: 'Home', icon: Home }, { to: '/agents', label: 'Agents', icon: Bot }, { to: '/conversations', label: 'Conversations', icon: PhoneCall },
@@ -47,7 +47,8 @@ function NavItem({ to, label, icon: Icon, collapsed, onClick }: (typeof main)[nu
 }
 
 function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => void }) {
-  const { mode, workspace, workspaceId, set } = useUI()
+  const { workspace, workspaceId, view, set } = useUI()
+  const advancedOnly = new Set(['/developers', '/testing']) // shown only in Advanced view
   const { data: me } = useMe()
   // Real mode: the user's actual workspaces. Mock mode: the demo list.
   const list = USE_MOCKS ? demoWorkspaces.map((n, i) => ({ id: String(i), name: n })) : (me?.workspaces ?? [])
@@ -70,17 +71,11 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
           </MenuContent>
         </Menu>
       )}
-      <div role="group" aria-label="Test or Live mode" className={cn('grid rounded-lg bg-muted p-1 text-[13px] font-medium', collapsed ? 'grid-cols-1 gap-1' : 'grid-cols-2')}>
-        {(['test', 'live'] as const).map((m) => (
-          <button key={m} onClick={() => { set({ mode: m }); toast(m === 'test' ? 'Switched to Test mode' : 'Switched to Live mode') }} aria-pressed={mode === m}
-            className={cn('rounded-md py-1.5 capitalize transition', mode === m ? (m === 'test' ? 'bg-surface text-warn shadow-card' : 'bg-surface text-ok shadow-card') : 'text-soft')}>{collapsed ? m[0].toUpperCase() : m}</button>
-        ))}
-      </div>
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto" aria-label="Main">
-        {main.map((n) => <NavItem key={n.to} {...n} collapsed={collapsed} onClick={close} />)}
+        {main.filter((n) => view === 'advanced' || !advancedOnly.has(n.to)).map((n) => <NavItem key={n.to} {...n} collapsed={collapsed} onClick={close} />)}
         {!collapsed && <div className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-wider text-soft/70">Build</div>}
         {collapsed && <div className="my-2 h-px bg-line" />}
-        {build.map((n) => <NavItem key={n.to} {...n} collapsed={collapsed} onClick={close} />)}
+        {build.filter((n) => view === 'advanced' || !advancedOnly.has(n.to)).map((n) => <NavItem key={n.to} {...n} collapsed={collapsed} onClick={close} />)}
         <div className="mt-auto pt-4">{bottom.map((n) => <NavItem key={n.to} {...n} collapsed={collapsed} onClick={close} />)}</div>
       </nav>
     </div>
@@ -111,6 +106,19 @@ const alerts = [
   { t: 'Priya just took her 1,000th call 🎉', d: 'Nice milestone. See how she’s doing.', to: '/agents/a1', tone: 'text-ok' },
 ]
 
+function WalletChip() {
+  const q = useQuery({ queryKey: ['wallet-chip'], queryFn: () => http<{ balance: number; minutes_available: number; currency: string; low_balance: boolean }>('/billing/wallet'), enabled: !USE_MOCKS, refetchInterval: 60000 })
+  const nav = useNavigate()
+  const w = USE_MOCKS ? { balance: 1240, minutes_available: 206, currency: 'INR', low_balance: false } : q.data
+  if (!w) return null
+  return (
+    <button onClick={() => nav('/billing')} title="Your balance. Click to add money or see usage." aria-label="Wallet balance"
+      className={cn('hidden h-9 items-center gap-2 rounded-lg border bg-surface px-3 text-sm shadow-card hover:bg-muted sm:flex', w.low_balance && 'border-warn text-warn')}>
+      <Wallet size={15} /><span className="font-semibold">{money(w.balance)}</span><span className="text-soft">· {Math.floor(w.minutes_available)} min</span>
+    </button>
+  )
+}
+
 function Topbar({ openNav }: { openNav: () => void }) {
   const { view, theme, collapsed, set } = useUI()
   const me = useMe().data
@@ -130,6 +138,7 @@ function Topbar({ openNav }: { openNav: () => void }) {
         <Search size={14} />Search<kbd className="ml-6 rounded border bg-muted px-1.5 text-[11px]">⌘K</kbd>
       </button>
       <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => set({ palette: true })} aria-label="Search"><Search size={18} /></Button>
+      <WalletChip />
       <div className="flex items-center gap-2 rounded-lg border bg-surface px-2.5 py-1.5 shadow-card" title="Simple shows the basics. Advanced shows every technical option.">
         <span className={cn('text-xs font-medium', view === 'simple' ? 'text-ink' : 'text-soft')}>Simple</span>
         <Switch checked={view === 'advanced'} onChange={(v) => { set({ view: v ? 'advanced' : 'simple' }); toast(v ? 'Advanced view: all options visible' : 'Simple view: just the basics') }} label="Advanced view" />
@@ -240,6 +249,8 @@ function AIHelper() {
 
 export default function Shell() {
   const { mode, theme, collapsed, mobileNav, set } = useUI()
+  // The app works on live data only; practice calls from an agent's page still use its private test copy.
+  React.useEffect(() => { if (mode !== 'live') set({ mode: 'live' }) }, [mode, set])
   const { pathname } = useLocation()
   React.useEffect(() => { document.documentElement.classList.toggle('dark', theme === 'dark') }, [theme])
   React.useEffect(() => { set({ mobileNav: false }); window.scrollTo(0, 0) }, [pathname, set])
@@ -256,7 +267,6 @@ export default function Shell() {
           )}
         </AnimatePresence>
         <div className="flex min-w-0 flex-1 flex-col">
-          {mode === 'test' && <div className="bg-warn px-4 py-1.5 text-center text-[13px] font-medium text-white" role="status">You're in Test mode. Nothing here costs money or calls real people.</div>}
           <Topbar openNav={() => set({ mobileNav: true })} />
           <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-8 pb-28 md:px-8">
             <AnimatePresence mode="wait">

@@ -1,22 +1,16 @@
-import pytest
+from api.product.make_profile import GOOGLE_REALTIME, INWORLD_REALTIME, build_config
 
-from api.product.make_profile import profile_config_from, summary
-from api.services.reseller.profiles import ProfileConfigError
-
-
-def test_profile_keeps_only_provider_sections():
-    raw = {
-        "llm": {"provider": "openai", "api_key": "k", "model": "gpt-4.1"},
-        "tts": {"provider": "sarvam", "api_key": "k", "model": "bulbul:v4-flash", "voice": "shubh_enhi_ads", "language": "hi-IN"},
-        "stt": {"provider": "deepgram", "api_key": "k", "model": "nova-3", "language": "multi"},
-        "last_validated_at": "2026-01-01", "something_else": 1,
-    }
-    cfg = profile_config_from(raw)
-    assert set(cfg) == {"llm", "tts", "stt"}
-    s = summary(cfg)
-    assert "openai / gpt-4.1" in s and "sarvam" in s and "k," not in s  # never prints keys
+BASE = {"llm": {"provider": "openai", "api_key": "k", "model": "gpt-4.1"}, "embeddings": None, "other": 1}
 
 
-def test_empty_settings_are_refused_plainly():
-    with pytest.raises(ProfileConfigError):
-        profile_config_from({})
+def test_inworld_profile_has_the_chosen_models_and_a_key():
+    cfg = build_config(INWORLD_REALTIME, "SECRET", BASE)
+    rt = cfg["realtime"]
+    assert cfg["is_realtime"] is True and rt["api_key"] == "SECRET"
+    assert rt["stt_model"] == "assemblyai/universal-3-5-pro" and rt["tts_model"] == "inworld-tts-2" and rt["voice"] == "Seema"
+    assert rt["model"] == "google-ai-studio/gemini-3.1-flash-lite" and cfg["llm"]["model"] == "gpt-4.1" and "other" not in cfg
+
+
+def test_google_profile_can_be_made_without_a_key():
+    cfg = build_config(GOOGLE_REALTIME, "", BASE)
+    assert cfg["realtime"]["provider"] == "google_realtime" and cfg["realtime"]["api_key"] == ""

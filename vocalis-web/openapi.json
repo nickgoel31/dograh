@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Vocalis API",
+    "title": "Swarvo AI API",
     "version": "0.1.0"
   },
   "paths": {
@@ -4420,6 +4420,54 @@
         }
       }
     },
+    "/api/v1/product/auth/handoff/eligible": {
+      "get": {
+        "tags": [
+          "handoff"
+        ],
+        "summary": "Eligible",
+        "description": "Whether this person may be offered the switch to the new experience (the classic UI asks before showing it).",
+        "operationId": "eligible_api_v1_product_auth_handoff_eligible_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/product/auth/handoff/redeem": {
       "post": {
         "tags": [
@@ -4554,6 +4602,88 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/billing/wallet": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Wallet Chip",
+        "description": "A small balance readout for the page header. Any member may see it.",
+        "operationId": "wallet_chip_api_v1_product_billing_wallet_get",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletOut"
+                }
               }
             }
           },
@@ -7936,6 +8066,11 @@
             ],
             "title": "Voice Id"
           },
+          "brain_applies": {
+            "type": "boolean",
+            "title": "Brain Applies",
+            "default": true
+          },
           "prompt_mode": {
             "type": "string",
             "title": "Prompt Mode"
@@ -9423,6 +9558,18 @@
             "maxLength": 128,
             "minLength": 1,
             "title": "Password"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 8
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
           }
         },
         "type": "object",
@@ -10739,6 +10886,27 @@
             "title": "Favorite",
             "default": false
           },
+          "available": {
+            "type": "boolean",
+            "title": "Available",
+            "default": true
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "brain_levels": {
+            "type": "boolean",
+            "title": "Brain Levels",
+            "default": true
+          },
           "preview_url": {
             "anyOf": [
               {
@@ -10763,6 +10931,34 @@
           "provider"
         ],
         "title": "VoiceOut"
+      },
+      "WalletOut": {
+        "properties": {
+          "balance": {
+            "type": "number",
+            "title": "Balance"
+          },
+          "minutes_available": {
+            "type": "number",
+            "title": "Minutes Available"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "low_balance": {
+            "type": "boolean",
+            "title": "Low Balance"
+          }
+        },
+        "type": "object",
+        "required": [
+          "balance",
+          "minutes_available",
+          "currency",
+          "low_balance"
+        ],
+        "title": "WalletOut"
       },
       "WorkspaceCreateBody": {
         "properties": {

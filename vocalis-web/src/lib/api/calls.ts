@@ -1,4 +1,4 @@
-import { http } from './http'
+import { ApiError, http } from './http'
 import type { components } from './schema'
 import type { Call } from '@/mock/types'
 
@@ -25,6 +25,13 @@ export function toCall(c: CallOut | CallDetail): Call {
 
 export const callsApi = {
   // One page of the newest calls; the page filters within it.
-  list: async () => (await http<components['schemas']['CallPage']>('/conversations?limit=100')).calls.map(toCall),
-  get: async (id: string) => toCall(await http<CallDetail>(`/conversations/${id}`)),
+  // `practice` shows calls made from an agent's Talk button; everything else is real calls.
+  list: async (practice = false) => (await http<components['schemas']['CallPage']>('/conversations?limit=100', practice ? { headers: { 'X-Environment': 'test' } } : {})).calls.map(toCall),
+  // A call might be a practice call, which lives on the private test side: look there if it isn't among the real ones.
+  get: async (id: string) => {
+    try { return toCall(await http<CallDetail>(`/conversations/${id}`)) } catch (e) {
+      if (e instanceof ApiError && e.code === 'call_not_found') return toCall(await http<CallDetail>(`/conversations/${id}`, { headers: { 'X-Environment': 'test' } }))
+      throw e
+    }
+  },
 }

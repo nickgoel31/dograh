@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 
 from api.db.product_models import ProductAgentModel
 from api.product import agents as svc
+from api.product import models_config, voices
 from api.product import definition as defn
 from api.product import versions as vdiff
 from api.product.deps import Ctx, get_ctx, require
@@ -28,6 +29,7 @@ class AgentOut(BaseModel):
     what_you_do: str
     brain: str
     voice_id: str | None
+    brain_applies: bool = True  # false when the chosen voice runs on a single fixed AI model
     prompt_mode: str
     prompt: str | None = None
     version: int
@@ -80,7 +82,8 @@ def _out(a: ProductAgentModel, prompt: str | None = None) -> AgentOut:
     return AgentOut(
         id=a.public_id, name=a.name, emoji=a.emoji, color=a.color, role=a.role, status=a.status,
         tone=a.tone, business=a.business, what_you_do=a.what_you_do, brain=a.brain,
-        voice_id=a.voice_id, prompt_mode=a.prompt_mode, prompt=prompt, version=a.version,
+        voice_id=a.voice_id, brain_applies=models_config.brain_applies(getattr(voices.find(a.voice_id) if a.voice_id else None, 'engine', None)),
+        prompt_mode=a.prompt_mode, prompt=prompt, version=a.version,
     )
 
 

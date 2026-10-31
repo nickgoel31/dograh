@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 for k, v in {
     "DATABASE_URL": "postgresql+asyncpg://dev/dev", "REDIS_URL": "redis://dev", "MINIO_PUBLIC_ENDPOINT": "http://localhost:9000",
     "PRODUCT_COOKIE_SECURE": "false", "PRODUCT_ALLOWED_ORIGINS": "http://localhost:5174,http://localhost:5173",
-    "PRODUCT_PROFILES": '{"default":"std"}', "PRODUCT_FREE_MINUTES": "30", "PRODUCT_NEW_UI_ORGS": "*",
+    "PRODUCT_PROFILES": '{"default":"inworld","inworld":"inworld","google":"google"}', "PRODUCT_FREE_MINUTES": "30", "PRODUCT_NEW_UI_ORGS": "*",
 }.items():
     os.environ.setdefault(k, v)
 
@@ -69,8 +69,11 @@ async def _init():
     async with engine.begin() as conn:
         await conn.run_sync(lambda c: models.Base.metadata.create_all(c, tables=TABLES))
     async with Session() as s:
-        for slug, cfg in PROFILES.items():
-            s.add(models.ModelProfileModel(slug=slug, display_name=slug, config=cfg, is_active=True))
+        llm = {"provider": "openai", "api_key": "dev", "model": "dev"}
+        rt = {"inworld": {"provider": "inworld_realtime", "api_key": "dev-key", "model": "google-ai-studio/gemini-3.1-flash-lite", "voice": "Seema", "stt_model": "assemblyai/universal-3-5-pro", "tts_model": "inworld-tts-2", "language": "auto"},
+              "google": {"provider": "google_realtime", "api_key": "", "model": "gemini-3.1-flash-live-preview", "voice": "Zephyr", "language": "en-hi"}}
+        for slug, cfg in rt.items():  # the real voice engines; Google has no key yet, so its voices show as "Coming soon"
+            s.add(models.ModelProfileModel(slug=slug, display_name=slug, config={"is_realtime": True, "llm": llm, "realtime": cfg}, is_active=True))
         await s.commit()
         await _seed_old_account(s)
 

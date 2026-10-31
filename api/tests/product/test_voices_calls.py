@@ -47,14 +47,26 @@ async def agent_for(client, tok, **hdr):
 
 
 # ---------- voices ----------
-def test_catalogue_is_unique_and_hides_the_vendor():
+def test_catalogue_is_unique_and_hides_the_vendor(monkeypatch):
+    monkeypatch.setenv("PRODUCT_VOICE_ENGINES", "sarvam")
     cat = voices.catalogue()
     assert len(cat) == len({v.id for v in cat}) > 100
     assert {v.provider for v in cat} == {"Engine A"}
+
+
+def test_new_engines_have_real_voices_and_neutral_names(monkeypatch):
+    monkeypatch.setenv("PRODUCT_VOICE_ENGINES", "inworld,google")
+    cat = voices.catalogue()
+    assert len(cat) == len({v.id for v in cat}) > 300
+    assert {v.provider for v in cat} == {"Studio", "Gemini"}
+    seema = next(v for v in cat if v.name == "Seema")
+    assert seema.language.startswith("Hindi") and seema.gender == "Female" and seema.age
+    assert next(v for v in cat if v.name == "Zephyr").style == "Bright" and next(v for v in cat if v.name == "Zephyr").gender is None
     assert all(v.id.startswith("vc_") for v in cat)
 
 
-def test_unknown_metadata_is_not_invented():
+def test_unknown_metadata_is_not_invented(monkeypatch):
+    monkeypatch.setenv("PRODUCT_VOICE_ENGINES", "sarvam")  # this engine publishes no gender/age/accent
     v = voices.catalogue()[0]
     assert v.gender is None and v.age is None and v.accent is None
 

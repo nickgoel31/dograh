@@ -110,10 +110,12 @@ async def _config(ctx: Ctx) -> TelephonyConfigurationModel:
     )
     if cfg is not None:
         return cfg
-    creds = providers.twilio_credentials() if ctx.environment == "live" else {
-        "account_sid": f"SANDBOX{ctx.workspace.id}", "auth_token": "sandbox", "from_numbers": []}
+    if ctx.environment == "live":
+        provider, creds = providers.live_config() or ("twilio", {})
+    else:
+        provider, creds = "twilio", {"account_sid": f"SANDBOX{ctx.workspace.id}", "auth_token": "sandbox", "from_numbers": []}
     cfg = TelephonyConfigurationModel(
-        organization_id=ctx.org_id, name="Phone numbers", provider="twilio", credentials=creds or {}, is_default_outbound=True,
+        organization_id=ctx.org_id, name="Phone numbers", provider=provider, credentials=creds, is_default_outbound=True,
     )
     ctx.session.add(cfg)
     await ctx.session.flush()
