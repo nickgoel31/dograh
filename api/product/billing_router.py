@@ -232,6 +232,21 @@ async def confirm_topup(body: ConfirmBody, ctx: Ctx = Depends(require(Perm.BILLI
     return {"ok": True}
 
 
+class CancelBody(BaseModel):
+    order_id: str
+
+
+@router.post("/topups/cancel")
+async def cancel_topup(body: CancelBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE))):
+    """The customer closed the payment window without paying."""
+    pay = await ctx.session.scalar(select(ProductPaymentModel).where(
+        ProductPaymentModel.order_id == body.order_id, ProductPaymentModel.workspace_id == ctx.workspace.id))
+    if pay is not None and pay.status == "created":
+        pay.status = "canceled"
+        await ctx.session.commit()
+    return {"ok": True}
+
+
 @router.post("/webhooks/razorpay")
 async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = Header(default=None),
                            session=Depends(get_session), wallet: WalletGateway = Depends(get_wallet)):
@@ -256,7 +271,14 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
 @router.get("/payments")
 async def payments(ctx: Ctx = Depends(require(Perm.BILLING_MANAGE))):
     rows = (await ctx.session.scalars(select(ProductPaymentModel).where(ProductPaymentModel.workspace_id == ctx.workspace.id).order_by(ProductPaymentModel.id.desc()).limit(50))).all()
-    return [{"order_id": r.order_id, "amount": r.amount, "currency": r.currency, "status": r.status, "at": r.created_at.isoformat() if r.created_at else None} for r in rows]
+    now = datetime.now(UTC)
+
+    def shown(r) -> str:  # an unpaid order nobody finished is "expired", not "created" forever
+        if r.status == "created" and r.created_at and now - r.created_at > timedelta(minutes=30):
+            return "expired"
+        return r.status
+
+    return [{"order_id": r.order_id, "amount": r.amount, "currency": r.currency, "status": shown(r), "at": r.created_at.isoformat() if r.created_at else None} for r in rows]
 
 
 @router.get("/invoices", response_model=list[InvoiceOut])

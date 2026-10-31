@@ -140,7 +140,7 @@ class ProductPaymentModel(Base):
     payment_id = Column(String(64), nullable=True)
     amount = Column(Float, nullable=False)
     currency = Column(String(8), nullable=False)
-    status = Column(String(8), nullable=False, default="created")  # created | paid
+    status = Column(String(8), nullable=False, default="created")  # created | paid | canceled
     created_at = Column(DateTime(timezone=True), default=_now)
 
     __table_args__ = (Index("ix_product_payments_workspace", "workspace_id"),)

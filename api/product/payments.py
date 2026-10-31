@@ -2,6 +2,7 @@
 
 import hashlib
 import hmac
+import logging
 import os
 from typing import Protocol
 
@@ -29,6 +30,9 @@ def _eq(a: str, b: str) -> bool:
     return hmac.compare_digest(a.encode(), b.encode())
 
 
+log = logging.getLogger(__name__)
+
+
 class Razorpay:
     name = "razorpay"
 
@@ -42,9 +46,15 @@ class Razorpay:
                     "https://api.razorpay.com/v1/orders", auth=(self.public_key, self._secret),
                     json={"amount": int(round(amount * 100)), "currency": currency, "receipt": receipt},
                 )
+            if r.status_code in (401, 403):
+                log.error("Razorpay rejected the keys (HTTP %s): %s", r.status_code, r.text[:200])
+                raise PaymentError("Payments aren't set up correctly yet (the payment keys were rejected). Please contact support.")
             r.raise_for_status()
             return r.json()["id"]
+        except PaymentError:
+            raise
         except Exception as e:  # noqa: BLE001
+            log.error("Razorpay order failed: %s", e)
             raise PaymentError("We couldn't start the payment. Please try again in a moment.") from e
 
     def verify_checkout(self, order_id, payment_id, signature):

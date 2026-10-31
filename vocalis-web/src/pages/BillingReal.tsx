@@ -68,6 +68,7 @@ export default function RealBilling() {
       await loadCheckout()
       new window.Razorpay!({
         key: t.key, order_id: t.order_id, amount: Math.round(t.amount * 100), currency: t.currency, name: 'Add money', theme: { color: '#0b5c4c' },
+        modal: { ondismiss: () => { void http('/billing/topups/cancel', { method: 'POST', json: { order_id: t.order_id } }).then(() => refresh()).catch(() => undefined) } },
         handler: (r: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) =>
           http('/billing/topups/confirm', { method: 'POST', json: { order_id: r.razorpay_order_id, payment_id: r.razorpay_payment_id, signature: r.razorpay_signature } })
             .then(() => { toast.success('Money added!'); refresh() }).catch(say),
@@ -87,7 +88,8 @@ export default function RealBilling() {
   const totalVal = u?.by_day.reduce((a, d) => a + d.value, 0) ?? 0
   const limitPct = s.spend_limit ? Math.min(100, Math.round((s.month_usage_value / s.spend_limit) * 100)) : 0
   const canPay = s.payments_enabled && !s.free_mode
-  const statusTone = (st: string) => (st === 'paid' || st === 'captured' ? 'green' : st === 'failed' ? 'red' : 'orange')
+  const statusTone = (st: string) => (st === 'paid' || st === 'captured' ? 'green' : st === 'failed' ? 'red' : st === 'created' ? 'orange' : 'gray')
+  const statusLabel = (st: string) => ({ created: 'waiting for payment', canceled: 'cancelled', expired: 'expired', paid: 'paid' } as Record<string, string>)[st] ?? st
 
   return (
     <>
@@ -183,7 +185,7 @@ export default function RealBilling() {
           {pays.data && pays.data.length > 0 ? (
             <table className="w-full text-sm"><thead className="border-y bg-muted/50 text-left text-xs text-soft"><tr>{['Date', 'Reference', 'Amount', 'Status'].map((h) => <th key={h} className="px-4 py-2 font-medium">{h}</th>)}</tr></thead>
               <tbody>{pays.data.map((p) => <tr key={p.order_id} className="border-b last:border-0"><td className="px-4 py-3">{p.at ? new Date(p.at).toLocaleDateString() : '—'}</td><td className="px-4 py-3 font-mono text-xs">{p.order_id.slice(-10)}</td>
-                <td className="num px-4 py-3 font-medium">{fmt(p.amount, p.currency)}</td><td className="px-4 py-3"><Badge tone={statusTone(p.status)}>{p.status}</Badge></td></tr>)}</tbody></table>
+                <td className="num px-4 py-3 font-medium">{fmt(p.amount, p.currency)}</td><td className="px-4 py-3"><Badge tone={statusTone(p.status)}>{statusLabel(p.status)}</Badge></td></tr>)}</tbody></table>
           ) : <p className="px-5 pb-5 text-sm text-soft">Money you add will be listed here.</p>}
         </Card>
         <Card className="overflow-hidden">

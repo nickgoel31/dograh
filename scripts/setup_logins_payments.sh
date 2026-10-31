@@ -13,6 +13,10 @@ read -r -s -p "Razorpay Webhook Secret (Enter to skip): " RWH; echo
 [ -n "$GID" ] && set_env GOOGLE_CLIENT_ID "$GID"
 [ -n "$RID" ] && [ -n "$RSEC" ] && { set_env RAZORPAY_KEY_ID "$RID"; set_env RAZORPAY_KEY_SECRET "$RSEC"; }
 [ -n "$RWH" ] && set_env RAZORPAY_WEBHOOK_SECRET "$RWH"
+if [ -n "$RID" ] && [ -n "$RSEC" ]; then
+  code=$(curl -s -o /dev/null -w "%{http_code}" -m 20 -u "$RID:$RSEC" -H "Content-Type: application/json" -d '{"amount":10000,"currency":"INR","receipt":"keycheck"}' https://api.razorpay.com/v1/orders || true)
+  if [ "$code" = "200" ]; then echo "Razorpay keys check: OK"; else echo "Razorpay keys check FAILED (code $code). Key ID ${#RID} characters, secret ${#RSEC} characters. Copy them again from the Razorpay dashboard and re-run this script."; fi
+fi
 echo "Restarting the API (calls in progress drop for a moment)..."
 sudo docker compose --profile remote up -d api
 echo "Done."
