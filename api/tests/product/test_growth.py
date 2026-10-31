@@ -254,3 +254,35 @@ async def test_campaign_flow_gate_audit_counters_and_scope(client):
     hb = {**bearer(tok_b), "X-Environment": "live"}
     assert (await client.get("/product/campaigns", headers=hb)).json() == []
     assert (await client.post(f"/product/campaigns/{made['id']}/start", headers=hb)).status_code == 404
+
+
+async def test_hand_over_to_a_person_and_call_me(client):
+    _, tok = await signup(client, "a@x.com")
+    ha = bearer(tok)
+    aid = await agent(client, ha)
+    assert (await client.get(f"/product/tools/handover/{aid}", headers=ha)).json()["enabled"] is False
+    assert (await client.put(f"/product/tools/handover/{aid}", json={"number": "98765"}, headers=ha)).json()["detail"]["code"] == "bad_number"
+    r = await client.put(f"/product/tools/handover/{aid}", json={"number": "+919876543210", "when": "The caller asks for the doctor."}, headers=ha)
+    assert r.json() == {"enabled": True, "number": "+919876543210", "when": "The caller asks for the doctor."}
+    tools = (await client.get("/product/tools", headers=ha)).json()
+    assert [(t["kind"], t["number"]) for t in tools] == [("transfer", "+919876543210")]
+    assert (await client.get(f"/product/tools/agent/{aid}", headers=ha)).json() == [tools[0]["id"]]  # attached to the agent
+    await client.put(f"/product/tools/handover/{aid}", json={"number": "+911111111111"}, headers=ha)  # changing it replaces, never duplicates
+    assert len((await client.get("/product/tools", headers=ha)).json()) == 1
+    assert (await client.delete(f"/product/tools/handover/{aid}", headers=ha)).status_code == 204
+    assert (await client.get("/product/tools", headers=ha)).json() == []
+
+    body = {"phone": "+919800000002"}
+    assert (await client.post(f"/product/agents/{aid}/call-me", json=body, headers=ha)).json()["detail"]["code"] == "not_live_yet"
+    await client.post(f"/product/agents/{aid}/publish", headers=ha)
+    assert (await client.post(f"/product/agents/{aid}/call-me", json=body, headers=ha)).json()["detail"]["code"] == "no_number"
+    async with client.session_factory() as s:
+        ws = (await s.execute(select(product_models.ProductWorkspaceModel))).scalars().first()
+        cfg = models.TelephonyConfigurationModel(organization_id=ws.live_org_id, name="c", provider="twilio", credentials={})
+        s.add(cfg)
+        await s.flush()
+        s.add(models.TelephonyPhoneNumberModel(organization_id=ws.live_org_id, telephony_configuration_id=cfg.id, address="+919800000001", address_normalized="919800000001", address_type="PSTN", country_code="IN", is_active=True))
+        await s.commit()
+    ok = await client.post(f"/product/agents/{aid}/call-me", json=body, headers=ha)
+    assert ok.json()["status"] == "calling" and client.phone.calls[0][2] == "+919800000002"
+    assert (await client.post(f"/product/agents/{aid}/call-me", json={"phone": "12345"}, headers=ha)).json()["detail"]["code"] == "bad_number"

@@ -11,7 +11,7 @@ from sqlalchemy.pool import StaticPool
 
 from api.db import models, product_models
 from api.product import (agents_router, analytics_router, billing_router, calls_router, campaigns_router, config, conversations_router, deps, gateway,
-                         developers, developers_router, emailer, account_router, google_auth, handoff_router, help_router, home_router, import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, public_api, team_router, tools_router, voices_router, widget_router)
+                         developers, developers_router, emailer, account_router, google_auth, handoff_router, phonetest_router, help_router, home_router, import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, public_api, team_router, tools_router, voices_router, widget_router)
 from api.product import router as product_router
 
 TABLES = [
@@ -156,6 +156,13 @@ class FakeTools:
         self.items.setdefault(org_id, []).append(t)
         return t
 
+    async def create_transfer(self, org_id, user_id, spec):
+        n = next(self._n)
+        t = {"id": n, "uuid": f"tool-{org_id}-{n}", "name": spec["name"], "description": spec["description"],
+             "definition": {"type": "transfer_call", "config": {"destination": spec["number"]}}}
+        self.items.setdefault(org_id, []).append(t)
+        return t
+
     async def archive(self, org_id, user_id, tool_uuid):
         self.items[org_id] = [t for t in self.items.get(org_id, []) if t["uuid"] != tool_uuid]
 
@@ -189,6 +196,15 @@ class FakeMailer:
     async def send(self, to, subject, text, html=None):
         self.sent.append((to, subject, text))
         return True
+
+
+class FakePhone:
+    def __init__(self):
+        self.calls: list[tuple[int, int, str]] = []
+
+    async def start(self, org_id, user_id, workflow_id, phone):
+        self.calls.append((org_id, workflow_id, phone))
+        return "calling"
 
 
 class FakeSender:
@@ -314,6 +330,7 @@ async def make_client(monkeypatch, seed_profiles=True):
     monkeypatch.setenv("PRODUCT_VOICE_ENGINES", "sarvam")  # tests of the new voice engines set their own
     monkeypatch.setenv("PRODUCT_NEW_UI_ORGS", "*")  # tests of the rollout rule set their own
     monkeypatch.setattr(public_api.rate_limit, "enforce", _no_limit)
+    monkeypatch.setattr(phonetest_router.rate_limit, "enforce", _no_limit)
     app = FastAPI()
     app.include_router(product_router.router)
     app.include_router(agents_router.router)
@@ -324,7 +341,7 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(billing_router.router)
     app.include_router(developers_router.ops_router)
     for r in (analytics_router, labs_router, handoff_router, import_router, campaigns_router, home_router, knowledge_router, notifications, tools_router,
-              developers_router, help_router, public_api, team_router, widget_router, google_auth, account_router):
+              developers_router, help_router, public_api, team_router, widget_router, google_auth, account_router, phonetest_router):
         app.include_router(r.router)
     kb, tl, cp = FakeKB(), FakeTools(), FakeCampaigns()
     app.dependency_overrides[knowledge_router.get_knowledge] = lambda: kb
@@ -336,6 +353,8 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.dependency_overrides[labs_router.get_session_factory] = lambda: Session
     app.dependency_overrides[deps.get_session] = _session
     app.dependency_overrides[gateway.get_gateway] = lambda: fake
+    phone = FakePhone()
+    app.dependency_overrides[phonetest_router.get_phone_call] = lambda: phone
     mailer = FakeMailer()
     app.dependency_overrides[emailer.get_mailer] = lambda: mailer
     sender = FakeSender()
@@ -349,7 +368,7 @@ async def make_client(monkeypatch, seed_profiles=True):
         c.wallet = c_wallet
         c.kb, c.tools, c.camps = kb, tl, cp
         c.text, c.llm = text, llm
-        c.sender, c.mailer = sender, mailer
+        c.sender, c.mailer, c.phone = sender, mailer, phone
         yield c
     await engine.dispose()
 

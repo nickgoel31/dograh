@@ -11,6 +11,7 @@ import { USE_MOCKS } from '@/lib/api/env'
 import { agentsApi, toAgent } from '@/lib/api/agents'
 import { fromWorkflowDefinition, toWorkflowDefinition } from '@/lib/flowConvert'
 import { AttachPicker } from '@/components/AttachPicker'
+import { AgentPhone } from '@/pages/AgentPhone'
 import { useUI } from '@/store/ui'
 import { api } from '@/lib/api'
 import { useAsync } from '@/components/shared'
@@ -179,8 +180,8 @@ export default function AgentDetail() {
             <Field label="If nobody picks up"><Select value={d.voicemail} onChange={(e) => up({ voicemail: e.target.value })}><option value="leave">Leave a short voicemail</option><option value="hang">Hang up</option><option value="retry">Try again later</option></Select></Field></div>
           <AdvancedOnly><div className="mt-6 grid gap-4 border-t pt-6 sm:grid-cols-3"><Field label="VAD threshold"><Input defaultValue="0.55" /></Field><Field label="Silence timeout (ms)"><Input defaultValue="700" /></Field><Field label="Backchannel"><Select><option>On</option><option>Off</option></Select></Field></div></AdvancedOnly></Q></TabPanel>
 
-        <TabPanel value="phone"><Q title="Phone numbers" hint="Calls to these numbers go to this agent.">
-          <div className="space-y-2">{numbers.map((n) => { const on = agent.numbers.includes(n.id); return <div key={n.id} className="flex items-center justify-between rounded-lg border p-3"><div><div className="num font-medium">{n.number}</div><div className="text-xs text-soft">{n.country} · {n.type}</div></div><Button size="sm" variant={on ? 'secondary' : 'primary'} onClick={() => { updateAgent(agent.id, { numbers: on ? agent.numbers.filter((x) => x !== n.id) : [...agent.numbers, n.id] }); toast.success(on ? 'Number removed' : 'Number attached') }}>{on ? 'Remove' : 'Attach'}</Button></div> })}</div></Q></TabPanel>
+        <TabPanel value="phone">{USE_MOCKS ? (<><Q title="Phone numbers" hint="Calls to these numbers go to this agent.">
+          <div className="space-y-2">{numbers.map((n) => { const on = agent.numbers.includes(n.id); return <div key={n.id} className="flex items-center justify-between rounded-lg border p-3"><div><div className="num font-medium">{n.number}</div><div className="text-xs text-soft">{n.country} · {n.type}</div></div><Button size="sm" variant={on ? 'secondary' : 'primary'} onClick={() => { updateAgent(agent.id, { numbers: on ? agent.numbers.filter((x) => x !== n.id) : [...agent.numbers, n.id] }); toast.success(on ? 'Number removed' : 'Number attached') }}>{on ? 'Remove' : 'Attach'}</Button></div> })}</div></Q></>) : <AgentPhone agentId={agent.id} live={agent.status === 'live'} />}</TabPanel>
 
         <TabPanel value="test"><Q title="Try it out"><VoicePlayground agentId={agent.id} /><div className="mt-4 text-right"><Button onClick={() => { up({ tested: true }); toast.success('Nice! Marked as tested.') }}>I tried it — looks good</Button></div></Q></TabPanel>
 

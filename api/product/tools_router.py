@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from types import SimpleNamespace
 from typing import Protocol
@@ -25,6 +26,7 @@ _NODES = ("startCall", "agentNode")
 class ToolsGateway(Protocol):
     async def list(self, org_id: int, user_id: int) -> list[dict]: ...
     async def create_http(self, org_id: int, user_id: int, spec: dict) -> dict: ...
+    async def create_transfer(self, org_id: int, user_id: int, spec: dict) -> dict: ...
     async def archive(self, org_id: int, user_id: int, tool_uuid: str) -> None: ...
 
 
@@ -47,8 +49,19 @@ class CoreTools:
     async def list(self, org_id, user_id):
         from api.routes import tool as core
 
-        rows = await self._call(core.list_tools(status="active", category="http_api", user=self._user(org_id, user_id)))
+        rows = []
+        for cat in ("http_api", "transfer_call"):
+            rows += await self._call(core.list_tools(status="active", category=cat, user=self._user(org_id, user_id)))
         return [{"id": t.id, "uuid": t.tool_uuid, "name": t.name, "description": t.description or "", "definition": t.definition} for t in rows]
+
+    async def create_transfer(self, org_id, user_id, spec):
+        from api.schemas.tool import CreateToolRequest
+        from api.services.tool_management import create_tool_for_user
+
+        req = CreateToolRequest(name=spec["name"], description=spec["description"], category="transfer_call", definition={
+            "type": "transfer_call", "config": {"destination": spec["number"], "messageType": "custom", "customMessage": "One moment, I'll connect you now.", "timeout": 30}})
+        t = await self._call(create_tool_for_user(req, self._user(org_id, user_id), source="product"))
+        return {"id": t.id, "uuid": t.tool_uuid, "name": t.name}
 
     async def create_http(self, org_id, user_id, spec):
         from api.schemas.tool import CreateToolRequest
@@ -97,6 +110,8 @@ class ToolOut(BaseModel):
     method: str
     headers: dict[str, str]  # values are always hidden
     parameters: list[dict]
+    kind: str = "web"  # web | transfer
+    number: str | None = None
 
 
 class TestBody(BaseModel):
@@ -125,6 +140,8 @@ CATALOG = [
 
 def _view(t: dict) -> ToolOut:
     cfg = (t["definition"] or {}).get("config", {})
+    if (t["definition"] or {}).get("type") == "transfer_call":
+        return ToolOut(id=encode_id("tool", t["id"]), name=t["name"], description=t["description"], url="", method="", headers={}, parameters=[], kind="transfer", number=cfg.get("destination"))
     return ToolOut(id=encode_id("tool", t["id"]), name=t["name"], description=t["description"], url=cfg.get("url", ""), method=cfg.get("method", "POST"),
                    headers={k: MASK for k in (cfg.get("headers") or {})}, parameters=[{k: p.get(k) for k in ("name", "type", "description", "required")} for p in cfg.get("parameters") or []])
 
@@ -239,3 +256,74 @@ async def attach(agent_id: str, body: AttachBody, ctx: Ctx = Depends(require(Per
     agent.version += 1
     await ctx.session.commit()
     return list(dict.fromkeys(body.tool_ids))
+
+# ---------------- hand over to a person ----------------
+_E164 = re.compile(r"^\+[1-9]\d{6,14}$")
+
+
+class HandoverBody(BaseModel):
+    number: str = Field(max_length=20)
+    when: str = Field(default="The caller asks to speak to a person, or the agent cannot help.", min_length=5, max_length=400)
+
+
+def _handover_name(agent) -> str:
+    return f"Hand over to a person ({agent.public_id[-5:]})"
+
+
+async def _agent_graph(ctx, pg, agent_id):
+    agent = await agent_svc.get_agent(ctx.session, ctx.workspace, agent_id)
+    return agent, await agent_svc.get_flow(pg, ctx.workspace, agent)
+
+
+def _set_tools(graph: dict, fn) -> dict:
+    for n in graph.get("nodes", []):
+        if n.get("type") in _NODES:
+            d = n.setdefault("data", {})
+            d["tool_uuids"] = fn(list(d.get("tool_uuids") or []))
+    return graph
+
+
+@router.get("/handover/{agent_id}")
+async def handover_get(agent_id: str, ctx: Ctx = Depends(get_ctx), gw: ToolsGateway = Depends(get_tools), pg: PlatformGateway = Depends(get_gateway)):
+    agent, graph = await _agent_graph(ctx, pg, agent_id)
+    mine = next((t for t in await _tools(ctx, gw) if t["name"] == _handover_name(agent)), None)
+    on = mine is not None and any(mine["uuid"] in ((n.get("data") or {}).get("tool_uuids") or []) for n in graph.get("nodes", []))
+    return {"enabled": on, "number": _view(mine).number if on else None, "when": mine["description"] if on else None}
+
+
+@router.put("/handover/{agent_id}")
+async def handover_set(agent_id: str, body: HandoverBody, ctx: Ctx = Depends(require(Perm.TOOLS_WRITE)), gw: ToolsGateway = Depends(get_tools), pg: PlatformGateway = Depends(get_gateway)):
+    if not _E164.match(body.number.strip()):
+        raise product_error(400, "bad_number", "Enter the number with its country code, like +919876543210.")
+    agent, graph = await _agent_graph(ctx, pg, agent_id)
+    name = _handover_name(agent)
+    old = next((t for t in await _tools(ctx, gw) if t["name"] == name), None)
+    if old:
+        await gw.archive(ctx.workspace.test_org_id, ctx.user.id, old["uuid"])
+    spec = {"name": name, "description": body.when.strip(), "number": body.number.strip()}
+    made = await gw.create_transfer(ctx.workspace.test_org_id, ctx.user.id, spec)
+    try:  # the Live twin is matched by name when the agent goes live
+        for t in await gw.list(ctx.workspace.live_org_id, ctx.user.id):
+            if t["name"] == name:
+                await gw.archive(ctx.workspace.live_org_id, ctx.user.id, t["uuid"])
+        await gw.create_transfer(ctx.workspace.live_org_id, ctx.user.id, spec)
+    except Exception:  # noqa: BLE001
+        pass
+    drop = old["uuid"] if old else None
+    graph = _set_tools(graph, lambda u: list(dict.fromkeys([x for x in u if x != drop] + [made["uuid"]])))
+    await pg.save_draft(ctx.workspace.test_org_id, agent.test_workflow_id, agent.name, graph)
+    agent.version += 1
+    await ctx.session.commit()
+    return {"enabled": True, "number": spec["number"], "when": spec["description"]}
+
+
+@router.delete("/handover/{agent_id}", status_code=204)
+async def handover_off(agent_id: str, ctx: Ctx = Depends(require(Perm.TOOLS_WRITE)), gw: ToolsGateway = Depends(get_tools), pg: PlatformGateway = Depends(get_gateway)):
+    agent, graph = await _agent_graph(ctx, pg, agent_id)
+    old = next((t for t in await _tools(ctx, gw) if t["name"] == _handover_name(agent)), None)
+    if old:
+        graph = _set_tools(graph, lambda u: [x for x in u if x != old["uuid"]])
+        await pg.save_draft(ctx.workspace.test_org_id, agent.test_workflow_id, agent.name, graph)
+        await gw.archive(ctx.workspace.test_org_id, ctx.user.id, old["uuid"])
+        agent.version += 1
+        await ctx.session.commit()
