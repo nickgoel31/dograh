@@ -39,9 +39,20 @@ add_env PRODUCT_ALLOWED_ORIGINS "https://$HOST"
 add_env PRODUCT_OPS_SECRET "$(openssl rand -hex 24)"
 add_env VOCALIS_CLASSIC_URL "https://$HOST"
 add_env PRODUCT_NAME '"Swarvo AI"'
+add_env PRODUCT_PROFILES ''"'"'{"default":"std"}'"'"''
 
 echo; echo "== 3/6 Updating the API (pulls the latest code, rebuilds, restarts)"
 bash "$DEPLOY" api
+
+echo; echo "== 3b Voice and AI settings for new customers"
+echo "New customers' agents need AI, voice and speech settings. We can copy the ones an existing Swarvo account"
+echo "already uses (keys are copied inside the database, nothing is typed or shown)."
+read -r -p "Email of that account (press Enter to skip for now): " PROFILE_EMAIL
+if [ -n "$PROFILE_EMAIL" ]; then
+  sudo docker exec dograh-api-1 python -m api.product.make_profile --email "$PROFILE_EMAIL" || echo "  (Couldn't create it. You can run this step again later.)"
+else
+  echo "  Skipped. New customers can sign up, but test calls and Go live say calling isn't set up until this is done."
+fi
 
 echo; echo "== 4/6 Building and starting the new app"
 bash "$DEPLOY" vocalis
