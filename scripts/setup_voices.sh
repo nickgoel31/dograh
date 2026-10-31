@@ -9,7 +9,9 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-$HOME/dograh}"
 cd "$APP_DIR"
 
-read -r -p "Email of your main Swarvo account: " EMAIL
+EMAIL="${1:-}"
+[ -n "$EMAIL" ] || read -r -p "Email of your main Swarvo account: " EMAIL
+[ -n "$EMAIL" ] || { echo "An email is needed. Run: bash scripts/setup_voices.sh your@email.com"; exit 1; }
 S="-s"; [ "${SHOW_KEYS:-}" = "1" ] && S=""   # SHOW_KEYS=1 shows what you type, in case pasting into a hidden prompt does not work
 read -r $S -p "Inworld API key (press Enter to keep the current one): " INWORLD_KEY; echo
 read -r $S -p "Google API key (press Enter to skip / keep the current one): " GOOGLE_KEY; echo
