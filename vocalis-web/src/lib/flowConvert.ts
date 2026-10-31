@@ -15,7 +15,7 @@
  * written back, so editing one field never loses the others.
  */
 
-export type Kind = 'greeting' | 'ask' | 'tool' | 'condition' | 'transfer' | 'end' | 'global' | 'webhook' | 'advanced'
+export type Kind = 'greeting' | 'ask' | 'tool' | 'condition' | 'transfer' | 'end' | 'global' | 'webhook' | 'trigger' | 'qa' | 'advanced'
 
 export interface FlowNode {
   id: string
@@ -39,9 +39,9 @@ export interface DefNode { id: string; type: string; position: { x: number; y: n
 export interface DefEdge { id: string; source: string; target: string; data: Record<string, unknown> }
 export interface Definition { nodes: DefNode[]; edges: DefEdge[] }
 
-const KIND_FROM_ID = /^(greeting|ask|tool|condition|transfer|end|global|webhook)-/
+const KIND_FROM_ID = /^(greeting|ask|tool|condition|transfer|end|global|webhook|trigger|qa)-/
 const DEFAULT_LABEL: Record<Exclude<Kind, 'advanced'>, string> = {
-  greeting: 'Greeting', ask: 'Ask a question', tool: 'Do something', condition: 'Yes / No check', transfer: 'Hand to a human', end: 'Close', global: 'Rules for every step', webhook: 'Send call data',
+  greeting: 'Greeting', ask: 'Ask a question', tool: 'Do something', condition: 'Yes / No check', transfer: 'Hand to a human', end: 'Close', global: 'Rules for every step', webhook: 'Send call data', trigger: 'API trigger', qa: 'Call quality check',
 }
 
 export const newStepId = (kind: Kind, n: number) => `${kind}-${n}`
@@ -54,6 +54,8 @@ function kindOf(n: DefNode): Kind {
   if (n.type === 'endCall') return 'end'
   if (n.type === 'globalNode') return 'global'
   if (n.type === 'webhook') return 'webhook'
+  if (n.type === 'trigger') return 'trigger'
+  if (n.type === 'qa') return 'qa'
   if (n.type === 'agentNode') return 'ask' // a plain conversation step stays editable
   return 'advanced'
 }
@@ -69,7 +71,7 @@ export function fromWorkflowDefinition(def: Definition): Flow {
   const nodes: FlowNode[] = (def.nodes ?? []).map((n) => {
     const kind = kindOf(n)
     const d = n.data ?? {}
-    const text = kind === 'greeting' ? str(d.greeting) : kind === 'advanced' || kind === 'webhook' ? '' : str(d.prompt)
+    const text = kind === 'greeting' ? str(d.greeting) : kind === 'advanced' || kind === 'webhook' || kind === 'trigger' || kind === 'qa' ? '' : str(d.prompt)
     const label = str(d.name) || (kind === 'advanced' ? n.type : DEFAULT_LABEL[kind])
     return { id: n.id, type: 'step', position: { x: n.position?.x ?? 0, y: n.position?.y ?? 0 }, data: { kind, label, text, raw: n } }
   })
@@ -91,9 +93,10 @@ export function toWorkflowDefinition(flow: Flow): Definition {
     const position = { x: n.position.x, y: n.position.y }
     if (kind === 'advanced' && raw) return { ...raw, position } // untouched apart from where it sits
     const base = { ...(raw?.data ?? {}) }
-    const type = kind === 'greeting' ? 'startCall' : kind === 'end' ? 'endCall' : kind === 'global' ? 'globalNode' : kind === 'webhook' ? 'webhook' : 'agentNode'
+    const type = kind === 'greeting' ? 'startCall' : kind === 'end' ? 'endCall' : kind === 'global' ? 'globalNode' : kind === 'webhook' ? 'webhook' : kind === 'trigger' ? 'trigger' : kind === 'qa' ? 'qa' : 'agentNode'
     const data: Record<string, unknown> = { ...base, name: label }
-    if (kind === 'webhook') { if (data.enabled === undefined) data.enabled = true; return { id: n.id, type, position, data } }
+    if (kind === 'webhook' || kind === 'trigger') { if (data.enabled === undefined) data.enabled = true }
+    if (kind === 'webhook' || kind === 'trigger' || kind === 'qa') return { id: n.id, type, position, data }
     if (kind === 'greeting') {
       data.greeting = text
       data.greeting_type = 'text'

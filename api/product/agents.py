@@ -299,8 +299,10 @@ async def save_flow(
             "Someone else changed this agent while you were editing. Reload to see their changes.",
         )
     current = await get_flow(gw, ws, agent)
-    merged = flows.keep_agent_prompt(definition, current)
+    merged, prompt_changed = flows.adopt_start_prompt(definition, current)
     flows.check_flow(merged)
+    if prompt_changed:
+        agent.prompt_mode = "custom"  # the instructions were written by hand, so stop regenerating them from the Personality answers
     await gw.save_draft(ws.test_org_id, agent.test_workflow_id, agent.name, merged)
     agent.version += 1
     await session.flush()

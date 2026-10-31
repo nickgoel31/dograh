@@ -23,6 +23,19 @@ export function StepOptions({ kind, data, set }: { kind: string; data: Raw; set:
         <Textarea className="min-h-[100px] font-mono text-xs" value={payload} onChange={(e) => { setPayload(e.target.value); try { set('payload_template', e.target.value.trim() ? JSON.parse(e.target.value) : null); setPayloadErr(false) } catch { setPayloadErr(true) } }} /></Field>
     </div>
   )
+  if (kind === 'trigger') return (
+    <div className="space-y-3 border-t pt-3">{row('Accept calls started from software', 'Turn off to pause it', 'enabled', true)}
+      <Field label="Trigger code" hint={<span className="text-xs text-soft">Your developer uses this to start calls with this agent.</span>}><Input readOnly value={(data.trigger_path as string) ?? ''} /></Field></div>
+  )
+  if (kind === 'qa') return (
+    <div className="space-y-3 border-t pt-3">
+      {row('Check every call', 'Score each finished call', 'qa_enabled', true)}
+      {row('Use this agent\'s own AI', 'Turn off to pick another model in the raw settings', 'qa_use_workflow_llm', true)}
+      <Field label="What to look for"><Textarea className="min-h-[90px]" value={(data.qa_system_prompt as string) ?? ''} onChange={(e) => set('qa_system_prompt', e.target.value)} placeholder="Was the agent polite? Did it answer the question? Did it make anything up?" /></Field>
+      <div className="grid grid-cols-2 gap-3"><Field label="Skip calls shorter than (seconds)"><Input type="number" min={0} value={Number(data.qa_min_call_duration ?? 15)} onChange={(e) => set('qa_min_call_duration', Number(e.target.value))} /></Field>
+        <Field label="Share of calls checked (%)"><Input type="number" min={1} max={100} value={Number(data.qa_sample_rate ?? 100)} onChange={(e) => set('qa_sample_rate', Number(e.target.value))} /></Field></div>
+    </div>
+  )
   if (kind === 'global' || kind === 'condition' || kind === 'advanced') return null
   return (
     <div className="space-y-3 border-t pt-3">

@@ -13,6 +13,7 @@ import { fromWorkflowDefinition, toWorkflowDefinition } from '@/lib/flowConvert'
 import { AttachPicker } from '@/components/AttachPicker'
 import { AgentPhone } from '@/pages/AgentPhone'
 import { HumanFeel } from '@/pages/AgentFeel'
+import { TryAgent } from '@/components/TryAgent'
 import { useUI } from '@/store/ui'
 import { api } from '@/lib/api'
 import { useAsync } from '@/components/shared'
@@ -69,6 +70,7 @@ export default function AgentDetail() {
   const updateAgent = useData((s) => s.updateAgent)
   const voices = useAsync(() => api.voices(), []).data ?? []
   const advanced = useUI((s) => s.view) === 'advanced'
+  const [tryOpen, setTryOpen] = React.useState(false)
   const upsertAgent = useData((s) => s.upsertAgent)
   // The list omits the prompt and edit version; load them when an agent is opened.
   React.useEffect(() => {
@@ -90,6 +92,13 @@ export default function AgentDetail() {
   const [d, setD] = React.useState<Draft | null>(base)
   const [diff, setDiff] = React.useState<number | null>(null)
   React.useEffect(() => { setSaved(base); setD(base) }, [base])
+  // Opening the Call flow tab shows the latest instructions, tools and knowledge, unless there are unsaved flow edits.
+  const flowTab = sp.get('tab') === 'flow'
+  React.useEffect(() => {
+    if (USE_MOCKS || !flowTab || !agent || (d && saved && JSON.stringify(d.flow) !== JSON.stringify(saved.flow))) return
+    agentsApi.flow(agent.id).then((fl) => setLoadedFlow(fromWorkflowDefinition(fl.definition as never) as unknown as FlowData)).catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flowTab])
   if (!agent || !d || !saved) return <EmptyState emoji="🔍" title="We couldn't find that agent" text="It may have been deleted. Head back to see all your agents." action={<Button variant="primary" size="lg" onClick={() => nav('/agents')}>See all agents</Button>} />
   const dirty = JSON.stringify(d) !== JSON.stringify(saved)
   const up = (p: Partial<Draft>) => setD({ ...d, ...p })
@@ -171,7 +180,7 @@ export default function AgentDetail() {
         <TabPanel value="tools">{USE_MOCKS ? (<><Q title="What can your agent do?" hint="Switch on the abilities you want.">
           <div className="divide-y">{toolList.map(([k, t, p]) => <div key={k} className="flex items-center justify-between py-3"><div><div className="font-medium">{t}</div><div className="text-[13px] text-soft">{p}</div></div><Switch label={t} checked={d.tools.includes(k)} onChange={(v) => up({ tools: v ? [...d.tools, k] : d.tools.filter((x) => x !== k) })} /></div>)}</div></Q></>) : <Q title="What can your agent do?" hint="Tick the tools it may use during a call."><AttachPicker kind="tools" agentId={agent.id} /></Q>}</TabPanel>
 
-        <TabPanel value="flow"><Q title="Call flow" hint="Plan how a call moves from hello to goodbye. Click a step to edit it."><CallFlowEditor value={d.flow} onChange={(flow) => up({ flow })} /></Q></TabPanel>
+        <TabPanel value="flow"><Q title="Call flow" hint="Plan how a call moves from hello to goodbye. Click a step to edit it."><CallFlowEditor value={d.flow} onChange={(flow) => up({ flow })} onSimulate={USE_MOCKS ? undefined : () => setTryOpen(true)} />{!USE_MOCKS && <TryAgent agentId={agent.id} open={tryOpen} onOpenChange={setTryOpen} />}</Q></TabPanel>
 
         <TabPanel value="behavior"><Q title="How should it behave?">
           <div className="grid gap-6 sm:grid-cols-2">

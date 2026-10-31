@@ -10,9 +10,10 @@ import { Button, Card, Field, Input, Textarea } from './ui'
 import { AdvancedOnly, CodeBlock } from './shared'
 import { cn, sleep } from '@/lib/utils'
 import { StepOptions } from './FlowStepOptions'
+import { RawEditor } from './RawEditor'
 
 export interface FlowData { nodes: Node[]; edges: Edge[] }
-type Kind = 'greeting' | 'ask' | 'tool' | 'condition' | 'transfer' | 'end' | 'global' | 'webhook' | 'advanced'
+type Kind = 'greeting' | 'ask' | 'tool' | 'condition' | 'transfer' | 'end' | 'global' | 'webhook' | 'trigger' | 'qa' | 'advanced'
 const kinds: Record<Kind, { emoji: string; name: string; hint: string; color: string; text: string }> = {
   greeting: { emoji: '👋', name: 'Greeting', hint: 'Say hello', color: '#6356f1', text: 'Hi, thanks for calling! How can I help?' },
   ask: { emoji: '❓', name: 'Ask a question', hint: 'Collect info', color: '#0ea5e9', text: 'May I have your name, please?' },
@@ -22,14 +23,19 @@ const kinds: Record<Kind, { emoji: string; name: string; hint: string; color: st
   end: { emoji: '✅', name: 'Close', hint: 'End the call', color: '#64748b', text: 'Thanks for calling. Have a lovely day!' },
   global: { emoji: '📌', name: 'Rules for every step', hint: 'Always-on instructions', color: '#8b5cf6', text: 'Always be polite and keep answers short. Never make up prices.' },
   webhook: { emoji: '📤', name: 'Send call data', hint: 'Send details to a web address', color: '#0d9488', text: 'Sends what we learned on the call to your web address when it ends.' },
+  trigger: { emoji: '⚡', name: 'API trigger', hint: 'Start calls from your own software', color: '#eab308', text: 'Lets your own software start calls with this agent.' },
+  qa: { emoji: '🧪', name: 'Call quality check', hint: 'Review every call automatically', color: '#06b6d4', text: 'Reads each finished call and scores how well the agent did.' },
   advanced: { emoji: '⚙️', name: 'Advanced step', hint: 'Set up outside this editor', color: '#475569', text: 'This step was set up elsewhere. You can move it, but its settings are kept as they are.' },
 }
+
+/** Steps that float on their own, with no connections in or out. */
+const FREE = ['global', 'webhook', 'trigger', 'qa']
 
 function StepNode({ data, selected }: NodeProps<{ kind: Kind; label: string; text: string; active?: boolean }>) {
   const k = kinds[data.kind]
   return (
     <div className={cn('w-52 rounded-xl border-2 bg-surface p-3 shadow-card transition', selected ? 'border-accent' : 'border-line', data.active && 'scale-105 border-ok shadow-pop')}>
-      {data.kind !== 'greeting' && data.kind !== 'global' && data.kind !== 'webhook' && <Handle type="target" position={Position.Left} />}
+      {data.kind !== 'greeting' && !FREE.includes(data.kind) && <Handle type="target" position={Position.Left} />}
       <div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg text-sm" style={{ background: k.color + '22' }}>{k.emoji}</span><div className="truncate text-[13px] font-semibold">{data.label}</div></div>
       <p className="mt-1.5 line-clamp-2 text-[11.5px] leading-snug text-soft">{data.text}</p>
       {data.kind === 'condition' ? (
@@ -38,11 +44,12 @@ function StepNode({ data, selected }: NodeProps<{ kind: Kind; label: string; tex
           <Handle id="no" type="source" position={Position.Right} style={{ top: '75%', background: '#ef4444' }} />
           <div className="absolute -right-8 top-[22%] text-[10px] font-semibold text-ok">Yes</div><div className="absolute -right-6 top-[62%] text-[10px] font-semibold text-bad">No</div>
         </>
-      ) : data.kind !== 'end' && data.kind !== 'transfer' && data.kind !== 'global' && data.kind !== 'webhook' ? <Handle type="source" position={Position.Right} /> : null}
+      ) : data.kind !== 'end' && data.kind !== 'transfer' && !FREE.includes(data.kind) ? <Handle type="source" position={Position.Right} /> : null}
     </div>
   )
 }
 const nodeTypes = { step: StepNode }
+
 const edgeStyle = { type: 'smoothstep', animated: true, markerEnd: { type: MarkerType.ArrowClosed } }
 const mk = (id: string, kind: Kind, x: number, y: number, label?: string, text?: string): Node => ({ id, type: 'step', position: { x, y }, data: { kind, label: label ?? kinds[kind].name, text: text ?? kinds[kind].text } })
 
@@ -51,7 +58,7 @@ export const defaultFlow = (): FlowData => ({
   edges: [['greeting-1', 'ask-2'], ['ask-2', 'condition-3'], ['condition-3', 'tool-4', 'no'], ['condition-3', 'transfer-5', 'yes'], ['tool-4', 'end-6']].map(([s, t, h]) => ({ id: `${s}>${t}${h ? '#' + h : ''}`, source: s, target: t, sourceHandle: h, label: h === 'yes' ? 'Yes' : h === 'no' ? 'No' : undefined, ...edgeStyle })),
 })
 
-function Editor({ value, onChange }: { value: FlowData; onChange: (v: FlowData) => void }) {
+function Editor({ value, onChange, onSimulate }: { value: FlowData; onChange: (v: FlowData) => void; onSimulate?: () => void }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(value.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(value.edges)
   const [sel, setSel] = React.useState<string | null>(null)
@@ -69,8 +76,15 @@ function Editor({ value, onChange }: { value: FlowData; onChange: (v: FlowData) 
   const connect = (c: Connection) => setEdges((es) => addEdge({ ...c, ...edgeStyle, label: c.sourceHandle === 'yes' ? 'Yes' : c.sourceHandle === 'no' ? 'No' : undefined }, es))
   const add = (kind: Kind) => {
     const id = `${kind}-${Date.now()}`
+    const ns0 = nodes
     const p = rf.project({ x: 300, y: 200 })
-    setNodes((ns) => [...ns, { ...mk(id, kind, p.x + ns.length * 6, p.y + ns.length * 6), selected: true }]); setSel(id)
+    const base = mk(id, kind, p.x + ns0.length * 6, p.y + ns0.length * 6)
+    const defaults: Record<string, Record<string, unknown>> = {
+      trigger: { name: kinds.trigger.name, trigger_path: crypto.randomUUID(), enabled: true },
+      qa: { name: kinds.qa.name, qa_enabled: true, qa_use_workflow_llm: true, qa_min_call_duration: 15, qa_sample_rate: 100 },
+    }
+    if (defaults[kind]) base.data = { ...base.data, raw: { id, type: kind, position: base.position, data: defaults[kind] } }
+    setNodes((ns) => [...ns, { ...base, selected: true }]); setSel(id)
   }
   const typeFor = (k: string) => (k === 'greeting' ? 'startCall' : k === 'end' ? 'endCall' : k === 'global' ? 'globalNode' : k === 'webhook' ? 'webhook' : 'agentNode')
   const setRaw = (key: string, value: unknown) => setNodes((ns) => ns.map((x) => (x.id === sel ? { ...x, data: { ...x.data, raw: { id: x.id, type: x.data.raw?.type ?? typeFor(x.data.kind), position: x.position, data: { ...(x.data.raw?.data ?? {}), [key]: value } } } } : x)))
@@ -103,7 +117,7 @@ function Editor({ value, onChange }: { value: FlowData; onChange: (v: FlowData) 
   const issues = [
     !nodes.some((x) => x.data.kind === 'greeting') && 'Add a Greeting so your agent knows how to start.',
     !nodes.some((x) => ['end', 'transfer'].includes(x.data.kind)) && 'Add a Close step so calls end politely.',
-    nodes.some((x) => !['greeting', 'global', 'webhook'].includes(x.data.kind) && !edges.some((e) => e.target === x.id)) && 'Some steps are not connected to anything.',
+    nodes.some((x) => x.data.kind !== 'greeting' && !FREE.includes(x.data.kind) && !edges.some((e) => e.target === x.id)) && 'Some steps are not connected to anything.',
   ].filter(Boolean) as string[]
 
   return (
@@ -113,7 +127,7 @@ function Editor({ value, onChange }: { value: FlowData; onChange: (v: FlowData) 
         <div className="ml-auto flex gap-2">
           <Button size="sm" variant="ghost" onClick={tidy}><LayoutGrid size={14} />Tidy up</Button>
           <Button size="sm" variant="ghost" onClick={() => { const f = defaultFlow(); setNodes(f.nodes); setEdges(f.edges); setSel(null); toast('Back to the starter flow') }}><RotateCcw size={14} />Reset</Button>
-          <Button size="sm" variant="primary" disabled={running} onClick={simulate}><Play size={14} />{running ? 'Running…' : 'Simulate a call'}</Button>
+          <Button size="sm" variant="primary" disabled={running} onClick={onSimulate ?? simulate}><Play size={14} />{running ? 'Running…' : onSimulate ? 'Try a call' : 'Simulate a call'}</Button>
         </div>
       </div>
       <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
@@ -129,7 +143,9 @@ function Editor({ value, onChange }: { value: FlowData; onChange: (v: FlowData) 
               <div className="flex items-center justify-between"><div className="text-sm font-semibold">{kinds[n.data.kind as Kind].emoji} Edit step</div><Button size="sm" variant="ghost" className="text-bad" onClick={remove} aria-label="Delete step"><Trash2 size={14} />Delete</Button></div>
               <Field label="Step name"><Input value={n.data.label} onChange={(e) => patch({ label: e.target.value })} /></Field>
               <Field label="What should the agent say or do?"><Textarea className="min-h-[120px]" value={n.data.text} disabled={n.data.kind === 'advanced'} onChange={(e) => patch({ text: e.target.value })} /></Field>
+              {n.data.kind === 'greeting' && <Field label="Main instructions" hint={<span className="text-xs text-soft">Who the agent is and how it behaves. The same text as the Personality tab.</span>}><Textarea className="min-h-[140px]" value={String((n.data.raw?.data as Record<string, unknown> | undefined)?.prompt ?? '')} onChange={(e) => setRaw('prompt', e.target.value)} /></Field>}
               {n.data.kind !== 'advanced' && <StepOptions kind={n.data.kind} data={(n.data.raw?.data ?? {}) as Record<string, unknown>} set={setRaw} />}
+              <AdvancedOnly><RawEditor key={n.id} value={(n.data.raw?.data ?? {}) as Record<string, unknown>} onApply={(obj) => setNodes((ns) => ns.map((x) => (x.id === sel ? { ...x, data: { ...x.data, raw: { id: x.id, type: x.data.raw?.type ?? typeFor(x.data.kind), position: x.position, data: obj } } } : x)))} /></AdvancedOnly>
               {n.data.kind === 'condition' && <p className="text-xs text-soft">Drag from the green dot for “Yes” and the red dot for “No”.</p>}
             </div>
           ) : (
@@ -146,6 +162,6 @@ function Editor({ value, onChange }: { value: FlowData; onChange: (v: FlowData) 
   )
 }
 
-export function CallFlowEditor(p: { value: FlowData; onChange: (v: FlowData) => void }) {
+export function CallFlowEditor(p: { value: FlowData; onChange: (v: FlowData) => void; onSimulate?: () => void }) {
   return <ReactFlowProvider><Editor {...p} /></ReactFlowProvider>
 }

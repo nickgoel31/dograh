@@ -63,3 +63,19 @@ def keep_agent_prompt(new: dict, current: dict) -> dict:
         if prompt:
             start.setdefault("data", {})["prompt"] = prompt
     return out
+
+
+def adopt_start_prompt(new: dict, current: dict) -> tuple[dict, bool]:
+    """The Greeting step's instructions may be edited in the flow editor (same text as the Personality tab's raw prompt).
+    Returns the flow to save and whether the main instructions changed. A flow with no instructions keeps the current ones."""
+    out = deepcopy(new)
+    cur = next((n for n in current.get("nodes", []) if n.get("type") == "startCall"), None)
+    start = next((n for n in out.get("nodes", []) if n.get("type") == "startCall"), None)
+    if cur is None or start is None:
+        return out, False
+    old = (cur.get("data") or {}).get("prompt") or ""
+    incoming = ((start.get("data") or {}).get("prompt") or "").strip()
+    if not incoming:
+        start.setdefault("data", {})["prompt"] = old
+        return out, False
+    return out, incoming != old.strip()

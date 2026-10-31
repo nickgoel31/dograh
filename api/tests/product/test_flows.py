@@ -81,7 +81,7 @@ async def test_flow_api_roundtrip_and_prompt_protection(client):
     assert [n["type"] for n in flow["definition"]["nodes"]] == ["startCall", "endCall"]
 
     d = flow["definition"]
-    d["nodes"][0]["data"]["prompt"] = "HIJACK"  # the editor must not be able to change the persona
+    d["nodes"][0]["data"]["prompt"] = "HAND WRITTEN"  # the editor may now edit the main instructions
     d["nodes"][0]["data"]["greeting"] = "Welcome to Sunrise!"
     d["nodes"].insert(1, {"id": "ask-9", "type": "agentNode", "position": {"x": 0, "y": 100},
                           "data": {"name": "Ask", "prompt": "Ask their name.", "allow_interrupt": True, "add_global_prompt": False}})
@@ -92,7 +92,7 @@ async def test_flow_api_roundtrip_and_prompt_protection(client):
     r = await client.put(f"/product/agents/{a['id']}/flow", json=d, headers={**h, "If-Match": str(flow["version"])})
     assert r.status_code == 200, r.text
     saved = r.json()["definition"]
-    assert saved["nodes"][0]["data"]["prompt"] != "HIJACK" and "Sunrise" in saved["nodes"][0]["data"]["prompt"]
+    assert saved["nodes"][0]["data"]["prompt"] == "HAND WRITTEN"
     assert saved["nodes"][0]["data"]["greeting"] == "Welcome to Sunrise!"
     assert len(saved["nodes"]) == 3 and r.json()["version"] == flow["version"] + 1
 
@@ -130,3 +130,22 @@ def test_flow_with_rules_webhook_and_collected_details_is_accepted_by_the_platfo
         {"id": "ask-2>end-3", "source": "ask-2", "target": "end-3", "data": {"label": "Done", "condition": "Finished"}},
     ]}
     check_flow(flow)
+
+
+async def test_greeting_instructions_edited_in_the_flow_stick_and_try_chat_works(client):
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    aid = (await client.post("/product/agents", json={"name": "P", "template": "receptionist"}, headers=h)).json()["id"]
+    flow = (await client.get(f"/product/agents/{aid}/flow", headers=h)).json()
+    for n in flow["definition"]["nodes"]:
+        if n["type"] == "startCall":
+            n["data"]["prompt"] = "You are Riya. Always answer in Hindi."
+    r = await client.put(f"/product/agents/{aid}/flow", json=flow["definition"], headers={**h, "If-Match": str(flow["version"])})
+    assert r.status_code == 200, r.text
+    a = (await client.get(f"/product/agents/{aid}", headers=h)).json()
+    assert a["prompt"] == "You are Riya. Always answer in Hindi." and a["prompt_mode"] == "custom"  # the Personality tab shows the same text
+
+    started = (await client.post(f"/product/agents/{aid}/try/start", headers=h)).json()
+    assert started["reply"] and started["session"].startswith("try_")
+    said = (await client.post(f"/product/agents/{aid}/try/say", json={"session": started["session"], "text": "Hello"}, headers=h)).json()
+    assert said["reply"] and (await client.post(f"/product/agents/{aid}/try/say", json={"session": "try_bad", "text": "x"}, headers=h)).status_code == 400
