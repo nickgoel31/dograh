@@ -140,7 +140,7 @@ export default function AgentDetail() {
         <Button onClick={() => setUI({ playground: agent.id })}><Mic size={15} />Talk</Button>
         <Button variant="primary" onClick={() => setSp({ tab: 'publish' })}><Rocket size={15} />Go live</Button></>} />
       <Tabs value={tab} onValueChange={(t) => setSp({ tab: t })}>
-        <TabsList>{['personality', 'voice', 'brain', 'knowledge', 'tools', 'flow', 'behavior', 'phone', 'test', 'versions', 'publish'].filter((t) => (t !== 'brain' || voice.brainLevels !== false) && (advanced || !['flow', 'behavior', 'versions'].includes(t) || t === tab)).map((t) => <Tab key={t} value={t} className="capitalize">{t === 'flow' ? 'Call flow' : t}</Tab>)}</TabsList>
+        <TabsList>{['personality', 'voice', 'brain', 'knowledge', 'tools', 'flow', 'behavior', 'phone', 'test', 'versions', 'publish'].filter((t) => (t !== 'brain' || voice.brainLevels !== false) && (advanced || !['behavior', 'versions'].includes(t) || t === tab)).map((t) => <Tab key={t} value={t} className="capitalize">{t === 'flow' ? 'Call flow' : t}</Tab>)}</TabsList>
 
         <TabPanel value="personality"><SimpleAdvanced
           simple={<Q title="Who is your agent?" hint="Just fill in the blanks. We write the instructions for you.">
