@@ -48,6 +48,15 @@ def build_definition(*, name: str, prompt: str, greeting: str) -> dict:
     }
 
 
+def set_interruptions(definition: dict, allowed: bool) -> dict:
+    """Let callers talk over the agent (or not) on every conversation step; the closing step never allows it."""
+    out = deepcopy(definition)
+    for n in out.get("nodes", []):
+        if n.get("type") in ("startCall", "agentNode"):
+            n.setdefault("data", {})["allow_interrupt"] = allowed
+    return out
+
+
 def get_prompt(definition: dict) -> str:
     for n in definition.get("nodes", []):
         if n.get("type") == "startCall":

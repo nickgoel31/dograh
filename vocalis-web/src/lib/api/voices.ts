@@ -9,7 +9,7 @@ export function toVoice(v: VoiceOut): Voice {
   return {
     id: v.id, name: v.name, lang: v.language, style: v.style ?? '', provider: v.provider,
     gender: (v.gender ?? '') as Voice['gender'], age: (v.age ?? '') as Voice['age'], accent: v.accent ?? '',
-    available: v.available, description: v.description ?? undefined, brainLevels: v.brain_levels,
+    available: v.available, description: v.description ?? undefined, brainLevels: v.brain_levels, hasSample: v.has_sample,
   }
 }
 

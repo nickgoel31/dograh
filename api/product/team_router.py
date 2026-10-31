@@ -63,6 +63,7 @@ class SettingsBody(BaseModel):
     redact_pii: bool
     retention_days: int | None = Field(default=None, ge=1, le=3650)
     widget_origins: list[str] = Field(default_factory=list, max_length=20)
+    summary_emails: list[EmailStr] = Field(default_factory=list, max_length=5)
 
 
 class SettingsOut(SettingsBody):
@@ -204,7 +205,7 @@ def _settings_out(s) -> SettingsOut:
     if s.retention_days:
         notes.append("Older recordings and transcripts are cleared by the operator's daily job, or by the owner using Clear now.")
     return SettingsOut(record_calls=bool(s.record_calls), consent_announcement=s.consent_announcement, redact_pii=bool(s.redact_pii), retention_days=s.retention_days,
-                       widget_origins=list(s.widget_origins or []), notes=notes)
+                       widget_origins=list(s.widget_origins or []), summary_emails=list(s.summary_emails or []), notes=notes)
 
 
 @router.get("/settings", response_model=SettingsOut)
@@ -226,7 +227,8 @@ async def put_settings(body: SettingsBody, ctx: Ctx = Depends(require(Perm.TEAM_
     s.record_calls, s.redact_pii, s.retention_days = body.record_calls, body.redact_pii, body.retention_days
     s.consent_announcement = (body.consent_announcement or "").strip() or None
     s.widget_origins = origins
-    await audit.record(ctx.session, ctx.workspace.id, ctx.user.id, "settings.updated", None, body.model_dump(exclude={"widget_origins"}))
+    s.summary_emails = sorted({str(e).lower() for e in body.summary_emails})
+    await audit.record(ctx.session, ctx.workspace.id, ctx.user.id, "settings.updated", None, body.model_dump(exclude={"widget_origins", "summary_emails"}))
     await ctx.session.commit()
     return _settings_out(s)
 

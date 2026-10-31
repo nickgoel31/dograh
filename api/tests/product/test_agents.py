@@ -50,7 +50,7 @@ def test_with_prompt_only_touches_start_node():
 
 
 def test_eight_templates_with_unique_keys():
-    assert len(TEMPLATES) == 8 and len({t.key for t in TEMPLATES}) == 8
+    assert len(TEMPLATES) == 13 and len({t.key for t in TEMPLATES}) == 13
 
 
 # ---------- API ----------
@@ -68,7 +68,7 @@ async def test_list_and_templates(client):
     await new_agent(client, tok)
     assert len((await client.get("/product/agents", headers=bearer(tok))).json()) == 1
     t = (await client.get("/product/agents/templates", headers=bearer(tok))).json()
-    assert len(t) == 8
+    assert len(t) == 13
 
 
 async def test_other_workspace_cannot_touch_agent(client):

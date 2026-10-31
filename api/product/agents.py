@@ -9,6 +9,7 @@ from api.db.product_models import ProductAgentModel, ProductWorkspaceModel
 from api.product import definition as defn
 from api.product import flows
 from api.product import models_config
+from api.product import style as style_mod
 from api.product import prompt as prompts
 from api.product import voices as voice_catalogue
 from api.product.errors import product_error
@@ -109,7 +110,13 @@ async def update_agent(
             "Someone else changed this agent while you were editing. Reload to see their changes.",
         )
     custom_prompt = changes.pop("prompt", None)
-    touches_models = bool({"voice_id", "brain"} & changes.keys())
+    new_style = changes.pop("style", None)
+    if new_style is not None:
+        try:
+            agent.style = {**(agent.style or {}), **style_mod.clean(new_style)}
+        except ValueError as e:
+            raise product_error(400, "bad_style", str(e))
+    touches_models = bool({"voice_id", "brain"} & changes.keys()) or new_style is not None
     if changes.get("voice_id") and voice_catalogue.find(changes["voice_id"]) is None:
         raise product_error(400, "unknown_voice", "That voice isn't available. Pick one from the voice list.")
     for field in ("name", "emoji", "color", "role", "tone", "business", "what_you_do", "voice_id"):
@@ -133,11 +140,14 @@ async def update_agent(
         )
     else:
         graph = defn.with_prompt(graph, name=agent.name)
+    if new_style is not None and "interruptions" in (agent.style or {}):
+        graph = defn.set_interruptions(graph, bool(agent.style["interruptions"]))
     await gw.save_draft(ws.test_org_id, agent.test_workflow_id, agent.name, graph)
     if touches_models:
         await gw.set_model_overrides(
             ws.test_org_id, agent.test_workflow_id,
-            await models_config.build_overrides(session, brain=agent.brain, voice_id=agent.voice_id),
+            await models_config.build_overrides(session, brain=agent.brain, voice_id=agent.voice_id, style=agent.style),
+            style_mod.workflow_settings(agent.style),
         )
     agent.version += 1
     await session.flush()
@@ -230,7 +240,8 @@ async def go_live(
         await gw.save_draft(ws.live_org_id, agent.live_workflow_id, agent.name, graph)
     await gw.set_model_overrides(
         ws.live_org_id, agent.live_workflow_id,
-        await models_config.build_overrides(session, brain=agent.brain, voice_id=agent.voice_id),
+        await models_config.build_overrides(session, brain=agent.brain, voice_id=agent.voice_id, style=agent.style),
+        style_mod.workflow_settings(agent.style),
     )
     await gw.publish(ws.live_org_id, agent.live_workflow_id)
     agent.status = "live"

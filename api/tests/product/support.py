@@ -399,7 +399,9 @@ async def _serve_signaling(self, ws, org_id, user_id, agent_ref, run_id):
     await ws.close()
 
 
-async def _set_model_overrides(self, org_id, agent_ref, overrides):
+async def _set_model_overrides(self, org_id, agent_ref, overrides, settings=None):
+    self.settings = getattr(self, "settings", {})
+    self.settings[(org_id, agent_ref)] = settings
     if (org_id, agent_ref) not in self.published:
         raise LookupError("wrong org")
     self.overrides[(org_id, agent_ref)] = overrides

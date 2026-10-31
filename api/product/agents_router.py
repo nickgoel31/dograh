@@ -29,6 +29,7 @@ class AgentOut(BaseModel):
     what_you_do: str
     brain: str
     voice_id: str | None
+    style: dict = Field(default_factory=dict)
     brain_applies: bool = True  # false when the chosen voice runs on a single fixed AI model
     prompt_mode: str
     prompt: str | None = None
@@ -58,6 +59,7 @@ class AgentPatch(BaseModel):
     what_you_do: str | None = Field(default=None, max_length=2000)
     brain: str | None = None
     voice_id: str | None = Field(default=None, max_length=64)
+    style: dict | None = None
     prompt: str | None = Field(default=None, max_length=20000)
 
 
@@ -82,7 +84,7 @@ def _out(a: ProductAgentModel, prompt: str | None = None) -> AgentOut:
     return AgentOut(
         id=a.public_id, name=a.name, emoji=a.emoji, color=a.color, role=a.role, status=a.status,
         tone=a.tone, business=a.business, what_you_do=a.what_you_do, brain=a.brain,
-        voice_id=a.voice_id, brain_applies=models_config.brain_applies(getattr(voices.find(a.voice_id) if a.voice_id else None, 'engine', None)),
+        voice_id=a.voice_id, style=a.style or {}, brain_applies=models_config.brain_applies(getattr(voices.find(a.voice_id) if a.voice_id else None, 'engine', None)),
         prompt_mode=a.prompt_mode, prompt=prompt, version=a.version,
     )
 

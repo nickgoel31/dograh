@@ -139,10 +139,10 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 function Privacy({ canEdit, isOwner }: { canEdit: boolean; isOwner: boolean }) {
   const qc = useQueryClient()
   const q = useQuery({ queryKey: ['privacy'], queryFn: P.settings })
-  const [f, setF] = React.useState<{ record_calls: boolean; redact_pii: boolean; retention_days: string; consent: string; origins: string } | null>(null)
-  React.useEffect(() => { if (q.data) setF({ record_calls: q.data.record_calls, redact_pii: q.data.redact_pii, retention_days: q.data.retention_days ? String(q.data.retention_days) : '', consent: q.data.consent_announcement ?? '', origins: q.data.widget_origins.join('\n') }) }, [q.data])
+  const [f, setF] = React.useState<{ record_calls: boolean; redact_pii: boolean; retention_days: string; consent: string; origins: string; emails: string } | null>(null)
+  React.useEffect(() => { if (q.data) setF({ emails: q.data.summary_emails.join(String.fromCharCode(10)), record_calls: q.data.record_calls, redact_pii: q.data.redact_pii, retention_days: q.data.retention_days ? String(q.data.retention_days) : '', consent: q.data.consent_announcement ?? '', origins: q.data.widget_origins.join('\n') }) }, [q.data])
   const save = useMutation({
-    mutationFn: () => P.saveSettings({ record_calls: f!.record_calls, redact_pii: f!.redact_pii, retention_days: f!.retention_days ? Number(f!.retention_days) : null, consent_announcement: f!.consent || null, widget_origins: f!.origins.split('\n').map((x) => x.trim()).filter(Boolean) }),
+    mutationFn: () => P.saveSettings({ summary_emails: f!.emails.split(new RegExp("[,; " + String.fromCharCode(10) + "]+")).map((x) => x.trim()).filter(Boolean), record_calls: f!.record_calls, redact_pii: f!.redact_pii, retention_days: f!.retention_days ? Number(f!.retention_days) : null, consent_announcement: f!.consent || null, widget_origins: f!.origins.split('\n').map((x) => x.trim()).filter(Boolean) }),
     onSuccess: () => { toast.success('Saved'); qc.invalidateQueries({ queryKey: ['privacy'] }) }, onError: say,
   })
   const [purge, setPurge] = React.useState(false)
@@ -154,6 +154,7 @@ function Privacy({ canEdit, isOwner }: { canEdit: boolean; isOwner: boolean }) {
       <Row><div><div className="font-medium">Hide personal details</div><div className="text-[13px] text-soft">Masks phone numbers, emails and card numbers in transcripts and call lists.</div></div><Switch checked={f.redact_pii} onChange={(v) => set({ redact_pii: v })} label="Hide personal details" /></Row>
       <Field label="Keep recordings and transcripts for (days)" hint="Leave empty to keep them."><Input className="w-40" type="number" min={1} value={f.retention_days} onChange={(e) => set({ retention_days: e.target.value })} /></Field>
       <Field label="What callers hear first on Live calls" hint="Added to the greeting the next time each agent goes live."><Textarea value={f.consent} onChange={(e) => set({ consent: e.target.value })} placeholder="This call may be recorded to help us serve you better." /></Field>
+      <Field label="Email me a summary after every call" hint="Up to 5 addresses, one per line. Needs email to be set up."><Textarea value={f.emails} onChange={(e) => set({ emails: e.target.value })} placeholder="you@yourbusiness.com" /></Field>
       <Field label="Websites allowed to show your call button" hint="One per line, like https://example.com"><Textarea value={f.origins} onChange={(e) => set({ origins: e.target.value })} /></Field>
       {q.data?.notes?.map((n) => <p key={n} className="text-xs text-soft">{n}</p>)}
       <div className="flex gap-2"><Button variant="primary" disabled={!canEdit || save.isPending} onClick={() => save.mutate()}>Save</Button>

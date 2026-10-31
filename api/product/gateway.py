@@ -29,7 +29,7 @@ class PlatformGateway(Protocol):
         """Newest first: {number, status, created_at, published_at, definition}."""
         ...
 
-    async def set_model_overrides(self, org_id: int, agent_ref: int, overrides: dict | None) -> None:
+    async def set_model_overrides(self, org_id: int, agent_ref: int, overrides: dict | None, settings: dict | None = None) -> None:
         """Set (or clear) the agent's per-agent model/voice overrides on its draft."""
         ...
 
@@ -107,7 +107,7 @@ class CoreGateway:
             if v.version_number is not None
         ]
 
-    async def set_model_overrides(self, org_id, agent_ref, overrides) -> None:
+    async def set_model_overrides(self, org_id, agent_ref, overrides, settings=None) -> None:
         db = self._db()
         wf = await db.get_workflow(agent_ref, organization_id=org_id)
         if wf is None:
@@ -122,6 +122,7 @@ class CoreGateway:
             cfg["model_overrides"] = overrides
         else:
             cfg.pop("model_overrides", None)
+        cfg.update(settings or {})  # call length and silence timeout
         await db.save_workflow_draft(agent_ref, workflow_configurations=cfg)
 
     async def start_test_run(self, org_id, user_id, agent_ref) -> int:

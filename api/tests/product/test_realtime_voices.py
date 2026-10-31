@@ -6,6 +6,8 @@ import pytest_asyncio
 
 from api.db import models
 from api.tests.product.support import bearer, make_client, signup
+from sqlalchemy import select
+from api.db import product_models
 
 LLM = {"provider": "openai", "api_key": "KEY-LLM", "model": "x-llm"}
 INWORLD = {"is_realtime": True, "llm": LLM, "realtime": {
@@ -79,3 +81,54 @@ async def test_no_keys_or_vendor_names_in_responses(client):
     h = bearer(tok)
     seen = (await client.get("/product/voices", headers=h)).text + (await client.get("/product/me", headers=h)).text
     assert not any(k in seen for k in ("KEY-", "inworld", "Inworld", "assemblyai", "google_realtime"))
+
+
+async def test_human_feel_settings_reach_the_voice_and_the_call(client):
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    seema = await voice(client, h, "Seema")
+    aid = (await client.post("/product/agents", json={"name": "P", "template": "receptionist"}, headers=h)).json()["id"]
+    bad = await client.patch(f"/product/agents/{aid}", json={"style": {"pace": 9}}, headers=h)
+    assert bad.status_code == 400 and bad.json()["detail"]["code"] == "bad_style"
+    style = {"pace": 1.25, "patience": "patient", "turns": "smart", "steadiness": "expressive", "fillers": True, "vocabulary": "Dr. Rao, Koregaon Park",
+             "max_minutes": 20, "silence_seconds": 15, "interruptions": False}
+    a = (await client.patch(f"/product/agents/{aid}", json={"voice_id": seema["id"], "style": style}, headers=h)).json()
+    assert a["style"]["pace"] == 1.25
+    assert (await client.post(f"/product/agents/{aid}/publish", headers=h)).status_code == 200
+    rt = live_overrides(client)["realtime"]
+    assert (rt["tts_speed"], rt["stt_eagerness"], rt["turn_detection"], rt["delivery_mode"], rt["conversational"]) == (1.25, "low", "semantic_vad", "CREATIVE", True)
+    assert rt["transcription_prompt"] == "Dr. Rao, Koregaon Park"
+    assert list(client.fake.settings.values())[-1] == {"max_call_duration": 1200, "max_user_idle_timeout": 15.0}
+    ws = await workspace(client)
+    start = next(n for n in client.fake.published[(ws.live_org_id, next(k[1] for k in client.fake.published if k[0] == ws.live_org_id))]["nodes"] if n["type"] == "startCall")
+    assert start["data"]["allow_interrupt"] is False
+
+
+async def workspace(client):
+    async with client.session_factory() as s:
+        return (await s.execute(select(product_models.ProductWorkspaceModel))).scalars().first()
+
+
+async def test_voice_samples_come_from_the_engine_and_are_kept(client, monkeypatch, tmp_path):
+    import base64
+    import httpx
+
+    from api.product import voice_samples
+
+    monkeypatch.setattr(voice_samples, "CACHE", tmp_path)
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, json={"audioContent": base64.b64encode(b"MP3DATA").decode()})
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(voice_samples.httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handler), **{k: v for k, v in kw.items() if k != "transport"}))
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    seema, zephyr = await voice(client, h, "Seema"), await voice(client, h, "Zephyr")
+    assert seema["has_sample"] is True and zephyr["has_sample"] is False
+    r = await client.get(f"/product/voices/{seema['id']}/sample", headers=h)
+    assert r.status_code == 200 and r.content == b"MP3DATA" and r.headers["content-type"] == "audio/mpeg"
+    assert (await client.get(f"/product/voices/{seema['id']}/sample", headers=h)).content == b"MP3DATA" and len(calls) == 1  # the second play comes from disk
+    assert "KEY-IW" in calls[0].headers["authorization"] and (await client.get(f"/product/voices/{zephyr['id']}/sample", headers=h)).status_code == 404

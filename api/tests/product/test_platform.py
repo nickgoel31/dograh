@@ -332,3 +332,20 @@ async def test_call_summary_mood_and_owner_alert(client):
         assert await alerts.scan(s, client.mailer, client.wallet) >= 1
         assert await alerts.scan(s, client.mailer, client.wallet) == 0
     assert any("didn't go through" in subj for _, subj, _ in client.mailer.sent)
+
+
+async def test_call_summary_emails_go_out_once(client):
+    from api.product import alerts
+
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    ws = await workspace(client)
+    assert (await client.put("/product/team/settings", headers=h, json={"record_calls": True, "redact_pii": False, "summary_emails": ["boss@x.com"]})).json()["summary_emails"] == ["boss@x.com"]
+    async with client.session_factory() as s:
+        s.add(models.WorkflowModel(id=901, name="w", organization_id=ws.live_org_id, workflow_definition={}))
+        events = [{"type": "rtf-user-transcription", "payload": {"text": "Table for two", "final": True}}, {"type": "rtf-bot-text", "payload": {"text": "Booked."}}]
+        s.add(models.WorkflowRunModel(name="r", workflow_id=901, mode="smallwebrtc", is_completed=True, cost_info={"call_duration_seconds": 30}, gathered_context={}, logs={"realtime_feedback_events": events}, created_at=datetime.now(UTC)))
+        await s.commit()
+        assert await alerts.email_summaries(s, client.mailer, client.llm) == 1
+        assert await alerts.email_summaries(s, client.mailer, client.llm) == 0
+    assert [m for m in client.mailer.sent if m[0] == "boss@x.com" and "Booked" not in m[2] and "table for two" in m[2].lower()]

@@ -317,6 +317,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/product/voices/{voice_id}/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sample */
+        get: operations["sample_api_v1_product_voices__voice_id__sample_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/product/voices/{voice_id}/favorite": {
         parameters: {
             query?: never;
@@ -1340,6 +1357,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/product/tools/handover/{agent_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Handover Get */
+        get: operations["handover_get_api_v1_product_tools_handover__agent_id__get"];
+        /** Handover Set */
+        put: operations["handover_set_api_v1_product_tools_handover__agent_id__put"];
+        post?: never;
+        /** Handover Off */
+        delete: operations["handover_off_api_v1_product_tools_handover__agent_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1426,6 +1462,10 @@ export interface components {
             brain: string;
             /** Voice Id */
             voice_id: string | null;
+            /** Style */
+            style?: {
+                [key: string]: unknown;
+            };
             /**
              * Brain Applies
              * @default true
@@ -1467,6 +1507,10 @@ export interface components {
             brain?: string | null;
             /** Voice Id */
             voice_id?: string | null;
+            /** Style */
+            style?: {
+                [key: string]: unknown;
+            } | null;
             /** Prompt */
             prompt?: string | null;
         };
@@ -1849,6 +1893,16 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HandoverBody */
+        HandoverBody: {
+            /** Number */
+            number: string;
+            /**
+             * When
+             * @default The caller asks to speak to a person, or the agent cannot help.
+             */
+            when: string;
         };
         /** HomeOut */
         HomeOut: {
@@ -2284,6 +2338,13 @@ export interface components {
             parameters: {
                 [key: string]: unknown;
             }[];
+            /**
+             * Kind
+             * @default web
+             */
+            kind: string;
+            /** Number */
+            number?: string | null;
         };
         /** TopupBody */
         TopupBody: {
@@ -2391,6 +2452,11 @@ export interface components {
             available: boolean;
             /** Description */
             description?: string | null;
+            /**
+             * Has Sample
+             * @default false
+             */
+            has_sample: boolean;
             /**
              * Brain Levels
              * @default true
@@ -3235,6 +3301,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VoiceOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sample_api_v1_product_voices__voice_id__sample_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                voice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -5628,6 +5729,113 @@ export interface operations {
                 content: {
                     "application/json": string[];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    handover_get_api_v1_product_tools_handover__agent_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    handover_set_api_v1_product_tools_handover__agent_id__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandoverBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    handover_off_api_v1_product_tools_handover__agent_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path: {
+                agent_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

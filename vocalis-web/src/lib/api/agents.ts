@@ -15,7 +15,7 @@ export function toAgent(a: AgentOut, prev?: Agent): Agent {
     // The list endpoint omits the prompt; keep what we already loaded.
     prompt: a.prompt ?? prev?.prompt ?? '',
     numbers: prev?.numbers ?? [],
-    version: a.version, brainApplies: a.brain_applies,
+    version: a.version, brainApplies: a.brain_applies, style: a.style,
   }
 }
 

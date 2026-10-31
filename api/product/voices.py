@@ -115,7 +115,7 @@ class InworldAdapter:
                 id=voice_id("inworld", "tts-2", r["id"]), name=r["name"], language=language_name(r["lang"]),
                 style=", ".join(t.capitalize() for t in r["tags"][:3]) or None, provider=PROVIDER_ALIASES["inworld"],
                 gender=(r["gender"] or "").capitalize() or None, age=AGES.get(r["age"] or ""), accent=None,
-                tts={"engine": "inworld", "voice": r["id"], "description": r["desc"]},
+                tts={"engine": "inworld", "voice": r["id"], "description": r["desc"], "lang": r["lang"]},
             )
             for r in rows
         ]

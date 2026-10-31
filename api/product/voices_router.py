@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel
 from sqlalchemy import delete, select
 
 from api.db.product_models import ProductVoiceFavoriteModel
-from api.product import models_config
+from api.product import models_config, voice_samples
 from api.product import voices as catalogue
 from api.product.deps import Ctx, get_ctx
 from api.product.errors import product_error
@@ -23,6 +23,7 @@ class VoiceOut(BaseModel):
     favorite: bool = False
     available: bool = True  # false until the voice's engine is set up (no key yet)
     description: str | None = None
+    has_sample: bool = False
     brain_levels: bool = True  # false when this voice runs on one fixed AI model (Fast/Balanced/Smartest don't apply)
     # Pre-generated sample clips are not available yet.
     preview_url: str | None = None
@@ -32,7 +33,7 @@ def _out(v: catalogue.Voice, favs: set[str], ready: dict[str, bool] | None = Non
     return VoiceOut(
         id=v.id, name=v.name, language=v.language, style=v.style, gender=v.gender,
         age=v.age, accent=v.accent, provider=v.provider, favorite=v.id in favs,
-        available=(ready or {}).get(v.engine, True), description=v.tts.get("description"), brain_levels=models_config.brain_applies(v.engine),
+        available=(ready or {}).get(v.engine, True), description=v.tts.get("description"), brain_levels=models_config.brain_applies(v.engine), has_sample=v.engine == "inworld" and (ready or {}).get("inworld", False),
     )
 
 
@@ -59,6 +60,19 @@ async def list_voices(
             continue
         out.append(_out(v, favs, ready))
     return out
+
+
+@router.get("/{voice_id}/sample")
+async def sample(voice_id: str, ctx: Ctx = Depends(get_ctx)):
+    v = catalogue.find(voice_id)
+    prof = await models_config.engine_profile(ctx.session, "inworld") if v and v.engine == "inworld" else None
+    key = ((prof.config or {}).get("realtime") or {}).get("api_key") if prof else None
+    if v is None or not key:
+        raise product_error(404, "no_sample", "There's no sample for this voice yet.")
+    audio = await voice_samples.make(key, v.tts["voice"], v.tts.get("lang", "en"))
+    if audio is None:
+        raise product_error(502, "sample_failed", "We couldn't make a sample right now. Please try again.")
+    return Response(audio, media_type="audio/mpeg", headers={"Cache-Control": "private, max-age=86400"})
 
 
 @router.put("/{voice_id}/favorite", response_model=VoiceOut)

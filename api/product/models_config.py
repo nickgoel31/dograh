@@ -23,6 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.db.models import ModelProfileModel, OrganizationModel
+from api.product import style as style_mod
 from api.product import voices as voice_catalogue
 
 PRESETS = ("fast", "balanced", "smartest")
@@ -100,7 +101,7 @@ async def ensure_org_profiles(session: AsyncSession, *org_ids: int) -> bool:
     return ok
 
 
-async def build_overrides(session: AsyncSession, *, brain: str, voice_id: str | None) -> dict | None:
+async def build_overrides(session: AsyncSession, *, brain: str, voice_id: str | None, style: dict | None = None) -> dict | None:
     """Self-contained per-agent overrides, or None when the default profile already fits."""
     base = await default_profile(session)
     if base is None:
@@ -117,10 +118,11 @@ async def build_overrides(session: AsyncSession, *, brain: str, voice_id: str | 
         rt["voice"] = voice.tts["voice"]
         if voice.engine == "inworld":
             rt["model"] = inworld_model(brain)
+            rt = style_mod.overlay(rt, style)
         return {"is_realtime": True, "realtime": rt}
     rt = (base.config or {}).get("realtime")
     if voice is None and rt and rt.get("provider") == "inworld_realtime":  # no voice picked: the profile's own voice, at the chosen Brain level
-        return {"is_realtime": True, "realtime": {**deepcopy(rt), "model": inworld_model(brain)}}
+        return {"is_realtime": True, "realtime": style_mod.overlay({**deepcopy(rt), "model": inworld_model(brain)}, style)}
 
     chosen = await _by_slug(session, profile_slugs().get(brain))
     llm = (chosen.config or {}).get("llm") if chosen else None

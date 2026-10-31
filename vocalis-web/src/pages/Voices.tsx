@@ -4,6 +4,8 @@ import { Badge, Button, Card, Chip, Dialog, Input, Select, Textarea } from '@/co
 import { AdvancedOnly, Bars, CardSkeletons, PageHeader, speak, stopSpeaking, useAsync } from '@/components/shared'
 import { api, USE_MOCKS } from '@/lib/api'
 import { voicesApi } from '@/lib/api/voices'
+import { API_URL } from '@/lib/api/env'
+import { toast } from 'sonner'
 import { useData } from '@/store/data'
 import { cn } from '@/lib/utils'
 import type { Voice } from '@/mock/types'
@@ -24,8 +26,16 @@ export default function VoicesPage() {
 
   const list = (data ?? []).filter((v) => (!f.lang || v.lang === f.lang) && (!f.gender || v.gender === f.gender) && (!f.age || v.age === f.age) && (!f.accent || v.accent === f.accent) && (!f.style || v.style === f.style) && (!favOnly || favorites.includes(v.id)) && (!q || `${v.name} ${v.style} ${v.description ?? ''}`.toLowerCase().includes(q.toLowerCase())))
   const opts = (k: keyof Voice) => [...new Set((data ?? []).map((v) => v[k]))].filter(Boolean) as string[]
+  const audio = React.useRef<HTMLAudioElement | null>(null)
   const play = (v: Voice, text = 'Hello! I can be the voice of your business.') => {
-    if (playing === v.id) { stopSpeaking(); setPlaying(null); return }
+    if (playing === v.id) { stopSpeaking(); audio.current?.pause(); setPlaying(null); return }
+    if (!USE_MOCKS) { // a real sample made by the voice engine
+      audio.current?.pause()
+      const a = new Audio(`${API_URL}/voices/${v.id}/sample`); audio.current = a; setPlaying(v.id)
+      a.onended = () => setPlaying((p) => (p === v.id ? null : p))
+      a.play().catch(() => { setPlaying(null); toast.error('We could not play that sample right now.') })
+      return
+    }
     setPlaying(v.id); speak(text, { female: v.gender === 'Female', onEnd: () => setPlaying((p) => (p === v.id ? null : p)) })
   }
   const playAll = async () => {
@@ -52,7 +62,7 @@ export default function VoicesPage() {
           {list.slice(0, shown).map((v) => (
             <Card key={v.id} className={cn('p-4', v.available === false && 'opacity-60')}>
               <div className="flex items-start gap-3">
-                <Button variant={playing === v.id ? 'primary' : 'secondary'} size="icon" className="h-11 w-11 rounded-full" onClick={() => play(v)} disabled={!USE_MOCKS} title={USE_MOCKS ? undefined : 'Voice samples are coming soon'} aria-label={`${playing === v.id ? 'Stop' : 'Play'} ${v.name}`}>{playing === v.id ? <Square size={14} /> : <Play size={15} className="ml-0.5" />}</Button>
+                <Button variant={playing === v.id ? 'primary' : 'secondary'} size="icon" className="h-11 w-11 rounded-full" onClick={() => play(v)} disabled={!USE_MOCKS && !v.hasSample} title={USE_MOCKS || v.hasSample ? undefined : 'No sample for this voice yet'} aria-label={`${playing === v.id ? 'Stop' : 'Play'} ${v.name}`}>{playing === v.id ? <Square size={14} /> : <Play size={15} className="ml-0.5" />}</Button>
                 <div className="flex-1"><div className="flex items-center gap-2 font-semibold">{v.name}{playing === v.id && <Bars className="text-accent" />}</div><div className="text-[13px] text-soft">{[v.lang, v.accent].filter(Boolean).join(' · ')}</div>{v.description && <p className="mt-1 line-clamp-2 text-xs text-soft">{v.description}</p>}
                   <div className="mt-2 flex flex-wrap gap-1.5">{v.gender && <Badge>{v.gender}</Badge>}{v.age && <Badge>{v.age}</Badge>}{v.style && <Badge tone="accent">{v.style}</Badge>}{v.available === false && <Badge>Coming soon</Badge>}<AdvancedOnly><Badge>{v.provider}</Badge></AdvancedOnly></div></div>
                 <div className="flex flex-col gap-1">

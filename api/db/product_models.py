@@ -84,6 +84,7 @@ class ProductAgentModel(Base):
     voice_id = Column(String(64), nullable=True)
     # "simple": prompt is compiled from the fields above. "custom": user-written.
     prompt_mode = Column(String(8), nullable=False, default="simple")
+    style = Column(JSON, nullable=True)  # "human feel" choices, see api/product/style.py
     status = Column(String(8), nullable=False, default="draft")  # draft|live|paused
     test_workflow_id = Column(Integer, nullable=False)
     live_workflow_id = Column(Integer, nullable=True)
@@ -393,6 +394,7 @@ class ProductSettingsModel(Base):
     redact_pii = Column(Boolean, nullable=False, default=False)
     retention_days = Column(Integer, nullable=True)
     widget_origins = Column(JSON, nullable=True)
+    summary_emails = Column(JSON, nullable=True)  # who gets an emailed summary after every call
 
 
 class ProductSupportMessageModel(Base):
