@@ -51,7 +51,7 @@ function hexToHsl(hex: string): string | null {
 function NavItem({ to, label, icon: Icon, collapsed, onClick }: (typeof main)[number] & { collapsed: boolean; onClick?: () => void }) {
   return (
     <NavLink to={to} end={to === '/'} onClick={onClick} title={collapsed ? label : undefined}
-      className={({ isActive }) => cn('flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium transition', isActive ? 'bg-accent-soft text-accent' : 'text-soft hover:bg-muted hover:text-ink', collapsed && 'justify-center px-0')}>
+      className={({ isActive }) => cn('relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium transition', isActive ? 'bg-accent-soft font-semibold text-accent before:absolute before:-left-3 before:top-2 before:h-[calc(100%-1rem)] before:w-[3px] before:rounded-r-full before:bg-accent' : 'text-soft hover:bg-muted/80 hover:text-ink', collapsed && 'justify-center px-0')}>
       <Icon size={17} className="shrink-0" />{!collapsed && label}
     </NavLink>
   )
@@ -84,7 +84,7 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
       )}
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto" aria-label="Main">
         {main.filter((n) => view === 'advanced' || !advancedOnly.has(n.to)).map((n) => <NavItem key={n.to} {...n} collapsed={collapsed} onClick={close} />)}
-        {!collapsed && <div className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-wider text-soft/70">Build</div>}
+        {!collapsed && <div className="px-3 pb-1 pt-5 text-[10.5px] font-bold uppercase tracking-[.14em] text-soft/60">Build</div>}
         {collapsed && <div className="my-2 h-px bg-line" />}
         {build.filter((n) => view === 'advanced' || !advancedOnly.has(n.to)).map((n) => <NavItem key={n.to} {...n} collapsed={collapsed} onClick={close} />)}
         <div className="mt-auto pt-4">{bottom.map((n) => <NavItem key={n.to} {...n} collapsed={collapsed} onClick={close} />)}</div>
@@ -141,7 +141,7 @@ function Topbar({ openNav }: { openNav: () => void }) {
   const initials = USE_MOCKS ? 'AS' : (me?.user.name || me?.user.email || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
   const nav = useNavigate()
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-bg/85 px-4 backdrop-blur md:px-6">
+    <header className="glass sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line/70 px-4 md:px-6">
       <Button variant="ghost" size="icon" className="md:hidden" onClick={openNav} aria-label="Open menu"><MenuIcon size={18} /></Button>
       <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={() => set({ collapsed: !collapsed })} aria-label="Collapse sidebar">{collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</Button>
       <div className="min-w-0 flex-1"><Breadcrumbs /></div>
@@ -275,7 +275,7 @@ export default function Shell() {
   return (
     <TooltipProvider>
       <div className="flex min-h-screen">
-        <aside className={cn('sticky top-0 hidden h-screen shrink-0 border-r bg-surface transition-[width] md:block', collapsed ? 'w-[68px]' : 'w-64')}><SidebarBody collapsed={collapsed} /></aside>
+        <aside className={cn('sticky top-0 hidden h-screen shrink-0 border-r border-line/70 bg-surface/80 backdrop-blur transition-[width] md:block', collapsed ? 'w-[68px]' : 'w-64')}><SidebarBody collapsed={collapsed} /></aside>
         <AnimatePresence>
           {mobileNav && (
             <>

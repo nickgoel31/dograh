@@ -11,10 +11,10 @@ import { cn } from '@/lib/utils'
 
 /* ---------- Button ---------- */
 const variants = {
-  primary: 'bg-accent text-accent-fg shadow-card hover:brightness-110',
-  secondary: 'bg-surface border shadow-card hover:bg-muted',
+  primary: 'brand-gradient text-accent-fg shadow-glow ring-1 ring-inset ring-white/15 hover:brightness-110',
+  secondary: 'bg-surface border shadow-card hover:bg-muted hover:border-soft/30',
   ghost: 'hover:bg-muted text-soft hover:text-ink',
-  danger: 'bg-bad text-white hover:brightness-110',
+  danger: 'bg-bad text-white shadow-card ring-1 ring-inset ring-white/15 hover:brightness-110',
   soft: 'bg-accent-soft text-accent hover:brightness-95',
 }
 const sizes = { sm: 'h-8 px-3 text-[13px] gap-1.5', md: 'h-9 px-4 gap-2', lg: 'h-12 px-6 text-base gap-2.5 rounded-xl', icon: 'h-9 w-9' }
@@ -26,7 +26,7 @@ export const Button = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttrib
 
 /* ---------- Card / Badge ---------- */
 export const Card = ({ className, ...p }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('rounded-xl border bg-surface shadow-card', className)} {...p} />
+  <div className={cn('rounded-xl border border-line/80 bg-surface shadow-card', className)} {...p} />
 )
 const tones = {
   gray: 'bg-muted text-soft', green: 'bg-ok/10 text-ok', orange: 'bg-warn/10 text-warn', red: 'bg-bad/10 text-bad', accent: 'bg-accent-soft text-accent',
@@ -37,7 +37,7 @@ export const Badge = ({ tone = 'gray', className, children }: { tone?: Tone; cla
 )
 
 /* ---------- Form fields ---------- */
-const field = 'w-full rounded-lg border bg-surface px-3 text-sm shadow-card placeholder:text-soft/70 transition focus-visible:border-accent'
+const field = 'w-full rounded-lg border bg-surface px-3 text-sm shadow-card placeholder:text-soft/70 transition hover:border-soft/30 focus-visible:border-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15'
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(({ className, ...p }, r) => (
   <input ref={r} className={cn(field, 'h-9', className)} {...p} />
 ))
@@ -79,10 +79,10 @@ export const Chip = ({ active, onClick, children }: { active?: boolean; onClick?
 /* ---------- Tabs ---------- */
 export const Tabs = TabsP.Root
 export const TabsList = ({ className, ...p }: TabsP.TabsListProps) => (
-  <TabsP.List className={cn('mb-6 flex gap-1 overflow-x-auto border-b', className)} {...p} />
+  <TabsP.List className={cn('mb-6 flex gap-1 overflow-x-auto border-b border-line/80', className)} {...p} />
 )
 export const Tab = ({ className, ...p }: TabsP.TabsTriggerProps) => (
-  <TabsP.Trigger className={cn('-mb-px whitespace-nowrap border-b-2 border-transparent px-3 py-2.5 text-sm font-medium text-soft transition hover:text-ink data-[state=active]:border-accent data-[state=active]:text-ink', className)} {...p} />
+  <TabsP.Trigger className={cn('-mb-px whitespace-nowrap border-b-2 border-transparent px-3 py-2.5 text-sm font-medium text-soft transition hover:text-ink data-[state=active]:border-accent data-[state=active]:font-semibold data-[state=active]:text-ink', className)} {...p} />
 )
 export const TabPanel = TabsP.Content
 
