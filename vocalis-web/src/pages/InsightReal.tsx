@@ -1,4 +1,5 @@
 /** Real Analytics and Testing Lab. Demo versions stay in their own files for mock mode. */
+import { Glyph } from '@/components/Glyph'
 import * as React from 'react'
 import { Lightbulb, Play, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -156,7 +157,7 @@ function Cases({ agent }: { agent: string }) {
       <div className="mb-3 flex items-center justify-between"><div><h3 className="font-semibold">Test cases</h3><p className="text-[13px] text-soft">“When the caller says X, the agent should do Y.” Results are kept for this version of the agent.</p></div>
         <div className="flex gap-2"><Button disabled={busy || !list.length} onClick={() => runAll(false)}>{busy ? 'Running…' : 'Run new'}</Button><Button variant="primary" disabled={busy || !list.length} onClick={() => runAll(true)}>Run all</Button></div></div>
       <div className="space-y-2">{list.map((c) => (
-        <div key={c.id} className="flex items-start gap-3 rounded-lg border p-3 text-sm"><span className="mt-0.5">{c.passed === null ? '⚪' : c.passed ? '✅' : '❌'}</span>
+        <div key={c.id} className="flex items-start gap-3 rounded-lg border p-3 text-sm"><span className="mt-0.5"><Glyph e={c.passed === null ? '⚪' : c.passed ? '✅' : '❌'} size={16} className={c.passed === null ? 'text-soft' : c.passed ? 'text-ok' : 'text-bad'} /></span>
           <div className="flex-1"><div><b>When:</b> {c.say}</div><div><b>Should:</b> {c.expect}{c.must_call ? ` (using “${c.must_call}”)` : ''}</div>{c.note && <div className="text-[13px] text-soft">{c.note}</div>}</div>
           <Button size="sm" variant="ghost" className="text-bad" onClick={() => http(`/lab/cases/${c.id}`, { method: 'DELETE' }).then(refresh).catch(say)}><Trash2 size={14} /></Button></div>))}</div>
       <div className="mt-4 grid gap-2 border-t pt-4 md:grid-cols-[1fr_1fr_160px_auto]"><Input placeholder="When the caller says…" value={f.say} onChange={(e) => setF({ ...f, say: e.target.value })} /><Input placeholder="The agent should…" value={f.expect} onChange={(e) => setF({ ...f, expect: e.target.value })} />

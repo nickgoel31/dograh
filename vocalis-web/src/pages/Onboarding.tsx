@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Glyph } from '@/components/Glyph'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, Check, Mic, Rocket } from 'lucide-react'
@@ -62,7 +63,7 @@ export default function Onboarding() {
         </div>)}
         {step === 1 && (<div className="grid gap-3 sm:grid-cols-2">{(templates.data ?? []).map((t) => (
           <button key={t.key} onClick={() => setTpl(t.key)} className={cn('rounded-xl border p-4 text-left transition hover:border-accent', tpl === t.key && 'border-accent bg-accent-soft')}>
-            <div className="text-2xl">{t.emoji}</div><div className="mt-2 font-medium">{t.name}</div><div className="text-sm text-soft">{t.blurb}</div></button>))}</div>)}
+            <div className="text-accent"><Glyph e={t.emoji} size={26} /></div><div className="mt-2 font-medium">{t.name}</div><div className="text-sm text-soft">{t.blurb}</div></button>))}</div>)}
         {step === 2 && <VoicePick voices={voices.data ?? []} value={voiceId} onPick={setVoiceId} />}
         {step === 3 && (<div className="py-6 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent-soft text-accent"><Mic size={28} /></div>

@@ -1,13 +1,14 @@
 import * as React from 'react'
+import { Glyph } from './Glyph'
 import ReactFlow, {
   addEdge, Background, Controls, Handle, MarkerType, Position, useEdgesState, useNodesState, useReactFlow, ReactFlowProvider,
   type Connection, type Edge, type Node, type NodeProps,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { Globe, LayoutGrid, Maximize2, Minimize2, Phone, Play, RotateCcw, Trash2 } from 'lucide-react'
+import { Globe, LayoutGrid, Phone, Play, RotateCcw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button, Card, Field, Input, Textarea } from './ui'
-import { AdvancedOnly, CodeBlock } from './shared'
+import { Button, Field, Input, Textarea } from './ui'
+import { AdvancedOnly } from './shared'
 import { cn, sleep } from '@/lib/utils'
 import { StepOptions } from './FlowStepOptions'
 import { RawEditor } from './RawEditor'
@@ -46,7 +47,7 @@ function StepNode({ data, selected }: NodeProps<NodeData>) {
           <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-snug text-soft">“{data.text}”</p>
           {prompt && <p className="mt-2 line-clamp-2 rounded-md bg-muted px-2 py-1 text-[10.5px] text-soft">Instructions: {prompt}</p>}
         </div>
-        <Handle type="source" position={Position.Right} />
+        <Handle type="source" position={Position.Bottom} />
       </div>
     )
   }
@@ -61,17 +62,17 @@ function StepNode({ data, selected }: NodeProps<NodeData>) {
   }
   return (
     <div className={cn('w-56 rounded-xl border bg-surface p-3 shadow-card transition', ring, live)}>
-      {!FREE.includes(data.kind) && <Handle type="target" position={Position.Left} />}
-      <div className="flex items-center gap-1.5 text-[11px] font-medium text-soft"><span className="flex h-5 w-5 items-center justify-center rounded-md text-[11px]" style={{ background: k.color + '22' }}>{k.emoji}</span>{k.name}</div>
+      {!FREE.includes(data.kind) && <Handle type="target" position={Position.Top} />}
+      <div className="flex items-center gap-1.5 text-[11px] font-medium text-soft"><span className="flex h-5 w-5 items-center justify-center rounded-md" style={{ background: k.color + '22' }}><Glyph e={k.emoji} size={12} color={k.color} /></span>{k.name}</div>
       <div className="mt-2 truncate text-[13.5px] font-semibold">{data.label}</div>
       <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-snug text-soft">{data.text}</p>
       {data.kind === 'condition' ? (
         <>
-          <Handle id="yes" type="source" position={Position.Right} style={{ top: '35%', background: '#10b981' }} />
-          <Handle id="no" type="source" position={Position.Right} style={{ top: '75%', background: '#ef4444' }} />
-          <div className="absolute -right-8 top-[22%] text-[10px] font-semibold text-ok">Yes</div><div className="absolute -right-6 top-[62%] text-[10px] font-semibold text-bad">No</div>
+          <Handle id="yes" type="source" position={Position.Bottom} style={{ left: '28%', background: '#10b981' }} />
+          <Handle id="no" type="source" position={Position.Bottom} style={{ left: '72%', background: '#ef4444' }} />
+          <div className="absolute -bottom-5 left-[28%] -translate-x-1/2 text-[10px] font-semibold text-ok">Yes</div><div className="absolute -bottom-5 left-[72%] -translate-x-1/2 text-[10px] font-semibold text-bad">No</div>
         </>
-      ) : data.kind !== 'end' && data.kind !== 'transfer' && !FREE.includes(data.kind) ? <Handle type="source" position={Position.Right} /> : null}
+      ) : data.kind !== 'end' && data.kind !== 'transfer' && !FREE.includes(data.kind) ? <Handle type="source" position={Position.Bottom} /> : null}
     </div>
   )
 }
@@ -83,7 +84,7 @@ const mk = (id: string, kind: Kind, x: number, y: number, label?: string, text?:
 })
 
 export const defaultFlow = (): FlowData => ({
-  nodes: [mk('greeting-1', 'greeting', 0, 120), mk('ask-2', 'ask', 330, 120, 'Qualify', 'Ask what they need and for whom.'), mk('condition-3', 'condition', 620, 120, 'Wants a person?'), mk('tool-4', 'tool', 920, 30, 'Book', 'Check the calendar and book a slot.'), mk('transfer-5', 'transfer', 920, 230), mk('end-6', 'end', 1200, 30), mk('global-7', 'global', 330, 340)],
+  nodes: [mk('greeting-1', 'greeting', 150, 0), mk('ask-2', 'ask', 150, 190, 'Qualify', 'Ask what they need and for whom.'), mk('condition-3', 'condition', 150, 370, 'Wants a person?'), mk('transfer-5', 'transfer', -40, 580), mk('tool-4', 'tool', 340, 580, 'Book', 'Check the calendar and book a slot.'), mk('end-6', 'end', 340, 770), mk('global-7', 'global', 640, 0)],
   edges: [['greeting-1', 'ask-2'], ['ask-2', 'condition-3'], ['condition-3', 'tool-4', 'no'], ['condition-3', 'transfer-5', 'yes'], ['tool-4', 'end-6']].map(([s, t, h]) => ({ id: `${s}>${t}${h ? '#' + h : ''}`, source: s, target: t, sourceHandle: h, label: h === 'yes' ? 'Yes' : h === 'no' ? 'No' : undefined, ...edgeStyle })),
 })
 
@@ -94,12 +95,11 @@ const clean = (ns: Node[], es: Edge[]): FlowData => ({
 const sig = (f: FlowData) => JSON.stringify(f)
 const typeFor = (k: string) => (k === 'greeting' ? 'startCall' : k === 'end' ? 'endCall' : k === 'global' ? 'globalNode' : k === 'webhook' ? 'webhook' : 'agentNode')
 
-function Editor({ value, onChange, onSimulate }: { value: FlowData; onChange: (v: FlowData) => void; onSimulate?: () => void | Promise<void> }) {
+function Editor({ value, onChange, onSimulate, header }: { value: FlowData; onChange: (v: FlowData) => void; onSimulate?: () => void | Promise<void>; header?: React.ReactNode }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(value.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(value.edges)
   const [sel, setSel] = React.useState<{ type: 'node' | 'edge'; id: string } | null>(null)
   const [running, setRunning] = React.useState(false)
-  const [full, setFull] = React.useState(false)
   const rf = useReactFlow()
   const last = React.useRef(sig(clean(value.nodes, value.edges)))
 
@@ -119,13 +119,12 @@ function Editor({ value, onChange, onSimulate }: { value: FlowData; onChange: (v
     setTimeout(() => rf.fitView({ padding: 0.2, maxZoom: 1 }), 60)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value])
+  // Flows saved before the layout ran top to bottom are laid out sideways: straighten them once.
   React.useEffect(() => {
-    if (!full) return
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setFull(false) }
-    window.addEventListener('keydown', esc)
-    return () => window.removeEventListener('keydown', esc)
-  }, [full])
-  React.useEffect(() => { const t = setTimeout(() => rf.fitView({ padding: 0.2, maxZoom: 1, duration: 200 }), 120); return () => clearTimeout(t) }, [full]) // eslint-disable-line react-hooks/exhaustive-deps
+    const xs = value.nodes.map((x) => x.position.x), ys = value.nodes.map((x) => x.position.y)
+    if (value.nodes.length > 2 && Math.max(...xs) - Math.min(...xs) > 2 * (Math.max(...ys) - Math.min(...ys) + 1)) setTimeout(tidy, 80)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const n = sel?.type === 'node' ? nodes.find((x) => x.id === sel.id) : undefined
   const edge = sel?.type === 'edge' ? edges.find((x) => x.id === sel.id) : undefined
@@ -158,10 +157,12 @@ function Editor({ value, onChange, onSimulate }: { value: FlowData; onChange: (v
     nodes.filter((x) => !FREE.includes(x.data.kind) && !edges.some((e) => e.target === x.id)).forEach((x) => walk(x.id, 0, new Set()))
     const rows: Record<number, number> = {}
     let free = 0
+    const width = Math.max(1, ...Object.values(nodes.filter((x) => !FREE.includes(x.data.kind)).reduce<Record<number, number>>((a, x) => { const d = depth[x.id] ?? 0; a[d] = (a[d] ?? 0) + 1; return a }, {})))
     setNodes((ns) => ns.map((x) => {
-      if (FREE.includes(x.data.kind)) return { ...x, position: { x: free++ * 300, y: 420 } }
+      if (FREE.includes(x.data.kind)) return { ...x, position: { x: width * 320 + 60, y: free++ * 190 } }
       const d = depth[x.id] ?? 0; const r = (rows[d] = (rows[d] ?? -1) + 1)
-      return { ...x, position: { x: d * 320, y: r * 160 + 40 } }
+      const inRow = nodes.filter((y) => !FREE.includes(y.data.kind) && (depth[y.id] ?? 0) === d).length
+      return { ...x, position: { x: r * 320 + ((width - inRow) * 320) / 2, y: d * 190 } }
     }))
     setTimeout(() => rf.fitView({ duration: 300, padding: 0.2, maxZoom: 1 }), 60)
   }
@@ -191,20 +192,20 @@ function Editor({ value, onChange, onSimulate }: { value: FlowData; onChange: (v
   const palette = (Object.keys(kinds) as Kind[]).filter((k) => k !== 'advanced')
 
   return (
-    <div className={cn(full ? 'fixed inset-0 z-40 bg-bg p-2 md:p-3' : 'space-y-3')}>
-      <div className={cn('grid gap-3 lg:grid-cols-[1fr_340px]', full && 'h-full grid-rows-[1fr_auto] lg:grid-rows-1')}>
-        <div className={cn('relative overflow-hidden rounded-xl border bg-muted/40', full ? 'h-full min-h-0' : 'h-[calc(100dvh-230px)] min-h-[460px] lg:min-h-[600px]')}>
+    <div className="flex h-[calc(100dvh-3.5rem)] flex-col md:h-[calc(100dvh-5rem)]">
+      {header}
+      <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] lg:grid-cols-[1fr_340px] lg:grid-rows-1">
+        <div className="relative min-h-0 overflow-hidden bg-muted/40">
           <div className="absolute inset-x-2 top-2 z-10 flex gap-1 overflow-x-auto rounded-xl border bg-surface p-1.5 shadow-pop lg:inset-x-auto lg:left-3 lg:top-3 lg:max-h-[calc(100%-1.5rem)] lg:w-44 lg:flex-col lg:overflow-y-auto lg:overflow-x-hidden">
             {palette.map((k) => (
               <button key={k} onClick={() => add(k)} title={kinds[k].hint} className="flex shrink-0 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium transition hover:bg-muted lg:w-full">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs" style={{ background: kinds[k].color + '22' }}>{kinds[k].emoji}</span><span className="whitespace-nowrap lg:truncate">{kinds[k].name}</span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md" style={{ background: kinds[k].color + '22' }}><Glyph e={kinds[k].emoji} size={14} color={kinds[k].color} /></span><span className="whitespace-nowrap lg:truncate">{kinds[k].name}</span>
               </button>
             ))}
           </div>
           <div className="absolute bottom-3 right-3 z-10 flex gap-1.5 lg:bottom-auto lg:top-3">
             <Button size="sm" onClick={tidy} aria-label="Tidy up"><LayoutGrid size={14} /><span className="hidden sm:inline">Tidy up</span></Button>
             <Button size="sm" onClick={() => { const f = defaultFlow(); setNodes(f.nodes); setEdges(f.edges); setSel(null); toast('Back to the starter flow'); setTimeout(() => rf.fitView({ padding: 0.2, maxZoom: 1 }), 60) }} aria-label="Reset"><RotateCcw size={14} /><span className="hidden sm:inline">Reset</span></Button>
-            <Button size="sm" onClick={() => setFull((f) => !f)} aria-label={full ? 'Exit full screen' : 'Full screen'}>{full ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</Button>
             <Button size="sm" variant="primary" disabled={running} onClick={tryCall}><Play size={14} />{running ? 'Working…' : 'Try a call'}</Button>
           </div>
           <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={connect}
@@ -213,10 +214,10 @@ function Editor({ value, onChange, onSimulate }: { value: FlowData; onChange: (v
             <Background gap={22} size={1.2} /><Controls showInteractive={false} position="bottom-left" />
           </ReactFlow>
         </div>
-        <Card className={cn('flex flex-col overflow-y-auto p-4', full ? 'max-h-[40dvh] lg:max-h-full' : 'lg:max-h-[calc(100dvh-230px)] lg:min-h-[600px]')}>
+        <div className="flex max-h-[38dvh] flex-col overflow-y-auto border-t bg-surface p-4 lg:max-h-none lg:border-l lg:border-t-0">
           {n ? (
             <div className="space-y-3">
-              <div className="flex items-center justify-between"><div className="text-sm font-semibold">{kinds[n.data.kind as Kind].emoji} {n.data.kind === 'greeting' ? 'Start call' : n.data.kind === 'global' ? 'Global rules' : 'Edit step'}</div>{n.deletable !== false && <Button size="sm" variant="ghost" className="text-bad" onClick={remove} aria-label="Delete step"><Trash2 size={14} />Delete</Button>}</div>
+              <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-sm font-semibold"><Glyph e={kinds[n.data.kind as Kind].emoji} size={16} color={kinds[n.data.kind as Kind].color} /> {n.data.kind === 'greeting' ? 'Start call' : n.data.kind === 'global' ? 'Global rules' : 'Edit step'}</div>{n.deletable !== false && <Button size="sm" variant="ghost" className="text-bad" onClick={remove} aria-label="Delete step"><Trash2 size={14} />Delete</Button>}</div>
               <Field label="Name"><Input value={n.data.label} onChange={(e) => patch({ label: e.target.value })} /></Field>
               {n.data.kind === 'greeting' ? (<>
                 <Field label="First thing the agent says"><Textarea className="min-h-[90px]" value={n.data.text} onChange={(e) => patch({ text: e.target.value })} /></Field>
@@ -240,17 +241,16 @@ function Editor({ value, onChange, onSimulate }: { value: FlowData; onChange: (v
             <div className="space-y-3 text-sm">
               <div className="font-semibold">How this works</div>
               <ul className="list-disc space-y-1.5 pl-4 text-soft"><li>Pick a step to add it to the canvas.</li><li>Click a step or a line to edit it.</li><li>Drag from a dot to connect steps.</li><li>Press Delete to remove the selected step.</li></ul>
-              {issues.length === 0 ? <div className="rounded-lg bg-ok/10 p-2.5 text-ok">✓ Your flow looks complete.</div> : issues.map((i) => <div key={i} className="rounded-lg bg-warn/10 p-2.5 text-warn">{i}</div>)}
+              {issues.length === 0 ? <div className="rounded-lg bg-ok/10 p-2.5 text-ok">Your flow looks complete.</div> : issues.map((i) => <div key={i} className="rounded-lg bg-warn/10 p-2.5 text-warn">{i}</div>)}
             </div>
           )}
-          <div className="mt-auto pt-4"><div className="rounded-xl bg-muted p-3 text-[12.5px] text-soft"><div className="mb-0.5 font-semibold text-ink">💡 Tips</div>Use the caller's name and details in what the agent says. Short sentences sound more natural on a call.</div></div>
-        </Card>
+          <div className="mt-auto pt-4"><div className="rounded-xl bg-muted p-3 text-[12.5px] text-soft"><div className="mb-0.5 flex items-center gap-1.5 font-semibold text-ink"><Glyph e="💡" size={13} className="text-warn" />Tips</div>Use the caller's name and details in what the agent says. Short sentences sound more natural on a call.</div></div>
+        </div>
       </div>
-      {!full && <AdvancedOnly><CodeBlock json code={JSON.stringify(clean(nodes, edges), null, 2)} className="max-h-72 overflow-auto" /></AdvancedOnly>}
     </div>
   )
 }
 
-export function CallFlowEditor(p: { value: FlowData; onChange: (v: FlowData) => void; onSimulate?: () => void | Promise<void> }) {
+export function CallFlowEditor(p: { value: FlowData; onChange: (v: FlowData) => void; onSimulate?: () => void | Promise<void>; header?: React.ReactNode }) {
   return <ReactFlowProvider><Editor {...p} /></ReactFlowProvider>
 }

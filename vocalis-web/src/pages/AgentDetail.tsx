@@ -134,7 +134,7 @@ export default function AgentDetail() {
     } catch (e) { toast.error(e instanceof Error ? e.message : 'We could not restore that version.') }
   }
 
-  const brainCards = [['fast', '⚡ Fast', 'Replies very quickly. Great for simple jobs.', 'Best for: FAQs'], ['balanced', '⚖️ Balanced', 'A good mix of speed and smarts.', 'Best for: most businesses'], ['smartest', '🧠 Smartest', 'Thinks harder. A little slower.', 'Best for: tricky conversations']] as const
+  const brainCards = [['fast', 'Fast', 'Replies very quickly. Great for simple jobs.', 'Best for: FAQs'], ['balanced', 'Balanced', 'A good mix of speed and smarts.', 'Best for: most businesses'], ['smartest', 'Smartest', 'Thinks harder. A little slower.', 'Best for: tricky conversations']] as const
   const checks = [
     { ok: !!d.prompt.trim(), t: 'Your agent knows what to say', fix: 'Add instructions in Personality' },
     { ok: !!d.voiceId, t: 'A voice is picked', fix: 'Pick a voice' },
@@ -145,6 +145,7 @@ export default function AgentDetail() {
 
   return (
     <>
+      {tab !== 'flow' && (<>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0"><div className="flex items-center gap-2.5"><h1 className="truncate text-2xl font-bold tracking-tight">{d.name}</h1><StatusBadge status={agent.status} /></div>{d.whatYouDo && <p className="mt-1 max-w-2xl truncate text-[13.5px] text-soft">{d.whatYouDo}</p>}</div>
         <div className="flex flex-wrap items-center gap-2">
@@ -159,6 +160,7 @@ export default function AgentDetail() {
           return <button key={k} role="tab" aria-selected={on} onClick={() => setSp({ tab: k === 'flow' ? 'flow' : tab === 'flow' ? 'personality' : tab })} className={cn('rounded-lg px-4 py-1.5 text-sm font-medium transition', on ? 'bg-surface text-ink shadow-card' : 'text-soft hover:text-ink')}>{label}</button>
         })}
       </div>
+      </>)}
       <Tabs value={tab} onValueChange={(t) => setSp({ tab: t })}>
         {tab !== 'flow' && <TabsList>{['personality', 'voice', 'brain', 'knowledge', 'tools', 'behavior', 'phone', 'test', 'versions', 'publish'].filter((t) => (t !== 'brain' || voice.brainLevels !== false) && (advanced || !['behavior', 'versions'].includes(t) || t === tab)).map((t) => <Tab key={t} value={t} className="capitalize">{t}</Tab>)}</TabsList>}
 
@@ -191,7 +193,21 @@ export default function AgentDetail() {
         <TabPanel value="tools">{USE_MOCKS ? (<><Q title="What can your agent do?" hint="Switch on the abilities you want.">
           <div className="divide-y">{toolList.map(([k, t, p]) => <div key={k} className="flex items-center justify-between py-3"><div><div className="font-medium">{t}</div><div className="text-[13px] text-soft">{p}</div></div><Switch label={t} checked={d.tools.includes(k)} onChange={(v) => up({ tools: v ? [...d.tools, k] : d.tools.filter((x) => x !== k) })} /></div>)}</div></Q></>) : <Q title="What can your agent do?" hint="Tick the tools it may use during a call."><AttachPicker kind="tools" agentId={agent.id} /></Q>}</TabPanel>
 
-        <TabPanel value="flow"><CallFlowEditor value={d.flow} onChange={(flow) => up({ flow })} onSimulate={USE_MOCKS ? undefined : async () => { if (dirty) await save(); setTryOpen(true) }} />{!USE_MOCKS && <TryAgent agentId={agent.id} open={tryOpen} onOpenChange={setTryOpen} />}</TabPanel>
+        <TabPanel value="flow"><CallFlowEditor header={
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b bg-surface px-3 py-2">
+        <div className="flex min-w-0 items-center gap-2"><h1 className="truncate text-[15px] font-bold">{d.name}</h1><StatusBadge status={agent.status} /></div>
+        <div className="inline-flex rounded-lg bg-muted p-0.5" role="tablist" aria-label="Agent view">
+          {[['flow', 'Flow'], ['config', 'Configuration']].map(([k, label]) => (
+            <button key={k} role="tab" aria-selected={k === 'flow'} onClick={() => setSp({ tab: k === 'flow' ? 'flow' : 'personality' })} className={cn('rounded-md px-3 py-1 text-[13px] font-medium transition', k === 'flow' ? 'bg-surface text-ink shadow-card' : 'text-soft hover:text-ink')}>{label}</button>
+          ))}
+        </div>
+        <div className="ml-auto flex items-center gap-1.5">
+          <Button size="sm" disabled={!dirty} onClick={save}>Save</Button>
+          <Button size="sm" onClick={() => setUI({ playground: agent.id })}><Mic size={14} />Preview</Button>
+          <Button size="sm" variant="primary" onClick={() => setSp({ tab: 'publish' })}><Rocket size={14} />Publish</Button>
+        </div>
+      </div>
+      } value={d.flow} onChange={(flow) => up({ flow })} onSimulate={USE_MOCKS ? undefined : async () => { if (dirty) await save(); setTryOpen(true) }} />{!USE_MOCKS && <TryAgent agentId={agent.id} open={tryOpen} onOpenChange={setTryOpen} />}</TabPanel>
 
         <TabPanel value="behavior"><Q title="How should it behave?">
           <div className="grid gap-6 sm:grid-cols-2">
@@ -214,7 +230,7 @@ export default function AgentDetail() {
 
         <TabPanel value="publish"><Q title="Ready to go live?" hint="Green means ready. Orange means it will still work, but could be better.">
           <ul className="space-y-2">{checks.map((c) => <li key={c.t} className={cn('flex items-center gap-3 rounded-lg p-3', c.ok ? 'bg-ok/10' : 'bg-warn/10')}>{c.ok ? <Check size={18} className="text-ok" /> : <AlertTriangle size={18} className="text-warn" />}<span className="flex-1 font-medium">{c.t}</span>{!c.ok && <span className="text-[13px] text-warn">{c.fix}</span>}</li>)}</ul>
-          <div className="mt-6 flex items-center gap-3"><Button variant="primary" size="lg" disabled={agent.status === 'live'} onClick={() => { updateAgent(agent.id, { status: 'live' }); toast.success('🎉 Your agent is live!') }}><Rocket size={18} />{agent.status === 'live' ? 'Already live' : 'Go live'}</Button>{agent.status !== 'live' && checks.some((c) => !c.ok) && <span className="text-sm text-soft">You can still go live with orange items.</span>}</div></Q></TabPanel>
+          <div className="mt-6 flex items-center gap-3"><Button variant="primary" size="lg" disabled={agent.status === 'live'} onClick={() => { updateAgent(agent.id, { status: 'live' }); toast.success('Your agent is live!') }}><Rocket size={18} />{agent.status === 'live' ? 'Already live' : 'Go live'}</Button>{agent.status !== 'live' && checks.some((c) => !c.ok) && <span className="text-sm text-soft">You can still go live with orange items.</span>}</div></Q></TabPanel>
       </Tabs>
       <UnsavedBar show={dirty} onSave={save} onDiscard={() => setD(saved)} />
     </>

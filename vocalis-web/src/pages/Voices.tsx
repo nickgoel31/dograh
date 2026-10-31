@@ -53,7 +53,7 @@ export default function VoicesPage() {
         actions={<Button onClick={() => setOpen(true)}><Columns3 size={15} />Compare voices{cmp.length > 0 && ` (${cmp.length})`}</Button>} />
       <div className="mb-6 flex flex-wrap items-center gap-2">
         <Input className="w-52" placeholder="Search voices" aria-label="Search voices" value={q} onChange={(e) => { setQ(e.target.value); setShown(30) }} /><Sel k="lang" label="Language" /><Sel k="gender" label="Gender" /><Sel k="age" label="Age" /><Sel k="accent" label="Accent" /><Sel k="style" label="Style" />
-        <Chip active={favOnly} onClick={() => setFavOnly(!favOnly)}>♥ Favorites</Chip>
+        <Chip active={favOnly} onClick={() => setFavOnly(!favOnly)}>Favorites</Chip>
       </div>
       <AdvancedOnly><Card className="mb-6 border-accent/30 bg-accent-soft p-4 text-sm">Voices come from our voice engines. Voices marked Coming soon aren't switched on yet.</Card></AdvancedOnly>
       {loading ? <CardSkeletons n={9} h="h-32" /> : (

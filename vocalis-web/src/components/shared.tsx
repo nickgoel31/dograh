@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Glyph } from '@/components/Glyph'
 import { motion } from 'framer-motion'
 import { Check, Copy, HelpCircle, Mic, Pause, Play } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -65,7 +66,7 @@ export function Illustration({ emoji }: { emoji: string }) {
         <circle cx="48" cy="48" r="34" fill="hsl(var(--surface))" stroke="hsl(var(--line))" />
         <circle cx="14" cy="26" r="4" fill="hsl(var(--accent))" opacity=".5" /><circle cx="84" cy="70" r="5" fill="hsl(var(--warn))" opacity=".5" />
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center text-4xl">{emoji}</div>
+      <div className="absolute inset-0 flex items-center justify-center text-accent"><Glyph e={emoji} size={34} /></div>
     </div>
   )
 }

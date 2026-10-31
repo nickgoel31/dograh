@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Glyph } from '@/components/Glyph'
 import { Link, useNavigate } from 'react-router-dom'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
 import { AlertTriangle, ArrowRight, Check, Mic } from 'lucide-react'
@@ -38,7 +39,7 @@ function Onboarding() {
       <div className="grid gap-4 sm:grid-cols-2">
         {steps.map((s, i) => (
           <Card key={s.t} className={cn('flex items-start gap-4 p-6', done[i] && 'opacity-70')}>
-            <div className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl', done[i] ? 'bg-ok/10' : 'bg-accent-soft')}>{done[i] ? <Check className="text-ok" /> : s.emoji}</div>
+            <div className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl', done[i] ? 'bg-ok/10' : 'bg-accent-soft')}>{done[i] ? <Check className="text-ok" /> : <Glyph e={s.emoji} size={22} className="text-accent" />}</div>
             <div className="flex-1"><h3 className="font-semibold">{i + 1}. {s.t}</h3><p className="mt-1 text-soft">{s.d}</p>
               <Button variant={done[i] ? 'secondary' : 'primary'} size="lg" className="mt-4 h-11" onClick={() => { setDone((d) => d.map((x, k) => (k === i ? true : x))); s.to === 'talk' ? set({ playground: first.id }) : nav(s.to) }}>{done[i] ? 'Do it again' : s.cta}<ArrowRight size={16} /></Button></div>
           </Card>
@@ -99,7 +100,7 @@ function DemoHomePage() {
   const [newUser, setNewUser] = React.useState(false)
   return (
     <>
-      <PageHeader title={newUser ? `Welcome to ${BRAND} 👋` : 'Good morning, Aarav'} subtitle={newUser ? 'You’re a few clicks away from your first talking agent.' : 'Here’s how your agents are doing today.'}
+      <PageHeader title={newUser ? `Welcome to ${BRAND}` : 'Good morning, Aarav'} subtitle={newUser ? 'You’re a few clicks away from your first talking agent.' : 'Here’s how your agents are doing today.'}
         actions={<label className="flex items-center gap-2 rounded-lg border bg-surface px-3 py-1.5 text-xs text-soft"><span>Demo: new user</span><Switch checked={newUser} onChange={setNewUser} label="Show new user view" /></label>} />
       {newUser ? <Onboarding /> : <Existing />}
     </>

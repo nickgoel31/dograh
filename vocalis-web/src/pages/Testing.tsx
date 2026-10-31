@@ -1,4 +1,5 @@
 import { TestingReal } from './InsightReal'
+import { Glyph } from '@/components/Glyph'
 import { USE_MOCKS } from '@/lib/api/env'
 import * as React from 'react'
 import { Check, Play, Trophy, X } from 'lucide-react'
@@ -46,7 +47,7 @@ function DemoTestingPage() {
         <TabsList><Tab value="play">Playground</Tab><Tab value="sim">Simulated callers</Tab><Tab value="cases">Test cases</Tab><Tab value="ab">A/B tests</Tab></TabsList>
         <TabPanel value="play"><Card className="p-6"><VoicePlayground key={aid} agentId={aid} /></Card></TabPanel>
         <TabPanel value="sim"><div className="grid gap-4 sm:grid-cols-2">{personas.map((p) => { const r = run[p.id]; return (
-          <Card key={p.id} className="p-5"><div className="flex items-start gap-4"><div className="text-4xl">{p.emoji}</div><div className="flex-1"><h3 className="font-semibold">{p.name}</h3><p className="text-soft">{p.d}</p>
+          <Card key={p.id} className="p-5"><div className="flex items-start gap-4"><div className="text-accent"><Glyph e={p.emoji} size={34} /></div><div className="flex-1"><h3 className="font-semibold">{p.name}</h3><p className="text-soft">{p.d}</p>
             {r === undefined && <Button className="mt-3" onClick={() => runPersona(p.id)}><Play size={14} />Run</Button>}
             {typeof r === 'number' && <div className="mt-4"><Progress value={r} /><div className="mt-1 text-xs text-soft">Calling… {r}%</div></div>}
             {r === 'done' && <div className="mt-3 flex items-center gap-3"><Badge tone={p.score > 75 ? 'green' : 'orange'}>Score {p.score}/100</Badge><span className="text-[13px] text-soft">{p.score > 75 ? 'Handled well' : 'Got flustered once'}</span><Button size="sm" variant="ghost" onClick={() => setRun((x) => { const n = { ...x }; delete n[p.id]; return n })}>Again</Button></div>}</div></div></Card>) })}</div></TabPanel>

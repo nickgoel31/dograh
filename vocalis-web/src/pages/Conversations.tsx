@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Glyph } from '@/components/Glyph'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { flexRender, getCoreRowModel, getPaginationRowModel, useReactTable, type ColumnDef } from '@tanstack/react-table'
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts'
@@ -42,7 +43,7 @@ export default function ConversationsPage() {
     { header: 'Agent', accessorFn: (c) => aName(c.agentId) },
     { header: 'Length', cell: ({ row }) => <span className="num">{fmtDur(row.original.duration)}</span> },
     { header: 'Result', cell: ({ row }) => <StatusBadge status={row.original.outcome} /> },
-    { header: 'Mood', cell: ({ row }) => <span className="text-lg" title="How the caller felt">{row.original.sentiment ? sentimentEmoji[row.original.sentiment] : '—'}</span> },
+    { header: 'Mood', cell: ({ row }) => <span className="text-lg" title="How the caller felt">{row.original.sentiment ? <Glyph e={sentimentEmoji[row.original.sentiment]} size={20} /> : '—'}</span> },
     { header: 'Cost', cell: ({ row }) => <span className="num">{money(row.original.cost, 2)}</span> },
   ], [agents])
   const table = useReactTable({ data: rows, columns, getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(), initialState: { pagination: { pageSize: 10 } } })
@@ -90,7 +91,7 @@ export function CallDetail() {
   return (
     <>
       <PageHeader title={call.caller} subtitle={`${call.phone} · ${new Date(call.time).toLocaleString('en-IN')}`} actions={<><StatusBadge status={call.outcome} /><Button onClick={() => toast.success('Replaying with the fixed prompt…')}>Replay with a fixed prompt</Button><Button onClick={() => toast('Thanks! We’ll look into that answer.')}>Report a bad answer</Button></>} />
-      {call.failReason && <Card className="mb-4 border-warn/40 bg-warn/10 p-4 text-warn">⚠️ {call.failReason}</Card>}
+      {call.failReason && <Card className="mb-4 border-warn/40 bg-warn/10 p-4 text-warn"><span className="flex items-center gap-2"><Glyph e="⚠️" size={16} />{call.failReason}</span></Card>}
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
           <Card className="p-6">
@@ -104,14 +105,14 @@ export function CallDetail() {
             {USE_MOCKS && <div className="num mt-2 text-right text-xs text-soft">{fmtDur(t)} / {fmtDur(call.duration)}</div>}
             <div className="mt-4 max-h-[320px] space-y-1 overflow-y-auto pr-1" aria-label="Transcript">
               {call.turns.map((x, i) => <button key={i} ref={x === active ? lineRef : undefined} onClick={() => setT(x.t)} className={cn('flex w-full gap-3 rounded-lg p-2.5 text-left text-sm transition hover:bg-muted', x === active && 'bg-accent-soft')}>
-                <span className="num w-10 shrink-0 text-xs text-soft">{fmtDur(x.t)}</span><span className={cn('w-14 shrink-0 text-xs font-semibold', x.who === 'agent' ? 'text-accent' : 'text-warn')}>{x.who === 'agent' ? 'Agent' : 'Caller'}</span><span className="flex-1">{x.text}{x.tool && <Badge tone="gray" className="ml-2">🔧 {x.tool}</Badge>}</span></button>)}
+                <span className="num w-10 shrink-0 text-xs text-soft">{fmtDur(x.t)}</span><span className={cn('w-14 shrink-0 text-xs font-semibold', x.who === 'agent' ? 'text-accent' : 'text-warn')}>{x.who === 'agent' ? 'Agent' : 'Caller'}</span><span className="flex-1">{x.text}{x.tool && <Badge tone="gray" className="ml-2"><Glyph e="🔧" size={11} />{x.tool}</Badge>}</span></button>)}
             </div>
           </Card>
           <Card className="p-6">
             <h3 className="font-semibold">Who spoke when</h3>
             <div className="relative mt-4 space-y-2">
               {(['agent', 'caller'] as const).map((w) => <div key={w} className="relative h-6 rounded bg-muted"><span className="absolute -top-0.5 left-1 z-10 text-[10px] font-semibold uppercase text-soft">{w}</span>{call.turns.filter((x) => x.who === w).map((x, i) => <div key={i} className={cn('absolute top-0 h-6 rounded', w === 'agent' ? 'bg-accent' : 'bg-warn')} style={{ left: `${(x.t / call.duration) * 100}%`, width: `${((x.end - x.t) / call.duration) * 100}%` }} />)}</div>)}
-              <div className="relative h-6 rounded bg-muted"><span className="absolute left-1 top-0.5 text-[10px] font-semibold uppercase text-soft">Events</span>{call.turns.filter((x) => x.tool || x.interrupted).map((x, i) => <span key={i} className="absolute top-0.5 text-sm" style={{ left: `${(x.t / call.duration) * 100}%` }} title={x.tool ?? 'Interruption'}>{x.tool ? '🔧' : '✋'}</span>)}</div>
+              <div className="relative h-6 rounded bg-muted"><span className="absolute left-1 top-0.5 text-[10px] font-semibold uppercase text-soft">Events</span>{call.turns.filter((x) => x.tool || x.interrupted).map((x, i) => <span key={i} className="absolute top-0.5 text-sm" style={{ left: `${(x.t / call.duration) * 100}%` }} title={x.tool ?? 'Interruption'}><Glyph e={x.tool ? '🔧' : '✋'} size={13} /></span>)}</div>
               <div className="absolute inset-y-0 w-px bg-ink/60" style={{ left: `${(t / call.duration) * 100}%` }} />
             </div>
             <h4 className="mb-2 mt-6 text-sm font-medium">How fast it replied <span className="font-normal text-soft">(shorter is better)</span></h4>

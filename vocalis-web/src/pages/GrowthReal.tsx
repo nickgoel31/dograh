@@ -35,7 +35,7 @@ export function HomeReal() {
   if (agentsLoaded && agents.length === 0 && !sessionStorage.getItem('skip-welcome')) return <Navigate to="/welcome" replace />
   return (
     <>
-      <PageHeader title={doneCount < steps.length && h && h.kpis.calls === 0 ? `Welcome${first ? `, ${first}` : ''} 👋` : `Hello${first ? `, ${first}` : ''}`} subtitle="Here’s how your agents are doing." />
+      <PageHeader title={doneCount < steps.length && h && h.kpis.calls === 0 ? `Welcome${first ? `, ${first}` : ''}` : `Hello${first ? `, ${first}` : ''}`} subtitle="Here’s how your agents are doing." />
       <Card className="mb-6 flex flex-wrap items-center justify-between gap-4 bg-gradient-to-br from-accent to-[#2f9e83] p-8 text-white">
         <div><h2 className="text-2xl font-semibold">Talk to your agent now</h2><p className="mt-1 text-white/80">Have a free practice call, right here in your browser.</p></div>
         {agents[0] ? <Button size="lg" className="h-14 bg-white px-8 text-base text-accent hover:bg-white/90" onClick={() => set({ playground: agents[0].id })}><Mic size={20} />Start talking</Button>

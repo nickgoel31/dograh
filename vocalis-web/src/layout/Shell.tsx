@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Glyph } from '@/components/Glyph'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Command } from 'cmdk'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -31,11 +32,15 @@ const build = [{ to: '/developers', label: 'Developers', icon: Code2 }, { to: '/
 const bottom = [{ to: '/settings', label: 'Team & Settings', icon: Settings }, { to: '/help', label: 'Help', icon: HelpCircle }]
 const demoWorkspaces = ['Sunrise Dental', 'GlowUp Salon']
 
-export const Logo = ({ name, logo }: { name?: string | null; logo?: string | null }) => (
-  <div className="flex items-center gap-2 font-semibold tracking-tight">
-    {logo ? <img src={logo} alt="" className="h-7 w-7 rounded-lg object-contain" /> : <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-accent-fg"><Mic2 size={15} /></div>}{name || BRAND}
-  </div>
-)
+export const Logo = ({ name, logo }: { name?: string | null; logo?: string | null }) => {
+  const [own, setOwn] = React.useState(true)
+  const src = logo || (own && !name ? `${import.meta.env.BASE_URL}logo.png` : null)
+  return (
+    <div className="flex items-center gap-2 font-semibold tracking-tight">
+      {src ? <img src={src} alt="" onError={() => setOwn(false)} className="h-8 w-8 rounded-lg object-contain" /> : <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-accent-fg"><Mic2 size={15} /></div>}{name || BRAND}
+    </div>
+  )
+}
 
 /** '#0b5c4c' -> '166 80% 20%' so the whole app can take the brand colour. */
 function hexToHsl(hex: string): string | null {
@@ -114,7 +119,7 @@ function Breadcrumbs() {
 const alerts = [
   { t: 'Your calendar got disconnected', d: 'Click to reconnect so bookings keep working.', to: '/tools', tone: 'text-warn' },
   { t: 'You have used 80% of this month’s limit', d: 'Raise your limit or top up to avoid interruptions.', to: '/billing', tone: 'text-warn' },
-  { t: 'Priya just took her 1,000th call 🎉', d: 'Nice milestone. See how she’s doing.', to: '/agents/a1', tone: 'text-ok' },
+  { t: 'Priya just took her 1,000th call', d: 'Nice milestone. See how she’s doing.', to: '/agents/a1', tone: 'text-ok' },
 ]
 
 function WalletChip() {
@@ -187,7 +192,7 @@ async function switchToClassic() {
 }
 
 async function signOut() {
-  if (USE_MOCKS) { toast('This is a demo, so there is nothing to sign out of 🙂'); return }
+  if (USE_MOCKS) { toast('This is a demo, so there is nothing to sign out of'); return }
   try { await authApi.logout() } finally { queryClient.clear(); window.location.assign(`${BASE}/`) }
 }
 
@@ -208,7 +213,7 @@ function CommandPalette() {
       <Command.List className={cn('max-h-[50vh] overflow-y-auto p-2', head)}>
         <Command.Empty className="py-8 text-center text-soft">Nothing found. Try another word.</Command.Empty>
         <Command.Group heading="Pages">{[...main, ...build, ...bottom].map((n) => <Command.Item key={n.to} value={'page ' + n.label} onSelect={() => go(n.to)} className={item}><n.icon size={15} />{n.label}</Command.Item>)}</Command.Group>
-        <Command.Group heading="Agents">{agents.map((a) => <Command.Item key={a.id} value={'agent ' + a.name} onSelect={() => go('/agents/' + a.id)} className={item}><span>{a.emoji}</span>{a.name}</Command.Item>)}</Command.Group>
+        <Command.Group heading="Agents">{agents.map((a) => <Command.Item key={a.id} value={'agent ' + a.name} onSelect={() => go('/agents/' + a.id)} className={item}><Glyph e={a.emoji} size={14} />{a.name}</Command.Item>)}</Command.Group>
         <Command.Group heading="Calls">{calls.slice(0, 12).map((c) => <Command.Item key={c.id} value={'call ' + c.caller + ' ' + c.id} onSelect={() => go('/conversations/' + c.id)} className={item}><PhoneCall size={15} />{c.caller}<span className="ml-auto text-xs text-soft">{c.phone}</span></Command.Item>)}</Command.Group>
       </Command.List>
     </Command.Dialog>
@@ -262,7 +267,9 @@ export default function Shell() {
   const { mode, theme, collapsed, mobileNav, set } = useUI()
   // The app works on live data only; practice calls from an agent's page still use its private test copy.
   React.useEffect(() => { if (mode !== 'live') set({ mode: 'live' }) }, [mode, set])
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
+  const seg = pathname.split('/').filter(Boolean)
+  const wide = seg[0] === 'agents' && seg.length === 2 && !['new', 'templates'].includes(seg[1]) && (new URLSearchParams(search).get('tab') ?? 'flow') === 'flow'
   React.useEffect(() => { document.documentElement.classList.toggle('dark', theme === 'dark') }, [theme])
   const brand = useMe().data?.branding
   React.useEffect(() => {
@@ -286,7 +293,7 @@ export default function Shell() {
         </AnimatePresence>
         <div className="flex min-w-0 flex-1 flex-col rounded-none border-line/70 bg-surface md:rounded-2xl md:border md:shadow-card">
           <Topbar openNav={() => set({ mobileNav: true })} />
-          <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-6 pb-28 md:px-8">
+          <main className={cn('w-full flex-1', wide ? '' : 'mx-auto max-w-[1280px] px-4 py-6 pb-28 md:px-8')}>
             <AnimatePresence mode="wait">
               <motion.div key={pathname.split('/')[1] + (pathname.split('/')[2] ?? '')} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}><Outlet /></motion.div>
             </AnimatePresence>

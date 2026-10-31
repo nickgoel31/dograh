@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Glyph } from '@/components/Glyph'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Copy, Mic, Pause, Play, Plus, Search, Sparkles, Wand2 } from 'lucide-react'
@@ -37,7 +38,7 @@ export default function AgentsPage() {
               <Card className="group p-5 transition hover:shadow-pop">
                 <div className="flex items-start justify-between">
                   <Link to={'/agents/' + a.id} className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl" style={{ background: a.color + '22' }}>{a.emoji}</div>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl" style={{ background: a.color + '22', color: a.color }}><Glyph e={a.emoji} size={24} /></div>
                     <div><div className="font-semibold group-hover:text-accent">{a.name}</div><div className="text-[13px] text-soft">{a.role}</div></div>
                   </Link>
                   <StatusBadge status={a.status} />
@@ -71,7 +72,7 @@ export function TemplatesPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {templates.map((t) => (
           <Card key={t.id} className="flex flex-col p-5 transition hover:shadow-pop">
-            <div className="text-4xl">{t.emoji}</div><h3 className="mt-3 font-semibold">{t.name}</h3><p className="mt-1 flex-1 text-soft">{t.blurb}</p>
+            <div className="text-accent"><Glyph e={t.emoji} size={34} /></div><h3 className="mt-3 font-semibold">{t.name}</h3><p className="mt-1 flex-1 text-soft">{t.blurb}</p>
             <Button className="mt-4" onClick={() => nav('/agents/new?template=' + t.id)}>Use this template</Button>
           </Card>
         ))}
@@ -137,7 +138,7 @@ export function NewAgentPage() {
               <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
                 {goals.map((g) => (
                   <button key={g.id} onClick={() => { setGoal(g); setStep(2) }} className={cn('rounded-xl border bg-surface p-5 text-left shadow-card transition hover:-translate-y-0.5 hover:border-accent hover:shadow-pop', goal?.id === g.id && 'border-accent')}>
-                    <div className="text-4xl">{g.emoji}</div><div className="mt-3 font-semibold">{g.t}</div><div className="mt-0.5 text-[13px] text-soft">{g.d}</div>
+                    <div className="text-accent"><Glyph e={g.emoji} size={34} /></div><div className="mt-3 font-semibold">{g.t}</div><div className="mt-0.5 text-[13px] text-soft">{g.d}</div>
                   </button>
                 ))}
               </div>
