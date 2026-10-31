@@ -11,6 +11,7 @@ class SignupBody(BaseModel):
 class LoginBody(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
+    code: str | None = Field(default=None, max_length=8)  # six-digit code, when two-step sign-in is on
 
 
 class WorkspaceCreateBody(BaseModel):

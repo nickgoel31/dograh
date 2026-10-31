@@ -112,6 +112,16 @@ async def _agents(ctx: Ctx) -> dict[int, ProductAgentModel]:
     return out
 
 
+async def present(ctx: Ctx, calls: list["CallOut"]) -> list["CallOut"]:
+    """Apply the workspace's privacy settings to calls on their way out."""
+    from api.product import privacy
+
+    if (await privacy.get_settings(ctx.session, ctx.workspace.id)).redact_pii:
+        for c in calls:
+            c.phone, c.caller = privacy.mask_phone(c.phone), privacy.redact_text(c.caller)
+    return calls
+
+
 def _scope(ctx: Ctx):
     """Runs of workflows in this workspace's organization for the active environment."""
     return (
@@ -156,7 +166,7 @@ async def list_calls(
     if not (wanted or q):  # everything can be done in SQL
         total = await ctx.session.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
         rows = (await ctx.session.scalars(stmt.offset((page - 1) * limit).limit(limit))).all()
-        return CallPage(calls=[_out(ctx, r, agents) for r in rows], total=total, page=page, limit=limit)
+        return CallPage(calls=await present(ctx, [_out(ctx, r, agents) for r in rows]), total=total, page=page, limit=limit)
 
     rows = (await ctx.session.scalars(stmt.limit(SCAN_LIMIT + 1))).all()
     truncated = len(rows) > SCAN_LIMIT
@@ -167,7 +177,7 @@ async def list_calls(
         needle = q.lower()
         calls = [c for c in calls if needle in f"{c.caller} {c.phone or ''} {c.agent_name or ''} {c.id}".lower()]
     start = (page - 1) * limit
-    return CallPage(calls=calls[start:start + limit], total=len(calls), page=page, limit=limit, truncated=truncated)
+    return CallPage(calls=await present(ctx, calls[start:start + limit]), total=len(calls), page=page, limit=limit, truncated=truncated)
 
 
 @router.get("/{call_id}", response_model=CallDetail)
@@ -179,12 +189,22 @@ async def get_call(call_id: str, ctx: Ctx = Depends(get_ctx), sign: AudioSigner 
     agents = await _agents(ctx)
     base = _out(ctx, run, agents)
     events = (run.logs or {}).get("realtime_feedback_events")
+    from api.product import privacy
+
+    settings = await privacy.get_settings(ctx.session, ctx.workspace.id)
+    turns = [TurnOut(**t) for t in conv.build_transcript(events)]
+    extracted = conv.extracted_answers(run.gathered_context)
+    if settings.redact_pii:
+        for t in turns:
+            t.text = privacy.redact_text(t.text) or ""
+        extracted = {k: privacy.redact_text(v) or "" for k, v in extracted.items()}
+        await present(ctx, [base])
     return CallDetail(
         **base.model_dump(),
-        turns=[TurnOut(**t) for t in conv.build_transcript(events)],
-        extracted=conv.extracted_answers(run.gathered_context),
+        turns=turns,
+        extracted=extracted,
         cost_split=conv.cost_split(run.cost_info, base.cost),
-        audio_url=await sign(run),
+        audio_url=await sign(run) if settings.record_calls else None,
     )
 
 

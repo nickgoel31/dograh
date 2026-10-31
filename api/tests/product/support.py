@@ -11,7 +11,7 @@ from sqlalchemy.pool import StaticPool
 
 from api.db import models, product_models
 from api.product import (agents_router, analytics_router, billing_router, calls_router, campaigns_router, config, conversations_router, deps, gateway,
-                         handoff_router, home_router, import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, tools_router, voices_router)
+                         developers, developers_router, handoff_router, help_router, home_router, import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, public_api, team_router, tools_router, voices_router, widget_router)
 from api.product import router as product_router
 
 TABLES = [
@@ -39,6 +39,14 @@ TABLES = [
     product_models.ProductSimRunModel.__table__,
     product_models.ProductAbTestModel.__table__,
     product_models.ProductInsightModel.__table__,
+    product_models.ProductApiKeyModel.__table__,
+    product_models.ProductApiLogModel.__table__,
+    product_models.ProductWebhookModel.__table__,
+    product_models.ProductDeliveryModel.__table__,
+    product_models.ProductAuditModel.__table__,
+    product_models.ProductInviteModel.__table__,
+    product_models.ProductSettingsModel.__table__,
+    product_models.ProductSupportMessageModel.__table__,
 ]
 
 
@@ -170,6 +178,18 @@ class FakeCampaigns:
         return {"ref": ref, "state": c["state"]}
 
 
+class FakeSender:
+    """Records webhook sends; answers with whatever status is set."""
+
+    def __init__(self):
+        self.sent: list[tuple[str, dict, bytes]] = []
+        self.code = 200
+
+    async def __call__(self, url, headers, body):
+        self.sent.append((url, headers, body))
+        return self.code, (None if 200 <= self.code < 300 else f"Your server answered {self.code}.")
+
+
 class FakeText:
     """A text agent that replies from a script and ends after a few turns. Records what it was asked."""
 
@@ -275,6 +295,7 @@ async def make_client(monkeypatch, seed_profiles=True):
     fake = FakeGateway()
     monkeypatch.setattr(product_router.rate_limit, "enforce", _no_limit)
     monkeypatch.setattr(config, "SESSION_COOKIE_SECURE", False)
+    monkeypatch.setattr(public_api.rate_limit, "enforce", _no_limit)
     app = FastAPI()
     app.include_router(product_router.router)
     app.include_router(agents_router.router)
@@ -283,7 +304,9 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(conversations_router.router)
     app.include_router(numbers_router.router)
     app.include_router(billing_router.router)
-    for r in (analytics_router, labs_router, handoff_router, import_router, campaigns_router, home_router, knowledge_router, notifications, tools_router):
+    app.include_router(developers_router.ops_router)
+    for r in (analytics_router, labs_router, handoff_router, import_router, campaigns_router, home_router, knowledge_router, notifications, tools_router,
+              developers_router, help_router, public_api, team_router, widget_router):
         app.include_router(r.router)
     kb, tl, cp = FakeKB(), FakeTools(), FakeCampaigns()
     app.dependency_overrides[knowledge_router.get_knowledge] = lambda: kb
@@ -295,6 +318,8 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.dependency_overrides[labs_router.get_session_factory] = lambda: Session
     app.dependency_overrides[deps.get_session] = _session
     app.dependency_overrides[gateway.get_gateway] = lambda: fake
+    sender = FakeSender()
+    app.dependency_overrides[developers.get_sender] = lambda: sender
     wallet = FakeWallet()
     app.dependency_overrides[payments.get_wallet] = lambda: wallet
     c_wallet = wallet
@@ -304,6 +329,7 @@ async def make_client(monkeypatch, seed_profiles=True):
         c.wallet = c_wallet
         c.kb, c.tools, c.camps = kb, tl, cp
         c.text, c.llm = text, llm
+        c.sender = sender
         yield c
     await engine.dispose()
 

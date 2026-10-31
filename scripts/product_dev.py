@@ -25,8 +25,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # no
 from sqlalchemy.pool import StaticPool  # noqa: E402
 
 from api.db import models  # noqa: E402
-from api.product import (agents_router, analytics_router, billing_router, calls_router, campaigns_router, conversations_router, deps, gateway, handoff_router, home_router,  # noqa: E402
-                         import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, tools_router, voices_router)
+from api.product import (agents_router, analytics_router, billing_router, calls_router, campaigns_router, conversations_router, deps, developers_router, gateway, handoff_router, help_router, home_router,  # noqa: E402
+                         import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, public_api, team_router, tools_router, voices_router, widget_router)
 from api.product import router as product_router  # noqa: E402
 from api.tests.product.support import (PROFILES, TABLES, FakeCampaigns, FakeGateway, FakeKB, FakeLLM, FakeText, FakeTools, FakeWallet)  # noqa: E402
 
@@ -49,10 +49,12 @@ async def _no_limit(*a, **k):
 
 
 product_router.rate_limit.enforce = _no_limit
+os.environ.setdefault("PRODUCT_ALLOW_PRIVATE_WEBHOOKS", "true")
 app = FastAPI(title="Product dev API")
 for r in (product_router, analytics_router, labs_router, handoff_router, import_router, agents_router, voices_router, calls_router, conversations_router, numbers_router, billing_router,
-          campaigns_router, home_router, knowledge_router, notifications, tools_router):
+          campaigns_router, home_router, knowledge_router, notifications, tools_router, developers_router, help_router, public_api, team_router, widget_router):
     app.include_router(r.router, prefix="/api/v1")
+app.include_router(developers_router.ops_router, prefix="/api/v1")
 fake, wallet = FakeGateway(), FakeWallet()
 kb, tl, cp = FakeKB(), FakeTools(), FakeCampaigns()
 app.dependency_overrides.update({

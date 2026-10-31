@@ -24,6 +24,8 @@ import Analytics from '@/pages/Analytics'
 import Developers from '@/pages/Developers'
 import Billing from '@/pages/Billing'
 import { HelpPage, SettingsPage } from '@/pages/SettingsHelp'
+import { AcceptInvite, DevelopersReal, HelpReal, SettingsReal } from '@/pages/PlatformReal'
+import WidgetPage from '@/pages/Widget'
 
 /** Real mode: show sign-in until a session exists; keep the active workspace valid. */
 function Gate({ children }: { children: React.ReactNode }) {
@@ -78,6 +80,10 @@ function CacheReset() {
 }
 
 export default function App() {
+  // The call button inside other people's websites: public, no sign-in.
+  if (window.location.pathname.startsWith('/widget/')) {
+    return <BrowserRouter><Routes><Route path="widget/:agentId" element={<WidgetPage />} /></Routes></BrowserRouter>
+  }
   return (
     <QueryClientProvider client={queryClient}>
     <CacheReset />
@@ -101,10 +107,11 @@ export default function App() {
           <Route path="voices" element={<Voices />} />
           <Route path="testing" element={<Testing />} />
           <Route path="analytics" element={<Analytics />} />
-          <Route path="developers" element={<Developers />} />
+          <Route path="developers" element={USE_MOCKS ? <Developers /> : <DevelopersReal />} />
           <Route path="billing" element={<Billing />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="help" element={<HelpPage />} />
+          <Route path="settings" element={USE_MOCKS ? <SettingsPage /> : <SettingsReal />} />
+          <Route path="invite/:token" element={<AcceptInvite />} />
+          <Route path="help" element={USE_MOCKS ? <HelpPage /> : <HelpReal />} />
           <Route path="*" element={<Home />} />
         </Route>
       </Routes>

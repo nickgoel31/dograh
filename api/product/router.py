@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.db.models import UserModel
 from api.db.product_models import ProductUserProfileModel
-from api.product import config
+from api.product import config, totp
 from api.product.deps import Ctx, get_ctx, get_session, get_user_only
 from api.product.errors import product_error
 from api.product.ids import user_public_id
@@ -126,6 +126,12 @@ async def login(
         raise product_error(401, "bad_credentials", "That email or password isn't right.")
     if not verify_password(body.password, user.password_hash):
         raise product_error(401, "bad_credentials", "That email or password isn't right.")
+    profile = await session.get(ProductUserProfileModel, user.id)
+    if profile is not None and profile.totp_enabled:
+        if not body.code:
+            raise product_error(401, "two_factor_required", "Enter the 6-digit code from your authenticator app.")
+        if not totp.verify(profile.totp_secret or "", body.code):
+            raise product_error(401, "bad_code", "That code isn't right. Check your authenticator app and try again.")
     _set_session(response, user)
     if not await list_workspaces(session, user.id):  # an existing account that hasn't been brought over yet
         return SetupOut(user=UserOut(id=user_public_id(user.provider_id), email=user.email, name=await get_display_name(session, user.id)))

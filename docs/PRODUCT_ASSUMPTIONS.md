@@ -99,3 +99,27 @@ Decisions taken for the white-label product (brand: `PRODUCT_NAME`, default "Voc
   - Background jobs are plain in-process tasks, not a queue: a restart interrupts them (shown as "interrupted, start again" after 30 minutes). Several workers would each run their own.
 - **Fixed along the way**: product routes now use a database session that keeps values after a commit; the platform's own session setting expires them, which would have crashed routes that read a saved object afterwards (the SQLite tests could not show this).
 - **Not verified**: any of the model-driven parts against a real model (tests use scripted stand-ins), or the text-chat path against the platform.
+
+
+## Phase 8 — platform (developers, team, help)
+
+**Built**
+- Public API under `/api/v1/public/*` with `sk_test_` / `sk_live_` keys (SHA-256 hashed, shown once, revocable). Read-only: `me`, `agents`, `calls`, `calls/{id}`. 120 requests/minute per key (the platform's Redis limiter), every request written to the request log.
+- Webhooks: `call.started`, `call.ended`, `campaign.completed`. Signed (`X-<Brand>-Signature: t=…,v1=HMAC-SHA256("t.body")`), one delivery row per event (deduplicated), retried with back-off (1 min, 5 min, 30 min, 2 h, 12 h; 6 tries), delivery log, manual resend, "send test", alert in the bell when one gives up. Private/loopback addresses and plain http are refused (`PRODUCT_ALLOW_PRIVATE_WEBHOOKS=true` lifts this for local development).
+- Roles are enforced on the server for every product endpoint (matrix test covers owner/admin/developer/viewer). Invites are single-use links (7 days, bound to the invited email). Audit log for keys, webhooks, invites, role changes, settings, 2FA, go-live, support messages.
+- Privacy runtime: hide recordings, mask phone/email/card in transcripts and call lists, consent announcement added to the greeting when an agent goes live, retention purge of recordings and transcripts.
+- Two-step sign-in (TOTP, standard library only; no recovery codes yet).
+- Sub-accounts: a child workspace owned by the same person (`parent_workspace_id`).
+- Website call button: `widget.js` + hosted `/widget/:agent` page + public socket for Live agents.
+- Help: 18 articles with keyword search, status (database, model profiles, payments, phone numbers — from configuration and a database ping, not external probes), contact form (stored in `product_support_messages`), AI helper that answers only from the articles and falls back to the best article when no model answers.
+
+**Needs the operator**
+- Nothing sends webhooks or applies retention by itself. Call `POST /api/v1/product/ops/tick` every minute with header `X-Ops-Secret: $PRODUCT_OPS_SECRET` (the route is off until that variable is set). Developers can also press "Check for new events".
+- No email is sent anywhere. Invite links are shown to the inviter to pass on; support messages sit in the database.
+
+**Not built / limits (shown as such in the app)**
+- `tool.failed` is listed but not sent: tool results aren't available from the platform in a form we can rely on.
+- The public API cannot start calls yet (reading only). No SDK packages are published; the page shows cURL/fetch/requests examples. Regenerate a client from `/openapi.json` if wanted.
+- Recording switch hides playback; whether audio is captured is still a platform setting. Consent announcement and redaction apply to Live calls going forward and to what is displayed; existing stored transcripts are not rewritten (only purged by retention).
+- The widget's "which website" check uses the embedding page address reported by the browser, so it deters casual misuse but is not a hard guarantee. Widget calls are billed to the Live balance.
+- Sub-account billing roll-up, SSO, IP allowlist and custom branding are "Coming soon". Rate limits and webhook scheduling are per the platform's Redis; nothing here has run against Postgres or a real receiver.

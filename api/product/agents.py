@@ -212,6 +212,10 @@ async def go_live(
         from api.product.tools_router import get_tools, remap_tools_for_live
 
         graph = await remap_tools_for_live(graph, tools or get_tools(), ws, user_id)
+    from api.product import audit, privacy
+
+    graph = await privacy.apply_consent(session, ws, graph)
+    await audit.record(session, ws.id, user_id, "agent.went_live", agent.public_id)
     if agent.live_workflow_id is None:
         agent.live_workflow_id = await gw.create_agent(ws.live_org_id, user_id, agent.name, graph)
     else:

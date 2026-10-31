@@ -11,6 +11,8 @@ export default function AuthPage() {
   const [busy, setBusy] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [f, setF] = React.useState({ name: '', email: '', password: '' })
+  const [needCode, setNeedCode] = React.useState(false)
+  const [code, setCode] = React.useState('')
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value })
 
   async function submit(e: React.FormEvent) {
@@ -18,10 +20,11 @@ export default function AuthPage() {
     setBusy(true); setError(null)
     try {
       if (signup) await authApi.signup(f)
-      else await authApi.login({ email: f.email, password: f.password })
+      else await authApi.login({ email: f.email, password: f.password, code: needCode ? code : undefined })
       // The session cookie is set; refetch /me so the app gate lets us in.
       await qc.invalidateQueries({ queryKey: ['me'] })
     } catch (err) {
+      if (err instanceof ApiError && err.code === 'two_factor_required') { setNeedCode(true); setError(null); return }
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
     } finally { setBusy(false) }
   }
@@ -36,6 +39,7 @@ export default function AuthPage() {
           {signup && <Input placeholder="Your name" value={f.name} onChange={set('name')} required autoComplete="name" />}
           <Input type="email" placeholder="Email" value={f.email} onChange={set('email')} required autoComplete="email" />
           <Input type="password" placeholder={signup ? 'Password (8+ characters)' : 'Password'} value={f.password} onChange={set('password')} required minLength={signup ? 8 : 1} autoComplete={signup ? 'new-password' : 'current-password'} />
+          {needCode && !signup && <Input inputMode="numeric" placeholder="6-digit code from your authenticator app" value={code} onChange={(e) => setCode(e.target.value)} required maxLength={8} autoComplete="one-time-code" autoFocus />}
           {error && <p role="alert" className="text-sm text-bad">{error}</p>}
           <Button variant="primary" className="w-full" disabled={busy}>{busy ? 'Please wait…' : signup ? 'Create account' : 'Sign in'}</Button>
         </form>

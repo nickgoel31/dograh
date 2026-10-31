@@ -108,6 +108,8 @@ class ProductUserProfileModel(Base):
 
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     display_name = Column(String(120), nullable=True)
+    totp_secret = Column(String(64), nullable=True)
+    totp_enabled = Column(Boolean, nullable=False, default=False)
 
 
 class ProductBillingSettingsModel(Base):
@@ -272,3 +274,124 @@ class ProductInsightModel(Base):
     created_at = Column(DateTime(timezone=True), default=_now)
 
     __table_args__ = (UniqueConstraint("workspace_id", "week", name="uq_product_insight_week"),)
+
+
+class ProductApiKeyModel(Base):
+    __tablename__ = "product_api_keys"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    public_id = Column(String(32), unique=True, nullable=False)
+    name = Column(String(80), nullable=False)
+    environment = Column(String(4), nullable=False)  # test | live
+    hint = Column(String(24), nullable=False)  # first and last characters, for recognising a key
+    key_hash = Column(String(64), unique=True, nullable=False, index=True)
+    created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+
+class ProductApiLogModel(Base):
+    __tablename__ = "product_api_logs"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    key_id = Column(Integer, ForeignKey("product_api_keys.id", ondelete="SET NULL"), nullable=True)
+    method = Column(String(8), nullable=False)
+    path = Column(String(200), nullable=False)
+    status = Column(Integer, nullable=False)
+    ms = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (Index("ix_product_api_logs_ws", "workspace_id", "id"),)
+
+
+class ProductWebhookModel(Base):
+    __tablename__ = "product_webhooks"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    public_id = Column(String(32), unique=True, nullable=False)
+    environment = Column(String(4), nullable=False)
+    url = Column(String(500), nullable=False)
+    secret = Column(String(80), nullable=False)
+    events = Column(JSON, nullable=False)
+    active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+
+class ProductDeliveryModel(Base):
+    __tablename__ = "product_deliveries"
+
+    id = Column(Integer, primary_key=True)
+    webhook_id = Column(Integer, ForeignKey("product_webhooks.id", ondelete="CASCADE"), nullable=False)
+    event = Column(String(40), nullable=False)
+    dedupe_key = Column(String(80), nullable=True)  # one delivery per (webhook, key); manual sends have none
+    payload = Column(JSON, nullable=False)
+    status = Column(String(8), nullable=False, default="pending")  # pending | ok | failed
+    attempts = Column(Integer, nullable=False, default=0)
+    response_code = Column(Integer, nullable=True)
+    error = Column(String(300), nullable=True)
+    next_attempt_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (
+        UniqueConstraint("webhook_id", "dedupe_key", name="uq_product_delivery_key"),
+        Index("ix_product_deliveries_wh", "webhook_id", "id"),
+        Index("ix_product_deliveries_due", "status", "next_attempt_at"),
+    )
+
+
+class ProductAuditModel(Base):
+    __tablename__ = "product_audit"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    action = Column(String(60), nullable=False)
+    target = Column(String(120), nullable=True)
+    detail = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (Index("ix_product_audit_ws", "workspace_id", "id"),)
+
+
+class ProductInviteModel(Base):
+    __tablename__ = "product_invites"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    public_id = Column(String(32), unique=True, nullable=False)
+    email = Column(String(255), nullable=False)
+    role = Column(String(16), nullable=False)
+    token_hash = Column(String(64), unique=True, nullable=False)
+    invited_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    accepted_at = Column(DateTime(timezone=True), nullable=True)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+
+class ProductSettingsModel(Base):
+    """Per-workspace privacy and embed settings."""
+
+    __tablename__ = "product_settings"
+
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), primary_key=True)
+    record_calls = Column(Boolean, nullable=False, default=True)
+    consent_announcement = Column(String(300), nullable=True)
+    redact_pii = Column(Boolean, nullable=False, default=False)
+    retention_days = Column(Integer, nullable=True)
+    widget_origins = Column(JSON, nullable=True)
+
+
+class ProductSupportMessageModel(Base):
+    __tablename__ = "product_support_messages"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    subject = Column(String(160), nullable=False)
+    body = Column(String(4000), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_now)

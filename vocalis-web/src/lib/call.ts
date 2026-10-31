@@ -16,11 +16,17 @@ const REASONS: Record<string, string> = {
   workspace_not_found: "We couldn't find that workspace.",
   not_allowed: "You don't have permission to test this agent. Ask a workspace owner.",
   agent_not_found: "We couldn't find that agent.",
+  agent_not_available: 'This agent is not taking calls right now.',
+  website_not_allowed: "This website isn't allowed to start calls with this agent.",
   calls_not_set_up: "Calling isn't enabled for your workspace yet. Please contact support.",
 }
 
-function wsUrl(agentId: string, workspaceId: string | null) {
+/** `widget` is set when a visitor on a customer's website calls a Live agent (no sign-in). */
+export interface WidgetOpts { embedder: string }
+
+function wsUrl(agentId: string, workspaceId: string | null, widget?: WidgetOpts) {
   const base = API_URL.startsWith('http') ? API_URL : `${window.location.origin}${API_URL}`
+  if (widget) return `${base.replace(/^http/, 'ws')}/public/widget/${encodeURIComponent(agentId)}/call?embedder=${encodeURIComponent(widget.embedder)}`
   const q = workspaceId ? `?workspace=${encodeURIComponent(workspaceId)}` : ''
   return `${base.replace(/^http/, 'ws')}/agents/${agentId}/call${q}`
 }
@@ -28,7 +34,7 @@ function wsUrl(agentId: string, workspaceId: string | null) {
 const newId = () => 'PC-' + Array.from(crypto.getRandomValues(new Uint8Array(16))).map((b) => b.toString(16).padStart(2, '0')).join('')
 
 /** A practice call with an agent, in the browser. Always runs on the agent's test copy. */
-export function useAgentCall(agentId: string) {
+export function useAgentCall(agentId: string, widget?: WidgetOpts) {
   const [status, setStatus] = React.useState<CallStatus>('idle')
   const [error, setError] = React.useState<string | null>(null)
   const [lines, setLines] = React.useState<CallLine[]>([])
@@ -66,7 +72,7 @@ export function useAgentCall(agentId: string) {
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error('This browser cannot use the microphone.')
       const [ice, mic] = await Promise.all([
-        http<components['schemas']['IceOut']>('/call/ice'),
+        http<components['schemas']['IceOut']>(widget ? '/public/widget/ice' : '/call/ice'),
         navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }),
       ])
       stream.current = mic
@@ -88,7 +94,7 @@ export function useAgentCall(agentId: string) {
         else if (s === 'disconnected' && !closing.current) { setStatus('ended'); cleanup() }
       }
 
-      const socket = new WebSocket(wsUrl(agentId, useUI.getState().workspaceId))
+      const socket = new WebSocket(wsUrl(agentId, useUI.getState().workspaceId, widget))
       ws.current = socket
       peer.onicecandidate = (e) => {
         if (socket.readyState !== WebSocket.OPEN) return
@@ -125,7 +131,7 @@ export function useAgentCall(agentId: string) {
       fail(denied ? 'Microphone access is blocked. Allow it in your browser and try again.' : e instanceof Error ? e.message : 'The call could not start.')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentId, cleanup])
+  }, [agentId, widget?.embedder, cleanup])
 
   const end = React.useCallback(() => { cleanup(); setStatus('ended') }, [cleanup])
   const setMuted = (m: boolean) => { stream.current?.getAudioTracks().forEach((t) => { t.enabled = !m }); setMutedState(m) }
