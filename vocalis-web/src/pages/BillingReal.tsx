@@ -125,7 +125,7 @@ export default function RealBilling() {
             })}
             <div className="border-t px-3 py-1.5 text-xs text-soft">More than {s.contact_sales_above.toLocaleString('en-IN')} minutes a month? Talk to us for enterprise pricing.</div></div>
           {s.next_rate_at && <p className="mt-2 text-xs text-soft">{Math.max(0, Math.round(s.next_rate_at - s.month_minutes)).toLocaleString('en-IN')} more minutes this month and the price drops to {fmt(s.next_rate ?? 0, s.currency)}.</p>}
-          <p className="mt-3 text-xs text-soft">Practice calls from the Talk button are charged at the same price. Monthly phone number rent is billed separately.</p>
+          <p className="mt-3 text-xs text-soft">Billed per minute, rounded up: a 61 second call is 2 minutes, and a call that never connects is free. Practice calls from the Talk button are charged at the same price. Monthly phone number rent is billed separately.</p>
         </Card>
       </div>
 

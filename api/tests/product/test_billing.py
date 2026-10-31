@@ -204,3 +204,9 @@ async def test_practice_calls_are_charged_once_to_the_live_wallet(client):
         assert await practice.charge_practice_calls(s, client.wallet) == 1
         assert await practice.charge_practice_calls(s, client.wallet) == 0  # never twice
     assert client.wallet.minutes == 0.0 and round(client.wallet.balance, 4) == round(100 - 2 * 6.75, 4)  # 3 minutes billed: 1 free, 2 paid
+
+
+def test_billing_is_per_minute_rounded_up():
+    from api.product import pricing
+
+    assert [pricing.billed_minutes(s) for s in (None, 0, 1, 60, 61, 119, 120, 121)] == [0, 0, 1, 1, 2, 2, 2, 3]

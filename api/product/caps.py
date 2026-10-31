@@ -8,6 +8,7 @@ from sqlalchemy.orm import load_only
 from api.db.models import WorkflowRunModel
 from api.product import config
 from api.product import conversations as conv
+from api.product import pricing
 
 FULL_TODAY = "Sorry, we can't take more calls today. Please try again tomorrow."
 FULL_MONTH = "Sorry, we can't take your call right now. Please try again later."
@@ -29,7 +30,7 @@ async def exceeded(session, agent, now: datetime | None = None) -> str | None:
     if daily and sum(1 for r in runs if r.created_at and naive(r.created_at) >= naive(today)) >= daily:
         return FULL_TODAY
     if monthly:
-        spent = sum((conv.duration_seconds(r.cost_info, r.usage_info) or 0) / 60 * config.PRICE_PER_MIN for r in runs)
+        spent = sum(pricing.billed_minutes(conv.duration_seconds(r.cost_info, r.usage_info)) * config.PRICE_PER_MIN for r in runs)
         if spent >= monthly:
             return FULL_MONTH
     return None

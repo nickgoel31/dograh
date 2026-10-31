@@ -21,8 +21,9 @@ async def sync_org_rate(session, ws: ProductWorkspaceModel) -> float:
     """Point the Live wallet's rate at the current slab (brought-over organizations keep their own rate)."""
     rate = await workspace_rate(session, ws)
     org = await session.get(OrganizationModel, ws.live_org_id)
-    if org is not None and org.wallet_enabled and not ws.adopted and org.billing_rate != rate:
+    if org is not None and org.wallet_enabled and not ws.adopted:
         org.billing_rate = rate
+        org.billing_pulse = 60  # billed per minute, rounded up
     return rate
 
 

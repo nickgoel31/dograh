@@ -8,6 +8,7 @@ Override the slabs with PRODUCT_PRICE_SLABS, a JSON list like [[1000, 6.75], [50
 """
 
 import json
+import math
 import os
 
 DEFAULT_SLABS: list[tuple[int, float]] = [
@@ -16,6 +17,11 @@ DEFAULT_SLABS: list[tuple[int, float]] = [
 PHONE_PER_MIN = 0.4
 SHARES = (("Voice", 0.60), ("Speech to text", 0.30), ("AI brain", 0.10))
 ORDER = ("Speech to text", "AI brain", "Voice", "Phone")
+
+
+def billed_minutes(seconds: float | None) -> float:
+    """Calls are billed per minute, rounded up: 61 seconds is 2 minutes, and a call that never connected is free."""
+    return float(math.ceil(seconds / 60)) if seconds and seconds > 0 else 0.0
 
 
 def slabs() -> list[tuple[int, float]]:

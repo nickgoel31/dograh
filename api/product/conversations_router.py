@@ -88,7 +88,7 @@ def _price(ctx: Ctx, duration: float | None) -> float:
     """Practice calls cost the same as real ones."""
     if not duration:
         return 0.0
-    return round(duration / 60 * _rate(ctx), 2)
+    return round(pricing.billed_minutes(duration) * _rate(ctx), 2)
 
 
 def _out(ctx: Ctx, run: WorkflowRunModel, agents: dict[int, ProductAgentModel]) -> CallOut:
@@ -237,7 +237,7 @@ async def get_call(call_id: str, ctx: Ctx = Depends(get_ctx), sign: AudioSigner 
         **base.model_dump(),
         turns=turns, summary=privacy.redact_text(summary) if settings.redact_pii else summary,
         extracted=extracted,
-        cost_split=pricing.split((conv.duration_seconds(run.cost_info, run.usage_info) or 0) / 60, _rate(ctx)),
+        cost_split=pricing.split(pricing.billed_minutes(conv.duration_seconds(run.cost_info, run.usage_info)), _rate(ctx)),
         audio_url=await sign(run) if settings.record_calls else None,
     )
 
