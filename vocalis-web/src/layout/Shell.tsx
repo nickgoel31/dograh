@@ -100,7 +100,7 @@ function Breadcrumbs() {
   const parts = pathname.split('/').filter(Boolean)
   const name = (p: string, i: number) => crumbNames[p] ?? (parts[0] === 'agents' ? agents.find((a) => a.id === p)?.name : p) ?? p
   return (
-    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm text-soft">
+    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm text-soft [&>*:not(:last-child)]:max-sm:hidden">
       <Link to="/" className="hover:text-ink">{BRAND}</Link>
       {parts.map((p, i) => (
         <React.Fragment key={i}><ChevronRight size={13} />
@@ -141,7 +141,7 @@ function Topbar({ openNav }: { openNav: () => void }) {
   const initials = USE_MOCKS ? 'AS' : (me?.user.name || me?.user.email || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
   const nav = useNavigate()
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 rounded-t-2xl border-b border-line/70 bg-surface/90 px-4 backdrop-blur md:px-5">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-1.5 rounded-t-2xl border-b border-line/70 bg-surface/90 px-2.5 backdrop-blur sm:gap-3 md:px-5">
       <Button variant="ghost" size="icon" className="md:hidden" onClick={openNav} aria-label="Open menu"><MenuIcon size={18} /></Button>
       <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={() => set({ collapsed: !collapsed })} aria-label="Collapse sidebar">{collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</Button>
       <div className="min-w-0 flex-1"><Breadcrumbs /></div>
@@ -150,10 +150,10 @@ function Topbar({ openNav }: { openNav: () => void }) {
       </button>
       <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => set({ palette: true })} aria-label="Search"><Search size={18} /></Button>
       <WalletChip />
-      <div className="flex items-center gap-2 rounded-lg border bg-surface px-2.5 py-1.5 shadow-card" title="Simple shows the basics. Advanced shows every technical option.">
-        <span className={cn('text-xs font-medium', view === 'simple' ? 'text-ink' : 'text-soft')}>Simple</span>
+      <div className="flex items-center gap-2 rounded-lg border bg-surface px-2 py-1.5 shadow-card sm:px-2.5" title="Simple shows the basics. Advanced shows every technical option.">
+        <span className={cn('hidden text-xs font-medium md:inline', view === 'simple' ? 'text-ink' : 'text-soft')}>Simple</span>
         <Switch checked={view === 'advanced'} onChange={(v) => { set({ view: v ? 'advanced' : 'simple' }); toast(v ? 'Advanced view: all options visible' : 'Simple view: just the basics') }} label="Advanced view" />
-        <span className={cn('text-xs font-medium', view === 'advanced' ? 'text-ink' : 'text-soft')}>Advanced</span>
+        <span className={cn('text-xs font-medium', view === 'advanced' ? 'text-ink' : 'text-soft max-md:hidden')}>{view === 'advanced' ? 'Advanced' : <span className="md:hidden">Basic</span>}{view !== 'advanced' && <span className="hidden md:inline">Advanced</span>}</span>
       </div>
       <Menu>
         <MenuTrigger asChild><Button variant="ghost" size="icon" className="relative" aria-label="Notifications"><Bell size={18} />{unread > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-bad" />}</Button></MenuTrigger>

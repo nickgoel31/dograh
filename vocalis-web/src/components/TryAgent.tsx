@@ -22,7 +22,7 @@ export function TryAgent({ agentId, open, onOpenChange }: { agentId: string; ope
     try { const r = await http<Reply>(`/agents/${agentId}/try/start`, { method: 'POST' }); setSession(r.session); setLog([{ who: 'agent', text: r.reply, tools: r.tools }]); setEnded(r.ended) }
     catch (e) { setError(e instanceof Error ? e.message : 'Something went wrong.') } finally { setBusy(false) }
   }, [agentId])
-  React.useEffect(() => { if (open && !session && !busy && log.length === 0) void begin() }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  React.useEffect(() => { if (open) void begin() }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const send = async (e: React.FormEvent) => {
     e.preventDefault()

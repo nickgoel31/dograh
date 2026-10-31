@@ -102,7 +102,7 @@ export default function AgentDetail() {
   }, [flowTab])
   if (!agent || !d || !saved) return <EmptyState emoji="🔍" title="We couldn't find that agent" text="It may have been deleted. Head back to see all your agents." action={<Button variant="primary" size="lg" onClick={() => nav('/agents')}>See all agents</Button>} />
   const dirty = JSON.stringify(d) !== JSON.stringify(saved)
-  const up = (p: Partial<Draft>) => setD({ ...d, ...p })
+  const up = (p: Partial<Draft>) => setD((x) => (x ? { ...x, ...p } : x))
   const voice = voices.find((v) => v.id === d.voiceId) ?? voices[0] ?? { id: '', name: 'Default', lang: '', gender: '', age: '', accent: '', style: '', provider: '' }
   const tab = sp.get('tab') ?? 'flow'
   const save = async () => {
@@ -191,7 +191,7 @@ export default function AgentDetail() {
         <TabPanel value="tools">{USE_MOCKS ? (<><Q title="What can your agent do?" hint="Switch on the abilities you want.">
           <div className="divide-y">{toolList.map(([k, t, p]) => <div key={k} className="flex items-center justify-between py-3"><div><div className="font-medium">{t}</div><div className="text-[13px] text-soft">{p}</div></div><Switch label={t} checked={d.tools.includes(k)} onChange={(v) => up({ tools: v ? [...d.tools, k] : d.tools.filter((x) => x !== k) })} /></div>)}</div></Q></>) : <Q title="What can your agent do?" hint="Tick the tools it may use during a call."><AttachPicker kind="tools" agentId={agent.id} /></Q>}</TabPanel>
 
-        <TabPanel value="flow"><CallFlowEditor value={d.flow} onChange={(flow) => up({ flow })} onSimulate={USE_MOCKS ? undefined : () => setTryOpen(true)} />{!USE_MOCKS && <TryAgent agentId={agent.id} open={tryOpen} onOpenChange={setTryOpen} />}</TabPanel>
+        <TabPanel value="flow"><CallFlowEditor value={d.flow} onChange={(flow) => up({ flow })} onSimulate={USE_MOCKS ? undefined : async () => { if (dirty) await save(); setTryOpen(true) }} />{!USE_MOCKS && <TryAgent agentId={agent.id} open={tryOpen} onOpenChange={setTryOpen} />}</TabPanel>
 
         <TabPanel value="behavior"><Q title="How should it behave?">
           <div className="grid gap-6 sm:grid-cols-2">

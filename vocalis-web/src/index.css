@@ -6,13 +6,13 @@
   --bg: 220 14% 94%; --surface: 0 0% 100%; --muted: 220 14% 96%; --line: 220 14% 90%;
   --ink: 224 30% 9%; --soft: 220 9% 42%;
   --accent: 162 84% 21%; --accent-2: 168 78% 30%; --accent-fg: 0 0% 100%; --accent-soft: 160 45% 94%;
-  --ok: 152 62% 33%; --warn: 28 92% 46%; --bad: 0 72% 50%; --shadow: 224 40% 10%;
+  --ok: 152 62% 33%; --warn: 28 92% 46%; --bad: 0 72% 50%; --shadow: 224 40% 10%; --hl: 0 0% 100% / .6; --edge: var(--line);
 }
 .dark {
   --bg: 224 24% 6%; --surface: 224 20% 9%; --muted: 224 16% 13%; --line: 224 14% 17%;
   --ink: 220 20% 96%; --soft: 220 10% 66%;
   --accent: 160 62% 46%; --accent-2: 168 64% 40%; --accent-fg: 224 30% 6%; --accent-soft: 164 34% 14%;
-  --ok: 152 55% 50%; --warn: 30 92% 58%; --bad: 0 80% 66%; --shadow: 0 0% 0%;
+  --ok: 152 55% 50%; --warn: 30 92% 58%; --bad: 0 80% 66%; --shadow: 0 0% 0%; --hl: 0 0% 100% / .03; --edge: var(--line);
 }
 * { border-color: hsl(var(--line)); }
 html { font-feature-settings: 'cv11', 'ss01'; -webkit-font-smoothing: antialiased; }
