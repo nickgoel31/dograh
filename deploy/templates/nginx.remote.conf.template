@@ -45,6 +45,20 @@ server {
         client_max_body_size 100M;
     }
 
+    # New web app, served under /new/ from its own small container. The prefix is stripped before it is passed on.
+    location = /new {
+        return 301 /new/;
+    }
+
+    location /new/ {
+        resolver 127.0.0.11 valid=10s;
+        set $vocalis_upstream http://vocalis:80;
+        rewrite ^/new/(.*)$ /$1 break;
+        proxy_pass $vocalis_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+
     location / {
         resolver 127.0.0.11 valid=10s;
         set $ui_upstream http://ui:3010;

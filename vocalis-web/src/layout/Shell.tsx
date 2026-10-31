@@ -12,7 +12,7 @@ import { useMe } from '@/lib/useMe'
 import { http } from '@/lib/api/http'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { USE_MOCKS, authApi } from '@/lib/api'
-import { CLASSIC_URL } from '@/lib/api/env'
+import { BASE, CLASSIC_URL } from '@/lib/api/env'
 import { queryClient } from '@/lib/query'
 import { useUI } from '@/store/ui'
 import { useData } from '@/store/data'
@@ -168,7 +168,7 @@ async function switchToClassic() {
 
 async function signOut() {
   if (USE_MOCKS) { toast('This is a demo, so there is nothing to sign out of 🙂'); return }
-  try { await authApi.logout() } finally { queryClient.clear(); window.location.assign('/') }
+  try { await authApi.logout() } finally { queryClient.clear(); window.location.assign(`${BASE}/`) }
 }
 
 function CommandPalette() {

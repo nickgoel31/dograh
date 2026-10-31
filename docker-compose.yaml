@@ -174,6 +174,12 @@ services:
       FORCE_TURN_RELAY: "${FORCE_TURN_RELAY:-false}"
 
       OSS_JWT_SECRET: "${OSS_JWT_SECRET:?OSS_JWT_SECRET must be set to a strong secret}"
+      # New product layer (see docs/RUNBOOK.md). Empty means off / not configured.
+      PRODUCT_NEW_UI_ORGS: "${PRODUCT_NEW_UI_ORGS:-}"
+      PRODUCT_PROFILES: "${PRODUCT_PROFILES:-}"
+      PRODUCT_ALLOWED_ORIGINS: "${PRODUCT_ALLOWED_ORIGINS:-}"
+      PRODUCT_OPS_SECRET: "${PRODUCT_OPS_SECRET:-}"
+      PRODUCT_NAME: "${PRODUCT_NAME:-Vocalis}"
       SMALLEST_AI_API_KEY: "${SMALLEST_AI_API_KEY:-}"
 
       # Telemetry
@@ -232,6 +238,19 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    networks:
+      - app-network
+
+  # The new web app (served under /new/ by nginx). Build with: docker compose --profile remote build vocalis
+  vocalis:
+    build:
+      context: ./vocalis-web
+      args:
+        VITE_BASE: /new/
+        VITE_CLASSIC_URL: "${VOCALIS_CLASSIC_URL:-}"
+    image: vocalis-web:local
+    profiles: ["remote"]
+    restart: unless-stopped
     networks:
       - app-network
 

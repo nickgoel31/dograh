@@ -4,6 +4,8 @@ import path from 'path'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
+    // Served from the site root by default; the production build under a path uses VITE_BASE=/new/.
+    base: env.VITE_BASE || '/',
     plugins: [react()],
     resolve: { alias: { '@': path.resolve(__dirname, 'src') } },
     // Same-origin in dev so the session cookie works without CORS setup.

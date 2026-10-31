@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { queryClient } from '@/lib/query'
 import { ApiError, USE_MOCKS, authApi } from '@/lib/api'
+import { BASE } from '@/lib/api/env'
 import { useMe } from '@/lib/useMe'
 import { useUI } from '@/store/ui'
 import AuthPage from '@/pages/Auth'
@@ -81,14 +82,14 @@ function CacheReset() {
 
 export default function App() {
   // The call button inside other people's websites: public, no sign-in.
-  if (window.location.pathname.startsWith('/widget/')) {
-    return <BrowserRouter><Routes><Route path="widget/:agentId" element={<WidgetPage />} /></Routes></BrowserRouter>
+  if (window.location.pathname.startsWith(`${BASE}/widget/`)) {
+    return <BrowserRouter basename={BASE}><Routes><Route path="widget/:agentId" element={<WidgetPage />} /></Routes></BrowserRouter>
   }
   return (
     <QueryClientProvider client={queryClient}>
     <CacheReset />
     <Gate>
-    <BrowserRouter>
+    <BrowserRouter basename={BASE}>
       <Routes>
         <Route element={<Shell />}>
           <Route index element={<Home />} />

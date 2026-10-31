@@ -68,3 +68,22 @@ python scripts/check_branding.py --api
 python -m pytest api/tests/product --noconftest          # with DATABASE_URL/REDIS_URL/MINIO_PUBLIC_ENDPOINT set to dummies
 cd vocalis-web && npx tsc --noEmit && npm run build && npx vitest run && npx playwright test
 ```
+
+
+## Docker install with the new app under /new/ (the Oracle VM layout)
+
+The new app is its own small container (`vocalis`, built from `vocalis-web/Dockerfile`). The existing nginx sends `https://YOUR-HOST/new/` to it and everything else exactly as before. No new DNS name or certificate is needed.
+
+1. Merge `feat/product-layer` into the branch the VM pulls (`main`) and push.
+2. On the VM, back up first:
+   `sudo docker exec dograh-postgres-1 pg_dump -U postgres postgres > ~/backup-before-vocalis.sql`
+   `sudo docker tag dograh-local/dograh-api:local dograh-local/dograh-api:before-vocalis`
+3. Add to the VM's `.env` (compose passes them to the API): `PRODUCT_NEW_UI_ORGS=` (leave empty: nobody switched on yet), `PRODUCT_PROFILES=...`, `PRODUCT_ALLOWED_ORIGINS=https://YOUR-HOST`, `PRODUCT_OPS_SECRET=<long random>`, `VOCALIS_CLASSIC_URL=https://YOUR-HOST`.
+4. Deploy in a quiet hour (restarting the API drops calls in progress; tables are created automatically when it starts):
+   `./deploy.sh api` then `./deploy.sh vocalis` (the new app).
+5. Make nginx pick up the new route: `sudo docker compose --profile remote up -d dograh-init nginx` then `sudo docker exec nginx_https nginx -s reload`.
+6. Check `https://YOUR-HOST/new/` loads, the classic UI still works, and create a test account on the new app.
+7. Switch a customer on: put their organization id in `PRODUCT_NEW_UI_ORGS`, `sudo docker compose --profile remote up -d api`. To show the "Switch to the new UI" link in the classic UI, rebuild it once with `NEXT_PUBLIC_VOCALIS_ENABLED=true` and set `VOCALIS_URL=https://YOUR-HOST/new` on the `ui` service (`./deploy.sh ui`); the link only appears for switched-on customers.
+8. Add the every-minute `ops/tick` job (above).
+
+To undo: set `PRODUCT_NEW_UI_ORGS` empty and restart the API; or `docker tag dograh-local/dograh-api:before-vocalis dograh-local/dograh-api:local` and bring the API up again.

@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Card, Chip, Dialog, Field, Input, Select, Switch, Tab, TabPanel, Tabs, TabsList, Textarea } from '@/components/ui'
 import { CodeBlock, ConfirmDialog, CopyButton, PageHeader, Row, TableSkeleton } from '@/components/shared'
 import { platformApi as P, type Hook } from '@/lib/api/platform'
-import { API_URL } from '@/lib/api/env'
+import { API_URL, BASE } from '@/lib/api/env'
 import { useMe } from '@/lib/useMe'
 import { useData } from '@/store/data'
 import { useUI } from '@/store/ui'
@@ -99,7 +99,7 @@ export function DevelopersReal() {
     node: `const res = await fetch('${base}/public/calls', {\n  headers: { Authorization: 'Bearer ${sample}' },\n})\nconsole.log(await res.json())`,
     python: `import requests\n\nr = requests.get('${base}/public/calls', headers={'Authorization': 'Bearer ${sample}'})\nprint(r.json())`,
   }
-  const embed = `<script src="${base}/public/widget.js"\n  data-app="${window.location.origin}"\n  data-agent="${agent || live[0]?.id || 'AGENT_ID'}" async></script>`
+  const embed = `<script src="${base}/public/widget.js"\n  data-app="${window.location.origin}${BASE}"\n  data-agent="${agent || live[0]?.id || 'AGENT_ID'}" async></script>`
   if (!can(perms, 'api_keys.manage')) return (<><PageHeader title="Developers" subtitle="Connect your own apps." /><Card className="p-8 text-center text-soft">Ask a workspace owner to give you the Developer role to use this page.</Card></>)
   return (
     <>
@@ -200,7 +200,7 @@ export function SettingsReal() {
   const [sub, setSub] = React.useState('')
   const [rm, setRm] = React.useState<string | null>(null)
   const refresh = () => qc.invalidateQueries({ queryKey: ['team'] })
-  const invite = useMutation({ mutationFn: () => P.invite(email, role), onSuccess: (i) => { setInv(false); setEmail(''); setLink(`${window.location.origin}/invite/${i.token}`); refresh() }, onError: say })
+  const invite = useMutation({ mutationFn: () => P.invite(email, role), onSuccess: (i) => { setInv(false); setEmail(''); setLink(`${window.location.origin}${BASE}/invite/${i.token}`); refresh() }, onError: say })
   const addSub = useMutation({ mutationFn: () => P.newSubAccount(sub), onSuccess: () => { toast.success('Sub-account created. Switch to it from the workspace menu.'); setSub(''); qc.invalidateQueries({ queryKey: ['subs'] }); qc.invalidateQueries({ queryKey: ['me'] }) }, onError: say })
   return (
     <>
