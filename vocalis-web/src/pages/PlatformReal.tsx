@@ -272,7 +272,7 @@ export function HelpReal() {
   const bad = status.data?.filter((x) => x.state === 'down') ?? []
   return (
     <>
-      <div className="mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-accent to-[#8b5cf6] p-8 text-white md:p-10">
+      <div className="mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-accent to-[#2f9e83] p-8 text-white md:p-10">
         <div className="mb-1 flex items-center gap-2 text-sm text-white/80"><LifeBuoy size={16} />{BRAND} Help</div>
         <h1 className="text-3xl font-semibold tracking-tight">How can we help?</h1>
         <div className="relative mt-5 max-w-2xl"><Search size={18} className="absolute left-4 top-3.5 text-soft" />

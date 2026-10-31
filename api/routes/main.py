@@ -95,8 +95,9 @@ from api.product.help_router import router as product_help_router  # noqa: E402
 from api.product.public_api import router as product_public_router  # noqa: E402
 from api.product.team_router import router as product_team_router  # noqa: E402
 from api.product.widget_router import router as product_widget_router  # noqa: E402
+from api.product.google_auth import router as product_google_router  # noqa: E402
 
-for _r in (product_developers_router, product_ops_router, product_help_router, product_public_router, product_team_router, product_widget_router,
+for _r in (product_developers_router, product_ops_router, product_help_router, product_public_router, product_team_router, product_widget_router, product_google_router,
            product_analytics_router, product_lab_router, product_handoff_router, product_import_router, product_campaigns_router, product_home_router, product_knowledge_router, product_notifications_router, product_tools_router):
     router.include_router(_r)
 

@@ -58,7 +58,7 @@ function Existing() {
   const x = k.data
   return (
     <>
-      <Card className="mb-6 flex flex-wrap items-center justify-between gap-4 bg-gradient-to-br from-accent to-[#8b5cf6] p-8 text-white">
+      <Card className="mb-6 flex flex-wrap items-center justify-between gap-4 bg-gradient-to-br from-accent to-[#2f9e83] p-8 text-white">
         <div><h2 className="text-2xl font-semibold">Talk to your agent now</h2><p className="mt-1 text-white/80">Have a free practice call, right here in your browser.</p></div>
         <Button size="lg" className="h-14 bg-white px-8 text-base text-accent hover:bg-white/90" onClick={() => set({ playground: agents[0].id })}><Mic size={20} />Start talking</Button>
       </Card>

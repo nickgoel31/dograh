@@ -3,19 +3,20 @@
 @tailwind utilities;
 
 :root {
-  --bg: 240 20% 98.5%; --surface: 0 0% 100%; --muted: 240 14% 95.5%; --line: 240 12% 90%;
-  --ink: 240 20% 11%; --soft: 240 7% 42%;
-  --accent: 245 82% 60%; --accent-fg: 0 0% 100%; --accent-soft: 245 90% 96%;
-  --ok: 152 62% 36%; --warn: 28 92% 48%; --bad: 0 72% 52%; --shadow: 240 30% 10%;
+  --bg: 40 12% 96%; --surface: 0 0% 100%; --muted: 40 10% 93%; --line: 40 9% 88%;
+  --ink: 165 25% 8%; --soft: 165 7% 40%;
+  --accent: 166 80% 20%; --accent-fg: 0 0% 100%; --accent-soft: 160 38% 92%;
+  --ok: 152 62% 34%; --warn: 28 92% 46%; --bad: 0 72% 50%; --shadow: 165 30% 8%;
 }
 .dark {
-  --bg: 240 18% 7%; --surface: 240 16% 10%; --muted: 240 12% 14%; --line: 240 10% 19%;
-  --ink: 240 14% 95%; --soft: 240 8% 66%;
-  --accent: 245 90% 70%; --accent-fg: 240 30% 8%; --accent-soft: 245 40% 18%;
+  --bg: 165 14% 6%; --surface: 165 11% 9%; --muted: 165 9% 13%; --line: 165 8% 18%;
+  --ink: 150 14% 95%; --soft: 160 8% 66%;
+  --accent: 160 58% 48%; --accent-fg: 165 30% 6%; --accent-soft: 165 32% 15%;
   --ok: 152 55% 50%; --warn: 30 92% 58%; --bad: 0 80% 66%; --shadow: 0 0% 0%;
 }
 * { border-color: hsl(var(--line)); }
 html { font-feature-settings: 'cv11', 'ss01'; }
+h1, h2, h3 { letter-spacing: -0.015em; }
 body { @apply bg-bg text-ink font-sans antialiased; font-size: 14px; }
 :focus-visible { outline: 2px solid hsl(var(--accent)); outline-offset: 2px; border-radius: 6px; }
 .num { font-variant-numeric: tabular-nums; }

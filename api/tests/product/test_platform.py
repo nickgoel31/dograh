@@ -270,3 +270,19 @@ async def test_help_status_contact_and_widget(client):
 
     js = await client.get("/public/widget.js")
     assert js.status_code == 200 and "javascript" in js.headers["content-type"] and "iframe" in js.text
+
+
+async def test_google_sign_in_creates_and_reuses_accounts(client, monkeypatch):
+    from api.product import google_auth
+
+    async def fake(cred):
+        return {"email": "g@x.com", "name": "Gita Rao"} if cred.startswith("good") else None
+
+    monkeypatch.setattr(google_auth, "verify_google_token", fake)
+    monkeypatch.setattr(google_auth.rate_limit, "enforce", lambda *a, **k: __import__("asyncio").sleep(0))
+    assert (await client.post("/product/auth/google", json={"credential": "bad" * 10})).json()["detail"]["code"] == "google_failed"
+    first = await client.post("/product/auth/google", json={"credential": "good" * 10})
+    assert first.status_code == 200 and first.json()["user"]["email"] == "g@x.com" and first.cookies.get("vocalis_session")
+    again = await client.post("/product/auth/google", json={"credential": "good" * 10})
+    assert again.status_code == 200 and again.json()["current_workspace"]["id"] == first.json()["current_workspace"]["id"]
+    assert (await client.get("/product/auth/config")).json() == {"google_client_id": None}
