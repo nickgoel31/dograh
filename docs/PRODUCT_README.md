@@ -1,4 +1,4 @@
-# The product layer ("Vocalis")
+# The product layer ("Swarvo AI")
 
 A white-label voice-agent product built on this platform. The platform is not rewritten: a thin layer in `api/product/` talks to it through small seams, and a separate web app in `vocalis-web/` replaces the interface. The classic UI keeps working; people can switch between the two.
 

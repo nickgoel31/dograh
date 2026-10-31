@@ -2,7 +2,7 @@
 
 import os
 
-PRODUCT_NAME = os.getenv("PRODUCT_NAME", "Vocalis")
+PRODUCT_NAME = os.getenv("PRODUCT_NAME", "Swarvo AI")
 SESSION_COOKIE_NAME = os.getenv("PRODUCT_SESSION_COOKIE", "vocalis_session")
 # Secure cookies everywhere except local development over plain HTTP.
 SESSION_COOKIE_SECURE = os.getenv("PRODUCT_COOKIE_SECURE", "true").lower() == "true"

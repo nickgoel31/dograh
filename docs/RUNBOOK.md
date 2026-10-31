@@ -72,6 +72,8 @@ cd vocalis-web && npx tsc --noEmit && npm run build && npx vitest run && npx pla
 
 ## Docker install with the new app under /new/ (the Oracle VM layout)
 
+**Quick way:** after the branch is on `main`, on the VM run `cd ~/dograh && git pull origin main && bash scripts/deploy_new_ui.sh` (does everything below, asks for confirmation first). Then `bash scripts/set_new_ui_customers.sh` lists customers and switches them on or off. The manual steps follow.
+
 The new app is its own small container (`vocalis`, built from `vocalis-web/Dockerfile`). The existing nginx sends `https://YOUR-HOST/new/` to it and everything else exactly as before. No new DNS name or certificate is needed.
 
 1. Merge `feat/product-layer` into the branch the VM pulls (`main`) and push.

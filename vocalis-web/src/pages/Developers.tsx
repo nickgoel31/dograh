@@ -9,9 +9,9 @@ import { cn } from '@/lib/utils'
 import type { ReqLog } from '@/mock/types'
 
 const snippets = {
-  curl: `curl https://api.vocalis.example.com/v1/calls \\\n  -H "Authorization: Bearer sk_test_51Hx..." \\\n  -d agent_id=a1 \\\n  -d to=+919845011223`,
-  node: `import ${BRAND} from '@vocalis/sdk'\n\nconst client = new ${BRAND}('sk_test_51Hx...')\nconst call = await client.calls.create({\n  agentId: 'a1',\n  to: '+919845011223',\n})\nconsole.log(call.id)`,
-  python: `from vocalis import Client\n\nclient = Client("sk_test_51Hx...")\ncall = client.calls.create(agent_id="a1", to="+919845011223")\nprint(call.id)`,
+  curl: `curl https://api.swarvoai.example.com/v1/calls \\\n  -H "Authorization: Bearer sk_test_51Hx..." \\\n  -d agent_id=a1 \\\n  -d to=+919845011223`,
+  node: `import ${BRAND} from '@swarvo/sdk'\n\nconst client = new ${BRAND}('sk_test_51Hx...')\nconst call = await client.calls.create({\n  agentId: 'a1',\n  to: '+919845011223',\n})\nconsole.log(call.id)`,
+  python: `from swarvo import Client\n\nclient = Client("sk_test_51Hx...")\ncall = client.calls.create(agent_id="a1", to="+919845011223")\nprint(call.id)`,
 }
 const events = ['call.started', 'call.ended', 'tool.failed', 'campaign.completed']
 
@@ -37,7 +37,7 @@ export default function DevelopersPage() {
   const [evs, setEvs] = React.useState(['call.ended'])
   const [log, setLog] = React.useState<ReqLog | null>(null)
   const [payload, setPayload] = React.useState<unknown>(null)
-  const embed = `<script src="https://cdn.vocalis.example.com/widget.js"\n  data-agent="a1" data-color="#6356f1" async></script>`
+  const embed = `<script src="https://cdn.swarvoai.example.com/widget.js"\n  data-agent="a1" data-color="#6356f1" async></script>`
   return (
     <>
       <PageHeader title="Developers" subtitle="Everything you need to connect your own apps." />
