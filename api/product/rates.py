@@ -1,4 +1,4 @@
-"""The workspace's current price per minute, from this month's usage."""
+"""The workspace's current price per minute, from how much money its wallet holds."""
 
 from sqlalchemy import select
 
@@ -14,11 +14,12 @@ async def month_minutes(session, ws: ProductWorkspaceModel) -> float:
 
 
 async def workspace_rate(session, ws: ProductWorkspaceModel) -> float:
-    return pricing.rate_for(await month_minutes(session, ws))
+    org = await session.get(OrganizationModel, ws.live_org_id)
+    return pricing.rate_for_balance(float(org.balance or 0.0) if org is not None else 0.0)
 
 
 async def sync_org_rate(session, ws: ProductWorkspaceModel) -> float:
-    """Point the Live wallet's rate at the current slab (brought-over organizations keep their own rate)."""
+    """Point the Live wallet's rate at the slab its balance is in (brought-over organizations keep their own rate)."""
     rate = await workspace_rate(session, ws)
     org = await session.get(OrganizationModel, ws.live_org_id)
     if org is not None and org.wallet_enabled and not ws.adopted:

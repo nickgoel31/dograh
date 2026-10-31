@@ -45,8 +45,9 @@ class SummaryOut(BaseModel):
     settings: SettingsOut
     payments_enabled: bool
     slabs: list[dict] = []
-    next_rate_at: int | None = None
+    next_rate_at: int | None = None  # wallet minutes at which the next cheaper slab starts
     next_rate: float | None = None
+    next_rate_balance: float | None = None  # wallet balance needed to reach that slab
     contact_sales_above: int = 100000
 
 
@@ -118,12 +119,14 @@ async def summary(ctx: Ctx = Depends(require(Perm.BILLING_MANAGE)), wallet: Wall
     await bl.ensure_billing(ctx.session, wallet, ctx.workspace)
     await ctx.session.commit()
     s = await bl.get_settings(ctx.session, ctx.workspace)
+    # The price follows the wallet: bring the wallet's rate up to date first so the minutes below are worked out at it.
+    await rates.sync_org_rate(ctx.session, ctx.workspace)
+    await ctx.session.commit()
     w = await wallet.summary(ctx.workspace.live_org_id)
     start, end = bl.month_bounds(bl.current_period())
     entries = await bl.usage_entries(ctx.session, ctx.workspace.live_org_id, start, end)
-    used = sum(e["minutes"] for e in entries)
-    rate, nxt = pricing.rate_for(used), pricing.next_step(used)
-    await rates.sync_org_rate(ctx.session, ctx.workspace)
+    balance = float(w.get("balance", 0) or 0)
+    rate, nxt = pricing.rate_for_balance(balance), pricing.next_balance_step(balance)
     value = round(sum(e["value"] for e in entries), 2)
     state = bl.limit_state(s.spend_limit, value)
     period = bl.current_period()
@@ -140,7 +143,7 @@ async def summary(ctx: Ctx = Depends(require(Perm.BILLING_MANAGE)), wallet: Wall
         month_usage_value=value, month_minutes=round(sum(e["minutes"] for e in entries), 2), spend_limit=s.spend_limit,
         limit_state=bl.limit_state(s.spend_limit, value), low_balance=bool(w.get("low_balance")),
         settings=_settings_out(s), payments_enabled=get_payments() is not None,
-        slabs=[{"up_to": a, "rate": b} for a, b in pricing.slabs()], next_rate_at=(nxt[0] if nxt else None), next_rate=(nxt[1] if nxt else None), contact_sales_above=pricing.contact_sales_above(),
+        slabs=[{"up_to": a, "rate": b} for a, b in pricing.slabs()], next_rate_at=(nxt[2] if nxt else None), next_rate=(nxt[1] if nxt else None), next_rate_balance=(nxt[0] if nxt else None), contact_sales_above=pricing.contact_sales_above(),
     )
 
 
@@ -214,6 +217,8 @@ async def _settle(session, wallet: WalletGateway, pay: ProductPaymentModel, paym
     pay.status, pay.payment_id = "paid", payment_id
     ws = await session.get(ProductWorkspaceModel, pay.workspace_id)
     await wallet.credit(ws.live_org_id, pay.amount, "Wallet top-up", f"pay:{pay.order_id}")  # same key => safe to repeat
+    await session.commit()
+    await rates.sync_org_rate(session, ws)  # a bigger wallet can unlock a cheaper slab straight away
     await session.commit()
     return True
 

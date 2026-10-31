@@ -174,6 +174,24 @@ async def test_billing_needs_billing_permission(client):
     assert (await client.patch("/product/billing/settings", json={"spend_limit": 1}, headers=hb)).status_code == 403
 
 
+def test_price_follows_the_minutes_in_the_wallet():
+    from api.product import pricing
+
+    balances = (0, 5999.99, 6000, 10979.75, 27499.99, 27500, 74999, 75000, 340000, 5_000_000)
+    assert [pricing.rate_for_balance(b) for b in balances] == [6.75, 6.75, 6.0, 6.0, 6.0, 5.5, 5.5, 5.0, 3.4, 3.4]
+    # a wallet of Rs 10,979.75 holds ~1,830 minutes at its own rate, so it is in the Rs 6.00 slab, not Rs 6.75
+    assert 1000 <= 10979.75 / pricing.rate_for_balance(10979.75) < 5000
+    assert pricing.next_balance_step(10979.75) == (27500.0, 5.5, 5000)
+    assert pricing.next_balance_step(0) == (6000.0, 6.0, 1000)
+    assert pricing.next_balance_step(5_000_000) is None
+    # every balance's slab really can hold the minutes that balance buys (no gaps, no negative jumps)
+    last = 0.0
+    for b in range(0, 400_000, 250):
+        mins = b / pricing.rate_for_balance(b)
+        assert mins >= last - 1e-6
+        last = mins
+
+
 def test_volume_slabs_and_where_a_minute_goes():
     from api.product import pricing
 

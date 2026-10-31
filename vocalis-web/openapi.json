@@ -11332,6 +11332,17 @@
             ],
             "title": "Next Rate"
           },
+          "next_rate_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Rate Balance"
+          },
           "contact_sales_above": {
             "type": "integer",
             "title": "Contact Sales Above",

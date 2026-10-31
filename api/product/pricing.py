@@ -1,7 +1,9 @@
 """The price per minute and where it goes.
 
-The rate falls as a workspace uses more minutes in a month (volume slabs). Each call minute is charged at the rate of the slab
-the month's usage is in at that moment. Above the last slab, customers talk to sales; the last rate keeps applying meanwhile.
+The rate falls as a workspace holds more minutes in its wallet (volume slabs): the more you load, the cheaper every minute is.
+The slab is found from the wallet balance - the cheapest slab whose minutes the balance can still buy at that slab's own rate
+(so ₹6,000 buys 1,000 minutes at ₹6.00, which is why ₹6,000 is where the ₹6.00 slab starts). Above the last slab, customers
+talk to sales; the last rate keeps applying meanwhile.
 
 Where a minute's price goes: phone first (PHONE_PER_MIN), then the rest is split voice 60%, speech to text 30%, AI brain 10%.
 Override the slabs with PRODUCT_PRICE_SLABS, a JSON list like [[1000, 6.75], [5000, 6]] (up to this many minutes a month, rate).
@@ -32,6 +34,36 @@ def slabs() -> list[tuple[int, float]]:
     except (ValueError, TypeError):
         pass
     return DEFAULT_SLABS
+
+
+def _bounds(table: list[tuple[int, float]]) -> list[tuple[int, float]]:
+    """(minutes the slab starts at, rate) for each slab, cheapest last."""
+    out, lower = [], 0
+    for limit, rate in table:
+        out.append((lower, rate))
+        lower = limit
+    return out
+
+
+def rate_for_balance(balance: float) -> float:
+    """Price per minute for a wallet holding this much money: the cheapest slab the balance can actually fill."""
+    table = slabs()
+    for lower, rate in reversed(_bounds(table)):
+        if balance >= lower * rate - 1e-9:
+            return rate
+    return table[0][1]
+
+
+def next_balance_step(balance: float) -> tuple[float, float, int] | None:
+    """(balance needed for the next cheaper slab, its rate, minutes it starts at), or None on the last slab."""
+    table = slabs()
+    bounds = _bounds(table)
+    here = rate_for_balance(balance)
+    for i, (_, rate) in enumerate(bounds):
+        if rate == here and i + 1 < len(bounds):
+            lower, nrate = bounds[i + 1]
+            return (round(lower * nrate, 2), nrate, lower)
+    return None
 
 
 def rate_for(minutes_used: float) -> float:

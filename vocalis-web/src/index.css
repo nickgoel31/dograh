@@ -2,56 +2,101 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Swarvo design system, v3.
+  Light = "porcelain": cool paper greys, white panels, hairline edges, deep emerald.
+  Dark  = "obsidian": blue-black, panels one step lighter, edges are light at low opacity, emerald glows.
+*/
 :root {
-  --bg: 220 14% 94%; --surface: 0 0% 100%; --muted: 220 14% 96%; --line: 220 14% 90%;
-  --ink: 224 30% 9%; --soft: 220 9% 42%;
-  --accent: 162 84% 21%; --accent-2: 168 78% 30%; --accent-fg: 0 0% 100%; --accent-soft: 160 45% 94%;
-  --ok: 152 62% 33%; --warn: 28 92% 46%; --bad: 0 72% 50%; --shadow: 224 40% 10%; --hl: 0 0% 100% / .6; --edge: var(--line);
+  --bg: 222 22% 95%; --surface: 0 0% 100%; --muted: 222 20% 96%; --line: 222 16% 89%;
+  --ink: 226 34% 9%; --soft: 224 10% 40%;
+  --accent: 163 88% 20%; --accent-2: 160 72% 34%; --accent-fg: 0 0% 100%; --accent-soft: 160 52% 95%;
+  --ok: 152 64% 32%; --warn: 28 94% 45%; --bad: 0 74% 50%;
+  --shadow: 226 44% 12%; --hl: 0 0% 100% / .9; --edge: var(--line);
+  --panel-glow: 160 80% 40% / .05;
 }
 .dark {
-  --bg: 224 24% 6%; --surface: 224 20% 9%; --muted: 224 16% 13%; --line: 224 14% 17%;
-  --ink: 220 20% 96%; --soft: 220 10% 66%;
-  --accent: 160 62% 46%; --accent-2: 168 64% 40%; --accent-fg: 224 30% 6%; --accent-soft: 164 34% 14%;
-  --ok: 152 55% 50%; --warn: 30 92% 58%; --bad: 0 80% 66%; --shadow: 0 0% 0%; --hl: 0 0% 100% / .03; --edge: var(--line);
+  --bg: 228 30% 4.5%; --surface: 228 24% 8%; --muted: 228 20% 11.5%; --line: 228 16% 16%;
+  --ink: 220 26% 96%; --soft: 222 12% 66%;
+  --accent: 158 66% 47%; --accent-2: 166 72% 38%; --accent-fg: 228 40% 5%; --accent-soft: 162 42% 12%;
+  --ok: 152 58% 52%; --warn: 32 94% 58%; --bad: 0 82% 67%;
+  --shadow: 0 0% 0%; --hl: 0 0% 100% / .045; --edge: var(--line);
+  --panel-glow: 160 80% 50% / .07;
 }
+
 * { border-color: hsl(var(--line)); }
-html { font-feature-settings: 'cv11', 'ss01'; -webkit-font-smoothing: antialiased; }
-h1, h2, h3 { letter-spacing: -0.022em; font-family: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif; }
+html { font-feature-settings: 'cv11', 'ss01', 'cv05'; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; color-scheme: light; }
+html.dark { color-scheme: dark; }
+h1, h2, h3, h4 { letter-spacing: -0.024em; font-family: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif; }
 body { @apply bg-bg text-ink font-sans antialiased; font-size: 14px; line-height: 1.55; }
-::selection { background: hsl(var(--accent) / .18); }
-:focus-visible { outline: 2px solid hsl(var(--accent) / .55); outline-offset: 2px; border-radius: 8px; }
-.num { font-variant-numeric: tabular-nums; }
-.skeleton { @apply relative overflow-hidden rounded-lg bg-muted; }
-.skeleton::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, hsl(var(--surface) / .7), transparent); animation: shimmer 1.4s infinite; }
-.react-flow__attribution { display: none; }
-.react-flow__node-default, .react-flow__node-input, .react-flow__node-output { border-radius: 12px; border: 1px solid hsl(var(--line)); background: hsl(var(--surface)); color: hsl(var(--ink)); box-shadow: 0 1px 2px hsl(var(--shadow) / .06); padding: 10px 14px; font-size: 13px; font-weight: 500; }
-.react-flow__edge-path { stroke: hsl(var(--accent)); }
-.react-flow__controls button { background: hsl(var(--surface)); color: hsl(var(--ink)); border-color: hsl(var(--line)); }
+::selection { background: hsl(var(--accent) / .2); }
+:focus-visible { outline: 2px solid hsl(var(--accent) / .6); outline-offset: 2px; border-radius: 8px; }
+.num { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum', 'cv11'; }
+
+/* The app frame: the main panel gets a faint emerald wash from the top-left, like light falling on glass */
+.app-panel {
+  background-color: hsl(var(--surface));
+  background-image: radial-gradient(900px 380px at 12% -140px, hsl(var(--panel-glow)), transparent 70%), radial-gradient(700px 320px at 100% -120px, hsl(var(--accent-2) / .04), transparent 70%);
+}
+.app-side { background: linear-gradient(180deg, hsl(var(--surface)), hsl(var(--surface)) 55%, hsl(var(--muted) / .55)); }
+
+/* Premium surfaces and helpers */
+.glass { background: hsl(var(--surface) / .72); backdrop-filter: saturate(170%) blur(16px); -webkit-backdrop-filter: saturate(170%) blur(16px); }
+.brand-gradient { background-image: linear-gradient(135deg, hsl(var(--accent-2)) 0%, hsl(var(--accent)) 100%); }
+.brand-gradient-soft { background-image: linear-gradient(135deg, hsl(var(--accent-2) / .14), hsl(var(--accent) / .06)); }
+.gradient-text { background: linear-gradient(120deg, hsl(var(--accent-2)), hsl(var(--accent)) 55%, hsl(var(--ink))); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hairline { box-shadow: 0 0 0 1px hsl(var(--line)); }
+.ring-glow { box-shadow: 0 0 0 1px hsl(var(--accent) / .35), 0 8px 28px -8px hsl(var(--accent) / .45); }
+.card-lift { transition: transform .22s cubic-bezier(.2, .8, .2, 1), box-shadow .22s ease, border-color .22s ease; }
+.card-lift:hover { transform: translateY(-2px); border-color: hsl(var(--accent) / .28); box-shadow: 0 20px 44px -20px hsl(var(--shadow) / .32), 0 0 0 1px hsl(var(--accent) / .16); }
+@keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+main { animation: fade-up .4s cubic-bezier(.2, .8, .2, 1) both; }
+
+/* Skeletons */
+.skeleton { @apply relative overflow-hidden rounded-lg; background: hsl(var(--muted)); }
+.skeleton::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, hsl(var(--surface) / .85), transparent); animation: shimmer 1.5s infinite; }
+
+/* Tables */
+table { border-collapse: separate; border-spacing: 0; }
+thead th { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: hsl(var(--soft)); }
+tbody tr { transition: background-color .15s ease; }
+tbody tr:hover { background-color: hsl(var(--muted) / .6); }
+tbody td { vertical-align: middle; }
+
+/* Code */
 .tok-k { color: hsl(var(--accent)); } .tok-s { color: hsl(var(--ok)); } .tok-n { color: hsl(var(--warn)); }
+code, pre, kbd { font-feature-settings: 'calt' 0; }
+kbd { border-radius: 6px; box-shadow: 0 1px 0 hsl(var(--line)); }
+
+/* Toasts */
+[data-sonner-toast] { border-radius: 14px !important; border: 1px solid hsl(var(--line)) !important; box-shadow: 0 18px 44px -16px hsl(var(--shadow) / .4), 0 4px 12px -4px hsl(var(--shadow) / .12) !important; font-family: inherit !important; }
+
+/* Call flow canvas */
+.react-flow__attribution { display: none; }
+.react-flow__renderer, .react-flow__pane { cursor: default; }
+.react-flow__background { background: transparent; }
+.react-flow__node-default, .react-flow__node-input, .react-flow__node-output { border-radius: 14px; border: 1px solid hsl(var(--line)); background: hsl(var(--surface)); color: hsl(var(--ink)); box-shadow: 0 1px 2px hsl(var(--shadow) / .06); padding: 10px 14px; font-size: 13px; font-weight: 500; }
+.react-flow__edge-path { stroke: hsl(var(--accent) / .75); stroke-dasharray: 5 4; stroke-width: 1.6; }
+.react-flow__edge.selected .react-flow__edge-path { stroke: hsl(var(--accent)); stroke-width: 2.2; }
+.react-flow__controls { box-shadow: 0 8px 24px -12px hsl(var(--shadow) / .3); border: 1px solid hsl(var(--line)); border-radius: 12px; overflow: hidden; }
+.react-flow__controls button { background: hsl(var(--surface)); color: hsl(var(--ink)); border-color: hsl(var(--line)); }
+.react-flow__controls button:hover { background: hsl(var(--muted)); }
+.react-flow__controls button svg { fill: currentColor; }
+.react-flow__handle { width: 9px; height: 9px; border: 2px solid hsl(var(--surface)); background: hsl(var(--accent)); box-shadow: 0 0 0 1px hsl(var(--accent) / .35); }
+.react-flow__edge-textbg { fill: hsl(var(--surface)); }
+.react-flow__edge-text { fill: hsl(var(--soft)); font-size: 11px; font-weight: 600; }
+
 @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 
 /* Slim scrollbars that match the theme */
-* { scrollbar-width: thin; scrollbar-color: hsl(var(--soft) / .35) transparent; }
+* { scrollbar-width: thin; scrollbar-color: hsl(var(--soft) / .32) transparent; }
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: hsl(var(--soft) / .28); border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb { background: hsl(var(--soft) / .26); border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
 *::-webkit-scrollbar-thumb:hover { background: hsl(var(--soft) / .5); border: 3px solid transparent; background-clip: content-box; }
 
 /* Recording seek bar */
 .recording-range { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 999px; outline: none; cursor: pointer; }
 .recording-range:disabled { cursor: default; opacity: .6; }
-.recording-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: hsl(var(--accent)); border: 2px solid hsl(var(--surface)); box-shadow: 0 1px 4px hsl(var(--shadow) / .35); }
+.recording-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 15px; height: 15px; border-radius: 50%; background: hsl(var(--accent)); border: 2.5px solid hsl(var(--surface)); box-shadow: 0 0 0 1px hsl(var(--accent) / .4), 0 2px 6px hsl(var(--shadow) / .35); }
 .recording-range::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: hsl(var(--accent)); border: 2px solid hsl(var(--surface)); }
-
-/* Premium surfaces */
-.glass { background: hsl(var(--surface) / .72); backdrop-filter: saturate(160%) blur(14px); -webkit-backdrop-filter: saturate(160%) blur(14px); }
-.brand-gradient { background: linear-gradient(135deg, hsl(var(--accent-2)), hsl(var(--accent))); }
-.gradient-text { background: linear-gradient(120deg, hsl(var(--accent-2)), hsl(var(--accent)) 60%, hsl(var(--ink))); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.card-lift { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
-.card-lift:hover { transform: translateY(-2px); box-shadow: 0 18px 40px -18px hsl(var(--shadow) / .28), 0 0 0 1px hsl(var(--accent) / .18); }
-@keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-main { animation: fade-up .35s ease both; }
-.react-flow__edge-path { stroke-dasharray: 5 4; stroke-width: 1.5; }
-.react-flow__controls { box-shadow: none; border: 1px solid hsl(var(--line)); border-radius: 10px; overflow: hidden; }
-.react-flow__handle { width: 8px; height: 8px; border: 2px solid hsl(var(--surface)); background: hsl(var(--accent)); }
-th { font-weight: 600; letter-spacing: .02em; }

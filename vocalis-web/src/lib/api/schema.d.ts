@@ -2390,6 +2390,8 @@ export interface components {
             next_rate_at?: number | null;
             /** Next Rate */
             next_rate?: number | null;
+            /** Next Rate Balance */
+            next_rate_balance?: number | null;
             /**
              * Contact Sales Above
              * @default 100000

@@ -37,7 +37,7 @@ export const Logo = ({ name, logo }: { name?: string | null; logo?: string | nul
   const src = logo || (own && !name ? `${import.meta.env.BASE_URL}logo.png` : null)
   return (
     <div className="flex items-center gap-2 font-semibold tracking-tight">
-      {src ? <img src={src} alt="" onError={() => setOwn(false)} className="h-8 w-8 rounded-lg object-contain" /> : <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-accent-fg"><Mic2 size={15} /></div>}{name || BRAND}
+      {src ? <img src={src} alt="" onError={() => setOwn(false)} className="h-8 w-8 rounded-lg object-contain" /> : <div className="brand-gradient flex h-8 w-8 items-center justify-center rounded-[10px] text-accent-fg shadow-glow"><Mic2 size={16} /></div>}{name || BRAND}
     </div>
   )
 }
@@ -56,7 +56,7 @@ function hexToHsl(hex: string): string | null {
 function NavItem({ to, label, icon: Icon, collapsed, onClick }: (typeof main)[number] & { collapsed: boolean; onClick?: () => void }) {
   return (
     <NavLink to={to} end={to === '/'} onClick={onClick} title={collapsed ? label : undefined}
-      className={({ isActive }) => cn('relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium transition', isActive ? 'bg-accent-soft font-semibold text-accent before:absolute before:-left-3 before:top-2 before:h-[calc(100%-1rem)] before:w-[3px] before:rounded-r-full before:bg-accent' : 'text-soft hover:bg-muted/80 hover:text-ink', collapsed && 'justify-center px-0')}>
+      className={({ isActive }) => cn('relative flex items-center gap-3 rounded-[10px] px-3 py-2 text-[13.5px] font-medium transition duration-150', isActive ? 'brand-gradient-soft font-semibold text-accent shadow-[0_0_24px_-10px_hsl(var(--accent)/.55)] ring-1 ring-inset ring-accent/15 before:absolute before:-left-3 before:top-2 before:h-[calc(100%-1rem)] before:w-[3px] before:rounded-r-full before:bg-gradient-to-b before:from-accent-2 before:to-accent' : 'text-soft hover:bg-muted/80 hover:text-ink', collapsed && 'justify-center px-0')}>
       <Icon size={17} className="shrink-0" />{!collapsed && label}
     </NavLink>
   )
@@ -77,8 +77,8 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
       {!collapsed && (
         <Menu>
           <MenuTrigger asChild>
-            <button className="flex w-full items-center gap-2 rounded-lg border bg-surface px-3 py-2 text-left text-sm shadow-card hover:bg-muted">
-              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-accent-soft text-xs font-semibold text-accent">{active.name[0]}</span>
+            <button className="flex w-full items-center gap-2.5 rounded-xl border border-line/80 bg-surface px-3 py-2 text-left text-sm shadow-card transition hover:border-soft/40 hover:bg-muted">
+              <span className="brand-gradient flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold text-accent-fg shadow-glow">{active.name[0]}</span>
               <span className="flex-1 truncate font-medium">{active.name}</span><ChevronsUpDown size={14} className="text-soft" />
             </button>
           </MenuTrigger>
@@ -129,7 +129,7 @@ function WalletChip() {
   if (!w) return null
   return (
     <button onClick={() => nav('/billing')} title="Your balance. Click to add money or see usage." aria-label="Wallet balance"
-      className={cn('hidden h-9 items-center gap-2 rounded-lg border bg-surface px-3 text-sm shadow-card hover:bg-muted sm:flex', w.low_balance && 'border-warn text-warn')}>
+      className={cn('hidden h-9 items-center gap-2 rounded-[10px] border bg-surface px-3 text-sm shadow-card transition hover:bg-muted sm:flex', w.low_balance && 'border-warn text-warn')}>
       <Wallet size={15} /><span className="font-semibold">{money(w.balance)}</span><span className="text-soft">· {Math.floor(w.minutes_available)} min</span>
     </button>
   )
@@ -150,12 +150,12 @@ function Topbar({ openNav }: { openNav: () => void }) {
       <Button variant="ghost" size="icon" className="md:hidden" onClick={openNav} aria-label="Open menu"><MenuIcon size={18} /></Button>
       <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={() => set({ collapsed: !collapsed })} aria-label="Collapse sidebar">{collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</Button>
       <div className="min-w-0 flex-1"><Breadcrumbs /></div>
-      <button onClick={() => set({ palette: true })} className="hidden h-9 items-center gap-2 rounded-lg border bg-surface px-3 text-sm text-soft shadow-card hover:bg-muted sm:flex">
+      <button onClick={() => set({ palette: true })} className="hidden h-9 items-center gap-2 rounded-[10px] border bg-surface px-3 text-sm text-soft shadow-field transition hover:border-soft/40 hover:bg-muted sm:flex">
         <Search size={14} />Search<kbd className="ml-6 rounded border bg-muted px-1.5 text-[11px]">⌘K</kbd>
       </button>
       <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => set({ palette: true })} aria-label="Search"><Search size={18} /></Button>
       <WalletChip />
-      <div className="flex items-center gap-2 rounded-lg border bg-surface px-2 py-1.5 shadow-card sm:px-2.5" title="Simple shows the basics. Advanced shows every technical option.">
+      <div className="flex items-center gap-2 rounded-[10px] border bg-surface px-2 py-1.5 shadow-field sm:px-2.5" title="Simple shows the basics. Advanced shows every technical option.">
         <span className={cn('hidden text-xs font-medium md:inline', view === 'simple' ? 'text-ink' : 'text-soft')}>Simple</span>
         <Switch checked={view === 'advanced'} onChange={(v) => { set({ view: v ? 'advanced' : 'simple' }); toast(v ? 'Advanced view: all options visible' : 'Simple view: just the basics') }} label="Advanced view" />
         <span className={cn('text-xs font-medium', view === 'advanced' ? 'text-ink' : 'text-soft max-md:hidden')}>{view === 'advanced' ? 'Advanced' : <span className="md:hidden">Basic</span>}{view !== 'advanced' && <span className="hidden md:inline">Advanced</span>}</span>
@@ -170,7 +170,7 @@ function Topbar({ openNav }: { openNav: () => void }) {
         </MenuContent>
       </Menu>
       <Menu>
-        <MenuTrigger asChild><button className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-fg" aria-label="Account menu">{initials}</button></MenuTrigger>
+        <MenuTrigger asChild><button className="brand-gradient flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-accent-fg shadow-glow ring-2 ring-surface" aria-label="Account menu">{initials}</button></MenuTrigger>
         <MenuContent>
           <div className="px-2.5 py-2"><div className="font-medium">{USE_MOCKS ? 'Aarav Sharma' : me?.user.name}</div><div className="text-xs text-soft">{USE_MOCKS ? 'aarav@sunrisedental.in' : me?.user.email}</div></div>
           <MenuSep />
@@ -282,7 +282,7 @@ export default function Shell() {
   return (
     <TooltipProvider>
       <div className="flex min-h-screen gap-3 p-0 md:p-3">
-        <aside className={cn('sticky top-3 hidden h-[calc(100vh-1.5rem)] shrink-0 rounded-2xl border border-line/70 bg-surface shadow-card transition-[width] md:block', collapsed ? 'w-[68px]' : 'w-64')}><SidebarBody collapsed={collapsed} /></aside>
+        <aside className={cn('sticky top-3 hidden h-[calc(100vh-1.5rem)] shrink-0 rounded-2xl border border-line/70 app-side shadow-raised transition-[width] md:block', collapsed ? 'w-[68px]' : 'w-64')}><SidebarBody collapsed={collapsed} /></aside>
         <AnimatePresence>
           {mobileNav && (
             <>
@@ -291,7 +291,7 @@ export default function Shell() {
             </>
           )}
         </AnimatePresence>
-        <div className="flex min-w-0 flex-1 flex-col rounded-none border-line/70 bg-surface md:rounded-2xl md:border md:shadow-card">
+        <div className="flex min-w-0 flex-1 flex-col rounded-none border-line/70 app-panel md:rounded-2xl md:border md:shadow-raised">
           <Topbar openNav={() => set({ mobileNav: true })} />
           <main className={cn('w-full flex-1', wide ? '' : 'mx-auto max-w-[1280px] px-4 py-6 pb-28 md:px-8')}>
             <AnimatePresence mode="wait">
@@ -301,7 +301,7 @@ export default function Shell() {
         </div>
       </div>
       <CommandPalette /><AIHelper /><PlaygroundModal />
-      <Toaster position="bottom-left" richColors closeButton />
+      <Toaster position="bottom-left" richColors closeButton theme={theme === 'dark' ? 'dark' : 'light'} />
     </TooltipProvider>
   )
 }

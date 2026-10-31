@@ -22,9 +22,9 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []) {
 /* ---------- layout bits ---------- */
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: React.ReactNode }) {
   return (
-    <div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-line/70 pb-6">
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-line/60 pb-6">
       <div>
-        <h1 className="text-[28px] font-bold leading-tight tracking-tight">{title}</h1>
+        <h1 className="text-[30px] font-extrabold leading-tight tracking-[-0.03em]">{title}</h1>
         {subtitle && <p className="mt-1.5 max-w-2xl text-[15px] text-soft">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -49,7 +49,7 @@ export function Sparkline({ data, color = 'hsl(var(--accent))', h = 36 }: { data
 export function StatCard({ label, value, delta, hint, loading, spark }: { label: string; value: React.ReactNode; delta?: string; hint?: string; loading?: boolean; spark?: number[] }) {
   return (
     <Card className="card-lift relative overflow-hidden p-5">
-      <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-accent/[.06] blur-2xl" aria-hidden />
+      <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-accent/[.10] blur-2xl" aria-hidden /><div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" aria-hidden />
       <div className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-soft">{label}{hint && <HelpTooltip text={hint} />}</div>
       {loading ? <Skeleton className="mt-3 h-8 w-24" /> : <div className="num mt-2.5 text-[32px] font-bold leading-none tracking-tight">{value}</div>}
       {delta && !loading && <div className={cn('mt-1 text-xs font-medium', delta.startsWith('-') ? 'text-bad' : 'text-ok')}>{delta} <span className="font-normal text-soft">vs last week</span></div>}
