@@ -472,6 +472,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/product/numbers/carriers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Carriers */
+        get: operations["carriers_api_v1_product_numbers_carriers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/product/numbers/bring": {
         parameters: {
             query?: never;
@@ -483,7 +500,7 @@ export interface paths {
         put?: never;
         /**
          * Bring
-         * @description Use a number the customer already owns with their Twilio or Plivo account. We point it at the platform; it stays theirs.
+         * @description Use a number the customer already owns with their own carrier account. It stays theirs; removing it here never touches the carrier.
          */
         post: operations["bring_api_v1_product_numbers_bring_post"];
         delete?: never;
@@ -1662,10 +1679,10 @@ export interface components {
             carrier: string;
             /** Number */
             number: string;
-            /** Account Id */
-            account_id: string;
-            /** Auth Token */
-            auth_token: string;
+            /** Details */
+            details?: {
+                [key: string]: string;
+            };
         };
         /** BuyBody */
         BuyBody: {
@@ -3818,6 +3835,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OfferOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    carriers_api_v1_product_numbers_carriers_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

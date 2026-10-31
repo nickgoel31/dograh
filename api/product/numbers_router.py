@@ -185,41 +185,97 @@ async def buy(body: BuyBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE))):
     return _out(row, await _agents_by_workflow(ctx))
 
 
+CARRIERS: dict[str, dict] = {
+    "twilio": {"name": "Twilio", "auto": True, "fields": [("account_sid", "Account SID", False, False), ("auth_token", "Auth token", True, False)]},
+    "plivo": {"name": "Plivo", "auto": True, "fields": [("auth_id", "Auth ID", False, False), ("auth_token", "Auth token", True, False)]},
+    "vobiz": {"name": "Vobiz", "auto": False, "fields": [("auth_id", "Account ID", False, False), ("auth_token", "Auth token", True, False), ("application_id", "Application ID", False, True)]},
+    "telnyx": {"name": "Telnyx", "auto": False, "fields": [("api_key", "API key", True, False), ("connection_id", "Connection ID", False, True)]},
+    "vonage": {"name": "Vonage", "auto": False, "fields": [("api_key", "API key", False, False), ("api_secret", "API secret", True, False), ("application_id", "Application ID", False, False), ("private_key", "Private key", True, False)]},
+    "cloudonix": {"name": "Cloudonix", "auto": False, "fields": [("bearer_token", "Bearer token", True, False), ("domain_id", "Domain ID", False, False)]},
+    "ari": {"name": "Asterisk (SIP)", "auto": False, "fields": [("ari_endpoint", "Asterisk address (ARI)", False, False), ("app_name", "ARI application name", False, False), ("app_password", "ARI password", True, False), ("ws_client_name", "WebSocket client name", False, True)]},
+}
+
+
+def _inbound_url() -> str:
+    from api.constants import BACKEND_API_ENDPOINT
+
+    return f"{BACKEND_API_ENDPOINT}/api/v1/telephony/inbound/run"
+
+
+@router.get("/carriers")
+async def carriers(ctx: Ctx = Depends(get_ctx)):
+    return [{"id": k, "name": v["name"], "auto": v["auto"], "inbound_url": _inbound_url(),
+             "fields": [{"key": f, "label": lab, "secret": sec, "optional": opt} for f, lab, sec, opt in v["fields"]]} for k, v in CARRIERS.items()]
+
+
 class BringBody(BaseModel):
-    carrier: str = Field(pattern="^(twilio|plivo)$")
+    carrier: str = Field(max_length=20)
     number: str = Field(max_length=20)
-    account_id: str = Field(min_length=3, max_length=120)
-    auth_token: str = Field(min_length=3, max_length=200)
+    details: dict[str, str] = Field(default_factory=dict)
 
 
-def make_carrier(carrier: str, account_id: str, token: str):
+def make_carrier(carrier: str, details: dict):
     """Seam for tests: the customer's own carrier account."""
-    return providers.TwilioNumbers(account_id, token) if carrier == "twilio" else providers.PlivoNumbers(account_id, token)
+    if carrier == "twilio":
+        return providers.TwilioNumbers(details["account_sid"], details["auth_token"])
+    return providers.PlivoNumbers(details["auth_id"], details["auth_token"])
+
+
+async def _verify_other(carrier: str, details: dict, number: str) -> None:
+    """A quick real check where the carrier makes one easy. The rest are saved as given and work once the carrier is pointed at us."""
+    import httpx
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as c:
+            if carrier == "telnyx":
+                r = await c.get("https://api.telnyx.com/v2/phone_numbers", params={"filter[phone_number]": number}, headers={"Authorization": f"Bearer {details['api_key']}"})
+                if r.status_code in (401, 403):
+                    raise providers.NumberError("Telnyx did not accept that API key.")
+                if r.status_code == 200 and not r.json().get("data"):
+                    raise providers.NumberError("That number isn't on this Telnyx account.")
+            elif carrier == "ari":
+                r = await c.get(f"{details['ari_endpoint'].rstrip('/')}/ari/asterisk/info", auth=(details["app_name"], details["app_password"]))
+                if r.status_code >= 400:
+                    raise providers.NumberError("Asterisk did not accept those details. Check the address, application name and password.")
+    except providers.NumberError:
+        raise
+    except Exception:  # noqa: BLE001
+        if carrier == "ari":
+            raise providers.NumberError("We couldn't reach your Asterisk server. Check the address, and that it can be reached from the internet.")
 
 
 @router.post("/bring", response_model=NumberOut, status_code=201)
 async def bring(body: BringBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE))):
-    """Use a number the customer already owns with their Twilio or Plivo account. We point it at the platform; it stays theirs."""
-    from api.constants import BACKEND_API_ENDPOINT
+    """Use a number the customer already owns with their own carrier account. It stays theirs; removing it here never touches the carrier."""
     from api.utils.telephony_address import normalize_telephony_address
 
+    spec = CARRIERS.get(body.carrier)
+    if spec is None:
+        raise product_error(400, "bad_carrier", "We don't support that carrier yet.")
     if ctx.environment != "live":
         raise product_error(400, "live_only", "Bring your own number in Live. Practice numbers are free.")
     if not _E164.match(body.number):
         raise product_error(400, "bad_number", "Enter the number with its country code, like +14155550123.")
+    details = {k: (body.details.get(k) or "").strip() for k, *_ in spec["fields"]}
+    gaps = [label for k, label, _, opt in spec["fields"] if not opt and not details[k]]
+    if gaps:
+        raise product_error(400, "missing_fields", "Please fill in: " + ", ".join(gaps) + ".")
     n = normalize_telephony_address(body.number)
     if await ctx.session.scalar(select(TelephonyPhoneNumberModel.id).where(TelephonyPhoneNumberModel.organization_id == ctx.org_id, TelephonyPhoneNumberModel.address_normalized == n.canonical)):
         raise product_error(409, "already_yours", "You already have that number.")
     try:
-        await make_carrier(body.carrier, body.account_id.strip(), body.auth_token.strip()).link_existing(body.number, f"{BACKEND_API_ENDPOINT}/api/v1/telephony/inbound/run")
+        if spec["auto"]:
+            await make_carrier(body.carrier, details).link_existing(body.number, _inbound_url())
+        else:
+            await _verify_other(body.carrier, details, body.number)
     except providers.NumberError as e:
         raise product_error(400, "bring_failed", str(e))
-    creds = {"account_sid": body.account_id.strip(), "auth_token": body.auth_token.strip(), "from_numbers": [body.number]} if body.carrier == "twilio" else {"auth_id": body.account_id.strip(), "auth_token": body.auth_token.strip(), "from_numbers": [body.number]}
-    cfg = TelephonyConfigurationModel(organization_id=ctx.org_id, name=f"Your {body.carrier.title()} account", provider=body.carrier, credentials=creds, is_default_outbound=False)
+    creds = {**{k: v for k, v in details.items() if v}, "from_numbers": [body.number]}
+    cfg = TelephonyConfigurationModel(organization_id=ctx.org_id, name=f"Your {spec['name']} account", provider=body.carrier, credentials=creds, is_default_outbound=False)
     ctx.session.add(cfg)
     await ctx.session.flush()
     row = TelephonyPhoneNumberModel(organization_id=ctx.org_id, telephony_configuration_id=cfg.id, address=body.number, address_normalized=n.canonical, address_type=n.address_type, country_code=n.country_code,
-                                    is_active=True, extra_metadata={"kind": "local", "byo": True, "sandbox": False, "monthly": 0.0, "reputation": "unknown"})
+                                    is_active=True, extra_metadata={"kind": "local", "byo": True, "carrier": body.carrier, "sandbox": False, "monthly": 0.0, "reputation": "unknown"})
     ctx.session.add(row)
     await ctx.session.commit()
     return _out(row, await _agents_by_workflow(ctx))

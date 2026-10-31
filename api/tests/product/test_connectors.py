@@ -117,12 +117,17 @@ async def test_bring_your_own_number(client, monkeypatch):
                 raise numbers_router.providers.NumberError("That number isn't on this Plivo account.")
 
     monkeypatch.setattr(numbers_router, "make_carrier", lambda *a: Carrier())
-    body = {"carrier": "plivo", "number": "+14155550123", "account_id": "MA123", "auth_token": "tok123"}
+    body = {"carrier": "plivo", "number": "+14155550123", "details": {"auth_id": "MA123", "auth_token": "tok123"}}
     r = await client.post("/product/numbers/bring", json=body, headers=live)
     assert r.status_code == 201, r.text
     assert (await client.post("/product/numbers/bring", json=body, headers=live)).status_code == 409
     assert (await client.post("/product/numbers/bring", json={**body, "number": "+14155550000"}, headers=live)).status_code == 400
     assert (await client.post("/product/numbers/bring", json=body, headers=bearer(tok))).status_code == 400  # practice mode
+    assert (await client.post("/product/numbers/bring", json={"carrier": "vobiz", "number": "+14155550199", "details": {}}, headers=live)).status_code == 400  # missing details
+    other = await client.post("/product/numbers/bring", json={"carrier": "vonage", "number": "+14155550188", "details": {"api_key": "k", "api_secret": "s", "application_id": "a", "private_key": "p"}}, headers=live)
+    assert other.status_code == 201, other.text
+    names = [c["id"] for c in (await client.get("/product/numbers/carriers", headers=live)).json()]
+    assert {"twilio", "plivo", "vobiz", "telnyx", "vonage", "cloudonix", "ari"} <= set(names)
     assert (await client.delete(f"/product/numbers/{r.json()['id']}", headers=live)).status_code == 204
 
 

@@ -2971,13 +2971,92 @@
         }
       }
     },
+    "/api/v1/product/numbers/carriers": {
+      "get": {
+        "tags": [
+          "numbers"
+        ],
+        "summary": "Carriers",
+        "operationId": "carriers_api_v1_product_numbers_carriers_get",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/product/numbers/bring": {
       "post": {
         "tags": [
           "numbers"
         ],
         "summary": "Bring",
-        "description": "Use a number the customer already owns with their Twilio or Plivo account. We point it at the platform; it stays theirs.",
+        "description": "Use a number the customer already owns with their own carrier account. It stays theirs; removing it here never touches the carrier.",
         "operationId": "bring_api_v1_product_numbers_bring_post",
         "parameters": [
           {
@@ -9215,7 +9294,7 @@
         "properties": {
           "carrier": {
             "type": "string",
-            "pattern": "^(twilio|plivo)$",
+            "maxLength": 20,
             "title": "Carrier"
           },
           "number": {
@@ -9223,25 +9302,18 @@
             "maxLength": 20,
             "title": "Number"
           },
-          "account_id": {
-            "type": "string",
-            "maxLength": 120,
-            "minLength": 3,
-            "title": "Account Id"
-          },
-          "auth_token": {
-            "type": "string",
-            "maxLength": 200,
-            "minLength": 3,
-            "title": "Auth Token"
+          "details": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Details"
           }
         },
         "type": "object",
         "required": [
           "carrier",
-          "number",
-          "account_id",
-          "auth_token"
+          "number"
         ],
         "title": "BringBody"
       },
