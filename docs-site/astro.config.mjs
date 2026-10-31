@@ -23,6 +23,7 @@ const SITE = process.env.DOCS_SITE_URL || 'https://docs.swarvoai.com';
 
 export default defineConfig({
   site: SITE,
+  redirects: { '/': '/start/what-is-swarvo/' },
   integrations: [
     mermaid({ theme: 'neutral', autoTheme: true }),
     starlight({
@@ -30,6 +31,7 @@ export default defineConfig({
       description: 'Voice agents that answer every call. Guides, reference and API for Swarvo AI.',
       logo: { src: './src/assets/logo.svg', alt: 'Swarvo AI' },
       favicon: '/favicon.svg',
+      components: { PageTitle: './src/components/PageTitle.astro' },
       customCss: ['./src/styles/custom.css'],
       head: [
         { tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.googleapis.com' } },

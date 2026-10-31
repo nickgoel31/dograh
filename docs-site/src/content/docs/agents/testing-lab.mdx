@@ -1,0 +1,36 @@
+---
+title: "Testing Lab"
+description: "Practise with AI callers, save test cases and compare two versions of your agent with an A/B test."
+sidebar:
+  order: 13.5
+audience: owner
+readingTime: "5 min"
+---
+
+The **Testing Lab** checks your agent without real callers. It always runs on the agent's **Test** copy, so it is free and never reaches anyone.
+
+## Practice callers
+An AI plays a caller (for example an impatient one) for up to 8 turns. A second check then scores your agent on four things:
+
+| Measure | Weight |
+|---|---|
+| Goal reached | 40% |
+| Politeness | 15% |
+| Handling this kind of caller | 20% |
+| Not inventing facts | 25% |
+
+A score of **70 or more** counts as "went well". There are 6 caller types. Runs happen in the background; the page shows progress.
+
+## Test cases
+Save up to **30 test cases** per agent. A case that requires a tool is checked directly; others are judged. Results are saved per agent version, so editing the agent clears them and **Run new** only runs what has not been run on this version.
+
+## A/B test
+Compare the agent's current instructions (A) with instructions you write (B). Each version gets a number of practice calls (2 to 40) across the caller types. A winner is named only with **at least 20 finished calls per version** and a clear statistical difference (below 5%). Otherwise you see "not enough data" or "no clear winner". It uses simulated traffic; splitting real callers is not available.
+
+## Limits
+- Needs a working AI model set up by your host.
+- Jobs run inside the server; a restart interrupts them ("interrupted, start again").
+
+## Related
+- [Test your agent](/agents/test-your-agent/)
+- [Versions and publishing](/agents/versions-and-publishing/)
