@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.constants import OSS_JWT_SECRET
 from api.db.models import UserModel
+from api.product import rollout
 from api.product.deps import get_session, get_user_only
 from api.product.errors import product_error
 from api.product.router import _set_session
@@ -37,12 +38,21 @@ class RedeemBody(BaseModel):
 @router.post("")
 async def start(body: StartBody, base=Depends(get_user_only)):
     """Needs a signed-in session on either side (cookie or bearer token)."""
-    _, user = base
+    session, user = base
+    if body.to == "product" and not await rollout.user_eligible(session, user):
+        raise product_error(403, "not_enabled", rollout.NOT_ENABLED)
     code = jwt.encode(
         {"sub": str(user.id), "aud": body.to, "jti": uuid.uuid4().hex, "exp": datetime.now(UTC) + timedelta(seconds=TTL_SECONDS)},
         _KEY, algorithm="HS256",
     )
     return {"code": code}
+
+
+@router.get("/eligible")
+async def eligible(base=Depends(get_user_only)):
+    """Whether this person may be offered the switch to the new experience (the classic UI asks before showing it)."""
+    session, user = base
+    return {"eligible": await rollout.user_eligible(session, user)}
 
 
 @router.post("/redeem")

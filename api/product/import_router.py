@@ -13,7 +13,7 @@ from sqlalchemy import func, select
 
 from api.db.models import OrganizationModel, UserModel, organization_users_association
 from api.db.product_models import ProductAgentModel, ProductMembershipModel, ProductWorkspaceModel
-from api.product import models_config
+from api.product import models_config, rollout
 from api.product.deps import get_user_only
 from api.product.errors import product_error
 from api.product.gateway import PlatformGateway, get_gateway
@@ -67,7 +67,7 @@ async def candidates(base=Depends(get_user_only), gw: PlatformGateway = Depends(
         .where(organization_users_association.c.user_id == user.id, OrganizationModel.is_active.is_(True)))).all()
     out = []
     for o in orgs:
-        if o.id in taken or user.role not in ADMIN_ROLES:
+        if o.id in taken or user.role not in ADMIN_ROLES or not rollout.org_allowed(o.id):
             continue
         n = len([a for a in await gw.list_agents(o.id) if a["active"]])
         out.append(Candidate(id=encode_id("org", o.id), name=o.name or "Your organization", agents=n))
@@ -83,6 +83,8 @@ async def import_org(body: ImportBody, base=Depends(get_user_only), gw: Platform
     org = await session.get(OrganizationModel, org_id) if member else None
     if org is None:  # not yours looks the same as not existing
         raise product_error(404, "organization_not_found", "We couldn't find that organization.")
+    if not rollout.org_allowed(org.id):
+        raise product_error(403, "not_enabled", rollout.NOT_ENABLED)
     if user.role not in ADMIN_ROLES:
         raise product_error(403, "not_allowed", "Only an administrator can bring an organization over. Ask one to do it.")
     if await session.scalar(select(ProductWorkspaceModel.id).where(

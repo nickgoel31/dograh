@@ -295,6 +295,7 @@ async def make_client(monkeypatch, seed_profiles=True):
     fake = FakeGateway()
     monkeypatch.setattr(product_router.rate_limit, "enforce", _no_limit)
     monkeypatch.setattr(config, "SESSION_COOKIE_SECURE", False)
+    monkeypatch.setenv("PRODUCT_NEW_UI_ORGS", "*")  # tests of the rollout rule set their own
     monkeypatch.setattr(public_api.rate_limit, "enforce", _no_limit)
     app = FastAPI()
     app.include_router(product_router.router)

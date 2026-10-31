@@ -6,7 +6,8 @@ from sqlalchemy import insert, select
 from api.db import models, product_models
 from api.product.definition import build_definition
 from api.tests.product.support import bearer, make_client, signup
-from api.utils.auth import decode_jwt_token, hash_password
+from api.product.ids import encode_id
+from api.utils.auth import create_jwt_token, decode_jwt_token, hash_password
 
 
 @pytest_asyncio.fixture
@@ -27,6 +28,15 @@ async def make_old_account(client, email="old@x.com", role="admin", org_name="Sw
         await s.execute(insert(models.organization_users_association).values(user_id=u.id, organization_id=org.id))
         await s.commit()
         return u.id, org.id
+
+
+def create_token(uid):
+    return create_jwt_token(uid, "x@x.com", "admin", False)
+
+
+async def user_id(client, email):
+    async with client.session_factory() as s:
+        return (await s.execute(select(models.UserModel.id).where(models.UserModel.email == email))).scalar_one()
 
 
 async def login(client, email, password="old-password"):
@@ -150,3 +160,32 @@ async def test_handoff_to_the_classic_ui_returns_a_platform_session(client):
     claims = decode_jwt_token(r["token"])
     assert claims["email"] == "a@x.com" and r["user"]["email"] == "a@x.com" and r["user"]["organizationId"]
     assert (await client.post("/product/auth/handoff/redeem", json={"code": code, "to": "classic"})).status_code == 400
+
+
+async def test_only_switched_on_customers_can_use_the_new_ui(client, monkeypatch):
+    _, org_a = await make_old_account(client, "a@x.com", org_name="Clinic A")
+    _, org_b = await make_old_account(client, "b@x.com", org_name="Clinic B")
+    monkeypatch.setenv("PRODUCT_NEW_UI_ORGS", str(org_a))
+
+    # Clinic B is held back everywhere: sign-in on the new site, the switch link, the hand-off and the import.
+    r = await client.post("/product/auth/login", json={"email": "b@x.com", "password": "old-password"})
+    assert r.status_code == 403 and r.json()["detail"]["code"] == "not_enabled" and not r.cookies.get("vocalis_session")
+    classic_tok = create_token(await user_id(client, "b@x.com"))
+    hb = bearer(classic_tok)
+    assert (await client.get("/product/auth/handoff/eligible", headers=hb)).json() == {"eligible": False}
+    assert (await client.post("/product/auth/handoff", json={"to": "product"}, headers=hb)).json()["detail"]["code"] == "not_enabled"
+    assert (await client.get("/product/import/candidates", headers=hb)).json() == []
+    assert (await client.post("/product/import", json={"organization_id": encode_id("org", org_b)}, headers=hb)).status_code == 403
+    assert (await client.post("/product/auth/handoff", json={"to": "classic"}, headers=hb)).status_code == 200  # going back is never blocked
+
+    # Clinic A is switched on and works as before.
+    me, _ = await login(client, "a@x.com")
+    assert me.get("setup_required") or me.get("user")
+    ha = bearer(create_token(await user_id(client, "a@x.com")))
+    assert (await client.get("/product/auth/handoff/eligible", headers=ha)).json() == {"eligible": True}
+    assert len((await client.get("/product/import/candidates", headers=ha)).json()) == 1
+
+    # New accounts on the new site are never held back, and switching B on later opens the door.
+    assert (await client.post("/product/auth/signup", json={"email": "new@x.com", "password": "password123", "name": "N"})).status_code == 200
+    monkeypatch.setenv("PRODUCT_NEW_UI_ORGS", f"{org_a}, {org_b}")
+    assert (await client.post("/product/auth/login", json={"email": "b@x.com", "password": "old-password"})).status_code == 200

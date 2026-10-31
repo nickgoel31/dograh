@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 for k, v in {
     "DATABASE_URL": "postgresql+asyncpg://dev/dev", "REDIS_URL": "redis://dev", "MINIO_PUBLIC_ENDPOINT": "http://localhost:9000",
     "PRODUCT_COOKIE_SECURE": "false", "PRODUCT_ALLOWED_ORIGINS": "http://localhost:5174,http://localhost:5173",
-    "PRODUCT_PROFILES": '{"default":"std"}', "PRODUCT_FREE_MINUTES": "30",
+    "PRODUCT_PROFILES": '{"default":"std"}', "PRODUCT_FREE_MINUTES": "30", "PRODUCT_NEW_UI_ORGS": "*",
 }.items():
     os.environ.setdefault(k, v)
 

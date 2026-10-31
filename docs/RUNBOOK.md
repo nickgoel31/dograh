@@ -26,6 +26,7 @@
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | Online top-ups (off until set) |
 | `PRODUCT_TWILIO_ACCOUNT_SID`, `PRODUCT_TWILIO_AUTH_TOKEN`, `PRODUCT_NUMBER_MONTHLY_LOCAL/TOLL_FREE` | Buying real numbers (off until set; sandbox numbers otherwise) |
 | `PRODUCT_CALL_WINDOW`, `PRODUCT_MAX_CAMPAIGN_ROWS`, `HUMAN_COST_PER_MIN_DEFAULT` | Campaign and analytics defaults |
+| `PRODUCT_NEW_UI_ORGS` | Which existing customers may use the new experience, by organization id: empty = nobody (default), `12,15` = those, `*` = everyone. Controls the switch link, the hand-off, bringing an org over, and sign-in on the new site for existing accounts. New accounts made on the new site are never held back. |
 | `PRODUCT_OPS_SECRET` | Enables `POST /api/v1/product/ops/tick` |
 | `PRODUCT_ALLOW_PRIVATE_WEBHOOKS` | Development only |
 | Classic UI: `NEXT_PUBLIC_VOCALIS_ENABLED`, `VOCALIS_URL` | Show the "switch to new UI" item |

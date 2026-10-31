@@ -36,6 +36,11 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
   const pathname = usePathname();
   const router = useRouter();
   const { logout, user } = useAuth();
+  const [canSwitchUi, setCanSwitchUi] = useState(false);
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_VOCALIS_ENABLED !== "true") return;
+    fetch("/switch-ui/eligible").then((r) => r.json()).then((d) => setCanSwitchUi(!!d.eligible)).catch(() => {});
+  }, []);
   const { role, isSuperadmin, isReseller, email, selectedOrgId, selectedOrgName } = useCurrentUserRole();
   const { isMobile, setOpenMobile } = useSidebar();
 
@@ -234,7 +239,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                       <Settings className="w-4 h-4 text-gray-500" />
                       <span>Platform Settings</span>
                     </button>
-                    {process.env.NEXT_PUBLIC_VOCALIS_ENABLED === "true" && (
+                    {canSwitchUi && (
                       <a
                         href="/switch-ui"
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-[#c8ccc5] hover:bg-gray-100 dark:hover:bg-white/8 rounded-xl transition-colors text-left"

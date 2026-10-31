@@ -123,3 +123,9 @@ Decisions taken for the white-label product (brand: `PRODUCT_NAME`, default "Voc
 - Recording switch hides playback; whether audio is captured is still a platform setting. Consent announcement and redaction apply to Live calls going forward and to what is displayed; existing stored transcripts are not rewritten (only purged by retention).
 - The widget's "which website" check uses the embedding page address reported by the browser, so it deters casual misuse but is not a hard guarantee. Widget calls are billed to the Live balance.
 - Sub-account billing roll-up, SSO, IP allowlist and custom branding are "Coming soon". Rate limits and webhook scheduling are per the platform's Redis; nothing here has run against Postgres or a real receiver.
+
+
+## Rollout control
+
+- `PRODUCT_NEW_UI_ORGS` (see RUNBOOK) is checked on the server in four places: the classic UI's switch link (hidden unless eligible), the hand-off to the new UI, listing/importing an organization, and sign-in on the new site for pre-existing accounts (answers `not_enabled`). Default is nobody. Going back to the classic UI is never blocked.
+- Changing the setting needs an API restart. It selects whole organizations; there is no per-user choice and no in-app screen for it yet.
