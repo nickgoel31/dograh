@@ -92,6 +92,7 @@ export function DevelopersReal() {
   const [ask, setAsk] = React.useState<string | null>(null)
   const [lang, setLang] = React.useState('curl')
   const [agent, setAgent] = React.useState('')
+  const [wmode, setWmode] = React.useState('voice')
   const create = useMutation({ mutationFn: () => P.createKey(name || 'My key'), onSuccess: (k) => { setMade(k.key); setName(''); qc.invalidateQueries({ queryKey: ['keys'] }) }, onError: say })
   const live = agents.filter((a) => a.status === 'live')
   const base = apiBase()
@@ -101,7 +102,7 @@ export function DevelopersReal() {
     node: `const res = await fetch('${base}/public/calls', {\n  headers: { Authorization: 'Bearer ${sample}' },\n})\nconsole.log(await res.json())`,
     python: `import requests\n\nr = requests.get('${base}/public/calls', headers={'Authorization': 'Bearer ${sample}'})\nprint(r.json())`,
   }
-  const embed = `<script src="${base}/public/widget.js"\n  data-app="${window.location.origin}${BASE}"\n  data-agent="${agent || live[0]?.id || 'AGENT_ID'}" async></script>`
+  const embed = `<script src="${base}/public/widget.js"\n  data-app="${window.location.origin}${BASE}"\n  data-agent="${agent || live[0]?.id || 'AGENT_ID'}"\n  data-mode="${wmode}" async></script>`
   if (!can(perms, 'api_keys.manage')) return (<><PageHeader title="Developers" subtitle="Connect your own apps." /><Card className="p-8 text-center text-soft">Ask a workspace owner to give you the Developer role to use this page.</Card></>)
   return (
     <>
@@ -124,6 +125,7 @@ export function DevelopersReal() {
         <TabPanel value="widget"><Card className="p-6"><h3 className="font-semibold">Add a talk button to your website</h3>
           <p className="mb-3 mt-1 text-[13px] text-soft">Visitors talk to a Live agent from their browser and calls use your Live balance. Add your website under Settings → Privacy first. Only agents that are live work here.</p>
           <Field label="Agent" className="mb-3 max-w-xs"><Select value={agent} onChange={(e) => setAgent(e.target.value)}>{live.length === 0 && <option value="">No live agents yet</option>}{live.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select></Field>
+          <Field label="Style" className="mb-3 max-w-xs"><Select value={wmode} onChange={(e) => setWmode(e.target.value)}><option value="voice">Talk button (voice)</option><option value="chat">Chat bubble (text)</option></Select></Field>
           <CodeBlock code={embed} /></Card></TabPanel></Tabs>
       <Dialog open={!!made} onOpenChange={(o) => !o && setMade(null)} title="Your new key" description="Copy it now. For safety we only show it once."><CodeBlock code={made ?? ''} /><div className="mt-3 flex justify-end"><CopyButton text={made ?? ''} /></div></Dialog>
       <ConfirmDialog open={!!ask} onOpenChange={(o) => !o && setAsk(null)} title="Revoke this key?" text="Apps using it stop working right away." confirm="Revoke" danger
@@ -139,10 +141,10 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 function Privacy({ canEdit, isOwner }: { canEdit: boolean; isOwner: boolean }) {
   const qc = useQueryClient()
   const q = useQuery({ queryKey: ['privacy'], queryFn: P.settings })
-  const [f, setF] = React.useState<{ record_calls: boolean; redact_pii: boolean; retention_days: string; consent: string; origins: string; emails: string } | null>(null)
-  React.useEffect(() => { if (q.data) setF({ emails: q.data.summary_emails.join(String.fromCharCode(10)), record_calls: q.data.record_calls, redact_pii: q.data.redact_pii, retention_days: q.data.retention_days ? String(q.data.retention_days) : '', consent: q.data.consent_announcement ?? '', origins: q.data.widget_origins.join('\n') }) }, [q.data])
+  const [f, setF] = React.useState<{ record_calls: boolean; redact_pii: boolean; retention_days: string; consent: string; origins: string; emails: string; sms: string; brandName: string; brandColor: string; logo: string } | null>(null)
+  React.useEffect(() => { if (q.data) setF({ sms: q.data.sms_after_call ?? '', brandName: q.data.brand_name ?? '', brandColor: q.data.brand_color ?? '', logo: q.data.logo_url ?? '', emails: q.data.summary_emails.join(String.fromCharCode(10)), record_calls: q.data.record_calls, redact_pii: q.data.redact_pii, retention_days: q.data.retention_days ? String(q.data.retention_days) : '', consent: q.data.consent_announcement ?? '', origins: q.data.widget_origins.join('\n') }) }, [q.data])
   const save = useMutation({
-    mutationFn: () => P.saveSettings({ summary_emails: f!.emails.split(new RegExp("[,; " + String.fromCharCode(10) + "]+")).map((x) => x.trim()).filter(Boolean), record_calls: f!.record_calls, redact_pii: f!.redact_pii, retention_days: f!.retention_days ? Number(f!.retention_days) : null, consent_announcement: f!.consent || null, widget_origins: f!.origins.split('\n').map((x) => x.trim()).filter(Boolean) }),
+    mutationFn: () => P.saveSettings({ sms_after_call: f!.sms || null, brand_name: f!.brandName || null, brand_color: f!.brandColor || null, logo_url: f!.logo || null, summary_emails: f!.emails.split(new RegExp("[,; " + String.fromCharCode(10) + "]+")).map((x) => x.trim()).filter(Boolean), record_calls: f!.record_calls, redact_pii: f!.redact_pii, retention_days: f!.retention_days ? Number(f!.retention_days) : null, consent_announcement: f!.consent || null, widget_origins: f!.origins.split('\n').map((x) => x.trim()).filter(Boolean) }),
     onSuccess: () => { toast.success('Saved'); qc.invalidateQueries({ queryKey: ['privacy'] }) }, onError: say,
   })
   const [purge, setPurge] = React.useState(false)
@@ -154,6 +156,11 @@ function Privacy({ canEdit, isOwner }: { canEdit: boolean; isOwner: boolean }) {
       <Row><div><div className="font-medium">Hide personal details</div><div className="text-[13px] text-soft">Masks phone numbers, emails and card numbers in transcripts and call lists.</div></div><Switch checked={f.redact_pii} onChange={(v) => set({ redact_pii: v })} label="Hide personal details" /></Row>
       <Field label="Keep recordings and transcripts for (days)" hint="Leave empty to keep them."><Input className="w-40" type="number" min={1} value={f.retention_days} onChange={(e) => set({ retention_days: e.target.value })} /></Field>
       <Field label="What callers hear first on Live calls" hint="Added to the greeting the next time each agent goes live."><Textarea value={f.consent} onChange={(e) => set({ consent: e.target.value })} placeholder="This call may be recorded to help us serve you better." /></Field>
+      <Field label="Text callers after every call" hint="Sent from your number. In India the wording must be registered with your carrier (DLT). Leave empty to turn off."><Textarea value={f.sms} onChange={(e) => set({ sms: e.target.value })} placeholder="Thanks for calling! Reply here if you need anything." /></Field>
+      <div className="rounded-xl border p-4"><div className="text-sm font-semibold">Your own brand</div><p className="mb-3 text-xs text-soft">Shown in the app for you, your team and any sub-accounts.</p>
+        <div className="grid gap-3 sm:grid-cols-3"><Field label="Name"><Input value={f.brandName} onChange={(e) => set({ brandName: e.target.value })} placeholder="Acme Voice" /></Field>
+          <Field label="Colour"><div className="flex items-center gap-2"><input type="color" aria-label="Brand colour" className="h-10 w-12 cursor-pointer rounded-lg border bg-surface p-1" value={f.brandColor || '#0b5c4c'} onChange={(e) => set({ brandColor: e.target.value })} /><Input value={f.brandColor} onChange={(e) => set({ brandColor: e.target.value })} placeholder="#0b5c4c" /></div></Field>
+          <Field label="Logo address"><Input value={f.logo} onChange={(e) => set({ logo: e.target.value })} placeholder="https://…/logo.png" /></Field></div></div>
       <Field label="Email me a summary after every call" hint="Up to 5 addresses, one per line. Needs email to be set up."><Textarea value={f.emails} onChange={(e) => set({ emails: e.target.value })} placeholder="you@yourbusiness.com" /></Field>
       <Field label="Websites allowed to show your call button" hint="One per line, like https://example.com"><Textarea value={f.origins} onChange={(e) => set({ origins: e.target.value })} /></Field>
       {q.data?.notes?.map((n) => <p key={n} className="text-xs text-soft">{n}</p>)}
@@ -196,6 +203,7 @@ export function SettingsReal() {
   const team = useQuery({ queryKey: ['team'], queryFn: P.team })
   const audit = useQuery({ queryKey: ['audit'], queryFn: P.audit, enabled: manage })
   const subs = useQuery({ queryKey: ['subs'], queryFn: P.subAccounts })
+  const usage = useQuery({ queryKey: ['sub-usage'], queryFn: P.subUsage, enabled: manage })
   const [inv, setInv] = React.useState(false)
   const [email, setEmail] = React.useState('')
   const [role, setRole] = React.useState('viewer')
@@ -224,7 +232,11 @@ export function SettingsReal() {
         <TabPanel value="ws"><Card className="divide-y">{subs.data?.length === 0 && <p className="p-4 text-sm text-soft">No sub-accounts. They are separate workspaces for your own clients.</p>}
           {subs.data?.map((w) => <div key={w.id} className="flex items-center justify-between p-4"><span className="font-medium">{w.name}</span><Badge>Sub-account</Badge></div>)}
           {can(perms, 'workspace.create_child') && <div className="flex gap-2 p-4"><Input className="max-w-xs" value={sub} onChange={(e) => setSub(e.target.value)} placeholder="Client name" aria-label="Sub-account name" /><Button disabled={!sub.trim() || addSub.isPending} onClick={() => addSub.mutate()}><Plus size={14} />New sub-account</Button></div>}</Card>
-          <p className="mt-3 text-xs text-soft">Each sub-account has its own agents, numbers and balance. Combined billing is not available yet.</p></TabPanel></Tabs>
+          {manage && usage.data && usage.data.accounts.length > 0 && (
+            <Card className="mt-4 overflow-hidden"><div className="border-b p-4 font-semibold">This month, all sub-accounts</div>
+              <table className="w-full text-sm"><tbody>{usage.data.accounts.map((a) => <tr key={a.id} className="border-b last:border-0"><td className="px-4 py-2.5 font-medium">{a.name}</td><td className="num px-4 py-2.5 text-soft">{a.minutes} min</td><td className="num px-4 py-2.5 text-right">{usage.data.currency} {a.value.toLocaleString()}</td></tr>)}
+                <tr className="bg-muted/40 font-semibold"><td className="px-4 py-2.5">Total</td><td className="num px-4 py-2.5">{usage.data.total_minutes} min</td><td className="num px-4 py-2.5 text-right">{usage.data.currency} {usage.data.total_value.toLocaleString()}</td></tr></tbody></table></Card>)}
+          <p className="mt-3 text-xs text-soft">Each sub-account has its own agents, numbers and balance, and pays for itself. This view only adds up their usage.</p></TabPanel></Tabs>
       <Dialog open={inv} onOpenChange={setInv} title="Invite a teammate"><Field label="Email"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" /></Field>
         <Field label="Role" className="mt-3"><Select value={role} onChange={(e) => setRole(e.target.value)}>{ROLES.slice().reverse().map((r) => <option key={r} value={r}>{cap(r)}</option>)}</Select></Field>
         <Button variant="primary" className="mt-4 w-full" disabled={!email || invite.isPending} onClick={() => invite.mutate()}>Create invite link</Button></Dialog>

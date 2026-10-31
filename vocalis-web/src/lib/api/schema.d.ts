@@ -1570,6 +1570,15 @@ export interface components {
             /** Link */
             link: string;
         };
+        /** BrandingOut */
+        BrandingOut: {
+            /** Name */
+            name?: string | null;
+            /** Color */
+            color?: string | null;
+            /** Logo */
+            logo?: string | null;
+        };
         /** BuyBody */
         BuyBody: {
             /** Number */
@@ -1995,6 +2004,7 @@ export interface components {
         };
         /** MeOut */
         MeOut: {
+            branding?: components["schemas"]["BrandingOut"] | null;
             user: components["schemas"]["UserOut"];
             /** Workspaces */
             workspaces: components["schemas"]["WorkspaceOut"][];
@@ -3459,6 +3469,7 @@ export interface operations {
                 outcome?: string | null;
                 failed?: boolean;
                 q?: string | null;
+                text?: string | null;
                 date_from?: string | null;
                 date_to?: string | null;
                 page?: number;

@@ -143,6 +143,7 @@ async def list_calls(
     outcome: str | None = Query(default=None, max_length=20),
     failed: bool = False,
     q: str | None = Query(default=None, max_length=80),
+    text: str | None = Query(default=None, max_length=80),
     date_from: date | None = None,
     date_to: date | None = None,
     page: int = Query(default=1, ge=1),
@@ -153,7 +154,7 @@ async def list_calls(
     stmt = _scope(ctx).options(load_only(
         WorkflowRunModel.id, WorkflowRunModel.workflow_id, WorkflowRunModel.created_at, WorkflowRunModel.is_completed,
         WorkflowRunModel.cost_info, WorkflowRunModel.usage_info, WorkflowRunModel.initial_context,
-        WorkflowRunModel.gathered_context, WorkflowRunModel.recording_url,
+        WorkflowRunModel.gathered_context, WorkflowRunModel.recording_url, *([WorkflowRunModel.logs] if text else []),
     ))
     if agent:
         wid = next((w for w, a in agents.items() if a.public_id == agent), None)
@@ -169,13 +170,16 @@ async def list_calls(
         raise product_error(400, "bad_outcome", "That outcome isn't one we know.")
     stmt = stmt.order_by(WorkflowRunModel.created_at.desc(), WorkflowRunModel.id.desc())
 
-    if not (wanted or q):  # everything can be done in SQL
+    if not (wanted or q or text):  # everything can be done in SQL
         total = await ctx.session.scalar(select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
         rows = (await ctx.session.scalars(stmt.offset((page - 1) * limit).limit(limit))).all()
         return CallPage(calls=await present(ctx, [_out(ctx, r, agents) for r in rows]), total=total, page=page, limit=limit)
 
     rows = (await ctx.session.scalars(stmt.limit(SCAN_LIMIT + 1))).all()
     truncated = len(rows) > SCAN_LIMIT
+    if text:  # what was said
+        needle = text.strip().lower()
+        rows = [r for r in rows if any(needle in (t.get("text") or "").lower() for t in conv.build_transcript((r.logs or {}).get("realtime_feedback_events")))]
     calls = [_out(ctx, r, agents) for r in rows[:SCAN_LIMIT]]
     if wanted:
         calls = [c for c in calls if c.outcome == wanted]

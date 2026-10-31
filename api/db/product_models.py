@@ -395,6 +395,10 @@ class ProductSettingsModel(Base):
     retention_days = Column(Integer, nullable=True)
     widget_origins = Column(JSON, nullable=True)
     summary_emails = Column(JSON, nullable=True)  # who gets an emailed summary after every call
+    brand_name = Column(String(60), nullable=True)
+    brand_color = Column(String(9), nullable=True)
+    logo_url = Column(String(500), nullable=True)
+    sms_after_call = Column(String(300), nullable=True)  # text sent to the caller after each call; empty = off
 
 
 class ProductSupportMessageModel(Base):
@@ -453,3 +457,36 @@ class ProductIntegrationModel(Base):
     created_at = Column(DateTime(timezone=True), default=_now)
 
     __table_args__ = (UniqueConstraint("workspace_id", "kind", name="uq_product_integration"),)
+
+
+class ProductContactModel(Base):
+    """Everyone the agents have talked to, one row per phone number."""
+
+    __tablename__ = "product_contacts"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    phone = Column(String(24), nullable=False)
+    name = Column(String(120), nullable=True)
+    notes = Column(String(2000), nullable=True)
+    tags = Column(JSON, nullable=True)
+    calls = Column(Integer, nullable=False, default=0)
+    last_call_at = Column(DateTime(timezone=True), nullable=True)
+    last_run_id = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (UniqueConstraint("workspace_id", "phone", name="uq_product_contact"), Index("ix_product_contacts_ws", "workspace_id", "last_call_at"))
+
+
+class ProductBlockModel(Base):
+    """Numbers that must never be called (do-not-call list)."""
+
+    __tablename__ = "product_blocklist"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    phone = Column(String(24), nullable=False)
+    reason = Column(String(20), nullable=False, default="added")  # added | imported | asked
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (UniqueConstraint("workspace_id", "phone", name="uq_product_block"),)

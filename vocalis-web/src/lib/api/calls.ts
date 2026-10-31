@@ -23,10 +23,13 @@ export function toCall(c: CallOut | CallDetail): Call {
   }
 }
 
+/** Words to look for inside call transcripts (set by the Conversations page). */
+export const callSearch = { text: '' }
+
 export const callsApi = {
   // One page of the newest calls; the page filters within it.
   // `practice` shows calls made from an agent's Talk button; everything else is real calls.
-  list: async (practice = false) => (await http<components['schemas']['CallPage']>('/conversations?limit=100', practice ? { headers: { 'X-Environment': 'test' } } : {})).calls.map(toCall),
+  list: async (practice = false) => (await http<components['schemas']['CallPage']>(`/conversations?limit=100${callSearch.text.trim() ? `&text=${encodeURIComponent(callSearch.text.trim())}` : ''}`, practice ? { headers: { 'X-Environment': 'test' } } : {})).calls.map(toCall),
   // A call might be a practice call, which lives on the private test side: look there if it isn't among the real ones.
   get: async (id: string) => {
     try { return toCall(await http<CallDetail>(`/conversations/${id}`)) } catch (e) {

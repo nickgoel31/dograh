@@ -184,14 +184,19 @@ async def create(body: CreateBody, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE)
         r = camp.check_contacts(body.csv_text, body.country.upper())
     except ValueError as e:
         raise product_error(400, "compliance_blocked", str(e))
+    from api.product import contacts as ct
+
+    stop = await ct.blocked_set(ctx.session, ctx.workspace.id)
+    removed = [v for v in r["valid"] if v["phone_number"] in stop]
+    r["valid"] = [v for v in r["valid"] if v["phone_number"] not in stop]
     if not r["valid"]:
-        raise product_error(400, "bad_contacts", "None of the phone numbers in this file could be used.")
+        raise product_error(400, "bad_contacts", "None of the phone numbers in this file could be used." if not removed else "Everyone in this file is on your do-not-call list.")
     made = await gw.create(ctx.org_id, ctx.user.id, body.name.strip(), agent.live_workflow_id, camp.to_csv(r["valid"]),
                            {"tz": body.timezone, "slots": slots}, {"max_retries": body.max_retries, "delay": body.retry_delay_minutes * 60})
     ctx.session.add(ProductCampaignAuditModel(
         workspace_id=ctx.workspace.id, user_id=ctx.user.id, campaign_ref=made["ref"], action="created", at=datetime.now(UTC),
         detail={"contacts": len(r["valid"]), "invalid": len(r["invalid"]), "duplicates": r["duplicates"], "consent_confirmed": True,
-                "dnc_attested": True, "registry_checked": False, "timezone": body.timezone, "slots": slots, "country": body.country.upper()}))
+                "dnc_attested": True, "skipped_do_not_call": len(removed), "registry_checked": False, "timezone": body.timezone, "slots": slots, "country": body.country.upper()}))
     await ctx.session.commit()
     made.setdefault("name", body.name.strip())
     return await _out(ctx, {**made, "name": body.name.strip()}, {agent.live_workflow_id: agent})

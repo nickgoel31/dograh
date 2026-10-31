@@ -166,7 +166,13 @@ async def scan_events(session, ws: ProductWorkspaceModel, wh: ProductWebhookMode
             gathered = r.gathered_context or {}
             dur = conv.duration_seconds(r.cost_info, r.usage_info)
             outcome = conv.product_outcome(disposition=gathered.get("mapped_call_disposition") or gathered.get("call_disposition"), completed=True, duration=dur)
-            if await enqueue(session, wh, "call.ended", {**base, "duration": int(round(dur or 0)), "outcome": outcome}, f"ended:{r.id}"):
+            from api.product import insights, privacy
+
+            ins = await insights.get(session, r.id)
+            red = (await privacy.get_settings(session, ws.id)).redact_pii
+            summary = privacy.redact_text(ins.summary) if ins and red else (ins.summary if ins else None)
+            extracted = {k: (privacy.redact_text(v) if red else v) for k, v in conv.extracted_answers(gathered).items()}
+            if await enqueue(session, wh, "call.ended", {**base, "duration": int(round(dur or 0)), "outcome": outcome, "summary": summary, "mood": ins.sentiment if ins else None, "details": extracted}, f"ended:{r.id}"):
                 n += 1
     if campaigns is not None and "campaign.completed" in wh.events and wh.environment == "live":
         for c in await campaigns.list(org, ws.owner_user_id):

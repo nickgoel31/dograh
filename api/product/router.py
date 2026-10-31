@@ -58,7 +58,12 @@ def _set_session(response: Response, user: UserModel) -> None:
 async def _me(session: AsyncSession, user: UserModel, workspace_id: str | None, env: str) -> MeOut:
     views = await list_workspaces(session, user.id)
     cur = next((v for v in views if v.workspace.public_id == workspace_id), None) or default_view(views)
+    from api.product.privacy import branding_for
+
+    brand = await branding_for(session, cur.workspace)
+    await session.commit()
     return MeOut(
+        branding=brand,
         user=UserOut(
             id=user_public_id(user.provider_id),
             email=user.email,

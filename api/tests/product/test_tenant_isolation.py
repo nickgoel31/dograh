@@ -24,6 +24,7 @@ TABLES = [
     product_models.ProductWorkspaceModel.__table__,
     product_models.ProductMembershipModel.__table__,
     product_models.ProductUserProfileModel.__table__,
+    product_models.ProductSettingsModel.__table__,
 ]
 
 

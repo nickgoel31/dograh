@@ -40,6 +40,14 @@ def clean(raw: dict | None) -> dict:
             out[k] = bool(v)
         elif k == "vocabulary":
             out[k] = str(v).strip()[:300]
+        elif k == "languages":
+            if not isinstance(v, list) or len(v) > 6 or not all(isinstance(x, str) and 1 <= len(x.strip()) <= 30 for x in v):
+                raise ValueError("Pick up to 6 languages.")
+            out[k] = [x.strip() for x in v]
+        elif k in ("daily_call_cap", "monthly_spend_cap"):
+            if not isinstance(v, int) or not 0 <= v <= 1_000_000:
+                raise ValueError("Limits must be whole numbers, or 0 for no limit.")
+            out[k] = v
         elif k == "max_minutes":
             if not isinstance(v, int) or not 1 <= v <= 60:
                 raise ValueError("Maximum call length must be between 1 and 60 minutes.")

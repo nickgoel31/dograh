@@ -28,6 +28,7 @@ import { HelpPage, SettingsPage } from '@/pages/SettingsHelp'
 import { AcceptInvite, DevelopersReal, HelpReal, SettingsReal } from '@/pages/PlatformReal'
 import WidgetPage from '@/pages/Widget'
 import Onboarding from '@/pages/Onboarding'
+import Contacts from '@/pages/Contacts'
 import { ResetPage, VerifyPage } from '@/pages/AccountPages'
 
 /** Real mode: show sign-in until a session exists; keep the active workspace valid. */
@@ -100,6 +101,7 @@ export default function App() {
         <Route element={<Shell />}>
           <Route index element={<Home />} />
           <Route path="welcome" element={<Onboarding />} />
+          <Route path="contacts" element={USE_MOCKS ? <Home /> : <Contacts />} />
           <Route path="agents" element={<Agents />} />
           <Route path="agents/new" element={<NewAgentPage />} />
           <Route path="agents/templates" element={<TemplatesPage />} />

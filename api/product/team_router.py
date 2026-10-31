@@ -64,6 +64,10 @@ class SettingsBody(BaseModel):
     retention_days: int | None = Field(default=None, ge=1, le=3650)
     widget_origins: list[str] = Field(default_factory=list, max_length=20)
     summary_emails: list[EmailStr] = Field(default_factory=list, max_length=5)
+    brand_name: str | None = Field(default=None, max_length=60)
+    brand_color: str | None = Field(default=None, max_length=9)
+    logo_url: str | None = Field(default=None, max_length=500)
+    sms_after_call: str | None = Field(default=None, max_length=300)
 
 
 class SettingsOut(SettingsBody):
@@ -205,7 +209,7 @@ def _settings_out(s) -> SettingsOut:
     if s.retention_days:
         notes.append("Older recordings and transcripts are cleared by the operator's daily job, or by the owner using Clear now.")
     return SettingsOut(record_calls=bool(s.record_calls), consent_announcement=s.consent_announcement, redact_pii=bool(s.redact_pii), retention_days=s.retention_days,
-                       widget_origins=list(s.widget_origins or []), summary_emails=list(s.summary_emails or []), notes=notes)
+                       widget_origins=list(s.widget_origins or []), summary_emails=list(s.summary_emails or []), brand_name=s.brand_name, brand_color=s.brand_color, logo_url=s.logo_url, sms_after_call=s.sms_after_call, notes=notes)
 
 
 @router.get("/settings", response_model=SettingsOut)
@@ -228,7 +232,15 @@ async def put_settings(body: SettingsBody, ctx: Ctx = Depends(require(Perm.TEAM_
     s.consent_announcement = (body.consent_announcement or "").strip() or None
     s.widget_origins = origins
     s.summary_emails = sorted({str(e).lower() for e in body.summary_emails})
-    await audit.record(ctx.session, ctx.workspace.id, ctx.user.id, "settings.updated", None, body.model_dump(exclude={"widget_origins", "summary_emails"}))
+    import re as _re
+
+    if body.brand_color and not _re.fullmatch(r"#[0-9a-fA-F]{6}", body.brand_color.strip()):
+        raise product_error(400, "bad_color", "Choose a colour like #0b5c4c.")
+    if body.logo_url and not body.logo_url.strip().lower().startswith("https://"):
+        raise product_error(400, "bad_logo", "The logo address must start with https://")
+    s.brand_name, s.brand_color = (body.brand_name or "").strip() or None, (body.brand_color or "").strip() or None
+    s.logo_url, s.sms_after_call = (body.logo_url or "").strip() or None, (body.sms_after_call or "").strip() or None
+    await audit.record(ctx.session, ctx.workspace.id, ctx.user.id, "settings.updated", None, body.model_dump(exclude={"widget_origins", "summary_emails", "logo_url"}))
     await ctx.session.commit()
     return _settings_out(s)
 
@@ -313,3 +325,19 @@ async def new_sub_account(body: SubBody, ctx: Ctx = Depends(require(Perm.WORKSPA
     await audit.record(ctx.session, ctx.workspace.id, ctx.user.id, "sub_account.created", ws.public_id, {"name": ws.name})
     await ctx.session.commit()
     return {"id": ws.public_id, "name": ws.name}
+
+
+@router.get("/sub-accounts/usage")
+async def sub_account_usage(ctx: Ctx = Depends(require(Perm.TEAM_MANAGE))):
+    """This month's minutes and usage for each sub-account, rolled up (read-only; each one still pays for itself)."""
+    from api.product import billing as bl
+
+    start, end = bl.month_bounds(bl.current_period())
+    rows = (await ctx.session.scalars(select(ProductWorkspaceModel).where(ProductWorkspaceModel.parent_workspace_id == ctx.workspace.id).order_by(ProductWorkspaceModel.id))).all()
+    out, tm, tv = [], 0.0, 0.0
+    for w in rows:
+        entries = await bl.usage_entries(ctx.session, w.live_org_id, start, end)
+        m, v = round(sum(e["minutes"] for e in entries), 1), round(sum(e["value"] for e in entries), 2)
+        out.append({"id": w.public_id, "name": w.name, "minutes": m, "value": v})
+        tm, tv = tm + m, tv + v
+    return {"currency": config.CURRENCY, "accounts": out, "total_minutes": round(tm, 1), "total_value": round(tv, 2)}

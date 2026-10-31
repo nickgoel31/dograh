@@ -64,6 +64,11 @@ async def call_me(agent_id: str, body: CallMeBody, ctx: Ctx = Depends(require(Pe
         raise product_error(400, "no_number", "Get a phone number first on the Phone Numbers page. The call comes from one of your numbers.")
     if await billing.limit_reached(ctx.session, org):
         raise product_error(400, "limit_reached", "You've reached your monthly spending limit, so calls are paused.")
+    from api.product import caps
+
+    full = await caps.exceeded(ctx.session, agent)
+    if full:
+        raise product_error(400, "agent_limit", "This agent has reached the daily or monthly limit you set.")
     await rate_limit.enforce(f"callme:{ctx.workspace.id}", 5, 3600, "That's a lot of test calls for one hour. Try again a little later.")
     status = await gw.start(org, ctx.user.id, agent.live_workflow_id, body.phone.strip())
     return {"status": status, "message": "Your phone should ring in a few seconds." if status == "calling" else "Your call is queued and will ring shortly."}

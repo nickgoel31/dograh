@@ -65,16 +65,23 @@ async def inbound_gate(phone_row) -> str | None:
         from api.db.product_models import ProductAgentModel
 
         status = None
+        agent = None
         if phone_row.inbound_workflow_id:
             async with db_client.async_session() as s:
-                status = await s.scalar(
-                    select(ProductAgentModel.status).where(
+                agent = await s.scalar(
+                    select(ProductAgentModel).where(
                         or_(
                             ProductAgentModel.live_workflow_id == phone_row.inbound_workflow_id,
                             ProductAgentModel.test_workflow_id == phone_row.inbound_workflow_id,
                         )
                     )
                 )
+                status = agent.status if agent else None
+                from api.product import caps
+
+                full = await caps.exceeded(s, agent) if agent else None
+            if full and status != "paused":
+                return full
         msg = gate_message(phone_row.extra_metadata, status, datetime.now().astimezone())
         if msg is None:
             from api.product import billing

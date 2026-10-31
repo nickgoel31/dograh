@@ -9,6 +9,7 @@ import { USE_MOCKS } from '@/lib/api/env'
 import { AdvancedOnly, EmptyState, PageHeader, StatusBadge, TableSkeleton, WaveformPlayer, sentimentEmoji, useAsync } from '@/components/shared'
 import { api } from '@/lib/api'
 import { useUI } from '@/store/ui'
+import { callSearch } from '@/lib/api/calls'
 import { useData } from '@/store/data'
 import { download, fmtDur, money, cn } from '@/lib/utils'
 import type { Call } from '@/mock/types'
@@ -20,7 +21,10 @@ export default function ConversationsPage() {
   const agents = useData((s) => s.agents)
   const nav = useNavigate()
   const [sp, setSp] = useSearchParams()
-  const { data, loading } = useAsync(() => api.calls(practice ? 'test' : 'live'), [practice])
+  const [said, setSaid] = React.useState('')
+  const [saidNow, setSaidNow] = React.useState('')
+  React.useEffect(() => { const t = setTimeout(() => setSaidNow(said), 400); return () => clearTimeout(t) }, [said])
+  const { data, loading } = useAsync(() => { callSearch.text = saidNow; return api.calls(practice ? 'test' : 'live') }, [practice, saidNow])
   const [q, setQ] = React.useState('')
   const [agent, setAgent] = React.useState('')
   const [outcome, setOutcome] = React.useState('')
@@ -51,6 +55,7 @@ export default function ConversationsPage() {
         <Select className="w-auto" value={days} onChange={(e) => setDays(e.target.value)} aria-label="Date"><option value="1">Today</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option></Select>
         <Select className="w-auto" value={agent} onChange={(e) => setAgent(e.target.value)} aria-label="Agent"><option value="">All agents</option>{agents.slice(0, 3).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select>
         <Select className="w-auto" value={outcome} onChange={(e) => setOutcome(e.target.value)} aria-label="Result"><option value="">Any result</option>{outcomes.map((o) => <option key={o}>{o}</option>)}</Select>
+        <Input className="w-56" placeholder="Search what was said" aria-label="Search what was said" value={said} onChange={(e) => setSaid(e.target.value)} />
         <Chip active={failedOnly} onClick={() => setSp(failedOnly ? {} : { failed: '1' })}>Failed only</Chip>
         <Chip active={practice} onClick={() => setSp(practice ? {} : { practice: '1' })}>Practice calls</Chip>
       </div>

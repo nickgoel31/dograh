@@ -4,7 +4,7 @@ import { Command } from 'cmdk'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   BarChart3, BookOpen, Bell, Bot, ChevronDown, ChevronRight, Code2, CreditCard, FlaskConical, HelpCircle, Home, Megaphone, Menu as MenuIcon,
-  MessageCircle, Mic2, Moon, Wallet, PanelLeftClose, PanelLeftOpen, Phone, PhoneCall, Plug, Search, Send, Settings, Sparkles, Sun, X, Check, ChevronsUpDown,
+  MessageCircle, Mic2, Moon, Users, Wallet, PanelLeftClose, PanelLeftOpen, Phone, PhoneCall, Plug, Search, Send, Settings, Sparkles, Sun, X, Check, ChevronsUpDown,
 } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
 import { BRAND } from '@/config/brand'
@@ -22,7 +22,7 @@ import { PlaygroundModal } from '@/components/Playground'
 import { cn, money } from '@/lib/utils'
 
 const main = [
-  { to: '/', label: 'Home', icon: Home }, { to: '/agents', label: 'Agents', icon: Bot }, { to: '/conversations', label: 'Conversations', icon: PhoneCall },
+  { to: '/', label: 'Home', icon: Home }, { to: '/agents', label: 'Agents', icon: Bot }, { to: '/conversations', label: 'Conversations', icon: PhoneCall }, { to: '/contacts', label: 'Contacts', icon: Users },
   { to: '/numbers', label: 'Phone Numbers', icon: Phone }, { to: '/campaigns', label: 'Campaigns', icon: Megaphone }, { to: '/knowledge', label: 'Knowledge', icon: BookOpen },
   { to: '/tools', label: 'Tools & Integrations', icon: Plug }, { to: '/voices', label: 'Voices', icon: Mic2 }, { to: '/testing', label: 'Testing Lab', icon: FlaskConical },
   { to: '/analytics', label: 'Analytics', icon: BarChart3 },
@@ -31,11 +31,22 @@ const build = [{ to: '/developers', label: 'Developers', icon: Code2 }, { to: '/
 const bottom = [{ to: '/settings', label: 'Team & Settings', icon: Settings }, { to: '/help', label: 'Help', icon: HelpCircle }]
 const demoWorkspaces = ['Sunrise Dental', 'GlowUp Salon']
 
-export const Logo = () => (
+export const Logo = ({ name, logo }: { name?: string | null; logo?: string | null }) => (
   <div className="flex items-center gap-2 font-semibold tracking-tight">
-    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-accent-fg"><Mic2 size={15} /></div>{BRAND}
+    {logo ? <img src={logo} alt="" className="h-7 w-7 rounded-lg object-contain" /> : <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-accent-fg"><Mic2 size={15} /></div>}{name || BRAND}
   </div>
 )
+
+/** '#0b5c4c' -> '166 80% 20%' so the whole app can take the brand colour. */
+function hexToHsl(hex: string): string | null {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex)
+  if (!m) return null
+  const n = parseInt(m[1], 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1))
+  const h = d === 0 ? 0 : max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+  return `${Math.round((h * 60 + 360) % 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`
+}
 
 function NavItem({ to, label, icon: Icon, collapsed, onClick }: (typeof main)[number] & { collapsed: boolean; onClick?: () => void }) {
   return (
@@ -57,7 +68,7 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
   const pick = (w: { id: string; name: string }) => { set(USE_MOCKS ? { workspace: Number(w.id) } : { workspaceId: w.id }); toast.success(`Switched to ${w.name}`) }
   return (
     <div className="flex h-full flex-col gap-4 p-3">
-      <div className={cn('flex items-center px-1 pt-1', collapsed ? 'justify-center' : 'justify-between')}>{collapsed ? <Mic2 size={20} className="text-accent" /> : <Logo />}</div>
+      <div className={cn('flex items-center px-1 pt-1', collapsed ? 'justify-center' : 'justify-between')}>{collapsed ? <Mic2 size={20} className="text-accent" /> : <Logo name={me?.branding?.name} logo={me?.branding?.logo} />}</div>
       {!collapsed && (
         <Menu>
           <MenuTrigger asChild>
@@ -82,7 +93,7 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
   )
 }
 
-const crumbNames: Record<string, string> = { agents: 'Agents', conversations: 'Conversations', numbers: 'Phone Numbers', campaigns: 'Campaigns', knowledge: 'Knowledge', tools: 'Tools & Integrations', voices: 'Voices', testing: 'Testing Lab', analytics: 'Analytics', developers: 'Developers', billing: 'Billing & Usage', settings: 'Team & Settings', help: 'Help', new: 'New', templates: 'Templates' }
+const crumbNames: Record<string, string> = { agents: 'Agents', conversations: 'Conversations', contacts: 'Contacts', numbers: 'Phone Numbers', campaigns: 'Campaigns', knowledge: 'Knowledge', tools: 'Tools & Integrations', voices: 'Voices', testing: 'Testing Lab', analytics: 'Analytics', developers: 'Developers', billing: 'Billing & Usage', settings: 'Team & Settings', help: 'Help', new: 'New', templates: 'Templates' }
 function Breadcrumbs() {
   const { pathname } = useLocation()
   const agents = useData((s) => s.agents)
@@ -253,6 +264,13 @@ export default function Shell() {
   React.useEffect(() => { if (mode !== 'live') set({ mode: 'live' }) }, [mode, set])
   const { pathname } = useLocation()
   React.useEffect(() => { document.documentElement.classList.toggle('dark', theme === 'dark') }, [theme])
+  const brand = useMe().data?.branding
+  React.useEffect(() => {
+    const root = document.documentElement
+    const hsl = brand?.color ? hexToHsl(brand.color) : null
+    if (hsl && theme !== 'dark') { root.style.setProperty('--accent', hsl); root.style.setProperty('--accent-soft', hsl.replace(/\d+%$/, '94%')) } else { root.style.removeProperty('--accent'); root.style.removeProperty('--accent-soft') }
+    document.title = brand?.name || BRAND
+  }, [brand?.color, brand?.name, theme])
   React.useEffect(() => { set({ mobileNav: false }); window.scrollTo(0, 0) }, [pathname, set])
   return (
     <TooltipProvider>

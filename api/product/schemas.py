@@ -30,7 +30,14 @@ class WorkspaceOut(BaseModel):
     role: str
 
 
+class BrandingOut(BaseModel):
+    name: str | None = None
+    color: str | None = None
+    logo: str | None = None
+
+
 class MeOut(BaseModel):
+    branding: BrandingOut | None = None
     user: UserOut
     workspaces: list[WorkspaceOut]
     current_workspace: WorkspaceOut

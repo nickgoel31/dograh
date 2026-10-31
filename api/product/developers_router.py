@@ -226,6 +226,10 @@ async def ops_tick(x_ops_secret: str | None = Header(default=None), session=Depe
 
     out["alerts"] = await alerts.scan(session, mailer, wallet)
     out["summaries"] = await alerts.email_summaries(session, mailer, llm)
+    from api.product import post_call
+
+    out.update(await post_call.contacts_and_texts(session))
+    out["reports"] = await post_call.weekly_reports(session, mailer)
     purged = 0
     for ws_id in (await session.scalars(select(ProductSettingsModel.workspace_id).where(ProductSettingsModel.retention_days.is_not(None)))).all():
         ws = await session.get(ProductWorkspaceModel, ws_id)

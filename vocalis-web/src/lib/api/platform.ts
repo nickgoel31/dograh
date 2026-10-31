@@ -9,7 +9,7 @@ export interface EventInfo { name: string; available: boolean; note: string | nu
 export interface Member { id: string; email: string | null; name: string | null; role: string; you: boolean }
 export interface Invite { id: string; email: string; role: string; expires: string; token: string | null }
 export interface Team { members: Member[]; invites: Invite[] }
-export interface PrivacySettings { record_calls: boolean; consent_announcement: string | null; redact_pii: boolean; retention_days: number | null; widget_origins: string[]; summary_emails: string[]; notes?: string[] }
+export interface PrivacySettings { record_calls: boolean; consent_announcement: string | null; redact_pii: boolean; retention_days: number | null; widget_origins: string[]; summary_emails: string[]; brand_name: string | null; brand_color: string | null; logo_url: string | null; sms_after_call: string | null; notes?: string[] }
 export interface AuditRow { time: string; who: string | null; action: string; target: string | null; detail: Record<string, unknown> | null }
 export interface Article { id: string; title: string; section: string; body: string }
 export interface StatusItem { name: string; state: 'ok' | 'down' | 'not_set_up'; detail: string }
@@ -45,6 +45,7 @@ export const platformApi = {
   twoFaSetup: () => http<{ secret: string; uri: string }>(`${T}/2fa/setup`, { method: 'POST' }),
   twoFaEnable: (code: string) => http<{ enabled: boolean }>(`${T}/2fa/enable`, { method: 'POST', json: { code } }),
   twoFaDisable: (code: string) => http<{ enabled: boolean }>(`${T}/2fa/disable`, { method: 'POST', json: { code } }),
+  subUsage: () => http<{ currency: string; accounts: { id: string; name: string; minutes: number; value: number }[]; total_minutes: number; total_value: number }>(`${T}/sub-accounts/usage`),
   subAccounts: () => http<{ id: string; name: string }[]>(`${T}/sub-accounts`),
   newSubAccount: (name: string) => http<{ id: string; name: string }>(`${T}/sub-accounts`, { method: 'POST', json: { name } }),
 

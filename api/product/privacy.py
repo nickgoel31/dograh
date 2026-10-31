@@ -46,6 +46,16 @@ async def get_settings(session, workspace_id: int) -> ProductSettingsModel:
     return row
 
 
+async def branding_for(session, ws: ProductWorkspaceModel) -> dict:
+    """Name, colour and logo for this workspace; sub-accounts inherit their agency's when they set none."""
+    s = await get_settings(session, ws.id)
+    if not (s.brand_name or s.brand_color or s.logo_url) and ws.parent_workspace_id:
+        parent = await session.get(ProductWorkspaceModel, ws.parent_workspace_id)
+        if parent is not None:
+            s = await get_settings(session, parent.id)
+    return {"name": s.brand_name, "color": s.brand_color, "logo": s.logo_url}
+
+
 async def apply_consent(session, ws: ProductWorkspaceModel, graph: dict) -> dict:
     """Prefix the announcement to the greeting of a Live graph."""
     text = (await get_settings(session, ws.id)).consent_announcement

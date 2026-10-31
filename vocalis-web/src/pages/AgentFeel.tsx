@@ -9,7 +9,7 @@ import { useData } from '@/store/data'
 import type { Agent } from '@/mock/types'
 import type { components } from '@/lib/api/schema'
 
-type Style = { pace?: number; patience?: string; turns?: string; steadiness?: string; fillers?: boolean; interruptions?: boolean; vocabulary?: string; max_minutes?: number; silence_seconds?: number }
+type Style = { pace?: number; patience?: string; turns?: string; steadiness?: string; fillers?: boolean; interruptions?: boolean; vocabulary?: string; max_minutes?: number; silence_seconds?: number; languages?: string[]; daily_call_cap?: number; monthly_spend_cap?: number }
 
 const Choice = ({ label, hint, value, options, onChange }: { label: string; hint: string; value?: string; options: [string, string][]; onChange: (v: string) => void }) => (
   <div><div className="text-[13px] font-medium">{label}</div><div className="mb-2 text-xs text-soft">{hint}</div>
@@ -48,7 +48,13 @@ export function HumanFeel({ agent, studio }: { agent: Agent; studio: boolean }) 
         <div className="flex items-center justify-between rounded-lg border p-3"><div><div className="text-sm font-medium">Natural fillers</div><div className="text-xs text-soft">Short "mm-hm" and "okay" while thinking (Studio voices)</div></div><Switch checked={!!s.fillers} onChange={(v) => set({ fillers: v })} label="Natural fillers" /></div>
         <div className="flex items-center justify-between rounded-lg border p-3"><div><div className="text-sm font-medium">Callers can interrupt</div><div className="text-xs text-soft">It stops talking when the caller speaks</div></div><Switch checked={s.interruptions ?? true} onChange={(v) => set({ interruptions: v })} label="Callers can interrupt" /></div>
       </div>
+      <div className="mt-6"><div className="text-[13px] font-medium">Languages it can switch between</div><div className="mb-2 text-xs text-soft">It answers in the language the caller uses and can mix them, like Hinglish.</div>
+        <div className="flex flex-wrap gap-2">{['English', 'Hindi', 'Hinglish', 'Marathi', 'Gujarati', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 'Bengali', 'Punjabi'].map((l) => (
+          <Chip key={l} active={(s.languages ?? []).includes(l)} onClick={() => set({ languages: (s.languages ?? []).includes(l) ? (s.languages ?? []).filter((x) => x !== l) : [...(s.languages ?? []), l].slice(0, 6) })}>{l}</Chip>))}</div></div>
       <Field label="Words it should get right" className="mt-5" hint={<span className="text-xs text-soft">Names, places, products. Comma separated.</span>}><Textarea className="min-h-[60px]" value={s.vocabulary ?? ''} onChange={(e) => set({ vocabulary: e.target.value })} placeholder="Dr. Rao, Koregaon Park, Invisalign" /></Field>
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <Field label="Most calls per day" hint={<span className="text-xs text-soft">0 = no limit. Callers hear a polite message after this.</span>}><Input type="number" min={0} value={s.daily_call_cap ?? 0} onChange={(e) => set({ daily_call_cap: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} /></Field>
+        <Field label="Most spend per month" hint={<span className="text-xs text-soft">0 = no limit. Counts this agent's calls only.</span>}><Input type="number" min={0} value={s.monthly_spend_cap ?? 0} onChange={(e) => set({ monthly_spend_cap: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} /></Field></div>
       <AdvancedOnly><div className="mt-5 grid gap-4 sm:grid-cols-2">
         <Field label="Longest call (minutes)"><Input type="number" min={1} max={60} value={s.max_minutes ?? 15} onChange={(e) => set({ max_minutes: Number(e.target.value) })} /></Field>
         <Field label="Hang up after silence (seconds)"><Input type="number" min={5} max={60} value={s.silence_seconds ?? 10} onChange={(e) => set({ silence_seconds: Number(e.target.value) })} /></Field></div></AdvancedOnly>

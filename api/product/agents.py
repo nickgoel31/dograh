@@ -50,9 +50,13 @@ async def list_agents(session: AsyncSession, ws: ProductWorkspaceModel) -> list[
 
 
 def _compile(a: ProductAgentModel) -> str:
-    return prompts.compile_prompt(
+    text = prompts.compile_prompt(
         business=a.business, what_you_do=a.what_you_do, role=a.role, tone=a.tone
     )
+    langs = (a.style or {}).get("languages")
+    if langs:
+        text += chr(10) * 2 + f"Languages: speak in the language the caller uses. You can switch between {', '.join(langs)} at any point in the call, even mid-sentence, and mix them naturally if the caller does (for example Hinglish)."
+    return text
 
 
 async def create_agent(
@@ -117,6 +121,8 @@ async def update_agent(
         except ValueError as e:
             raise product_error(400, "bad_style", str(e))
     touches_models = bool({"voice_id", "brain"} & changes.keys()) or new_style is not None
+    if new_style is not None and "languages" in new_style and agent.prompt_mode == "simple":
+        changes.setdefault("role", None)  # recompile the instructions below so the language line is included
     if changes.get("voice_id") and voice_catalogue.find(changes["voice_id"]) is None:
         raise product_error(400, "unknown_voice", "That voice isn't available. Pick one from the voice list.")
     for field in ("name", "emoji", "color", "role", "tone", "business", "what_you_do", "voice_id"):
