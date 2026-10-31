@@ -83,6 +83,21 @@ class TwilioNumbers:
         except Exception as e:  # noqa: BLE001
             raise NumberError("We couldn't buy that number. It may have just been taken. Try another.") from e
 
+    async def link_existing(self, number, webhook_url):
+        """Point a number the customer already owns at the platform. Returns nothing to release later (it stays theirs)."""
+        def run():
+            found = self._client().incoming_phone_numbers.list(phone_number=number, limit=1)
+            if not found:
+                raise NumberError("That number isn't on this Twilio account. Check the number and the account details.")
+            found[0].update(voice_url=webhook_url, voice_method="POST")
+
+        try:
+            await asyncio.to_thread(run)
+        except NumberError:
+            raise
+        except Exception as e:  # noqa: BLE001
+            raise NumberError("Twilio didn't accept those account details. Check them and try again.") from e
+
     async def release(self, provider_ref):
         try:
             await asyncio.to_thread(lambda: self._client().incoming_phone_numbers(provider_ref).delete())
@@ -146,6 +161,21 @@ class PlivoNumbers:
                 raise NumberError("This number needs identity verification before it can be activated. Please contact support to complete it.")
             raise NumberError("We couldn't buy that number. It may have just been taken. Try another.")
         return digits
+
+    async def link_existing(self, number, webhook_url):
+        digits = number.lstrip("+")
+        try:
+            async with self._client() as c:
+                have = await c.get(f"Number/{digits}/")
+                if have.status_code == 404:
+                    raise NumberError("That number isn't on this Plivo account. Check the number and the account details.")
+                have.raise_for_status()
+                r = await c.post(f"Number/{digits}/", json={"app_id": await self._app_id(c, webhook_url)})
+                r.raise_for_status()
+        except NumberError:
+            raise
+        except Exception as e:  # noqa: BLE001
+            raise NumberError("Plivo didn't accept those account details. Check them and try again.") from e
 
     async def release(self, provider_ref):
         try:

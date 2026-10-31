@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { BringNumber } from '@/components/BringNumber'
 import { Plus, Settings2, ShieldQuestion } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -31,13 +32,14 @@ export default function RealNumbers() {
   const agents = useData((s) => s.agents)
   const { data, isPending } = useQuery({ queryKey: ['numbers', mode], queryFn: () => http<N[]>('/numbers') })
   const [buy, setBuy] = React.useState(false)
+  const [bring, setBring] = React.useState(false)
   const [sel, setSel] = React.useState<N | null>(null)
   const refresh = () => qc.invalidateQueries({ queryKey: ['numbers'] })
   const list = data ?? []
 
   return (
     <>
-      <PageHeader title="Phone Numbers" subtitle="The numbers people call to reach your agents." actions={<Button variant="primary" onClick={() => setBuy(true)}><Plus size={16} />Get a number</Button>} />
+      <PageHeader title="Phone Numbers" subtitle="The numbers people call to reach your agents." actions={<><Button onClick={() => setBring(true)}>Bring your own</Button><Button variant="primary" onClick={() => setBuy(true)}><Plus size={16} />Get a number</Button></>} />
       <Card className="overflow-hidden">
         {isPending ? <TableSkeleton rows={4} /> : list.length === 0 ? (
           <div className="p-6"><EmptyState emoji="📞" title="No numbers yet" text={mode === 'test' ? 'Practice numbers are free and never ring a real phone.' : 'Get a number so real people can call your agent.'} action={<Button variant="primary" size="lg" onClick={() => setBuy(true)}>Get a number</Button>} /></div>
@@ -55,6 +57,7 @@ export default function RealNumbers() {
         )}
       </Card>
       <BuyDialog open={buy} onClose={() => setBuy(false)} onBought={refresh} />
+      <BringNumber open={bring} onClose={() => setBring(false)} onDone={refresh} />
       {sel && <SettingsDialog key={sel.id} n={sel} agents={agents} onClose={() => setSel(null)} onSaved={refresh} />}
     </>
   )
@@ -75,7 +78,7 @@ function BuyDialog({ open, onClose, onBought }: { open: boolean; onClose: () => 
     try { await http('/numbers', { method: 'POST', json: { number, kind } }); toast.success('Number added!'); onBought(); onClose() } catch (e) { say(e) } finally { setBusy(null) }
   }
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()} wide title="Get a phone number" description="Pick a new number. Bringing your own number is coming soon.">
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()} wide title="Get a phone number" description="Pick a new number. Already have one with Twilio or Plivo? Use “Bring your own” instead.">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Country"><Select value={country} onChange={(e) => setCountry(e.target.value)}><option value="IN">India</option><option value="US">United States</option><option value="GB">United Kingdom</option></Select></Field>
         <Field label="Type"><Select value={kind} onChange={(e) => setKind(e.target.value)}><option value="local">Local</option><option value="toll_free">Toll-free</option></Select></Field>
@@ -84,7 +87,6 @@ function BuyDialog({ open, onClose, onBought }: { open: boolean; onClose: () => 
         {offers === null ? <p className="text-sm text-soft">Looking for numbers…</p> : offers.length === 0 ? <p className="text-sm text-soft">No numbers found. Try another type or country.</p> :
           offers.map((o) => <div key={o.number} className="flex items-center justify-between rounded-lg border p-3"><span className="num font-medium">{o.number}<span className="ml-2 text-xs text-soft">{o.region}</span></span><Button size="sm" variant="primary" disabled={!!busy} onClick={() => buyIt(o.number)}>{busy === o.number ? 'Adding…' : 'Get this number'}</Button></div>)}
       </div>
-      <div className="mt-4 flex items-center gap-2 text-xs text-soft"><Badge tone="accent">Coming soon</Badge>Bring your own number (SIP)</div>
     </Dialog>
   )
 }

@@ -231,6 +231,24 @@ async def list_sources(ctx: Ctx = Depends(get_ctx), kb: KnowledgeGateway = Depen
     return [_out(d) for d in await _docs(ctx, kb)]
 
 
+@router.get("/gaps")
+async def gaps(ctx: Ctx = Depends(get_ctx)):
+    """Questions callers asked in the last 30 days that the agent could not answer, most asked first."""
+    from sqlalchemy import select
+
+    from api.db.product_models import ProductCallInsightModel
+
+    rows = (await ctx.session.scalars(select(ProductCallInsightModel).where(
+        ProductCallInsightModel.workspace_id == ctx.workspace.id, ProductCallInsightModel.created_at > datetime.now(UTC) - timedelta(days=30),
+        ProductCallInsightModel.unanswered.is_not(None)).order_by(ProductCallInsightModel.run_id.desc()).limit(500))).all()
+    seen: dict[str, dict] = {}
+    for r in rows:
+        for q in r.unanswered or []:
+            e = seen.setdefault(q.lower().rstrip("?. "), {"question": q, "count": 0})
+            e["count"] += 1
+    return sorted(seen.values(), key=lambda e: -e["count"])[:30]
+
+
 @router.post("/url", response_model=list[DocOut], status_code=201)
 async def add_url(body: UrlBody, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE)), kb: KnowledgeGateway = Depends(get_knowledge)):
     if not body.url.lower().startswith(("http://", "https://")):

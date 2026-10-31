@@ -2971,6 +2971,98 @@
         }
       }
     },
+    "/api/v1/product/numbers/bring": {
+      "post": {
+        "tags": [
+          "numbers"
+        ],
+        "summary": "Bring",
+        "description": "Use a number the customer already owns with their Twilio or Plivo account. We point it at the platform; it stays theirs.",
+        "operationId": "bring_api_v1_product_numbers_bring_post",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BringBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NumberOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/product/numbers/{number_id}/assign": {
       "post": {
         "tags": [
@@ -5333,6 +5425,96 @@
         }
       }
     },
+    "/api/v1/product/billing/topups/cancel": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Cancel Topup",
+        "description": "The customer closed the payment window without paying.",
+        "operationId": "cancel_topup_api_v1_product_billing_topups_cancel_post",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/product/billing/webhooks/razorpay": {
       "post": {
         "tags": [
@@ -6329,6 +6511,86 @@
                   },
                   "title": "Response List Sources Api V1 Product Knowledge Get"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/product/knowledge/gaps": {
+      "get": {
+        "tags": [
+          "knowledge"
+        ],
+        "summary": "Gaps",
+        "description": "Questions callers asked in the last 30 days that the agent could not answer, most asked first.",
+        "operationId": "gaps_api_v1_product_knowledge_gaps_get",
+        "parameters": [
+          {
+            "name": "X-Workspace",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Workspace"
+            }
+          },
+          {
+            "name": "X-Environment",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Environment"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -8949,6 +9211,40 @@
         "type": "object",
         "title": "BrandingOut"
       },
+      "BringBody": {
+        "properties": {
+          "carrier": {
+            "type": "string",
+            "pattern": "^(twilio|plivo)$",
+            "title": "Carrier"
+          },
+          "number": {
+            "type": "string",
+            "maxLength": 20,
+            "title": "Number"
+          },
+          "account_id": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Account Id"
+          },
+          "auth_token": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Auth Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "carrier",
+          "number",
+          "account_id",
+          "auth_token"
+        ],
+        "title": "BringBody"
+      },
       "BuyBody": {
         "properties": {
           "number": {
@@ -9331,6 +9627,19 @@
           "total"
         ],
         "title": "CampaignOut"
+      },
+      "CancelBody": {
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "title": "Order Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "order_id"
+        ],
+        "title": "CancelBody"
       },
       "Candidate": {
         "properties": {

@@ -472,6 +472,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/product/numbers/bring": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bring
+         * @description Use a number the customer already owns with their Twilio or Plivo account. We point it at the platform; it stays theirs.
+         */
+        post: operations["bring_api_v1_product_numbers_bring_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/product/numbers/{number_id}/assign": {
         parameters: {
             query?: never;
@@ -899,6 +919,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/product/billing/topups/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Topup
+         * @description The customer closed the payment window without paying.
+         */
+        post: operations["cancel_topup_api_v1_product_billing_topups_cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/product/billing/webhooks/razorpay": {
         parameters: {
             query?: never;
@@ -1082,6 +1122,26 @@ export interface paths {
         };
         /** List Sources */
         get: operations["list_sources_api_v1_product_knowledge_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/product/knowledge/gaps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gaps
+         * @description Questions callers asked in the last 30 days that the agent could not answer, most asked first.
+         */
+        get: operations["gaps_api_v1_product_knowledge_gaps_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1596,6 +1656,17 @@ export interface components {
             /** Logo */
             logo?: string | null;
         };
+        /** BringBody */
+        BringBody: {
+            /** Carrier */
+            carrier: string;
+            /** Number */
+            number: string;
+            /** Account Id */
+            account_id: string;
+            /** Auth Token */
+            auth_token: string;
+        };
         /** BuyBody */
         BuyBody: {
             /** Number */
@@ -1727,6 +1798,11 @@ export interface components {
              * @default 0
              */
             converted: number;
+        };
+        /** CancelBody */
+        CancelBody: {
+            /** Order Id */
+            order_id: string;
         };
         /** Candidate */
         Candidate: {
@@ -3755,6 +3831,43 @@ export interface operations {
             };
         };
     };
+    bring_api_v1_product_numbers_bring_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BringBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NumberOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     assign_api_v1_product_numbers__number_id__assign_post: {
         parameters: {
             query?: never;
@@ -4738,6 +4851,43 @@ export interface operations {
             };
         };
     };
+    cancel_topup_api_v1_product_billing_topups_cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     razorpay_webhook_api_v1_product_billing_webhooks_razorpay_post: {
         parameters: {
             query?: never;
@@ -5137,6 +5287,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    gaps_api_v1_product_knowledge_gaps_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Workspace"?: string | null;
+                "X-Environment"?: string | null;
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

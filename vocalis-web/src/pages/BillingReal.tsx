@@ -164,8 +164,8 @@ export default function RealBilling() {
             <Button onClick={() => (limit ? save({ spend_limit: Number(limit) }) : save({ clear_spend_limit: true }))}>Save</Button></div>
           {s.spend_limit ? <div className="mt-4"><div className="h-2 overflow-hidden rounded-full bg-muted"><div className={cn('h-full rounded-full', limitPct >= 80 ? 'bg-warn' : 'bg-accent')} style={{ width: `${limitPct}%` }} /></div>
             <div className="mt-1 text-xs text-soft">{fmt(s.month_usage_value, s.currency)} of {fmt(s.spend_limit, s.currency, 0)} used this month</div></div> : null}
-          <div className="mt-5 flex items-center justify-between"><div><div className="text-sm font-medium">Low-balance reminder</div><div className="text-xs text-soft">We'll remind you when your balance runs low. Automatic charging isn't available yet.</div></div>
-            <Switch checked={s.settings.auto_topup_enabled} onChange={(v) => save({ auto_topup_enabled: v })} label="Low-balance reminder" /></div>
+          <div className="mt-5 flex items-center justify-between"><div><div className="text-sm font-medium">Auto top-up</div><div className="text-xs text-soft">When your balance drops below your reminder level, we email you a one-tap payment link for your top-up amount (at most once a day). Nothing is charged until you pay.</div></div>
+            <Switch checked={s.settings.auto_topup_enabled} onChange={(v) => save({ auto_topup_enabled: v })} label="Auto top-up" /></div>
         </Card>
         <Card className="p-5">
           <h3 className="font-semibold">Invoice details</h3><p className="mb-3 text-[13px] text-soft">Printed on your GST tax invoices.</p>

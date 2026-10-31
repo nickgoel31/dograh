@@ -10,7 +10,8 @@ from api.db.product_models import ProductCallInsightModel
 SYSTEM = (
     "You read a phone call transcript between an AI agent and a caller. Reply with JSON only: "
     '{"summary": "<one plain sentence, under 25 words, saying what the caller wanted and what happened>", '
-    '"sentiment": <1 to 5, where 1 = upset, 3 = neutral, 5 = delighted>}. Use only what is in the transcript. Never invent details.'
+    '"sentiment": <1 to 5, where 1 = upset, 3 = neutral, 5 = delighted>, '
+    '"unanswered": [<each question the caller asked that the agent could not answer or got wrong, as a short question; [] if none>]}. Use only what is in the transcript. Never invent details.'
 )
 
 
@@ -26,6 +27,15 @@ def parse(raw: str) -> tuple[str, int | None] | None:
     except (ValueError, TypeError):
         return None
     return (summary, sentiment) if summary else None
+
+
+def unanswered_of(raw: str) -> list[str]:
+    m = re.search(r"\{.*\}", raw or "", re.S)
+    try:
+        items = json.loads(m.group(0)).get("unanswered") if m else None
+    except (ValueError, TypeError):
+        return []
+    return [str(q).strip()[:200] for q in items if str(q).strip()][:5] if isinstance(items, list) else []
 
 
 def fallback(turns: list[dict]) -> str | None:
@@ -56,12 +66,13 @@ async def ensure(session, llm, *, workspace_id: int, org_id: int, user_id: int, 
         return existing
     transcript = "\n".join(f"{'Agent' if t['who'] == 'agent' else 'Caller'}: {t['text']}" for t in turns if t.get("text"))[:6000]
     try:
-        parsed = parse(await llm.complete(org_id, user_id, SYSTEM, [{"role": "user", "content": transcript}]))
+        raw = await llm.complete(org_id, user_id, SYSTEM, [{"role": "user", "content": transcript}])
+        parsed = parse(raw)
     except Exception:  # noqa: BLE001 - no model available: show the call without a summary and try again next time
         return None
     if parsed is None:
         return None
-    row = ProductCallInsightModel(run_id=run_id, workspace_id=workspace_id, summary=parsed[0], sentiment=parsed[1])
+    row = ProductCallInsightModel(run_id=run_id, workspace_id=workspace_id, summary=parsed[0], sentiment=parsed[1], unanswered=unanswered_of(raw))
     session.add(row)
     await session.commit()
     return row

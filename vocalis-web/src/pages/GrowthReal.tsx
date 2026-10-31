@@ -10,6 +10,7 @@ import { EmptyState, PageHeader, StatusBadge, TableSkeleton } from '@/components
 import { http } from '@/lib/api/http'
 import { API_URL } from '@/lib/api/env'
 import { CalendarCard } from '@/pages/CalendarCard'
+import { ConnectorGrid } from '@/components/ConnectorCards'
 import { useData } from '@/store/data'
 import { useUI } from '@/store/ui'
 import { useMe } from '@/lib/useMe'
@@ -71,6 +72,7 @@ export function KnowledgeReal() {
   const [q, setQ] = React.useState('')
   const [ans, setAns] = React.useState<S['AnswerOut'] | null>(null)
   const refresh = () => qc.invalidateQueries({ queryKey: ['knowledge'] })
+  const gaps = useQuery({ queryKey: ['knowledge', 'gaps'], queryFn: () => http<{ question: string; count: number }[]>('/knowledge/gaps') })
   const ask = async (e: React.FormEvent) => { e.preventDefault(); setAns(null); try { setAns(await http<S['AnswerOut']>('/knowledge/ask', { method: 'POST', json: { question: q } })) } catch (x) { say(x) } }
   const del = async (id: string) => { if (window.confirm('Remove this from your agents’ knowledge?')) try { await http(`/knowledge/${id}`, { method: 'DELETE' }); refresh() } catch (x) { say(x) } }
   return (
@@ -84,7 +86,8 @@ export function KnowledgeReal() {
           <Card key={k.id} className="p-5"><div className="flex items-start justify-between"><div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-soft text-accent"><I size={18} /></div><StatusBadge status={k.status as never} /></div>
             <div className="mt-3 truncate font-medium" title={k.title}>{k.title}</div><div className="text-xs text-soft">{k.kind}{k.problem ? ` · ${k.problem}` : ''}</div>
             <Button size="sm" variant="ghost" className="mt-3 -ml-2 text-bad" onClick={() => del(k.id)}><Trash2 size={13} />Remove</Button></Card>) })}</div>)}
-      <div className="mt-6 flex items-center gap-2 text-xs text-soft"><Badge tone="accent">Coming soon</Badge>“Questions your callers asked that you have no answer for” will appear here.</div>
+      <Card className="mt-6 p-6"><div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">Questions your agents couldn't answer</h3><p className="text-[13px] text-soft">From calls in the last 30 days. Add an answer so it never happens again.</p></div><Button size="sm" onClick={() => setOpen(true)}>Add an answer</Button></div>
+        {gaps.data && gaps.data.length > 0 ? <ul className="mt-4 divide-y">{gaps.data.map((g) => <li key={g.question} className="flex items-center justify-between gap-3 py-2.5 text-sm"><span>{g.question}</span><Badge tone={g.count > 2 ? 'orange' : 'gray'}>{g.count} {g.count === 1 ? 'time' : 'times'}</Badge></li>)}</ul> : <p className="mt-4 text-sm text-soft">{gaps.isPending ? 'Looking…' : 'Nothing yet. When a caller asks something your agent can’t answer, it shows up here.'}</p>}</Card>
       <AddKnowledge open={open} onClose={() => setOpen(false)} onAdded={refresh} />
     </>
   )
@@ -115,7 +118,6 @@ function AddKnowledge({ open, onClose, onAdded }: { open: boolean; onClose: () =
 /* ---------------- Tools ---------------- */
 export function ToolsReal() {
   const qc = useQueryClient()
-  const cat = useQuery({ queryKey: ['tools', 'catalog'], queryFn: () => http<S['CatalogItem'][]>('/tools/catalog') })
   const tools = useQuery({ queryKey: ['tools'], queryFn: () => http<S['ToolOut'][]>('/tools') })
   const [open, setOpen] = React.useState(false)
   const [f, setF] = React.useState({ name: '', description: '', url: '', method: 'POST', auth: '', params: '' })
@@ -129,10 +131,8 @@ export function ToolsReal() {
     <>
       <PageHeader title="Tools & Integrations" subtitle="Connect the apps your agent should work with." actions={<Button variant="primary" onClick={() => setOpen(true)}><Plus size={16} />Make a tool</Button>} />
       <CalendarCard />
-      <h2 className="mb-3 font-semibold">Ready-made</h2>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{(cat.data ?? []).map((i) => (
-        <Card key={i.id} className="p-5"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent"><Plug size={18} /></div><div className="mt-3 font-medium">{i.name}</div><div className="text-[13px] text-soft">{i.blurb}</div>
-          <div className="mt-3">{i.status === 'available' ? <Button size="sm" onClick={() => setOpen(true)}>Set up</Button> : <Badge tone="accent">Coming soon</Badge>}</div></Card>))}</div>
+      <h2 className="mb-3 font-semibold">Connect your apps</h2>
+      <ConnectorGrid />
       <h2 className="mb-3 mt-8 font-semibold">Your tools</h2>
       {tools.data && tools.data.length === 0 ? <p className="text-sm text-soft">You haven’t made any tools yet.</p> : (
         <div className="space-y-2">{tools.data?.map((t) => <Card key={t.id} className="flex items-center gap-3 p-4"><div className="flex-1"><div className="font-medium">{t.name}</div><div className="text-[13px] text-soft">{t.description}</div><div className="mt-1 truncate text-xs text-soft">{t.method} {t.url}</div></div>

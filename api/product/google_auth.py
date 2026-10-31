@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.db.models import UserModel
 from api.db.product_models import ProductUserProfileModel
-from api.product import config, rollout
+from api.product import config, rollout, security
 from api.product.deps import get_session
 from api.product.errors import product_error
 from api.product.router import _client_ip, _me, _set_session
@@ -58,13 +58,20 @@ async def google_login(body: GoogleBody, request: Request, response: Response, s
         raise product_error(401, "google_failed", "We couldn't sign you in with Google. Please try again.")
     email = claims["email"].lower()
     user = await session.scalar(select(UserModel).where(UserModel.email == email))
+    company = await security.sso_workspace(session, email)
     if user is None:
         user = UserModel(provider_id=f"usr_{uuid.uuid4().hex}", email=email, password_hash=None, role="admin")
         session.add(user)
         await session.flush()
         name = claims.get("name") or email.split("@")[0]
         session.add(ProductUserProfileModel(user_id=user.id, display_name=name))
-        await create_workspace(session, user, f"{name}'s workspace")
+        if company is None:
+            await create_workspace(session, user, f"{name}'s workspace")
+        else:  # the company requires Google sign-in: people join its workspace instead of getting their own
+            await security.join_sso_workspace(session, company, user.id)
+        await session.commit()
+    elif company is not None:
+        await security.join_sso_workspace(session, company, user.id)
         await session.commit()
     elif await rollout.is_held_back(session, user):
         raise product_error(403, "not_enabled", rollout.NOT_ENABLED)

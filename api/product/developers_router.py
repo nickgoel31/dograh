@@ -234,6 +234,12 @@ async def ops_tick(x_ops_secret: str | None = Header(default=None), session=Depe
     out["practice_charged"] = await practice.charge_practice_calls(session, wallet)
     await rates.sync_all(session)
     out["reports"] = await post_call.weekly_reports(session, mailer)
+    from api.product import push
+
+    out["pushed"] = await push.push_calls(session, llm)
+    from api.product import autotopup
+
+    out["topup_links"] = await autotopup.send_links(session, wallet, mailer)
     purged = 0
     for ws_id in (await session.scalars(select(ProductSettingsModel.workspace_id).where(ProductSettingsModel.retention_days.is_not(None)))).all():
         ws = await session.get(ProductWorkspaceModel, ws_id)

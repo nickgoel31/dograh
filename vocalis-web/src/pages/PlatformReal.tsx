@@ -1,4 +1,5 @@
 /** Real Developers, Team & Settings and Help. Demo versions stay in Developers.tsx and SettingsHelp.tsx for mock mode. */
+import { NetworkSecurity } from '@/components/NetworkSecurity'
 import * as React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
@@ -189,7 +190,7 @@ function Security() {
         <Field label="Then enter the 6-digit code it shows"><Input className="w-40" inputMode="numeric" maxLength={8} value={code} onChange={(e) => setCode(e.target.value)} /></Field>
         <Button variant="primary" disabled={code.length < 6 || on.isPending} onClick={() => on.mutate()}>Confirm and turn on</Button></div>)}
       {st.data?.enabled && (<div className="flex items-end gap-2"><Field label="To turn it off, enter a current code"><Input className="w-40" inputMode="numeric" maxLength={8} value={code} onChange={(e) => setCode(e.target.value)} /></Field><Button disabled={code.length < 6 || off.isPending} onClick={() => off.mutate()}>Turn off</Button></div>)}
-      {['Single sign-on (SSO)', 'IP allowlist'].map((s) => <Row key={s}><div className="font-medium">{s}</div><Badge tone="accent">Coming soon</Badge></Row>)}
+      <NetworkSecurity canEdit />
     </Card>
   )
 }

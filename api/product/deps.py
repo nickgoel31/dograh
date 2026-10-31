@@ -69,6 +69,7 @@ async def get_user_only(
 
 
 async def get_ctx(
+    request: Request,
     x_workspace: str | None = Header(default=None, alias=config.WORKSPACE_HEADER),
     x_environment: str | None = Header(default=None, alias=config.ENVIRONMENT_HEADER),
     base: tuple[AsyncSession, UserModel] = Depends(get_user_only),
@@ -89,6 +90,9 @@ async def get_ctx(
         chosen = next((v for v in views if v.workspace.public_id == x_workspace), None)
         if chosen is None:
             raise product_error(404, "workspace_not_found", "We couldn't find that workspace.")
+    from api.product import security
+
+    await security.check_network(session, chosen.workspace.id, request)
     return Ctx(session, user, chosen.workspace, chosen.role, environment)
 
 

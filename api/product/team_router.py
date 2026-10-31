@@ -4,7 +4,7 @@ import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 
@@ -68,6 +68,9 @@ class SettingsBody(BaseModel):
     brand_color: str | None = Field(default=None, max_length=9)
     logo_url: str | None = Field(default=None, max_length=500)
     sms_after_call: str | None = Field(default=None, max_length=300)
+    ip_allowlist: list[str] | None = Field(default=None, max_length=30)  # None = leave as it is
+    sso_domain: str | None = Field(default=None, max_length=120)
+    sso_required: bool | None = None
 
 
 class SettingsOut(SettingsBody):
@@ -209,7 +212,7 @@ def _settings_out(s) -> SettingsOut:
     if s.retention_days:
         notes.append("Older recordings and transcripts are cleared by the operator's daily job, or by the owner using Clear now.")
     return SettingsOut(record_calls=bool(s.record_calls), consent_announcement=s.consent_announcement, redact_pii=bool(s.redact_pii), retention_days=s.retention_days,
-                       widget_origins=list(s.widget_origins or []), summary_emails=list(s.summary_emails or []), brand_name=s.brand_name, brand_color=s.brand_color, logo_url=s.logo_url, sms_after_call=s.sms_after_call, notes=notes)
+                       widget_origins=list(s.widget_origins or []), summary_emails=list(s.summary_emails or []), brand_name=s.brand_name, brand_color=s.brand_color, logo_url=s.logo_url, sms_after_call=s.sms_after_call, ip_allowlist=list(s.ip_allowlist or []), sso_domain=s.sso_domain, sso_required=bool(s.sso_required), notes=notes)
 
 
 @router.get("/settings", response_model=SettingsOut)
@@ -220,7 +223,7 @@ async def get_settings(ctx: Ctx = Depends(get_ctx)):
 
 
 @router.put("/settings", response_model=SettingsOut)
-async def put_settings(body: SettingsBody, ctx: Ctx = Depends(require(Perm.TEAM_MANAGE))):
+async def put_settings(body: SettingsBody, request: Request, ctx: Ctx = Depends(require(Perm.TEAM_MANAGE))):
     origins = []
     for o in body.widget_origins:
         o = o.strip().rstrip("/")
@@ -240,6 +243,22 @@ async def put_settings(body: SettingsBody, ctx: Ctx = Depends(require(Perm.TEAM_
         raise product_error(400, "bad_logo", "The logo address must start with https://")
     s.brand_name, s.brand_color = (body.brand_name or "").strip() or None, (body.brand_color or "").strip() or None
     s.logo_url, s.sms_after_call = (body.logo_url or "").strip() or None, (body.sms_after_call or "").strip() or None
+    from api.product import security
+
+    if body.ip_allowlist is not None:
+        nets = security.parse_networks(body.ip_allowlist)
+        if nets and not security.allowed(nets, security.client_ip(request)):
+            raise product_error(400, "would_lock_out", f"That list doesn't include the address you're using now ({security.client_ip(request)}), so you'd be locked out. Add it first.")
+        s.ip_allowlist = nets
+    if body.sso_domain is not None:
+        d = body.sso_domain.strip().lower().lstrip("@")
+        if d and not _re.fullmatch(r"[a-z0-9.-]+\.[a-z]{2,}", d):
+            raise product_error(400, "bad_domain", "Enter your company's email domain, like acme.com.")
+        s.sso_domain = d or None
+    if body.sso_required is not None:
+        if body.sso_required and not (s.sso_domain and (ctx.user.email or "").lower().endswith("@" + s.sso_domain)):
+            raise product_error(400, "sso_needs_domain", "Set your company domain first, and use an email at that domain yourself so you aren't locked out.")
+        s.sso_required = body.sso_required
     await audit.record(ctx.session, ctx.workspace.id, ctx.user.id, "settings.updated", None, body.model_dump(exclude={"widget_origins", "summary_emails", "logo_url"}))
     await ctx.session.commit()
     return _settings_out(s)

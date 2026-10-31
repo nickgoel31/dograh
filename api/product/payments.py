@@ -57,6 +57,19 @@ class Razorpay:
             log.error("Razorpay order failed: %s", e)
             raise PaymentError("We couldn't start the payment. Please try again in a moment.") from e
 
+    async def create_link(self, amount: float, currency: str, reference: str, email: str, description: str) -> tuple[str, str]:
+        """A payment link the provider emails to the customer. Returns (link id, link address)."""
+        try:
+            async with httpx.AsyncClient(timeout=15) as c:
+                r = await c.post("https://api.razorpay.com/v1/payment_links", auth=(self.public_key, self._secret),
+                                 json={"amount": int(round(amount * 100)), "currency": currency, "reference_id": reference, "description": description, "customer": {"email": email}, "notify": {"email": True}})
+            r.raise_for_status()
+            d = r.json()
+            return d["id"], d["short_url"]
+        except Exception as e:  # noqa: BLE001
+            log.error("Razorpay payment link failed: %s", e)
+            raise PaymentError("We couldn't create the payment link.") from e
+
     def verify_checkout(self, order_id, payment_id, signature):
         want = hmac.new(self._secret.encode(), f"{order_id}|{payment_id}".encode(), hashlib.sha256).hexdigest()
         return _eq(want, signature or "")

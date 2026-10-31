@@ -144,6 +144,10 @@ async def login(
             raise product_error(401, "bad_code", "That code isn't right. Check your authenticator app and try again.")
     if await rollout.is_held_back(session, user):  # an existing customer who hasn't been switched on for the new experience
         raise product_error(403, "not_enabled", rollout.NOT_ENABLED)
+    from api.product import security
+
+    if await security.sso_workspace(session, user.email or ""):
+        raise product_error(403, "sso_required", "Your company signs in with Google. Use “Continue with Google” instead.")
     _set_session(response, user)
     if not await list_workspaces(session, user.id):  # an existing account that hasn't been brought over yet
         return SetupOut(user=UserOut(id=user_public_id(user.provider_id), email=user.email, name=await get_display_name(session, user.id)))

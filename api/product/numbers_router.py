@@ -185,6 +185,46 @@ async def buy(body: BuyBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE))):
     return _out(row, await _agents_by_workflow(ctx))
 
 
+class BringBody(BaseModel):
+    carrier: str = Field(pattern="^(twilio|plivo)$")
+    number: str = Field(max_length=20)
+    account_id: str = Field(min_length=3, max_length=120)
+    auth_token: str = Field(min_length=3, max_length=200)
+
+
+def make_carrier(carrier: str, account_id: str, token: str):
+    """Seam for tests: the customer's own carrier account."""
+    return providers.TwilioNumbers(account_id, token) if carrier == "twilio" else providers.PlivoNumbers(account_id, token)
+
+
+@router.post("/bring", response_model=NumberOut, status_code=201)
+async def bring(body: BringBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE))):
+    """Use a number the customer already owns with their Twilio or Plivo account. We point it at the platform; it stays theirs."""
+    from api.constants import BACKEND_API_ENDPOINT
+    from api.utils.telephony_address import normalize_telephony_address
+
+    if ctx.environment != "live":
+        raise product_error(400, "live_only", "Bring your own number in Live. Practice numbers are free.")
+    if not _E164.match(body.number):
+        raise product_error(400, "bad_number", "Enter the number with its country code, like +14155550123.")
+    n = normalize_telephony_address(body.number)
+    if await ctx.session.scalar(select(TelephonyPhoneNumberModel.id).where(TelephonyPhoneNumberModel.organization_id == ctx.org_id, TelephonyPhoneNumberModel.address_normalized == n.canonical)):
+        raise product_error(409, "already_yours", "You already have that number.")
+    try:
+        await make_carrier(body.carrier, body.account_id.strip(), body.auth_token.strip()).link_existing(body.number, f"{BACKEND_API_ENDPOINT}/api/v1/telephony/inbound/run")
+    except providers.NumberError as e:
+        raise product_error(400, "bring_failed", str(e))
+    creds = {"account_sid": body.account_id.strip(), "auth_token": body.auth_token.strip(), "from_numbers": [body.number]} if body.carrier == "twilio" else {"auth_id": body.account_id.strip(), "auth_token": body.auth_token.strip(), "from_numbers": [body.number]}
+    cfg = TelephonyConfigurationModel(organization_id=ctx.org_id, name=f"Your {body.carrier.title()} account", provider=body.carrier, credentials=creds, is_default_outbound=False)
+    ctx.session.add(cfg)
+    await ctx.session.flush()
+    row = TelephonyPhoneNumberModel(organization_id=ctx.org_id, telephony_configuration_id=cfg.id, address=body.number, address_normalized=n.canonical, address_type=n.address_type, country_code=n.country_code,
+                                    is_active=True, extra_metadata={"kind": "local", "byo": True, "sandbox": False, "monthly": 0.0, "reputation": "unknown"})
+    ctx.session.add(row)
+    await ctx.session.commit()
+    return _out(row, await _agents_by_workflow(ctx))
+
+
 @router.post("/{number_id}/assign", response_model=NumberOut)
 async def assign(number_id: str, body: AssignBody, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE))):
     row = await _row(ctx, number_id)

@@ -261,6 +261,11 @@ async def razorpay_webhook(request: Request, x_razorpay_signature: str | None = 
         order_id, payment_id = ent.get("order_id"), ent.get("id")
     except ValueError:
         return Response(status_code=400)
+    if ev.get("event") == "payment_link.paid":  # a top-up link we emailed (low-balance auto top-up)
+        link_id = ((ev.get("payload", {}).get("payment_link", {}) or {}).get("entity", {}) or {}).get("id")
+        pay = await session.scalar(select(ProductPaymentModel).where(ProductPaymentModel.order_id == link_id)) if link_id else None
+        if pay is not None:
+            await _settle(session, wallet, pay, payment_id)
     if ev.get("event") in ("payment.captured", "order.paid") and order_id:
         pay = await session.scalar(select(ProductPaymentModel).where(ProductPaymentModel.order_id == order_id))
         if pay is not None:

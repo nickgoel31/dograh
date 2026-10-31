@@ -141,6 +141,7 @@ class ProductPaymentModel(Base):
     amount = Column(Float, nullable=False)
     currency = Column(String(8), nullable=False)
     status = Column(String(8), nullable=False, default="created")  # created | paid | canceled
+    kind = Column(String(8), nullable=False, default="topup")  # topup | link (emailed payment link)
     created_at = Column(DateTime(timezone=True), default=_now)
 
     __table_args__ = (Index("ix_product_payments_workspace", "workspace_id"),)
@@ -399,6 +400,10 @@ class ProductSettingsModel(Base):
     brand_color = Column(String(9), nullable=True)
     logo_url = Column(String(500), nullable=True)
     sms_after_call = Column(String(300), nullable=True)  # text sent to the caller after each call; empty = off
+    ip_allowlist = Column(JSON, nullable=True)  # networks allowed to sign in; empty = anywhere
+    sso_domain = Column(String(120), nullable=True)  # company email domain that must use Google sign-in
+    sso_required = Column(Boolean, nullable=False, default=False)
+    topup_link_at = Column(DateTime(timezone=True), nullable=True)  # when we last emailed a top-up payment link
 
 
 class ProductSupportMessageModel(Base):
@@ -439,6 +444,7 @@ class ProductCallInsightModel(Base):
     workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
     summary = Column(String(400), nullable=False)
     sentiment = Column(Integer, nullable=True)  # 1 (upset) .. 5 (delighted)
+    unanswered = Column(JSON, nullable=True)  # questions the caller asked that the agent could not answer
     created_at = Column(DateTime(timezone=True), default=_now)
 
     __table_args__ = (Index("ix_product_call_insights_ws", "workspace_id"),)
@@ -504,3 +510,15 @@ class ProductPracticeChargeModel(Base):
     created_at = Column(DateTime(timezone=True), default=_now)
 
     __table_args__ = (Index("ix_product_practice_ws", "workspace_id"),)
+
+
+class ProductPushModel(Base):
+    """A finished call that has been sent to a connected service (once per call and service)."""
+
+    __tablename__ = "product_pushes"
+
+    run_id = Column(Integer, primary_key=True)
+    kind = Column(String(16), primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    ok = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), default=_now)

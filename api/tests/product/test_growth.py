@@ -147,7 +147,7 @@ async def test_tools_create_mask_attach_remap_and_ssrf(client):
     assert len(client.tools.items[ws.test_org_id]) == len(client.tools.items[ws.live_org_id]) == 1
     assert (await client.post("/product/tools", json={**body, "name": "X", "url": "ftp://a"}, headers=h)).status_code == 400
     cat = (await client.get("/product/tools/catalog", headers=h)).json()
-    assert {c["status"] for c in cat} == {"available", "coming_soon"} and next(c for c in cat if c["id"] == "webhook")["status"] == "available"
+    assert {c["status"] for c in cat} == {"available"} and next(c for c in cat if c["id"] == "webhook")["status"] == "available"
 
     assert (await client.put(f"/product/tools/agent/{aid}", json={"tool_ids": [t["id"]]}, headers=h)).json() == [t["id"]]
     await client.post(f"/product/agents/{aid}/publish", headers=h)
