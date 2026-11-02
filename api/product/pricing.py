@@ -54,11 +54,11 @@ def rate_for_balance(balance: float) -> float:
     return table[0][1]
 
 
-def next_balance_step(balance: float) -> tuple[float, float, int] | None:
+def next_balance_step(balance: float, current_rate: float | None = None) -> tuple[float, float, int] | None:
     """(balance needed for the next cheaper slab, its rate, minutes it starts at), or None on the last slab."""
     table = slabs()
     bounds = _bounds(table)
-    here = rate_for_balance(balance)
+    here = current_rate if current_rate is not None else rate_for_balance(balance)
     for i, (_, rate) in enumerate(bounds):
         if rate == here and i + 1 < len(bounds):
             lower, nrate = bounds[i + 1]

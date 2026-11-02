@@ -57,6 +57,25 @@ def set_interruptions(definition: dict, allowed: bool) -> dict:
     return out
 
 
+QA_NODE = "global-qa"
+
+
+def with_qa(definition: dict, qa: list[dict] | None) -> dict:
+    """Keep the agent's questions and answers in one global node, so every step of the call can use them."""
+    out = deepcopy(definition)
+    nodes = [n for n in out.get("nodes", []) if n.get("id") != QA_NODE]
+    pairs = [x for x in (qa or []) if x.get("q") and x.get("a")]
+    if pairs:
+        text = "Frequently asked questions. When the caller asks one of these, answer with the matching answer, in your own natural words and in the caller's language. Never invent facts that are not here or elsewhere in your instructions.\n\n" + "\n\n".join(f"Q: {x['q']}\nA: {x['a']}" for x in pairs)
+        xs = [n.get("position", {}).get("x", 0) for n in nodes]
+        nodes.append({"id": QA_NODE, "type": "globalNode", "position": {"x": (max(xs) if xs else 0) + 320, "y": 0}, "data": {"name": "Q&A", "prompt": text}})
+        for n in nodes:
+            if n.get("type") in ("startCall", "agentNode"):
+                n.setdefault("data", {})["add_global_prompt"] = True
+    out["nodes"] = nodes
+    return out
+
+
 def get_prompt(definition: dict) -> str:
     for n in definition.get("nodes", []):
         if n.get("type") == "startCall":

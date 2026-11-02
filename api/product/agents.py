@@ -148,6 +148,8 @@ async def update_agent(
         graph = defn.with_prompt(graph, name=agent.name)
     if new_style is not None and "interruptions" in (agent.style or {}):
         graph = defn.set_interruptions(graph, bool(agent.style["interruptions"]))
+    if new_style is not None and "qa" in new_style:
+        graph = defn.with_qa(graph, (agent.style or {}).get("qa"))
     await gw.save_draft(ws.test_org_id, agent.test_workflow_id, agent.name, graph)
     if touches_models:
         await gw.set_model_overrides(

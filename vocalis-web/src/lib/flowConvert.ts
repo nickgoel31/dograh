@@ -87,6 +87,7 @@ export function fromWorkflowDefinition(def: Definition): Flow {
 }
 
 export function toWorkflowDefinition(flow: Flow): Definition {
+  const hasGlobal = flow.nodes.some((n) => n.data.kind === 'global')
   const byId = new Map(flow.nodes.map((n) => [n.id, n]))
   const nodes: DefNode[] = flow.nodes.map((n) => {
     const { kind, label, text, raw } = n.data
@@ -108,7 +109,7 @@ export function toWorkflowDefinition(flow: Flow): Definition {
       if (kind === 'end') data.is_end = true
     }
     if (data.allow_interrupt === undefined) data.allow_interrupt = kind !== 'end'
-    if (data.add_global_prompt === undefined) data.add_global_prompt = false
+    if (data.add_global_prompt === undefined) data.add_global_prompt = hasGlobal && kind !== 'global' && kind !== 'end'
     return { id: n.id, type: raw?.type && raw.type === type ? raw.type : type, position, data }
   })
 

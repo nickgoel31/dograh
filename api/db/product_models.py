@@ -121,6 +121,7 @@ class ProductBillingSettingsModel(Base):
     spend_limit = Column(Float, nullable=True)  # monthly, in the billing currency
     auto_topup_enabled = Column(Boolean, nullable=False, default=False)
     auto_topup_threshold = Column(Float, nullable=True)
+    locked_rate = Column(Float, nullable=True)  # the cheapest price per minute this workspace has reached; it never goes back up
     auto_topup_amount = Column(Float, nullable=True)
     billing_name = Column(String(160), nullable=True)
     billing_gstin = Column(String(20), nullable=True)

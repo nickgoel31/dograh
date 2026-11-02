@@ -84,11 +84,16 @@ def _rate(ctx: Ctx) -> float:
     return getattr(ctx, "rate", None) or config.PRICE_PER_MIN
 
 
-def _price(ctx: Ctx, duration: float | None) -> float:
+def _rate_for(ctx: Ctx, run_id: int | None) -> float:
+    """The price this call was charged at (calls keep their price when the slab changes later); today's price if it hasn't been charged yet."""
+    return (getattr(ctx, "run_rates", None) or {}).get(run_id) or _rate(ctx)
+
+
+def _price(ctx: Ctx, duration: float | None, run_id: int | None = None) -> float:
     """Practice calls cost the same as real ones."""
     if not duration:
         return 0.0
-    return round(pricing.billed_minutes(duration) * _rate(ctx), 2)
+    return round(pricing.billed_minutes(duration) * _rate_for(ctx, run_id), 2)
 
 
 def _out(ctx: Ctx, run: WorkflowRunModel, agents: dict[int, ProductAgentModel]) -> CallOut:
@@ -104,7 +109,7 @@ def _out(ctx: Ctx, run: WorkflowRunModel, agents: dict[int, ProductAgentModel]) 
         id=encode_call_id(run.id), time=run.created_at.isoformat() if run.created_at else "",
         caller=name, phone=phone, agent_id=agent.public_id if agent else None,
         agent_name=agent.name if agent else None, duration=int(round(duration or 0)),
-        outcome=outcome, cost=_price(ctx, duration), fail_reason=conv.failure_reason(outcome),
+        outcome=outcome, cost=_price(ctx, duration, run.id), fail_reason=conv.failure_reason(outcome),
         test=ctx.environment == "test",
     )
 
@@ -113,6 +118,7 @@ async def _load_rate(ctx: Ctx) -> None:
     from api.product import rates
 
     ctx.rate = await rates.workspace_rate(ctx.session, ctx.workspace)
+    ctx.run_rates = await rates.run_rates(ctx.session, ctx.workspace)
 
 
 async def _agents(ctx: Ctx) -> dict[int, ProductAgentModel]:
@@ -237,7 +243,7 @@ async def get_call(call_id: str, ctx: Ctx = Depends(get_ctx), sign: AudioSigner 
         **base.model_dump(),
         turns=turns, summary=privacy.redact_text(summary) if settings.redact_pii else summary,
         extracted=extracted,
-        cost_split=pricing.split(pricing.billed_minutes(conv.duration_seconds(run.cost_info, run.usage_info)), _rate(ctx)),
+        cost_split=pricing.split(pricing.billed_minutes(conv.duration_seconds(run.cost_info, run.usage_info)), _rate_for(ctx, run.id)),
         audio_url=await sign(run) if settings.record_calls else None,
     )
 

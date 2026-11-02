@@ -13,6 +13,7 @@ import { fromWorkflowDefinition, toWorkflowDefinition } from '@/lib/flowConvert'
 import { AttachPicker } from '@/components/AttachPicker'
 import { AgentPhone } from '@/pages/AgentPhone'
 import { HumanFeel } from '@/pages/AgentFeel'
+import { QAEditor } from '@/components/QAEditor'
 import { TryAgent } from '@/components/TryAgent'
 import { BrainModel } from '@/pages/BrainModel'
 import { useUI } from '@/store/ui'
@@ -162,7 +163,7 @@ export default function AgentDetail() {
       </div>
       </>)}
       <Tabs value={tab} onValueChange={(t) => setSp({ tab: t })}>
-        {tab !== 'flow' && <TabsList>{['personality', 'voice', 'brain', 'knowledge', 'tools', 'behavior', 'phone', 'test', 'versions', 'publish'].filter((t) => (t !== 'brain' || voice.brainLevels !== false) && (advanced || !['behavior', 'versions'].includes(t) || t === tab)).map((t) => <Tab key={t} value={t} className="capitalize">{t}</Tab>)}</TabsList>}
+        {tab !== 'flow' && <TabsList>{['personality', 'voice', 'brain', 'knowledge', 'qa', 'tools', 'behavior', 'phone', 'test', 'versions', 'publish'].filter((t) => (t !== 'brain' || voice.brainLevels !== false) && (advanced || !['behavior', 'versions'].includes(t) || t === tab)).map((t) => <Tab key={t} value={t} className="capitalize">{t === 'qa' ? 'Q&A' : t}</Tab>)}</TabsList>}
 
         <TabPanel value="personality"><SimpleAdvanced
           simple={<Q title="Who is your agent?" hint="Just fill in the blanks. We write the instructions for you.">
@@ -208,6 +209,8 @@ export default function AgentDetail() {
         </div>
       </div>
       } value={d.flow} onChange={(flow) => up({ flow })} onSimulate={USE_MOCKS ? undefined : async () => { if (dirty) await save(); setTryOpen(true) }} />{!USE_MOCKS && <TryAgent agentId={agent.id} open={tryOpen} onOpenChange={setTryOpen} />}</TabPanel>
+
+        <TabPanel value="qa"><QAEditor agent={agent} /></TabPanel>
 
         <TabPanel value="behavior"><Q title="How should it behave?">
           <div className="grid gap-6 sm:grid-cols-2">
