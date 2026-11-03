@@ -1,6 +1,7 @@
 """Billing logic: usage from the platform ledger, spend limit, GST invoices. The platform wallet does the debiting."""
 
 import io
+import logging
 import os
 from datetime import UTC, datetime, timedelta
 
@@ -12,6 +13,8 @@ from api.db.models import OrganizationModel, WalletLedgerModel
 from api.db.product_models import ProductBillingSettingsModel, ProductInvoiceModel, ProductWorkspaceModel
 from api.product import config
 from api.product.payments import WalletGateway
+
+log = logging.getLogger(__name__)
 
 
 def _env_float(name: str, default: float) -> float:
@@ -78,11 +81,19 @@ async def ensure_billing(session: AsyncSession, wallet: WalletGateway, ws: Produ
         org.billing_pulse = 60
         org.allow_overdraft = False
     s = await get_settings(session, ws)
-    if not s.first_grant_done:
-        s.first_grant_done = True
+    if s.first_grant_done:
+        return
+    # Save what we changed above before talking to the wallet. The wallet works on its own database connection, so it would wait
+    # forever for the row lock this request is still holding.
+    await session.commit()
+    try:
         if free_minutes() > 0:
             await wallet.grant_minutes(ws.live_org_id, free_minutes(), "Welcome minutes", f"welcome:{ws.id}")
         await _give_signup_bonus(session, wallet, ws, s)
+    except Exception:  # noqa: BLE001 - a wallet problem must not stop the page; it is tried again next time (both grants are idempotent)
+        log.warning("welcome grant failed for workspace %s", ws.id, exc_info=True)
+        return
+    s.first_grant_done = True
 
 
 async def _give_signup_bonus(session: AsyncSession, wallet: WalletGateway, ws: ProductWorkspaceModel, s: ProductBillingSettingsModel) -> None:

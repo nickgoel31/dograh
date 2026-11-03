@@ -280,3 +280,30 @@ async def test_welcome_shows_the_bonus_that_was_given(client, monkeypatch):
     monkeypatch.setenv("PRODUCT_SIGNUP_BONUS_LIMIT", "1")
     _, tok2 = await signup(client, "b@x.com")
     assert (await client.get("/product/billing/welcome", headers={**bearer(tok2), "X-Environment": "live"})).json()["bonus"] == 0
+
+
+async def test_the_wallet_is_only_asked_after_our_own_changes_are_saved(client, monkeypatch):
+    """The wallet uses its own connection, so asking it while our row changes are unsaved makes both wait for each other forever."""
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    monkeypatch.setenv("PRODUCT_SIGNUP_BONUS", "100")
+    commits = {"n": 0}
+    real_commit = AsyncSession.commit
+
+    async def counting(self):
+        commits["n"] += 1
+        return await real_commit(self)
+
+    monkeypatch.setattr(AsyncSession, "commit", counting)
+    seen = {}
+    real_credit = client.wallet.credit
+
+    async def spy(org_id, amount, description, key):
+        seen["commits_before"] = commits["n"]
+        return await real_credit(org_id, amount, description, key)
+
+    client.wallet.credit = spy
+    _, tok = await signup(client, "a@x.com")
+    base = commits["n"]
+    await client.get("/product/billing/summary", headers={**bearer(tok), "X-Environment": "live"})
+    assert client.wallet.balance == 100 and seen["commits_before"] > base
