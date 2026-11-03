@@ -296,7 +296,12 @@ dograh_render_remote_nginx_conf() {
     local template=""
     local tmp_upstream=""
 
-    template="$(dograh_template_path "nginx.remote.conf.template")"
+    # With OLD_UI_HOST set, the new app is served at PUBLIC_HOST and the classic app at OLD_UI_HOST.
+    if [[ -n "${OLD_UI_HOST:-}" ]]; then
+        template="$(dograh_template_path "nginx.remote.split.conf.template")"
+    else
+        template="$(dograh_template_path "nginx.remote.conf.template")"
+    fi
     tmp_upstream="$(mktemp)"
 
     {
@@ -311,7 +316,7 @@ dograh_render_remote_nginx_conf() {
         echo "}"
     } > "$tmp_upstream"
 
-    awk -v public_host="$PUBLIC_HOST" -v upstream_file="$tmp_upstream" '
+    awk -v public_host="$PUBLIC_HOST" -v old_host="${OLD_UI_HOST:-}" -v upstream_file="$tmp_upstream" '
         BEGIN {
             while ((getline line < upstream_file) > 0) {
                 upstream = upstream line ORS
@@ -320,6 +325,7 @@ dograh_render_remote_nginx_conf() {
         }
         {
             gsub(/__DOGRAH_PUBLIC_HOST__/, public_host)
+            gsub(/__DOGRAH_OLD_HOST__/, old_host)
             if ($0 == "__DOGRAH_UPSTREAM_BLOCK__") {
                 printf "%s", upstream
             } else {

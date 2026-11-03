@@ -67,6 +67,7 @@ services:
       ENVIRONMENT: "${ENVIRONMENT:-local}"
       SERVER_IP: "${SERVER_IP:-}"
       PUBLIC_HOST: "${PUBLIC_HOST:-}"
+      OLD_UI_HOST: "${OLD_UI_HOST:-}"
       PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-}"
       BACKEND_API_ENDPOINT: "${BACKEND_API_ENDPOINT:-http://localhost:8000}"
       MINIO_PUBLIC_ENDPOINT: "${MINIO_PUBLIC_ENDPOINT:-http://localhost:9000}"
@@ -260,7 +261,7 @@ services:
     build:
       context: ./vocalis-web
       args:
-        VITE_BASE: /new/
+        VITE_BASE: "${VOCALIS_BASE:-/new/}"
         VITE_CLASSIC_URL: "${VOCALIS_CLASSIC_URL:-}"
     image: vocalis-web:local
     profiles: ["remote"]

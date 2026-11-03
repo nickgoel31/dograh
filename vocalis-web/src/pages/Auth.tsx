@@ -4,6 +4,7 @@ import type { LucideIcon } from 'lucide-react'
 import { AlertCircle, ArrowLeft, ArrowRight, BarChart3, CalendarCheck, Check, Eye, EyeOff, Lock, Mail, Mic2, PhoneCall, ShieldCheck, User } from 'lucide-react'
 import { ApiError, authApi } from '@/lib/api'
 import { BRAND } from '@/config/brand'
+import { CLASSIC_URL } from '@/lib/api/env'
 import { Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
@@ -72,6 +73,7 @@ export default function AuthPage() {
   const [needCode, setNeedCode] = React.useState(false)
   const [code, setCode] = React.useState('')
   const [show, setShow] = React.useState(false)
+  const [notEnabled, setNotEnabled] = React.useState(false)
   const cfg = useQuery({ queryKey: ['auth-config'], queryFn: authApi.config, retry: false })
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value })
 
@@ -85,6 +87,7 @@ export default function AuthPage() {
       await done()
     } catch (err) {
       if (err instanceof ApiError && err.code === 'two_factor_required') { setNeedCode(true); setError(null); return }
+      setNotEnabled(err instanceof ApiError && err.code === 'not_enabled')
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
     } finally { setBusy(false) }
   }
@@ -99,7 +102,7 @@ export default function AuthPage() {
   const hasGoogle = !!cfg.data?.google_client_id
   const strength = Math.min(4, (f.password.length >= 8 ? 1 : 0) + (/[A-Z]/.test(f.password) ? 1 : 0) + (/\d/.test(f.password) ? 1 : 0) + (/[^A-Za-z0-9]/.test(f.password) ? 1 : 0))
   const err = error && (
-    <p role="alert" className="flex items-start gap-2 rounded-xl border border-bad/25 bg-bad/10 px-3.5 py-2.5 text-sm text-bad"><AlertCircle size={16} className="mt-0.5 shrink-0" />{error}</p>
+    <p role="alert" className="flex items-start gap-2 rounded-xl border border-bad/25 bg-bad/10 px-3.5 py-2.5 text-sm text-bad"><AlertCircle size={16} className="mt-0.5 shrink-0" /><span>{error}{notEnabled && CLASSIC_URL && <a href={CLASSIC_URL} className="mt-1.5 block font-semibold underline">Open the classic app</a>}</span></p>
   )
   const eye = (
     <button type="button" onClick={() => setShow(!show)} className="rounded-lg p-2 text-soft transition hover:bg-muted hover:text-ink" aria-label={show ? 'Hide password' : 'Show password'}>{show ? <EyeOff size={16} /> : <Eye size={16} />}</button>

@@ -89,3 +89,10 @@ The new app is its own small container (`vocalis`, built from `vocalis-web/Docke
 8. Add the every-minute `ops/tick` job (above).
 
 To undo: set `PRODUCT_NEW_UI_ORGS` empty and restart the API; or `docker tag dograh-local/dograh-api:before-vocalis dograh-local/dograh-api:local` and bring the API up again.
+
+## New app at the front door, classic app on its own address
+
+`scripts/setup_old_ui_host.sh` puts the new app at `https://app.<domain>/` and the classic app at `https://old.<domain>/`
+(one certificate covers both, so renewal keeps working). It sets `OLD_UI_HOST` in `.env`, which makes `dograh-init`
+render `deploy/templates/nginx.remote.split.conf.template` instead of the single-address template. `/new/...` links
+redirect to `/...`. Run it with `--undo` to go back to classic at `/` and the new app at `/new/`.
