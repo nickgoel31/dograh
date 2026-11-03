@@ -56,7 +56,7 @@ FOUND_IP="$(getent hosts "$OLD_HOST" | awk '{print $1}' | head -1 || true)"
 echo "This server's address: ${SERVER_IP:-unknown}.  $OLD_HOST points to: ${FOUND_IP:-nothing yet}"
 if [ -z "$FOUND_IP" ] || { [ -n "$SERVER_IP" ] && [ "$FOUND_IP" != "$SERVER_IP" ]; }; then
   echo
-  echo "$OLD_HOST doesn't point at this server yet. In Spaceship add:  Type A,  Host old,  Value ${SERVER_IP:-this server's IP}"
+  echo "$OLD_HOST doesn't point at this server yet. In Spaceship add:  Type A,  Host old,  Value ${SERVER_IP:-the server address}"
   echo "Wait a few minutes, then run this again. Nothing was changed."
   exit 1
 fi
