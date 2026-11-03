@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from types import SimpleNamespace
 from typing import Protocol
@@ -25,7 +26,7 @@ class AgentTextGateway(Protocol):
 
 
 class LLMGateway(Protocol):
-    async def complete(self, org_id: int, user_id: int, system: str, messages: list[dict]) -> str: ...
+    async def complete(self, org_id: int, user_id: int, system: str, messages: list[dict], platform: bool = False) -> str: ...
 
 
 def _user(org_id: int, user_id: int):
@@ -61,12 +62,16 @@ class CoreText:
 
 
 class CoreLLM:
-    async def complete(self, org_id, user_id, system, messages):
+    async def complete(self, org_id, user_id, system, messages, platform=False):
         from api.db import db_client
         from api.services.pipecat.service_factory import create_llm_service_from_provider
         from api.services.workflow.qa.analysis import _run_llm_inference
 
-        cfg = (await db_client.get_user_configurations(user_id, organization_id=org_id)).model_dump(exclude_none=True).get("llm") or {}
+        key = os.getenv("PRODUCT_ASSISTANT_OPENAI_KEY", "").strip()
+        if platform and key:  # the app's own helper runs on the platform's key, so it works for every workspace
+            cfg = {"provider": "openai", "api_key": key, "model": os.getenv("PRODUCT_ASSISTANT_MODEL", "").strip() or "gpt-4.1-mini"}
+        else:
+            cfg = (await db_client.get_user_configurations(user_id, organization_id=org_id)).model_dump(exclude_none=True).get("llm") or {}
         if not cfg.get("provider") or not cfg.get("api_key"):
             raise product_error(503, "ai_unavailable", "This feature isn't switched on for your workspace yet. Please contact support.")
         extra = {k: cfg[k] for k in ("base_url", "endpoint") if cfg.get(k)}

@@ -118,3 +118,26 @@ async def test_an_agent_can_be_deleted_only_from_its_own_workspace(client):
     assert (await client.delete(f"/product/agents/{made['id']}", headers=h)).status_code == 204
     assert (await client.get(f"/product/agents/{made['id']}", headers=h)).status_code == 404
     assert [a["id"] for a in (await client.get("/product/agents", headers=h)).json()] == []
+
+
+async def test_the_assistant_uses_the_platform_key_but_other_features_do_not(monkeypatch):
+    from api.product import llm_gateway
+
+    seen = {}
+
+    async def fake_inference(llm, messages, system):
+        seen["llm"] = llm
+        return "hi"
+
+    def fake_service(provider, model, key, **extra):
+        seen["cfg"] = (provider, model, key)
+        return "svc"
+
+    import api.services.pipecat.service_factory as sf
+    import api.services.workflow.qa.analysis as qa
+
+    monkeypatch.setattr(sf, "create_llm_service_from_provider", fake_service)
+    monkeypatch.setattr(qa, "_run_llm_inference", fake_inference)
+    monkeypatch.setenv("PRODUCT_ASSISTANT_OPENAI_KEY", "sk-platform")
+    out = await llm_gateway.CoreLLM().complete(1, 1, "sys", [{"role": "user", "content": "x"}], platform=True)
+    assert out == "hi" and seen["cfg"] == ("openai", "gpt-4.1-mini", "sk-platform")

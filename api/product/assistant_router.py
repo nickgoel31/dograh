@@ -83,7 +83,7 @@ async def chat(body: ChatBody, ctx: Ctx = Depends(get_ctx), llm: LLMGateway = De
     messages = [{"role": m.role, "content": m.content} for m in body.messages[-10:]]
     last = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
     try:
-        text = (await llm.complete(ctx.workspace.test_org_id, ctx.user.id, _system(body.page, await _state(ctx)), messages)).strip()
+        text = (await llm.complete(ctx.workspace.test_org_id, ctx.user.id, _system(body.page, await _state(ctx)), messages, platform=True)).strip()
     except Exception:  # noqa: BLE001 - no model available: answer from the help articles instead
         text = ""
     return ChatOut(reply=text[:2500] or _fallback(last))
@@ -168,7 +168,7 @@ async def plan(body: PlanBody, ctx: Ctx = Depends(get_ctx), llm: LLMGateway = De
     await rate_limit.enforce(f"pplan:{ctx.user.id}", 60, 600, "You're asking quickly. Give it a minute and try again.")
     messages = [{"role": m.role, "content": m.content} for m in body.messages[-24:]]
     try:
-        text = await llm.complete(ctx.workspace.test_org_id, ctx.user.id, _plan_system(await _state(ctx)), messages)
+        text = await llm.complete(ctx.workspace.test_org_id, ctx.user.id, _plan_system(await _state(ctx)), messages, platform=True)
         reply, raw_calls = _parse_plan(text)
     except Exception:  # noqa: BLE001 - no model available
         reply, raw_calls = "I couldn't reach the assistant just now. Please try again in a moment.", []

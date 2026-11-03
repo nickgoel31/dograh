@@ -270,7 +270,7 @@ class FakeLLM:
         self.insight = '{"summary": "Caller booked a table for two.", "sentiment": 4}'
         self.calls: list[str] = []
 
-    async def complete(self, org_id, user_id, system, messages):
+    async def complete(self, org_id, user_id, system, messages, **_):
         self.calls.append(system[:30])
         if "Score the AGENT" in system:
             return self.judge
