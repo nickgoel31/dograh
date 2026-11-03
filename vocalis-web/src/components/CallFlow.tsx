@@ -5,7 +5,7 @@ import ReactFlow, {
   type Connection, type Edge, type Node, type NodeProps,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { Globe, LayoutGrid, Phone, Play, RotateCcw, Trash2 } from 'lucide-react'
+import { Globe, LayoutGrid, Phone, Play, RotateCcw, Trash2 } from '@/components/icons'
 import { toast } from 'sonner'
 import { Button, Field, Input, Textarea } from './ui'
 import { AdvancedOnly } from './shared'

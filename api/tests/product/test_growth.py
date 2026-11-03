@@ -27,7 +27,8 @@ async def agent(client, h, **kw):
 
 
 # ---------- notifications ----------
-async def test_spend_alert_creates_one_notification_and_read_marks(client):
+async def test_spend_alert_creates_one_notification_and_read_marks(client, monkeypatch):
+    monkeypatch.setenv("PRODUCT_SIGNUP_BONUS", "0")  # a welcome balance would stop the low-balance alert
     _, tok = await signup(client, "a@x.com")
     h = bearer(tok)
     ws = await ws_of(client)

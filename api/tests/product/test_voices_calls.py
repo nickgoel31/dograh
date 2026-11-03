@@ -57,8 +57,12 @@ def test_catalogue_is_unique_and_hides_the_vendor(monkeypatch):
 def test_new_engines_have_real_voices_and_neutral_names(monkeypatch):
     monkeypatch.setenv("PRODUCT_VOICE_ENGINES", "inworld,google")
     cat = voices.catalogue()
-    assert len(cat) == len({v.id for v in cat}) > 300
+    assert len(cat) == len({v.id for v in cat}) > 40
     assert {v.provider for v in cat} == {"Studio", "Gemini"}
+    assert {v.language for v in cat if v.provider == "Studio"} <= {"Hindi (India)", "English (India)"}  # Indian voices only
+    monkeypatch.setenv("PRODUCT_VOICES_INDIAN_ONLY", "0")
+    assert len(voices.catalogue()) > 300
+    monkeypatch.delenv("PRODUCT_VOICES_INDIAN_ONLY")
     seema = next(v for v in cat if v.name == "Seema")
     assert seema.language.startswith("Hindi") and seema.gender == "Female" and seema.age
     assert next(v for v in cat if v.name == "Zephyr").style == "Bright" and next(v for v in cat if v.name == "Zephyr").gender is None

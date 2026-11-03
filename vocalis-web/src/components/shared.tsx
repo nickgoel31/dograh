@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Glyph } from '@/components/Glyph'
 import { motion } from 'framer-motion'
-import { Check, Copy, HelpCircle, Mic, Pause, Play } from 'lucide-react'
+import { Check, Copy, HelpCircle, Mic, Pause, Play, Search } from '@/components/icons'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Area, AreaChart, ResponsiveContainer } from 'recharts'
@@ -20,11 +20,19 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []) {
 }
 
 /* ---------- layout bits ---------- */
+export function SearchPill({ value, onChange, placeholder = 'Search', label, className }: { value: string; onChange: (v: string) => void; placeholder?: string; label?: string; className?: string }) {
+  return (
+    <div className={cn('flex h-10 w-full items-center gap-2 rounded-full border bg-surface px-3.5 text-sm text-soft transition focus-within:border-soft/50', className)}>
+      <Search size={15} /><input className="w-full bg-transparent text-ink outline-none placeholder:text-soft/70" placeholder={placeholder} aria-label={label ?? placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
+    </div>
+  )
+}
+
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: React.ReactNode }) {
   return (
-    <div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-line/60 pb-6">
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="text-[30px] font-extrabold leading-tight tracking-[-0.03em]">{title}</h1>
+        <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.03em]">{title}</h1>
         {subtitle && <p className="mt-1.5 max-w-2xl text-[15px] text-soft">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -72,7 +80,7 @@ export function Illustration({ emoji }: { emoji: string }) {
 }
 export function EmptyState({ emoji, title, text, action }: { emoji: string; title: string; text: string; action?: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-dashed bg-surface/60 px-6 py-14 text-center">
+    <div className="rounded-2xl border border-dashed bg-surface/60 px-6 py-14 text-center">
       <Illustration emoji={emoji} />
       <h3 className="text-lg font-semibold">{title}</h3>
       <p className="mx-auto mt-1.5 max-w-sm text-soft">{text}</p>
@@ -190,11 +198,12 @@ export function VoiceOrb({ state = 'idle', size = 160 }: { state?: 'idle' | 'lis
           animate={live ? { scale: [1, 1.35 + i * 0.12, 1], opacity: [0.7, 0, 0.7] } : { scale: 1, opacity: 0.35 }}
           transition={{ duration: state === 'speaking' ? 1.1 : 2, repeat: Infinity, delay: i * 0.35 }} />
       ))}
-      <motion.div className="relative z-10 flex items-center justify-center rounded-full text-white shadow-pop"
-        style={{ width: size * 0.62, height: size * 0.62, background: `radial-gradient(circle at 30% 25%, hsl(${color} / .75), hsl(${color}))` }}
+      <motion.div className="relative z-10 flex items-center justify-center overflow-hidden rounded-full text-white ring-1 ring-inset ring-white/50"
+        style={{ width: size * 0.62, height: size * 0.62, backgroundImage: state === 'listening' ? 'linear-gradient(135deg,#34d399,#06b6d4)' : 'linear-gradient(135deg,#22d3ee 0%,#6366f1 55%,#8b5cf6 100%)' }}
         animate={{ scale: state === 'speaking' ? [1, 1.07, 0.97, 1.05, 1] : state === 'thinking' ? [1, 0.94, 1] : 1 }}
         transition={{ duration: state === 'thinking' ? 0.9 : 0.8, repeat: live ? Infinity : 0 }}>
-        {state === 'speaking' ? <Bars n={5} className="h-8 text-white" /> : <Mic size={size * 0.2} />}
+        <span aria-hidden className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_28%_22%,rgba(255,255,255,.55),transparent_55%)]" />
+        <span className="relative">{state === 'speaking' ? <Bars n={5} className="h-8 text-white" /> : <Mic size={size * 0.2} />}</span>
       </motion.div>
     </div>
   )

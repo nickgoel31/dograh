@@ -15,6 +15,7 @@ interface Data {
   addAgent: (a: Agent) => void
   updateAgent: (id: string, p: Partial<Agent>) => void
   duplicate: (id: string) => void
+  remove: (id: string) => Promise<void>
   toggleFav: (id: string) => void
   setFavorites: (ids: string[]) => void
 }
@@ -50,6 +51,10 @@ export const useData = create<Data>((set, get) => {
         return
       }
       agentsApi.duplicate(id).then((a) => get().upsertAgent(toAgent(a))).catch(oops)
+    },
+    remove: async (id) => {
+      if (!USE_MOCKS) await agentsApi.remove(id)
+      set((s) => ({ agents: s.agents.filter((x) => x.id !== id) }))
     },
     setFavorites: (favorites) => set({ favorites }),
     toggleFav: (id) => {

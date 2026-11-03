@@ -45,6 +45,7 @@ export const agentsApi = {
       method: 'PATCH', json: toPatch(p), headers: version !== undefined ? { 'If-Match': String(version) } : undefined,
     }),
   duplicate: (id: string) => http<AgentOut>(`/agents/${id}/duplicate`, { method: 'POST' }),
+  remove: (id: string) => http<void>(`/agents/${id}`, { method: 'DELETE' }),
   pause: (id: string) => http<AgentOut>(`/agents/${id}/pause`, { method: 'POST' }),
   resume: (id: string) => http<AgentOut>(`/agents/${id}/resume`, { method: 'POST' }),
   publish: (id: string) => http<AgentOut>(`/agents/${id}/publish`, { method: 'POST' }),

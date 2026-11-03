@@ -1,7 +1,7 @@
 import {
   AlertTriangle, Angry, BookOpen, Bot, Brain, CalendarCheck, CheckCircle2, ClipboardList, Circle, Ear, Frown, GitBranch, Globe, Hand, HelpCircle, Inbox, Laugh, LifeBuoy, Lightbulb,
   Megaphone, Meh, MessageCircle, Mic, Phone, Scale, SearchX, Send, Settings2, ShoppingBag, Smile, Target, UserRound, Users, VolumeX, Wrench, XCircle, Zap, FlaskConical, type LucideIcon,
-} from 'lucide-react'
+} from '@/components/icons'
 
 /** The app's data still names things with an emoji; this draws the matching line icon instead, so the whole UI looks consistent. */
 const icons: Record<string, LucideIcon> = {

@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { CalendarCheck } from 'lucide-react'
+import { CalendarCheck } from '@/components/icons'
 import { toast } from 'sonner'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Card, Field, Input } from '@/components/ui'

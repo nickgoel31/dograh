@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Check, Pause, Play, Plus, Upload } from 'lucide-react'
+import { Check, Pause, Play, Plus, Upload } from '@/components/icons'
 import { toast } from 'sonner'
 import { Button, Card, Field, Input, Progress, Select } from '@/components/ui'
 import { CardSkeletons, EmptyState, PageHeader, StatusBadge, useAsync } from '@/components/shared'
@@ -17,7 +17,7 @@ function DemoCampaignsPage() {
     <>
       <PageHeader title="Campaigns" subtitle="Let your agent call a whole list for you." actions={<Link to="/campaigns/new"><Button variant="primary"><Plus size={16} />New campaign</Button></Link>} />
       {loading ? <CardSkeletons n={4} h="h-32" /> : (
-        <div className="grid gap-4 md:grid-cols-2">{data!.map((c) => <Link key={c.id} to={'/campaigns/' + c.id}><Card className="p-5 transition hover:shadow-pop"><div className="flex items-start justify-between gap-3"><h3 className="font-semibold">{c.name}</h3><StatusBadge status={c.status} /></div>
+        <div className="grid gap-4 md:grid-cols-2">{data!.map((c) => <Link key={c.id} to={'/campaigns/' + c.id}><Card className="p-5 transition hover:bg-muted/40"><div className="flex items-start justify-between gap-3"><h3 className="font-semibold">{c.name}</h3><StatusBadge status={c.status} /></div>
           <Progress className="mt-4" value={(c.dialed / c.total) * 100} /><div className="num mt-2 text-[13px] text-soft">{c.dialed.toLocaleString()} of {c.total.toLocaleString()} called</div></Card></Link>)}</div>)}
     </>
   )

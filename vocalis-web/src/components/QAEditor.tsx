@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { MessageCircleQuestion, Plus, Trash2 } from 'lucide-react'
+import { MessageCircleQuestion, Plus, Trash2 } from '@/components/icons'
 import { toast } from 'sonner'
 import { Button, Card, Textarea } from './ui'
 import { http } from '@/lib/api/http'

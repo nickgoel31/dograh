@@ -6,15 +6,15 @@ import * as DropP from '@radix-ui/react-dropdown-menu'
 import * as SwitchP from '@radix-ui/react-switch'
 import * as SliderP from '@radix-ui/react-slider'
 import * as PopP from '@radix-ui/react-popover'
-import { X } from 'lucide-react'
+import { X } from '@/components/icons'
 import { cn } from '@/lib/utils'
 
 /* ---------- Button ---------- */
 const variants = {
-  primary: 'brand-gradient text-accent-fg shadow-glow ring-1 ring-inset ring-white/10 hover:brightness-110 hover:-translate-y-px',
-  secondary: 'bg-surface border border-line shadow-card hover:bg-muted hover:border-soft/30',
+  primary: 'bg-ink text-surface hover:opacity-90',
+  secondary: 'bg-surface border border-line hover:bg-muted hover:border-soft/30',
   ghost: 'hover:bg-muted/80 text-soft hover:text-ink',
-  danger: 'bg-bad text-white shadow-card ring-1 ring-inset ring-white/15 hover:brightness-110',
+  danger: 'bg-bad text-white ring-1 ring-inset ring-white/15 hover:brightness-110',
   soft: 'bg-accent-soft text-accent ring-1 ring-inset ring-accent/15 hover:brightness-95',
 }
 const sizes = { sm: 'h-8 px-3 text-[13px] gap-1.5', md: 'h-9 px-4 gap-2 text-[13.5px]', lg: 'h-12 px-6 text-base gap-2.5 rounded-xl', icon: 'h-9 w-9' }
@@ -26,7 +26,7 @@ export const Button = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttrib
 
 /* ---------- Card / Badge ---------- */
 export const Card = ({ className, ...p }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('rounded-2xl border border-line/80 bg-surface shadow-card', className)} {...p} />
+  <div className={cn('rounded-2xl border border-line bg-surface', className)} {...p} />
 )
 const tones = {
   gray: 'bg-muted text-soft ring-1 ring-inset ring-line', green: 'bg-ok/10 text-ok ring-1 ring-inset ring-ok/20', orange: 'bg-warn/10 text-warn ring-1 ring-inset ring-warn/25', red: 'bg-bad/10 text-bad ring-1 ring-inset ring-bad/20', accent: 'bg-accent-soft text-accent ring-1 ring-inset ring-accent/20',
@@ -37,7 +37,7 @@ export const Badge = ({ tone = 'gray', className, children }: { tone?: Tone; cla
 )
 
 /* ---------- Form fields ---------- */
-const field = 'w-full rounded-[10px] border border-line bg-surface px-3 text-sm shadow-field placeholder:text-soft/60 transition duration-150 hover:border-soft/35 focus-visible:border-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15'
+const field = 'w-full rounded-xl border border-line bg-surface px-3.5 text-sm placeholder:text-soft/60 transition duration-150 hover:border-soft/35 focus-visible:border-ink/35 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/[.06]'
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(({ className, ...p }, r) => (
   <input ref={r} className={cn(field, 'h-10', className)} {...p} />
 ))
@@ -73,16 +73,16 @@ export const Progress = ({ value, className }: { value: number; className?: stri
 export const Skeleton = ({ className }: { className?: string }) => <div className={cn('skeleton h-4', className)} />
 
 export const Chip = ({ active, onClick, children }: { active?: boolean; onClick?: () => void; children: React.ReactNode }) => (
-  <button type="button" onClick={onClick} aria-pressed={active} className={cn('rounded-full border px-3.5 py-1.5 text-sm font-medium transition duration-150', active ? 'border-accent/40 bg-accent-soft text-accent shadow-[0_0_0_3px_hsl(var(--accent)/.08)]' : 'bg-surface text-soft hover:border-soft/40 hover:bg-muted')}>{children}</button>
+  <button type="button" onClick={onClick} aria-pressed={active} className={cn('rounded-full border px-3.5 py-1.5 text-sm font-medium transition duration-150', active ? 'border-ink bg-ink text-surface' : 'bg-surface text-soft hover:border-soft/40 hover:bg-muted')}>{children}</button>
 )
 
 /* ---------- Tabs ---------- */
 export const Tabs = TabsP.Root
 export const TabsList = ({ className, ...p }: TabsP.TabsListProps) => (
-  <TabsP.List className={cn('mb-6 inline-flex max-w-full gap-0.5 overflow-x-auto rounded-xl border border-line/80 bg-muted/70 p-1 shadow-field', className)} {...p} />
+  <TabsP.List className={cn('mb-6 flex max-w-full flex-wrap gap-2', className)} {...p} />
 )
 export const Tab = ({ className, ...p }: TabsP.TabsTriggerProps) => (
-  <TabsP.Trigger className={cn('whitespace-nowrap rounded-lg px-3.5 py-1.5 text-[13px] font-medium text-soft transition duration-150 hover:text-ink data-[state=active]:bg-surface data-[state=active]:font-semibold data-[state=active]:text-ink data-[state=active]:shadow-card data-[state=active]:ring-1 data-[state=active]:ring-line', className)} {...p} />
+  <TabsP.Trigger className={cn('whitespace-nowrap rounded-full border bg-surface px-4 py-1.5 text-[13px] font-medium text-soft transition duration-150 hover:bg-muted hover:text-ink data-[state=active]:border-ink data-[state=active]:bg-ink data-[state=active]:text-surface', className)} {...p} />
 )
 export const TabPanel = TabsP.Content
 

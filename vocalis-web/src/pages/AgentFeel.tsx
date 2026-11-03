@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Sparkles } from 'lucide-react'
+import { Sparkles } from '@/components/icons'
 import { toast } from 'sonner'
 import { Button, Card, Chip, Field, Input, Slider, Switch, Textarea } from '@/components/ui'
 import { AdvancedOnly } from '@/components/shared'

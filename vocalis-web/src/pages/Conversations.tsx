@@ -3,11 +3,11 @@ import { Glyph } from '@/components/Glyph'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { flexRender, getCoreRowModel, getPaginationRowModel, useReactTable, type ColumnDef } from '@tanstack/react-table'
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts'
-import { Download, Search } from 'lucide-react'
+import { Download, Search } from '@/components/icons'
 import { toast } from 'sonner'
 import { Badge, Button, Card, Chip, Input, Select } from '@/components/ui'
 import { USE_MOCKS } from '@/lib/api/env'
-import { AdvancedOnly, EmptyState, PageHeader, StatusBadge, TableSkeleton, WaveformPlayer, sentimentEmoji, useAsync } from '@/components/shared'
+import { AdvancedOnly, EmptyState, PageHeader, SearchPill, StatusBadge, TableSkeleton, WaveformPlayer, sentimentEmoji, useAsync } from '@/components/shared'
 import { api } from '@/lib/api'
 import { useUI } from '@/store/ui'
 import { callSearch } from '@/lib/api/calls'
@@ -53,10 +53,10 @@ export default function ConversationsPage() {
     <>
       <PageHeader title="Conversations" subtitle="Every call your agents have had. Click one to listen and read." actions={<Button onClick={exportCsv}><Download size={15} />Export CSV</Button>} />
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative w-full max-w-[240px]"><Search size={15} className="absolute left-3 top-2.5 text-soft" /><Input className="pl-9" placeholder="Search name or number" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search calls" /></div>
-        <Select className="w-auto" value={days} onChange={(e) => setDays(e.target.value)} aria-label="Date"><option value="1">Today</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option></Select>
-        <Select className="w-auto" value={agent} onChange={(e) => setAgent(e.target.value)} aria-label="Agent"><option value="">All agents</option>{agents.slice(0, 3).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select>
-        <Select className="w-auto" value={outcome} onChange={(e) => setOutcome(e.target.value)} aria-label="Result"><option value="">Any result</option>{outcomes.map((o) => <option key={o}>{o}</option>)}</Select>
+        <SearchPill className="max-w-[240px]" placeholder="Search name or number" label="Search calls" value={q} onChange={setQ} />
+        <Select className="h-10 w-auto rounded-full px-4" value={days} onChange={(e) => setDays(e.target.value)} aria-label="Date"><option value="1">Today</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option></Select>
+        <Select className="h-10 w-auto rounded-full px-4" value={agent} onChange={(e) => setAgent(e.target.value)} aria-label="Agent"><option value="">All agents</option>{agents.slice(0, 3).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select>
+        <Select className="h-10 w-auto rounded-full px-4" value={outcome} onChange={(e) => setOutcome(e.target.value)} aria-label="Result"><option value="">Any result</option>{outcomes.map((o) => <option key={o}>{o}</option>)}</Select>
         <Input className="w-56" placeholder="Search what was said" aria-label="Search what was said" value={said} onChange={(e) => setSaid(e.target.value)} />
         <Chip active={failedOnly} onClick={() => setSp(failedOnly ? {} : { failed: '1' })}>Failed only</Chip>
         <Chip active={practice} onClick={() => setSp(practice ? {} : { practice: '1' })}>Practice calls</Chip>

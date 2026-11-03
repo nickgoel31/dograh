@@ -1,7 +1,7 @@
 /** Real Home, Knowledge, Tools and Campaigns. Demo versions stay in their own files for mock mode. */
 import * as React from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { AlertTriangle, Check, Circle, FileText, Globe, Megaphone, MessageSquare, Mic, Plus, Trash2, Type, Plug } from 'lucide-react'
+import { AlertTriangle, Check, Circle, FileText, Globe, Megaphone, MessageSquare, Mic, Plus, Trash2, Type, Plug } from '@/components/icons'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Area, AreaChart, ResponsiveContainer, Tooltip as RTooltip, XAxis } from 'recharts'

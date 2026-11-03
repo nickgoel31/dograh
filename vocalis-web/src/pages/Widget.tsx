@@ -1,7 +1,7 @@
 /** The call or chat window inside a customer's website (loaded in an iframe by widget.js). No sign-in. */
 import * as React from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { Mic, PhoneOff, Send } from 'lucide-react'
+import { Mic, PhoneOff, Send } from '@/components/icons'
 import { Button, Input } from '@/components/ui'
 import { useAgentCall } from '@/lib/call'
 import { API_URL } from '@/lib/api/env'

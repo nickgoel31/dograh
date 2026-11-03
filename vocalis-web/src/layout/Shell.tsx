@@ -4,9 +4,9 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { Command } from 'cmdk'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  BarChart3, BookOpen, Bell, Bot, ChevronDown, ChevronRight, Code2, CreditCard, FlaskConical, HelpCircle, Home, Megaphone, Menu as MenuIcon,
-  MessageCircle, Mic2, Moon, Users, Wallet, PanelLeftClose, PanelLeftOpen, Phone, PhoneCall, Plug, Search, Send, Settings, Sparkles, Sun, X, Check, ChevronsUpDown,
-} from 'lucide-react'
+  AlertCircle, AlertTriangle, CheckCircle2, Info, Loader2, BarChart3, BookOpen, Bell, Bot, ChevronDown, ChevronRight, Code2, CreditCard, FlaskConical, HelpCircle, Home, Megaphone, Menu as MenuIcon,
+  MessageCircle, Mic2, Moon, Plus, Users, Wallet, PanelLeftClose, PanelLeftOpen, Phone, PhoneCall, Plug, Search, Send, Settings, Sparkles, Sun, X, Check, ChevronsUpDown,
+} from '@/components/icons'
 import { Toaster, toast } from 'sonner'
 import { BRAND } from '@/config/brand'
 import { useMe } from '@/lib/useMe'
@@ -20,6 +20,8 @@ import { useData } from '@/store/data'
 import { calls } from '@/mock/calls'
 import { Button, Menu, MenuContent, MenuItem, MenuSep, MenuTrigger, Switch, TooltipProvider } from '@/components/ui'
 import { PlaygroundModal } from '@/components/Playground'
+import { AgentAvatar } from '@/components/AgentAvatar'
+import { WelcomeTour } from '@/components/WelcomeTour'
 import { cn, money } from '@/lib/utils'
 
 const main = [
@@ -29,15 +31,33 @@ const main = [
   { to: '/analytics', label: 'Analytics', icon: BarChart3 },
 ]
 const build = [{ to: '/developers', label: 'Developers', icon: Code2 }, { to: '/billing', label: 'Billing & Usage', icon: CreditCard }]
+const all = Object.fromEntries([...main, ...build].map((n) => [n.to, n])) as Record<string, (typeof main)[number]>
+const pick = (...paths: string[]) => paths.map((p) => all[p])
+const groups: { title?: string; items: (typeof main)[number][] }[] = [
+  { items: pick('/') },
+  { title: 'Build', items: pick('/agents', '/voices', '/knowledge', '/tools', '/testing') },
+  { title: 'Data', items: pick('/conversations', '/contacts', '/analytics') },
+  { title: 'Reach', items: pick('/numbers', '/campaigns') },
+  { title: 'Account', items: pick('/billing', '/developers') },
+]
 const bottom = [{ to: '/settings', label: 'Team & Settings', icon: Settings }, { to: '/help', label: 'Help', icon: HelpCircle }]
 const demoWorkspaces = ['Sunrise Dental', 'GlowUp Salon']
 
+/** A small soft two-colour gradient tile, used for the organization, wallet and profile icons. */
+export const MeshBadge = ({ className, children }: { className?: string; children?: React.ReactNode }) => (
+  <span className={cn('relative flex shrink-0 items-center justify-center overflow-hidden bg-[#3b82f6] font-bold text-white', className)}>
+    <span className="absolute -left-1/4 -top-1/4 h-[85%] w-[85%] rounded-full bg-[#22d3ee] blur-[7px]" aria-hidden />
+    <span className="absolute -bottom-1/4 -right-1/4 h-[90%] w-[90%] rounded-full bg-[#7c3aed] blur-[8px]" aria-hidden />
+    <span className="relative flex items-center justify-center [text-shadow:0_1px_2px_rgba(0,0,0,.35)]">{children}</span>
+  </span>
+)
+
 export const Logo = ({ name, logo }: { name?: string | null; logo?: string | null }) => {
   const [own, setOwn] = React.useState(true)
-  const src = logo || (own && !name ? `${import.meta.env.BASE_URL}logo.png` : null)
+  const src = logo || (own && !name ? `${import.meta.env.BASE_URL}swarvo-logo.webp` : null)
   return (
-    <div className="flex items-center gap-2 font-semibold tracking-tight">
-      {src ? <img src={src} alt="" onError={() => setOwn(false)} className="h-8 w-8 rounded-lg object-contain" /> : <div className="brand-gradient flex h-8 w-8 items-center justify-center rounded-[10px] text-accent-fg shadow-glow"><Mic2 size={16} /></div>}{name || BRAND}
+    <div className="flex items-center gap-2.5 font-['Sora'] text-[19px] font-semibold leading-6 tracking-[-0.03em]">
+      {src ? <img src={src} alt="" onError={() => setOwn(false)} className={cn("h-6 w-6 rounded-md object-contain", !logo && "dark:invert")} /> : <div className="brand-gradient flex h-8 w-8 items-center justify-center rounded-[10px] text-accent-fg shadow-glow"><Mic2 size={16} /></div>}{name || BRAND}
     </div>
   )
 }
@@ -56,8 +76,8 @@ function hexToHsl(hex: string): string | null {
 function NavItem({ to, label, icon: Icon, collapsed, onClick }: (typeof main)[number] & { collapsed: boolean; onClick?: () => void }) {
   return (
     <NavLink to={to} end={to === '/'} onClick={onClick} title={collapsed ? label : undefined}
-      className={({ isActive }) => cn('relative flex items-center gap-3 rounded-[10px] px-3 py-2 text-[13.5px] font-medium transition duration-150', isActive ? 'brand-gradient-soft font-semibold text-accent shadow-[0_0_24px_-10px_hsl(var(--accent)/.55)] ring-1 ring-inset ring-accent/15 before:absolute before:-left-3 before:top-2 before:h-[calc(100%-1rem)] before:w-[3px] before:rounded-r-full before:bg-gradient-to-b before:from-accent-2 before:to-accent' : 'text-soft hover:bg-muted/80 hover:text-ink', collapsed && 'justify-center px-0')}>
-      <Icon size={17} className="shrink-0" />{!collapsed && label}
+      className={({ isActive }) => cn('flex items-center gap-3 rounded-[10px] px-3 py-2 text-[13px] font-medium transition duration-150', isActive ? 'bg-[hsl(228_22%_93%)] text-ink dark:bg-[#262628] dark:text-white' : 'text-soft hover:bg-muted/60 hover:text-ink')}>
+      {({ isActive }) => <><Icon size={16} strokeWidth={1.75} className={cn('shrink-0', isActive && 'text-[#3b5bdb]')} />{!collapsed && label}</>}
     </NavLink>
   )
 }
@@ -72,13 +92,13 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
   const active = list.find((w) => w.id === activeId) ?? list[0] ?? { id: '', name: BRAND }
   const pick = (w: { id: string; name: string }) => { set(USE_MOCKS ? { workspace: Number(w.id) } : { workspaceId: w.id }); toast.success(`Switched to ${w.name}`) }
   return (
-    <div className="flex h-full flex-col gap-4 p-3">
-      <div className={cn('flex items-center px-1 pt-1', collapsed ? 'justify-center' : 'justify-between')}>{collapsed ? <Mic2 size={20} className="text-accent" /> : <Logo name={me?.branding?.name} logo={me?.branding?.logo} />}</div>
+    <div className="flex h-full flex-col gap-5 px-3 pb-2 pt-5">
+      <div className={cn('flex items-center px-1 pt-1', 'justify-between')}>{collapsed ? <img src={`${import.meta.env.BASE_URL}swarvo-logo.webp`} alt="" className="ml-1 h-6 w-6 rounded-md object-contain dark:invert" /> : <Logo name={me?.branding?.name} logo={me?.branding?.logo} />}</div>
       {!collapsed && (
         <Menu>
           <MenuTrigger asChild>
-            <button className="flex w-full items-center gap-2.5 rounded-xl border border-line/80 bg-surface px-3 py-2 text-left text-sm shadow-card transition hover:border-soft/40 hover:bg-muted">
-              <span className="brand-gradient flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold text-accent-fg shadow-glow">{active.name[0]}</span>
+            <button className="flex w-full items-center gap-2.5 rounded-xl border border-line/80 bg-surface px-3 py-2 text-left text-sm transition hover:border-soft/40 hover:bg-muted">
+              <MeshBadge className="h-7 w-7 rounded-lg text-xs">{active.name[0]}</MeshBadge>
               <span className="flex-1 truncate font-medium">{active.name}</span><ChevronsUpDown size={14} className="text-soft" />
             </button>
           </MenuTrigger>
@@ -87,11 +107,17 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
           </MenuContent>
         </Menu>
       )}
-      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto" aria-label="Main">
-        {main.filter((n) => view === 'advanced' || !advancedOnly.has(n.to)).map((n) => <NavItem key={n.to} {...n} collapsed={collapsed} onClick={close} />)}
-        {!collapsed && <div className="px-3 pb-1 pt-5 text-[10.5px] font-bold uppercase tracking-[.14em] text-soft/60">Build</div>}
-        {collapsed && <div className="my-2 h-px bg-line" />}
-        {build.filter((n) => view === 'advanced' || !advancedOnly.has(n.to)).map((n) => <NavItem key={n.to} {...n} collapsed={collapsed} onClick={close} />)}
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Main">
+        {groups.map((g, gi) => {
+          const shown = g.items.filter((n) => view === 'advanced' || !advancedOnly.has(n.to))
+          if (!shown.length) return null
+          return (
+            <div key={gi} className="flex flex-col gap-1">
+              {g.title && (collapsed ? <div className="my-2 h-px bg-line" /> : <div className="px-3 pb-1 pt-5 text-[12px] font-medium text-soft/70">{g.title}</div>)}
+              {shown.map((n) => <NavItem key={n.to} {...n} collapsed={collapsed} onClick={close} />)}
+            </div>
+          )
+        })}
         <div className="mt-auto pt-4">{bottom.map((n) => <NavItem key={n.to} {...n} collapsed={collapsed} onClick={close} />)}</div>
       </nav>
     </div>
@@ -129,49 +155,67 @@ function WalletChip() {
   if (!w) return null
   return (
     <button onClick={() => nav('/billing')} title="Your balance. Click to add money or see usage." aria-label="Wallet balance"
-      className={cn('hidden h-9 items-center gap-2 rounded-[10px] border bg-surface px-3 text-sm shadow-card transition hover:bg-muted sm:flex', w.low_balance && 'border-warn text-warn')}>
-      <Wallet size={15} /><span className="font-semibold">{money(w.balance)}</span><span className="text-soft">· {Math.floor(w.minutes_available)} min</span>
+      className="group hidden h-10 items-center gap-2.5 rounded-full border bg-surface py-1 pl-1 pr-1 transition hover:bg-muted sm:flex">
+      <MeshBadge className="h-8 w-8 rounded-full"><Wallet size={14} /></MeshBadge>
+      <span className="flex flex-col items-start leading-none">
+        <span className="num text-[13.5px] font-semibold tracking-tight">{money(w.balance)}</span>
+        <span className="mt-[3px] flex items-center gap-1 text-[11px] text-soft">
+          {w.low_balance && <span className="h-1.5 w-1.5 rounded-full bg-warn" />}{w.low_balance ? 'Low balance' : `${Math.floor(w.minutes_available)} min left`}
+        </span>
+      </span>
+      <span className="ml-1 flex h-8 w-8 items-center justify-center rounded-full bg-muted text-ink transition group-hover:bg-ink group-hover:text-surface"><Plus size={14} /></span>
     </button>
   )
 }
 
 function Topbar({ openNav }: { openNav: () => void }) {
-  const { view, theme, collapsed, set } = useUI()
+  const { theme, collapsed, set } = useUI()
   const me = useMe().data
   const mode = useUI((s) => s.mode)
   const qc = useQueryClient()
   const notes = useQuery({ queryKey: ['notifications', mode], queryFn: () => http<{ unread: number; items: { id: string; title: string; body: string; link: string | null; read: boolean }[] }>('/notifications'), enabled: !USE_MOCKS, refetchInterval: 30000 })
   const unread = USE_MOCKS ? 1 : notes.data?.unread ?? 0
-  const bell = USE_MOCKS ? alerts : (notes.data?.items ?? []).map((n) => ({ t: n.title, d: n.body, to: n.link ?? '/', tone: n.read ? 'text-soft' : 'text-ink', id: n.id }))
+  const bell: { t: string; d: string; to: string; tone: string; unread?: boolean }[] = USE_MOCKS ? alerts.map((x) => ({ ...x, unread: true })) : (notes.data?.items ?? []).map((n) => ({ t: n.title, d: n.body, to: n.link ?? '/', tone: n.read ? 'text-soft' : 'text-ink', id: n.id, unread: !n.read }))
   const initials = USE_MOCKS ? 'AS' : (me?.user.name || me?.user.email || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
   const nav = useNavigate()
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-1.5 rounded-t-2xl border-b border-line/70 bg-surface/90 px-2.5 backdrop-blur sm:gap-3 md:px-5">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-2 rounded-t-2xl border-b border-line/60 bg-surface/90 px-3 backdrop-blur sm:gap-3 md:px-6">
       <Button variant="ghost" size="icon" className="md:hidden" onClick={openNav} aria-label="Open menu"><MenuIcon size={18} /></Button>
       <Button variant="ghost" size="icon" className="hidden md:inline-flex" onClick={() => set({ collapsed: !collapsed })} aria-label="Collapse sidebar">{collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</Button>
       <div className="min-w-0 flex-1"><Breadcrumbs /></div>
-      <button onClick={() => set({ palette: true })} className="hidden h-9 items-center gap-2 rounded-[10px] border bg-surface px-3 text-sm text-soft shadow-field transition hover:border-soft/40 hover:bg-muted sm:flex">
-        <Search size={14} />Search<kbd className="ml-6 rounded border bg-muted px-1.5 text-[11px]">⌘K</kbd>
+      <button onClick={() => set({ palette: true })} className="hidden h-10 items-center gap-2.5 rounded-xl border border-transparent bg-muted/70 px-3.5 text-sm text-soft transition hover:border-line hover:bg-muted sm:flex">
+        <Search size={14} />Search<kbd className="ml-8 rounded-md border bg-surface px-1.5 py-0.5 text-[11px] font-medium">⌘K</kbd>
       </button>
       <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => set({ palette: true })} aria-label="Search"><Search size={18} /></Button>
       <WalletChip />
-      <div className="flex items-center gap-2 rounded-[10px] border bg-surface px-2 py-1.5 shadow-field sm:px-2.5" title="Simple shows the basics. Advanced shows every technical option.">
-        <span className={cn('hidden text-xs font-medium md:inline', view === 'simple' ? 'text-ink' : 'text-soft')}>Simple</span>
-        <Switch checked={view === 'advanced'} onChange={(v) => { set({ view: v ? 'advanced' : 'simple' }); toast(v ? 'Advanced view: all options visible' : 'Simple view: just the basics') }} label="Advanced view" />
-        <span className={cn('text-xs font-medium', view === 'advanced' ? 'text-ink' : 'text-soft max-md:hidden')}>{view === 'advanced' ? 'Advanced' : <span className="md:hidden">Basic</span>}{view !== 'advanced' && <span className="hidden md:inline">Advanced</span>}</span>
-      </div>
       <Menu>
-        <MenuTrigger asChild><Button variant="ghost" size="icon" className="relative" aria-label="Notifications"><Bell size={18} />{unread > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-bad" />}</Button></MenuTrigger>
-        <MenuContent className="w-80">
-          <div className="px-2.5 py-2 text-xs font-semibold uppercase tracking-wide text-soft">Notifications</div>
-          {bell.length === 0 && <div className="px-2.5 py-3 text-sm text-soft">You’re all caught up.</div>}
-          {unread > 0 && !USE_MOCKS && <MenuItem onSelect={() => http('/notifications/read-all', { method: 'POST' }).then(() => qc.invalidateQueries({ queryKey: ['notifications'] }))}>Mark all as read</MenuItem>}
-          {bell.map((a) => <MenuItem key={a.t} onSelect={() => nav(a.to)} className="flex-col items-start gap-0.5"><span className={cn('font-medium', a.tone)}>{a.t}</span><span className="text-xs text-soft">{a.d}</span></MenuItem>)}
+        <MenuTrigger asChild><button className="relative flex h-10 w-10 items-center justify-center rounded-full border bg-surface text-soft transition hover:bg-muted hover:text-ink" aria-label="Notifications"><Bell size={17} strokeWidth={1.75} />{unread > 0 && <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-bad ring-2 ring-surface" />}</button></MenuTrigger>
+        <MenuContent align="end" className="w-[22rem] p-0">
+          <div className="flex items-center justify-between border-b px-4 py-3">
+            <span className="text-sm font-semibold">Notifications</span>
+            {unread > 0 && !USE_MOCKS && <button className="text-xs font-medium text-accent hover:underline" onClick={() => http('/notifications/read-all', { method: 'POST' }).then(() => qc.invalidateQueries({ queryKey: ['notifications'] }))}>Mark all as read</button>}
+          </div>
+          {bell.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-soft"><Bell size={18} strokeWidth={1.75} /></span>
+              <div className="text-sm font-medium">You are all caught up</div>
+              <div className="text-xs text-soft">New alerts will show up here.</div>
+            </div>
+          ) : (
+            <div className="max-h-96 overflow-y-auto p-1.5">
+              {bell.map((a) => (
+                <MenuItem key={a.t} onSelect={() => nav(a.to)} className="items-start gap-3 rounded-lg px-3 py-2.5">
+                  <span className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', a.unread ? 'bg-accent' : 'bg-transparent')} />
+                  <span className="flex min-w-0 flex-col gap-0.5"><span className="text-[13px] font-medium text-ink">{a.t}</span><span className="text-xs leading-snug text-soft">{a.d}</span></span>
+                </MenuItem>
+              ))}
+            </div>
+          )}
         </MenuContent>
       </Menu>
       <Menu>
-        <MenuTrigger asChild><button className="brand-gradient flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-accent-fg shadow-glow ring-2 ring-surface" aria-label="Account menu">{initials}</button></MenuTrigger>
-        <MenuContent>
+        <MenuTrigger asChild><button className="rounded-full ring-2 ring-surface transition hover:opacity-90" aria-label="Account menu"><MeshBadge className="h-10 w-10 rounded-full text-[13px]">{initials}</MeshBadge></button></MenuTrigger>
+        <MenuContent align="end">
           <div className="px-2.5 py-2"><div className="font-medium">{USE_MOCKS ? 'Aarav Sharma' : me?.user.name}</div><div className="text-xs text-soft">{USE_MOCKS ? 'aarav@sunrisedental.in' : me?.user.email}</div></div>
           <MenuSep />
           <MenuItem onSelect={() => set({ theme: theme === 'dark' ? 'light' : 'dark' })}>{theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}{theme === 'dark' ? 'Light mode' : 'Dark mode'}</MenuItem>
@@ -198,23 +242,56 @@ async function signOut() {
 
 function CommandPalette() {
   const { palette, set } = useUI()
-  const agents = useData((s) => s.agents)
+  const mode = useUI((u) => u.mode)
+  const agents = useData((u) => u.agents)
   const nav = useNavigate()
+  const [q, setQ] = React.useState('')
+  const [dq, setDq] = React.useState('')
   const go = (to: string) => { set({ palette: false }); nav(to) }
   React.useEffect(() => {
     const h = (e: KeyboardEvent) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); useUI.getState().set({ palette: !useUI.getState().palette }) } }
     window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h)
   }, [])
-  const item = 'flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm aria-selected:bg-accent-soft aria-selected:text-accent'
-  const head = '[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-soft'
+  React.useEffect(() => { const t = setTimeout(() => setDq(q.trim()), 250); return () => clearTimeout(t) }, [q])
+  React.useEffect(() => { if (!palette) { setQ(''); setDq('') } }, [palette])
+
+  const needle = q.trim().toLowerCase()
+  const real = !USE_MOCKS
+  const search = real && palette && dq.length >= 2
+  const enc = encodeURIComponent(dq)
+  type CallHit = { id: string; caller: string; phone: string | null; agent_name: string | null }
+  type ContactHit = { id: string; name: string | null; phone: string }
+  const callsQ = useQuery({ queryKey: ['search', 'calls', dq, mode], queryFn: () => http<{ calls: CallHit[] }>(`/conversations?q=${enc}&limit=5`), enabled: search })
+  const contactsQ = useQuery({ queryKey: ['search', 'contacts', dq, mode], queryFn: () => http<{ contacts: ContactHit[] }>(`/contacts?q=${enc}&limit=5`), enabled: search })
+  const numbersQ = useQuery({ queryKey: ['search', 'numbers', mode], queryFn: () => http<{ id: string; number: string; agent_name: string | null }[]>('/numbers'), enabled: real && palette, staleTime: 60000 })
+  const docsQ = useQuery({ queryKey: ['search', 'docs', mode], queryFn: () => http<{ id: string; title: string; kind: string }[]>('/knowledge'), enabled: real && palette, staleTime: 60000 })
+  const has = (...t: (string | null | undefined)[]) => !needle || t.some((x) => (x ?? '').toLowerCase().includes(needle))
+
+  const pages = [...main, ...build, ...bottom].filter((n) => has(n.label))
+  const agentHits = agents.filter((a) => has(a.name, a.role)).slice(0, 6)
+  const callHits: CallHit[] = real ? (needle ? callsQ.data?.calls ?? [] : []) : calls.filter((c) => has(c.caller, c.phone)).slice(0, 6).map((c) => ({ id: c.id, caller: c.caller, phone: c.phone, agent_name: null }))
+  const contactHits = needle ? contactsQ.data?.contacts ?? [] : []
+  const numberHits = needle ? (numbersQ.data ?? []).filter((n) => has(n.number, n.agent_name)).slice(0, 5) : []
+  const docHits = needle ? (docsQ.data ?? []).filter((d) => has(d.title)).slice(0, 5) : []
+  const total = pages.length + agentHits.length + callHits.length + contactHits.length + numberHits.length + docHits.length
+  const loading = search && (callsQ.isFetching || contactsQ.isFetching)
+  const ask = () => { try { sessionStorage.setItem('assistant-prompt', q.trim()) } catch { /* the assistant just opens empty */ } go('/') }
+
+  const item = 'flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm aria-selected:bg-muted'
+  const head = '[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-soft'
+  const tile = 'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted text-soft'
   return (
-    <Command.Dialog open={palette} onOpenChange={(o) => set({ palette: o })} label="Search" overlayClassName="fixed inset-0 z-[70] bg-black/40" contentClassName="fixed left-1/2 top-[15vh] z-[71] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 overflow-hidden rounded-2xl border bg-surface shadow-pop">
-      <div className="flex items-center gap-2 border-b px-4"><Search size={16} className="text-soft" /><Command.Input placeholder="Search agents, calls, pages…" className="h-12 flex-1 bg-transparent outline-none placeholder:text-soft" /></div>
-      <Command.List className={cn('max-h-[50vh] overflow-y-auto p-2', head)}>
-        <Command.Empty className="py-8 text-center text-soft">Nothing found. Try another word.</Command.Empty>
-        <Command.Group heading="Pages">{[...main, ...build, ...bottom].map((n) => <Command.Item key={n.to} value={'page ' + n.label} onSelect={() => go(n.to)} className={item}><n.icon size={15} />{n.label}</Command.Item>)}</Command.Group>
-        <Command.Group heading="Agents">{agents.map((a) => <Command.Item key={a.id} value={'agent ' + a.name} onSelect={() => go('/agents/' + a.id)} className={item}><Glyph e={a.emoji} size={14} />{a.name}</Command.Item>)}</Command.Group>
-        <Command.Group heading="Calls">{calls.slice(0, 12).map((c) => <Command.Item key={c.id} value={'call ' + c.caller + ' ' + c.id} onSelect={() => go('/conversations/' + c.id)} className={item}><PhoneCall size={15} />{c.caller}<span className="ml-auto text-xs text-soft">{c.phone}</span></Command.Item>)}</Command.Group>
+    <Command.Dialog open={palette} onOpenChange={(o) => set({ palette: o })} shouldFilter={false} label="Search" overlayClassName="fixed inset-0 z-[70] bg-black/40" contentClassName="fixed left-1/2 top-[14vh] z-[71] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 overflow-hidden rounded-2xl border bg-surface">
+      <div className="flex items-center gap-3 border-b px-4"><Search size={16} className="text-soft" /><Command.Input value={q} onValueChange={setQ} placeholder="Search agents, calls, contacts, numbers, knowledge…" className="h-[52px] flex-1 bg-transparent text-[15px] outline-none placeholder:text-soft/70" />{loading && <Loader2 size={15} className="animate-spin text-soft" />}</div>
+      <Command.List className={cn('max-h-[55vh] overflow-y-auto p-2', head)}>
+        {needle.length >= 3 && real && <Command.Item value="ask" onSelect={ask} className={item}><span className={cn(tile, 'bg-accent-soft text-accent')}><Sparkles size={14} /></span><span className="min-w-0 truncate">Ask the assistant: <b className="font-medium">{q.trim()}</b></span></Command.Item>}
+        {total === 0 && !loading && <div className="py-10 text-center text-sm text-soft">{needle ? 'Nothing found. Try another word.' : 'Start typing to search.'}</div>}
+        {agentHits.length > 0 && <Command.Group heading="Agents">{agentHits.map((a) => <Command.Item key={a.id} value={'agent ' + a.id} onSelect={() => go('/agents/' + a.id)} className={item}><AgentAvatar id={a.id} className="h-7 w-7" /><span className="truncate">{a.name}</span><span className="ml-auto text-xs capitalize text-soft">{a.status}</span></Command.Item>)}</Command.Group>}
+        {callHits.length > 0 && <Command.Group heading="Calls">{callHits.map((c) => <Command.Item key={c.id} value={'call ' + c.id} onSelect={() => go('/conversations/' + c.id)} className={item}><span className={tile}><PhoneCall size={14} /></span><span className="truncate">{c.caller || c.phone}</span>{c.agent_name && <span className="ml-auto truncate text-xs text-soft">{c.agent_name}</span>}</Command.Item>)}</Command.Group>}
+        {contactHits.length > 0 && <Command.Group heading="Contacts">{contactHits.map((c) => <Command.Item key={c.id} value={'contact ' + c.id} onSelect={() => go('/contacts')} className={item}><span className={tile}><Users size={14} /></span><span className="truncate">{c.name || c.phone}</span>{c.name && <span className="num ml-auto text-xs text-soft">{c.phone}</span>}</Command.Item>)}</Command.Group>}
+        {numberHits.length > 0 && <Command.Group heading="Phone numbers">{numberHits.map((n) => <Command.Item key={n.id} value={'number ' + n.id} onSelect={() => go('/numbers')} className={item}><span className={tile}><Phone size={14} /></span><span className="num">{n.number}</span>{n.agent_name && <span className="ml-auto truncate text-xs text-soft">{n.agent_name}</span>}</Command.Item>)}</Command.Group>}
+        {docHits.length > 0 && <Command.Group heading="Knowledge">{docHits.map((d) => <Command.Item key={d.id} value={'doc ' + d.id} onSelect={() => go('/knowledge')} className={item}><span className={tile}><BookOpen size={14} /></span><span className="truncate">{d.title}</span><span className="ml-auto text-xs capitalize text-soft">{d.kind}</span></Command.Item>)}</Command.Group>}
+        {pages.length > 0 && <Command.Group heading="Pages">{pages.map((n) => <Command.Item key={n.to} value={'page ' + n.to} onSelect={() => go(n.to)} className={item}><span className={tile}><n.icon size={14} /></span>{n.label}</Command.Item>)}</Command.Group>}
       </Command.List>
     </Command.Dialog>
   )
@@ -229,7 +306,7 @@ const faq: Record<string, string> = {
 const STARTERS = ['How do I get my agent live?', 'Why did my call fail?', 'How is billing worked out?', 'How do I buy a phone number?']
 
 /** Plain text with **bold** and [links](/path) turned into something clickable. */
-function Rich({ text, go }: { text: string; go: (to: string) => void }) {
+export function Rich({ text, go }: { text: string; go: (to: string) => void }) {
   const parts = text.split(/(\[[^\]]+\]\(\/[^)\s]*\)|\*\*[^*]+\*\*)/g)
   return (
     <>{parts.map((p, i) => {
@@ -268,10 +345,10 @@ function AIHelper() {
         {helper && (
           <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16 }} role="dialog" aria-label="AI Helper"
             className="fixed bottom-24 right-4 z-40 flex h-[520px] max-h-[calc(100dvh-8rem)] w-[calc(100vw-2rem)] max-w-[400px] flex-col overflow-hidden rounded-2xl border border-line/80 bg-surface shadow-pop sm:right-6">
-            <div className="brand-gradient flex items-center justify-between px-4 py-3 text-accent-fg"><div className="flex items-center gap-2 font-semibold"><Sparkles size={16} />AI Helper</div>
+            <div className="bg-ink flex items-center justify-between px-4 py-3 text-surface"><div className="flex items-center gap-2 font-semibold"><Sparkles size={16} />AI Helper</div>
               <button onClick={() => set({ helper: false })} aria-label="Close" className="rounded-lg p-1 transition hover:bg-white/15"><X size={16} /></button></div>
             <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
-              {log.map((m, i) => <div key={i} className={cn('flex', m.who === 'me' && 'justify-end')}><div className={cn('max-w-[88%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm leading-relaxed', m.who === 'me' ? 'brand-gradient text-accent-fg' : 'bg-muted')}>{m.who === 'ai' ? <Rich text={m.t} go={go} /> : m.t}</div></div>)}
+              {log.map((m, i) => <div key={i} className={cn('flex', m.who === 'me' && 'justify-end')}><div className={cn('max-w-[88%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm leading-relaxed', m.who === 'me' ? 'bg-ink text-surface' : 'bg-muted')}>{m.who === 'ai' ? <Rich text={m.t} go={go} /> : m.t}</div></div>)}
               {typing && <div className="flex"><div className="flex gap-1 rounded-2xl bg-muted px-4 py-3">{[0, 1, 2].map((i) => <motion.span key={i} className="h-1.5 w-1.5 rounded-full bg-soft" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: i * 0.15 }} />)}</div></div>}
               {log.length < 3 && <div className="flex flex-col items-start gap-2 pt-2">{(USE_MOCKS ? Object.keys(faq) : STARTERS).map((q) => <button key={q} onClick={() => ask(q)} className="rounded-xl border bg-surface px-3 py-2 text-left text-[13px] transition hover:border-accent/40 hover:bg-accent-soft">{q}</button>)}</div>}
               <div ref={end} />
@@ -283,7 +360,7 @@ function AIHelper() {
           </motion.div>
         )}
       </AnimatePresence>
-      <button onClick={() => set({ helper: !helper })} aria-label="Open AI Helper" className="brand-gradient fixed bottom-5 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full text-accent-fg shadow-glow ring-4 ring-surface transition hover:scale-105 sm:right-6">{helper ? <X size={22} /> : <MessageCircle size={24} />}</button>
+      <button onClick={() => set({ helper: !helper })} aria-label="Open AI Helper" className="bg-ink text-surface fixed bottom-5 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full ring-4 ring-surface transition hover:scale-105 sm:right-6">{helper ? <X size={22} /> : <MessageCircle size={24} />}</button>
     </>
   )
 }
@@ -306,8 +383,8 @@ export default function Shell() {
   React.useEffect(() => { set({ mobileNav: false }); document.getElementById('app-scroll')?.scrollTo(0, 0) }, [pathname, set])
   return (
     <TooltipProvider>
-      <div className="flex h-[100dvh] gap-3 overflow-hidden p-0 md:p-3">
-        <aside className={cn('hidden h-full shrink-0 rounded-2xl border border-line/70 app-side shadow-raised transition-[width] md:block', collapsed ? 'w-[68px]' : 'w-64')}><SidebarBody collapsed={collapsed} /></aside>
+      <div className="flex h-[100dvh] gap-2 overflow-hidden p-0 md:p-2">
+        <aside className={cn('hidden h-full shrink-0 overflow-hidden transition-[width] md:block', collapsed ? 'w-16' : 'w-64')}><SidebarBody collapsed={collapsed} /></aside>
         <AnimatePresence>
           {mobileNav && (
             <>
@@ -316,17 +393,18 @@ export default function Shell() {
             </>
           )}
         </AnimatePresence>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-none border-line/70 app-panel md:rounded-2xl md:border md:shadow-raised">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-none border-line/70 app-panel md:rounded-2xl md:border">
           <Topbar openNav={() => set({ mobileNav: true })} />
-          <main id="app-scroll" className="min-h-0 flex-1 overflow-y-auto"><div className={cn('w-full', wide ? '' : 'mx-auto max-w-[1280px] px-4 py-6 pb-28 md:px-8')}>
+          <main id="app-scroll" className="min-h-0 flex-1 overflow-y-auto"><div className={cn('w-full', wide ? '' : 'mx-auto max-w-[1280px] px-4 py-6 pb-28 md:px-10 md:py-9')}>
             <AnimatePresence mode="wait">
               <motion.div key={pathname.split('/')[1] + (pathname.split('/')[2] ?? '')} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}><Outlet /></motion.div>
             </AnimatePresence>
           </div></main>
         </div>
       </div>
-      <CommandPalette /><AIHelper /><PlaygroundModal />
-      <Toaster position="bottom-left" richColors closeButton theme={theme === 'dark' ? 'dark' : 'light'} />
+      <CommandPalette /><AIHelper /><PlaygroundModal />{!USE_MOCKS && <WelcomeTour />}
+      <Toaster position="bottom-left" closeButton theme={theme === 'dark' ? 'dark' : 'light'}
+        icons={{ success: <CheckCircle2 size={18} className="text-ok" />, error: <AlertCircle size={18} className="text-bad" />, warning: <AlertTriangle size={18} className="text-warn" />, info: <Info size={18} className="text-soft" />, loading: <Loader2 size={18} className="animate-spin text-soft" /> }} />
     </TooltipProvider>
   )
 }

@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Download, Pause, Play } from 'lucide-react'
+import { Download, Pause, Play } from '@/components/icons'
 import { cn } from '@/lib/utils'
 
 const SPEEDS = [1, 1.25, 1.5, 2]
@@ -28,7 +28,7 @@ export function RecordingPlayer({ src, time, onTime }: { src: string; time: numb
     <div className="flex items-center gap-3 rounded-2xl border bg-muted/50 p-3" role="group" aria-label="Call recording">
       <audio ref={audio} src={src} preload="metadata" onLoadedMetadata={(e) => setLength(e.currentTarget.duration || 0)} onTimeUpdate={(e) => onTime(e.currentTarget.currentTime)}
         onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} onError={() => setFailed(true)} />
-      <button onClick={toggle} aria-label={playing ? 'Pause' : 'Play'} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-accent-fg shadow-card transition hover:scale-105">
+      <button onClick={toggle} aria-label={playing ? 'Pause' : 'Play'} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-accent-fg transition hover:scale-105">
         {playing ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}</button>
       <div className="min-w-0 flex-1">
         <input type="range" min={0} max={length || 1} step={0.1} value={Math.min(time, length || 1)} onChange={(e) => seek(Number(e.target.value))} aria-label="Seek" disabled={!length}

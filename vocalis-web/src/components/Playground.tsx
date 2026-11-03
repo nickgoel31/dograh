@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Mic, MicOff, Send, Volume2 } from 'lucide-react'
+import { Mic, MicOff, Send, Volume2 } from '@/components/icons'
 import { Button, Dialog, Input } from './ui'
 import { VoiceOrb, speak, stopSpeaking } from './shared'
 import { useData } from '@/store/data'
@@ -28,8 +28,10 @@ function RealCall({ agentId, compact }: { agentId: string; compact?: boolean }) 
   const orb = busy ? 'thinking' : live ? 'listening' : 'idle'
   const label = busy ? 'Connecting…' : live ? 'You are on a call. Just talk.' : call.status === 'ended' ? 'Call ended' : 'Press Talk and say hello'
   return (
-    <div className={cn('grid gap-6', !compact && 'md:grid-cols-[220px_1fr]')}>
-      <div className="flex flex-col items-center justify-center gap-4 py-2">
+    <div className={cn('grid gap-4', !compact && 'md:grid-cols-[260px_1fr]')}>
+      <div className="relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border bg-surface px-4 py-8">
+        <div className="pointer-events-none absolute -left-10 -top-12 h-40 w-40 rounded-full bg-[#22d3ee]/20 blur-3xl" aria-hidden />
+        <div className="pointer-events-none absolute -bottom-12 -right-10 h-44 w-44 rounded-full bg-[#8b5cf6]/20 blur-3xl" aria-hidden />
         <VoiceOrb state={orb} size={compact ? 140 : 170} />
         <div className="text-sm text-soft" aria-live="polite">{label}</div>
         {live || busy ? (
@@ -42,13 +44,13 @@ function RealCall({ agentId, compact }: { agentId: string; compact?: boolean }) 
         )}
         <p className="max-w-[200px] text-center text-xs text-soft">Practice calls are free and never reach real callers.</p>
       </div>
-      <div className="flex min-h-[280px] flex-col rounded-xl border bg-muted/40">
+      <div className="flex min-h-[300px] flex-col rounded-2xl border bg-surface">
         <div className="flex-1 space-y-2.5 overflow-y-auto p-4" style={{ maxHeight: compact ? 220 : 320 }} aria-live="polite">
           {call.error && <p role="alert" className="rounded-lg bg-bad/10 p-3 text-sm text-bad">{call.error}</p>}
           {call.lines.length === 0 && !call.error && <p className="text-sm text-soft">What you and the agent say will show up here.</p>}
           {call.lines.map((m) => (
             <div key={m.id} className={cn('flex', m.who === 'you' && 'justify-end')}>
-              <div className={cn('max-w-[85%] rounded-2xl px-3.5 py-2 text-sm', m.who === 'you' ? 'bg-accent text-accent-fg' : 'border bg-surface')}>{m.text}</div>
+              <div className={cn('max-w-[85%] rounded-2xl px-3.5 py-2 text-sm', m.who === 'you' ? 'bg-ink text-surface' : 'bg-muted')}>{m.text}</div>
             </div>
           ))}
           <div ref={end} />
@@ -109,13 +111,13 @@ function DemoPlayground({ agentId, compact }: { agentId?: string; compact?: bool
   return (
     <div className={cn('grid gap-6', !compact && 'md:grid-cols-[220px_1fr]')}>
       <div className="flex flex-col items-center justify-center gap-4 py-2">
-        <VoiceOrb state={state} size={compact ? 140 : 170} />
-        <div className="text-sm text-soft" aria-live="polite">{label}</div>
-        <Button variant={state === 'listening' ? 'danger' : 'primary'} size="lg" onClick={listen} disabled={!SR} aria-label="Talk">
+        <div className="relative"><VoiceOrb state={state} size={compact ? 140 : 170} /></div>
+        <div className="relative text-sm text-soft" aria-live="polite">{label}</div>
+        <Button variant={state === 'listening' ? 'danger' : 'primary'} size="lg" className="relative rounded-full px-7" onClick={listen} disabled={!SR} aria-label="Talk">
           {state === 'listening' ? <MicOff size={18} /> : <Mic size={18} />}{state === 'listening' ? 'Stop' : 'Talk'}
         </Button>
         {!SR && <p className="max-w-[200px] text-center text-xs text-soft">Your browser can't listen, so type below instead. The agent still talks back.</p>}
-        <label className="flex cursor-pointer items-center gap-2 text-xs text-soft"><input type="checkbox" checked={voiceOn} onChange={(e) => { setVoiceOn(e.target.checked); if (!e.target.checked) stopSpeaking() }} /><Volume2 size={13} />Agent speaks out loud</label>
+        <label className="relative flex cursor-pointer items-center gap-2 text-xs text-soft"><input type="checkbox" checked={voiceOn} onChange={(e) => { setVoiceOn(e.target.checked); if (!e.target.checked) stopSpeaking() }} /><Volume2 size={13} />Agent speaks out loud</label>
       </div>
       <div className="flex min-h-[280px] flex-col rounded-xl border bg-muted/40">
         <div className="flex-1 space-y-2.5 overflow-y-auto p-4" style={{ maxHeight: compact ? 220 : 320 }} aria-live="polite">
@@ -127,8 +129,8 @@ function DemoPlayground({ agentId, compact }: { agentId?: string; compact?: bool
           <div ref={end} />
         </div>
         <form className="flex gap-2 border-t p-3" onSubmit={(e) => { e.preventDefault(); send(text) }}>
-          <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Or type what the caller says…" aria-label="Type a message" />
-          <Button variant="primary" size="icon" aria-label="Send"><Send size={16} /></Button>
+          <Input className="rounded-full" value={text} onChange={(e) => setText(e.target.value)} placeholder="Or type what the caller says…" aria-label="Type a message" />
+          <Button variant="primary" size="icon" className="shrink-0 rounded-full" aria-label="Send"><Send size={16} /></Button>
         </form>
       </div>
     </div>

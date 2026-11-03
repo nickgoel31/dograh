@@ -90,3 +90,31 @@ async def test_indian_numbers_need_approved_kyc_and_show_prices(client, monkeypa
     assert (await client.get("/product/kyc", headers=live)).json()["status"] == "approved"
     assert (await client.post("/product/numbers", json={"number": offers[0]["number"]}, headers=live)).status_code == 201
     assert (await client.put("/product/kyc", json={**form, "documents": docs}, headers=live)).status_code == 409  # approved details are locked
+
+
+async def test_home_assistant_plans_tool_calls_and_ignores_unknown_ones(client):
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+
+    async def said(text):
+        async def complete(*a, **k):
+            return text
+
+        client.llm.complete = complete
+        return (await client.post("/product/assistant/plan", json={"messages": [{"role": "user", "content": "hi"}], "page": "/"}, headers=h)).json()
+
+    out = await said('```json\n{"reply": "Let me look.", "calls": [{"tool": "list_agents", "args": {}}, {"tool": "delete_everything", "args": {}}, {"tool": "create_agent", "args": {"name": "Bot"}}]}\n```')
+    assert out["reply"] == "Let me look." and [(c["tool"], c["kind"]) for c in out["calls"]] == [("list_agents", "read"), ("create_agent", "write")]
+    plain = await said("Just text, no JSON.")
+    assert plain["reply"] == "Just text, no JSON." and plain["calls"] == []
+
+
+async def test_an_agent_can_be_deleted_only_from_its_own_workspace(client):
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    made = (await client.post("/product/agents", json={"name": "Bot", "template": "receptionist"}, headers=h)).json()
+    other = bearer((await signup(client, "b@x.com"))[1])
+    assert (await client.delete(f"/product/agents/{made['id']}", headers=other)).status_code == 404
+    assert (await client.delete(f"/product/agents/{made['id']}", headers=h)).status_code == 204
+    assert (await client.get(f"/product/agents/{made['id']}", headers=h)).status_code == 404
+    assert [a["id"] for a in (await client.get("/product/agents", headers=h)).json()] == []

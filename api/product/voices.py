@@ -110,6 +110,8 @@ class InworldAdapter:
 
     def list(self) -> list[Voice]:
         rows = json.loads((Path(__file__).parent / "data" / "inworld_voices.json").read_text(encoding="utf-8"))
+        if os.getenv("PRODUCT_VOICES_INDIAN_ONLY", "1") != "0":  # Indian-language voices only (set to 0 to list every language)
+            rows = [r for r in rows if str(r["lang"]).upper().endswith("-IN")]
         return [
             Voice(
                 id=voice_id("inworld", "tts-2", r["id"]), name=r["name"], language=language_name(r["lang"]),

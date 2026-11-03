@@ -2,13 +2,13 @@ import * as React from 'react'
 import { Glyph } from '@/components/Glyph'
 import { Link, useNavigate } from 'react-router-dom'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
-import { AlertTriangle, ArrowRight, Check, Mic } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Check, Mic } from '@/components/icons'
 import { Button, Card, Switch } from '@/components/ui'
 import { PageHeader, StatCard, useAsync } from '@/components/shared'
 import { Skeleton } from '@/components/ui'
 import { api } from '@/lib/api'
 import { USE_MOCKS } from '@/lib/api/env'
-import { HomeReal } from './GrowthReal'
+import AssistantHome from './AssistantHome'
 import { useUI } from '@/store/ui'
 import { useData } from '@/store/data'
 import { money, cn } from '@/lib/utils'
@@ -108,5 +108,5 @@ function DemoHomePage() {
 }
 
 export default function HomePage() {
-  return USE_MOCKS ? <DemoHomePage /> : <HomeReal />
+  return USE_MOCKS ? <DemoHomePage /> : <AssistantHome />
 }

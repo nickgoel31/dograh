@@ -22,10 +22,12 @@ export default {
       keyframes: {
         wave: { '0%,100%': { transform: 'scaleY(.3)' }, '50%': { transform: 'scaleY(1)' } },
         shimmer: { '100%': { transform: 'translateX(100%)' } },
+        glow: { '0%': { opacity: .7, transform: 'scaleX(.94)' }, '100%': { opacity: 1, transform: 'scaleX(1.06)' } },
         'fade-in': { from: { opacity: 0 }, to: { opacity: 1 } },
         'pop-in': { from: { opacity: 0, transform: 'translateY(4px) scale(.98)' }, to: { opacity: 1, transform: 'none' } },
       },
-      animation: { wave: 'wave 1s ease-in-out infinite', 'pop-in': 'pop-in .16s ease-out', 'fade-in': 'fade-in .15s ease-out' },
+      animation: {
+        glow: 'glow 2.6s ease-in-out infinite alternate', wave: 'wave 1s ease-in-out infinite', 'pop-in': 'pop-in .16s ease-out', 'fade-in': 'fade-in .15s ease-out' },
     },
   },
   plugins: [],

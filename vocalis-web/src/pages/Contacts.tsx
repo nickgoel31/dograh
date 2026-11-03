@@ -1,10 +1,10 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
-import { Ban, Download, Pencil, Search, Trash2 } from 'lucide-react'
+import { Ban, Download, Pencil, Search, Trash2 } from '@/components/icons'
 import { toast } from 'sonner'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Card, Dialog, Field, Input, Tab, TabPanel, Tabs, TabsList, Textarea } from '@/components/ui'
-import { EmptyState, PageHeader, TableSkeleton } from '@/components/shared'
+import { EmptyState, PageHeader, SearchPill, TableSkeleton } from '@/components/shared'
 import { API_URL } from '@/lib/api/env'
 import { http } from '@/lib/api/http'
 import { useUI } from '@/store/ui'
@@ -44,7 +44,7 @@ export default function ContactsPage() {
       <PageHeader title="Contacts" subtitle="Everyone your agents have talked to." actions={<Button onClick={exportCsv}><Download size={15} />Export CSV</Button>} />
       <Tabs defaultValue="all"><TabsList><Tab value="all">All contacts</Tab><Tab value="dnc">Do not call{blocked.data?.length ? ` (${blocked.data.length})` : ''}</Tab></TabsList>
         <TabPanel value="all">
-          <div className="relative mb-4 max-w-sm"><Search size={15} className="absolute left-3 top-3 text-soft" /><Input className="pl-9" placeholder="Search name, number or notes" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search contacts" /></div>
+          <SearchPill className="mb-4 max-w-sm" placeholder="Search name, number or notes" label="Search contacts" value={q} onChange={setQ} />
           {list.isPending ? <TableSkeleton rows={6} /> : list.data?.contacts.length === 0 ? <EmptyState emoji="👥" title="No contacts yet" text="People show up here after your agent talks to them on the phone." /> : (
             <Card className="overflow-hidden"><table className="w-full text-sm"><thead className="border-b bg-muted/50 text-left text-xs text-soft"><tr>{['Contact', 'Calls', 'Last call', 'Tags', ''].map((h) => <th key={h} className="px-4 py-2.5 font-medium">{h}</th>)}</tr></thead>
               <tbody>{list.data?.contacts.map((c) => (

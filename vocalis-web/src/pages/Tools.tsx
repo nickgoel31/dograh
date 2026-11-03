@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Plus } from 'lucide-react'
+import { Plus } from '@/components/icons'
 import { toast } from 'sonner'
 import { Badge, Button, Card, Dialog, Field, Input, Select, Textarea } from '@/components/ui'
 import { CardSkeletons, CodeBlock, PageHeader, SimpleAdvanced, useAsync } from '@/components/shared'

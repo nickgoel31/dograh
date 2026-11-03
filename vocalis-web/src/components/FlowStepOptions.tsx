@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from '@/components/icons'
 import { Button, Field, Input, Select, Switch, Textarea } from './ui'
 
 type Raw = Record<string, unknown>

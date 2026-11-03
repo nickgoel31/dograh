@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { RotateCcw, Send, Wrench } from 'lucide-react'
+import { RotateCcw, Send, Wrench } from '@/components/icons'
 import { Button, Dialog, Input } from './ui'
 import { http } from '@/lib/api/http'
 

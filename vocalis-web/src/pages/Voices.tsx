@@ -1,5 +1,6 @@
 import * as React from 'react'
-import { Heart, Lock, Play, Plus, Square, Columns3 } from 'lucide-react'
+import { Heart, Lock, Play, Plus, Search, Square, Columns3 } from '@/components/icons'
+import { AgentAvatar } from '@/components/AgentAvatar'
 import { Badge, Button, Card, Chip, Dialog, Input, Select, Textarea } from '@/components/ui'
 import { AdvancedOnly, Bars, CardSkeletons, PageHeader, speak, stopSpeaking, useAsync } from '@/components/shared'
 import { api, USE_MOCKS } from '@/lib/api'
@@ -45,26 +46,26 @@ export default function VoicesPage() {
     }
   }
   const Sel = ({ k, label }: { k: keyof typeof f; label: string }) => opts(k as keyof Voice).length === 0 ? null : (
-    <Select className="w-auto" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} aria-label={label}><option value="">{label}</option>{opts(k as keyof Voice).map((o) => <option key={o}>{o}</option>)}</Select>
+    <Select className="h-10 w-auto rounded-full border-line bg-surface px-4 shadow-none" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} aria-label={label}><option value="">{label}</option>{opts(k as keyof Voice).map((o) => <option key={o}>{o}</option>)}</Select>
   )
   return (
     <>
       <PageHeader title="Voices" subtitle="Choose how your agent sounds. Press play on any voice."
         actions={<Button onClick={() => setOpen(true)}><Columns3 size={15} />Compare voices{cmp.length > 0 && ` (${cmp.length})`}</Button>} />
       <div className="mb-6 flex flex-wrap items-center gap-2">
-        <Input className="w-52" placeholder="Search voices" aria-label="Search voices" value={q} onChange={(e) => { setQ(e.target.value); setShown(30) }} /><Sel k="lang" label="Language" /><Sel k="gender" label="Gender" /><Sel k="age" label="Age" /><Sel k="accent" label="Accent" /><Sel k="style" label="Style" />
+        <div className="flex h-10 w-52 items-center gap-2 rounded-full border bg-surface px-3.5 text-sm text-soft transition focus-within:border-soft/50"><Search size={15} /><input className="w-full bg-transparent text-ink outline-none placeholder:text-soft/70" placeholder="Search voices" aria-label="Search voices" value={q} onChange={(e) => { setQ(e.target.value); setShown(30) }} /></div><Sel k="lang" label="Language" /><Sel k="gender" label="Gender" /><Sel k="age" label="Age" /><Sel k="accent" label="Accent" /><Sel k="style" label="Style" />
         <Chip active={favOnly} onClick={() => setFavOnly(!favOnly)}>Favorites</Chip>
       </div>
-      <AdvancedOnly><Card className="mb-6 border-accent/30 bg-accent-soft p-4 text-sm">Voices come from our voice engines. Voices marked Coming soon aren't switched on yet.</Card></AdvancedOnly>
+      <AdvancedOnly><p className="mb-5 rounded-xl border bg-muted/50 px-4 py-3 text-sm text-soft">Voices come from our voice engines. Voices marked Coming soon aren't switched on yet.</p></AdvancedOnly>
       {loading ? <CardSkeletons n={9} h="h-32" /> : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <Card className="flex flex-col items-center justify-center gap-1 border-dashed p-5 text-center opacity-70"><Lock size={18} /><div className="font-semibold">Clone a voice</div><Badge tone="accent">Coming soon</Badge><Button size="sm" disabled className="mt-2">Upload a sample</Button></Card>
+          <Card className="flex flex-col items-center justify-center gap-1 rounded-2xl border-dashed p-5 text-center opacity-70 shadow-none"><Lock size={18} /><div className="font-semibold">Clone a voice</div><Badge tone="accent">Coming soon</Badge><Button size="sm" disabled className="mt-2">Upload a sample</Button></Card>
           {list.slice(0, shown).map((v) => (
-            <Card key={v.id} className={cn('p-4', v.available === false && 'opacity-60')}>
+            <Card key={v.id} className={cn('rounded-2xl p-4 shadow-none transition hover:bg-muted/40', v.available === false && 'opacity-60')}>
               <div className="flex items-start gap-3">
-                <Button variant={playing === v.id ? 'primary' : 'secondary'} size="icon" className="h-11 w-11 rounded-full" onClick={() => play(v)} disabled={!USE_MOCKS && !v.hasSample} title={USE_MOCKS || v.hasSample ? undefined : 'No sample for this voice yet'} aria-label={`${playing === v.id ? 'Stop' : 'Play'} ${v.name}`}>{playing === v.id ? <Square size={14} /> : <Play size={15} className="ml-0.5" />}</Button>
+                <button type="button" className="shrink-0 rounded-full transition hover:scale-105 disabled:opacity-40 disabled:hover:scale-100" onClick={() => play(v)} disabled={!USE_MOCKS && !v.hasSample} title={USE_MOCKS || v.hasSample ? undefined : 'No sample for this voice yet'} aria-label={`${playing === v.id ? 'Stop' : 'Play'} ${v.name}`}><AgentAvatar id={v.id} className="h-11 w-11">{playing === v.id ? <Square size={14} /> : <Play size={15} className="ml-0.5" />}</AgentAvatar></button>
                 <div className="flex-1"><div className="flex items-center gap-2 font-semibold">{v.name}{playing === v.id && <Bars className="text-accent" />}</div><div className="text-[13px] text-soft">{[v.lang, v.accent].filter(Boolean).join(' · ')}</div>{v.description && <p className="mt-1 line-clamp-2 text-xs text-soft">{v.description}</p>}
-                  <div className="mt-2 flex flex-wrap gap-1.5">{v.gender && <Badge>{v.gender}</Badge>}{v.age && <Badge>{v.age}</Badge>}{v.style && <Badge tone="accent">{v.style}</Badge>}{v.available === false && <Badge>Coming soon</Badge>}<AdvancedOnly><Badge>{v.provider}</Badge></AdvancedOnly></div></div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">{v.gender && <Badge>{v.gender}</Badge>}{v.age && <Badge>{v.age}</Badge>}{v.style && <Badge>{v.style}</Badge>}{v.available === false && <Badge>Coming soon</Badge>}<AdvancedOnly><Badge>{v.provider}</Badge></AdvancedOnly></div></div>
                 <div className="flex flex-col gap-1">
                   <button onClick={() => toggleFav(v.id)} aria-label="Favorite" aria-pressed={favorites.includes(v.id)} className={cn('rounded-md p-1.5 hover:bg-muted', favorites.includes(v.id) ? 'text-bad' : 'text-soft')}><Heart size={16} fill={favorites.includes(v.id) ? 'currentColor' : 'none'} /></button>
                   <button onClick={() => setCmp(cmp.includes(v.id) ? cmp.filter((x) => x !== v.id) : cmp.length < 3 ? [...cmp, v.id] : cmp)} aria-label="Add to compare" className={cn('rounded-md p-1.5 hover:bg-muted', cmp.includes(v.id) ? 'text-accent' : 'text-soft')}><Plus size={16} /></button></div>

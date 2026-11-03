@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import type { LucideIcon } from 'lucide-react'
-import { AlertCircle, ArrowLeft, ArrowRight, BarChart3, CalendarCheck, Check, Eye, EyeOff, Lock, Mail, Mic2, PhoneCall, ShieldCheck, User } from 'lucide-react'
+import type { LucideIcon } from '@/components/icons'
+import { AlertCircle, ArrowLeft, ArrowRight, Check, Eye, EyeOff, Lock, Mail, ShieldCheck, User } from '@/components/icons'
 import { ApiError, authApi } from '@/lib/api'
 import { BRAND } from '@/config/brand'
 import { CLASSIC_URL } from '@/lib/api/env'
@@ -9,13 +9,6 @@ import { Button } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
 declare global { interface Window { google?: { accounts: { id: { initialize: (o: Record<string, unknown>) => void; renderButton: (el: HTMLElement, o: Record<string, unknown>) => void } } } } }
-
-const FEATURES = [
-  [PhoneCall, 'Answer every call', 'Pick up on the first ring, day and night, in the caller\'s language.'],
-  [CalendarCheck, 'Book and follow up', 'Appointments land in your calendar, details reach your CRM and WhatsApp.'],
-  [BarChart3, 'See what works', 'Every call transcribed, scored and summed up in plain words.'],
-  [ShieldCheck, 'Safe to start', 'Practice free on a private copy before anyone real calls.'],
-] as const
 
 function Field({ icon: Icon, right, ...p }: React.InputHTMLAttributes<HTMLInputElement> & { icon: LucideIcon; right?: React.ReactNode }) {
   return (
@@ -43,24 +36,6 @@ function GoogleButton({ clientId, onToken }: { clientId: string; onToken: (crede
   return <div ref={ref} className="flex min-h-[44px] w-full justify-center" />
 }
 
-/** A call in progress, to show what the product does. Purely decorative. */
-function LiveCall() {
-  const bars = Array.from({ length: 34 })
-  return (
-    <div className="relative w-full max-w-[420px] rounded-3xl border border-white/15 bg-white/[.07] p-5 shadow-[0_30px_80px_-30px_rgba(0,0,0,.6)] backdrop-blur-xl">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5"><span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-300" /></span><span className="text-[13px] font-medium text-white/90">Live call · Dental clinic</span></div>
-        <span className="num text-xs text-white/60">00:42</span>
-      </div>
-      <div className="mt-4 flex h-12 items-center gap-[3px]">{bars.map((_, i) => <span key={i} className="w-[3px] origin-center animate-wave rounded-full bg-gradient-to-t from-emerald-200/40 to-white/90" style={{ height: 14 + Math.abs(Math.sin(i * 0.65)) * 30, animationDelay: `${(i % 9) * 0.11}s` }} />)}</div>
-      <div className="mt-4 space-y-2.5 text-[13px] leading-snug">
-        <div className="max-w-[88%] rounded-2xl rounded-bl-md bg-white/10 px-3.5 py-2 text-white/90"><span className="mb-0.5 block text-[10.5px] font-semibold uppercase tracking-wider text-white/50">Caller</span>Hi, can I book a cleaning for Saturday morning?</div>
-        <div className="ml-auto max-w-[88%] rounded-2xl rounded-br-md bg-white px-3.5 py-2 text-emerald-950"><span className="mb-0.5 block text-[10.5px] font-semibold uppercase tracking-wider text-emerald-700/70">{BRAND}</span>Of course. I have 10:30 or 11:15 free. Which works for you?</div>
-      </div>
-      <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-300/15 px-3 py-2 text-xs text-emerald-100"><Check size={14} />Booked for Saturday 10:30 · confirmation sent on WhatsApp</div>
-    </div>
-  )
-}
 
 export default function AuthPage() {
   const qc = useQueryClient()
@@ -109,12 +84,12 @@ export default function AuthPage() {
   )
 
   return (
-    <div className="grid min-h-screen bg-bg p-0 lg:grid-cols-[minmax(460px,1fr)_1.12fr] lg:gap-3 lg:p-3">
+    <div className="grid min-h-screen bg-bg p-0 lg:h-screen lg:grid-cols-[minmax(460px,1fr)_auto] lg:gap-3 lg:p-3">
       <div className="relative flex items-center justify-center overflow-hidden bg-surface px-6 py-12 lg:rounded-3xl lg:border lg:border-line/70 lg:shadow-raised">
         <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-accent/[.07] blur-3xl" aria-hidden />
         <div className="relative w-full max-w-[400px]">
           <div className="flex items-center gap-3 text-[19px] font-extrabold tracking-tight">
-            <span className="brand-gradient flex h-10 w-10 items-center justify-center rounded-xl text-accent-fg shadow-glow"><Mic2 size={19} /></span>{BRAND}
+            <img src={`${import.meta.env.BASE_URL}swarvo-logo.webp`} alt="" className="h-10 w-10 rounded-xl object-contain dark:invert" />{BRAND}
           </div>
 
           {forgot ? (<>
@@ -131,7 +106,7 @@ export default function AuthPage() {
             <div className="mt-12 inline-flex rounded-xl border border-line/80 bg-muted/70 p-1 shadow-field" role="tablist" aria-label="Sign in or create an account">
               {([['Sign in', false], ['Create account', true]] as const).map(([label, isSignup]) => (
                 <button key={label} role="tab" aria-selected={signup === isSignup} type="button" onClick={() => { setSignup(isSignup); setError(null) }}
-                  className={cn('rounded-lg px-4 py-1.5 text-[13px] font-semibold transition', signup === isSignup ? 'bg-surface text-ink shadow-card ring-1 ring-line' : 'text-soft hover:text-ink')}>{label}</button>
+                  className={cn('rounded-lg px-4 py-1.5 text-[13px] font-semibold transition', signup === isSignup ? 'bg-surface text-ink ring-1 ring-line' : 'text-soft hover:text-ink')}>{label}</button>
               ))}
             </div>
             <h1 className="mt-6 text-[32px] font-extrabold leading-tight tracking-[-0.03em]">{signup ? 'Create your account' : 'Welcome back'}</h1>
@@ -163,19 +138,10 @@ export default function AuthPage() {
         </div>
       </div>
 
-      <div className="relative hidden overflow-hidden rounded-3xl bg-[linear-gradient(145deg,#04201c_0%,#08433a_42%,#0f6b58_100%)] p-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <div className="pointer-events-none absolute -right-32 -top-32 h-[28rem] w-[28rem] rounded-full bg-emerald-300/20 blur-3xl" aria-hidden />
-        <div className="pointer-events-none absolute -bottom-40 -left-24 h-[26rem] w-[26rem] rounded-full bg-teal-400/15 blur-3xl" aria-hidden />
-        <div className="pointer-events-none absolute inset-0 opacity-[.07]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #fff 1px, transparent 0)', backgroundSize: '26px 26px' }} aria-hidden />
-        <div className="relative max-w-lg">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium text-white/85"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />Voice agents for businesses that can't miss a call</span>
-          <h2 className="mt-6 text-[44px] font-extrabold leading-[1.05] tracking-[-0.035em]">Your business, answered. <span className="text-emerald-200">Every call.</span></h2>
-          <p className="mt-5 max-w-md text-[16px] leading-relaxed text-white/70">Build a voice agent in minutes, give it a phone number, and let it book, answer and follow up while you work.</p>
-        </div>
-        <div className="relative my-10 flex justify-center"><LiveCall /></div>
-        <ul className="relative grid max-w-xl gap-x-8 gap-y-5 sm:grid-cols-2">{FEATURES.map(([Icon, t, d]) => (
-          <li key={t} className="flex gap-3.5"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10"><Icon size={16} /></span><span><span className="block text-sm font-semibold">{t}</span><span className="mt-0.5 block text-[13px] leading-snug text-white/60">{d}</span></span></li>
-        ))}</ul>
+      <div className="relative hidden overflow-hidden rounded-3xl bg-[#04201c] lg:block lg:aspect-[8/9] lg:h-full lg:max-w-[52vw]">
+        <img src="/auth-image.png" alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#0b1020]/90 via-[#0b1020]/55 to-transparent" aria-hidden />
+        <div className="absolute inset-x-0 bottom-0 p-8 text-white"><h2 className="text-[30px] font-extrabold leading-[1.1] tracking-[-0.03em] [text-shadow:0_2px_16px_rgba(0,0,0,.45)]">Your business, answered. Every call.</h2><p className="mt-2 text-[14px] leading-snug text-white/85 [text-shadow:0_1px_10px_rgba(0,0,0,.5)]">Build a voice agent in minutes, give it a phone number, and let it book and follow up while you work.</p></div>
       </div>
     </div>
   )

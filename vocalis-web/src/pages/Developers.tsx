@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Eye, EyeOff, MessageCircle, RefreshCw, Send } from 'lucide-react'
+import { Eye, EyeOff, MessageCircle, RefreshCw, Send } from '@/components/icons'
 import { toast } from 'sonner'
 import { Badge, Button, Card, Chip, Input, Dialog, Tab, TabPanel, Tabs, TabsList } from '@/components/ui'
 import { CodeBlock, ConfirmDialog, CopyButton, PageHeader, TableSkeleton, useAsync } from '@/components/shared'
@@ -54,7 +54,7 @@ export default function DevelopersPage() {
         <TabPanel value="logs"><Card className="overflow-hidden">{logs.loading ? <TableSkeleton rows={6} /> : <table className="w-full text-sm"><tbody>{logs.data!.map((l) => <tr key={l.id} className="cursor-pointer border-b last:border-0 hover:bg-muted/50" onClick={() => setLog(l)}><td className="px-5 py-3"><Badge>{l.method}</Badge></td><td className="font-mono text-xs">{l.path}</td><td><Badge tone={l.status < 300 ? 'green' : 'red'}>{l.status}</Badge></td><td className="num text-soft">{l.ms} ms</td><td className="px-5 text-right text-soft">{l.time}</td></tr>)}</tbody></table>}</Card></TabPanel>
         <TabPanel value="widget"><div className="grid gap-6 lg:grid-cols-2"><Card className="p-6"><h3 className="font-semibold">Add a talk button to your website</h3><p className="mb-3 mt-1 text-soft">Paste this before the closing body tag.</p><CodeBlock code={embed} /></Card>
           <Card className="relative min-h-[220px] overflow-hidden bg-muted/50 p-6"><div className="text-sm text-soft">Live preview</div><div className="mt-2 h-3 w-2/3 rounded bg-line" /><div className="mt-2 h-3 w-1/2 rounded bg-line" />
-            <button onClick={() => toast('Starting a call with your agent…')} className={cn('absolute bottom-4 right-4 flex h-14 items-center gap-2 rounded-full bg-accent px-5 font-medium text-accent-fg shadow-pop transition hover:scale-105')}><MessageCircle size={20} />Talk to us</button></Card></div></TabPanel></Tabs>
+            <button onClick={() => toast('Starting a call with your agent…')} className={cn('absolute bottom-4 right-4 flex h-14 items-center gap-2 rounded-full bg-ink px-5 font-medium text-surface transition hover:scale-105')}><MessageCircle size={20} />Talk to us</button></Card></div></TabPanel></Tabs>
       <Dialog open={!!log} onOpenChange={(o) => !o && setLog(null)} side title={log ? `${log.method} ${log.path}` : ''} description={log?.time}>
         {log && <div className="space-y-4"><div><div className="mb-1 text-xs font-semibold uppercase text-soft">Request</div><CodeBlock json code={JSON.stringify(log.req, null, 2)} /></div><div><div className="mb-1 text-xs font-semibold uppercase text-soft">Response</div><CodeBlock json code={JSON.stringify(log.res, null, 2)} /></div></div>}
       </Dialog>

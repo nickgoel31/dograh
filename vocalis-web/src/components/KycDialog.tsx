@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { FileCheck2, ShieldCheck, Upload } from 'lucide-react'
+import { FileCheck2, ShieldCheck, Upload } from '@/components/icons'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Dialog, Field, Input, Select } from './ui'

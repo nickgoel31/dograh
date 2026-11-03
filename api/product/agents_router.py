@@ -176,6 +176,26 @@ async def duplicate(
     return _out(copy)
 
 
+@router.delete("/{agent_id}", status_code=204)
+async def delete(agent_id: str, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE))):
+    """Remove an agent. Phone numbers that pointed at it stop answering (they stay in the account); past calls are kept."""
+    from sqlalchemy import update
+
+    from api.db.models import TelephonyPhoneNumberModel
+
+    agent = await svc.get_agent(ctx.session, ctx.workspace, agent_id)
+    workflows = [w for w in (agent.test_workflow_id, agent.live_workflow_id) if w]
+    if workflows:
+        await ctx.session.execute(
+            update(TelephonyPhoneNumberModel)
+            .where(TelephonyPhoneNumberModel.inbound_workflow_id.in_(workflows))
+            .values(inbound_workflow_id=None)
+        )
+    await ctx.session.delete(agent)
+    await ctx.session.commit()
+    return Response(status_code=204)
+
+
 @router.post("/{agent_id}/pause", response_model=AgentOut)
 async def pause(agent_id: str, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE))):
     agent = await svc.get_agent(ctx.session, ctx.workspace, agent_id)

@@ -1,8 +1,8 @@
 import * as React from 'react'
-import { BookOpen, CheckCircle2, Play, Plus, Search } from 'lucide-react'
+import { BookOpen, CheckCircle2, Play, Plus, Search } from '@/components/icons'
 import { toast } from 'sonner'
 import { Badge, Button, Card, Dialog, Field, Input, Select, Switch, Tab, TabPanel, Tabs, TabsList, Textarea } from '@/components/ui'
-import { PageHeader, Row, TableSkeleton, useAsync } from '@/components/shared'
+import { PageHeader, Row, SearchPill, TableSkeleton, useAsync } from '@/components/shared'
 import { api } from '@/lib/api'
 import { auditLog } from '@/mock/misc'
 
@@ -39,8 +39,8 @@ export function HelpPage() {
   return (
     <>
       <PageHeader title="How can we help?" actions={<Badge tone="green" className="px-3 py-1.5 text-sm"><CheckCircle2 size={14} />All systems operational</Badge>} />
-      <div className="relative mb-8 max-w-xl"><Search size={16} className="absolute left-3 top-3 text-soft" /><Input className="h-11 pl-10" placeholder="Search help…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search help" /></div>
-      <div className="grid gap-4 sm:grid-cols-3">{cats.filter((c) => c.toLowerCase().includes(q.toLowerCase())).map((c) => <Card key={c} className="flex items-center gap-3 p-5 hover:shadow-pop"><BookOpen className="text-accent" /><span className="font-medium">{c}</span></Card>)}</div>
+      <SearchPill className="mb-8 max-w-xl" placeholder="Search help…" label="Search help" value={q} onChange={setQ} />
+      <div className="grid gap-4 sm:grid-cols-3">{cats.filter((c) => c.toLowerCase().includes(q.toLowerCase())).map((c) => <Card key={c} className="flex items-center gap-3 p-5 hover:bg-muted/40"><BookOpen className="text-accent" /><span className="font-medium">{c}</span></Card>)}</div>
       <h2 className="mb-3 mt-10 font-semibold">Video tutorials</h2>
       <div className="grid gap-4 sm:grid-cols-3">{['Your first agent in 60 seconds', 'Connecting a phone number', 'Reading call reports'].map((t) => <Card key={t} className="overflow-hidden"><button onClick={() => toast('Video player would open')} className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-accent to-[#2f9e83] text-white"><Play size={36} /></button><div className="p-3 font-medium">{t}</div></Card>)}</div>
       <Card className="mt-10 max-w-xl p-6"><h3 className="font-semibold">Contact support</h3><div className="mt-3 space-y-3"><Input placeholder="Subject" aria-label="Subject" /><Textarea placeholder="Tell us what's happening…" aria-label="Message" /><Button variant="primary" onClick={() => toast.success('Thanks! We reply within a few hours.')}>Send</Button></div></Card>

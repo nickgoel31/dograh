@@ -252,3 +252,31 @@ async def test_charge_takes_money_when_only_the_balance_is_left(monkeypatch):
     monkeypatch.setattr(ws, "credit_money", credit)
     taken = await payments.CoreWallet().charge(11, 2.0, 6.0, "Practice call #1", "practice:1")
     assert taken == 12.0 and calls["removed"] == [] and calls["credits"] == [-12.0]
+
+
+async def test_only_the_first_accounts_get_the_signup_bonus(client, monkeypatch):
+    monkeypatch.setenv("PRODUCT_SIGNUP_BONUS", "100")
+    monkeypatch.setenv("PRODUCT_SIGNUP_BONUS_LIMIT", "2")
+    heads = []
+    for email in ("a@x.com", "b@x.com", "c@x.com"):
+        _, tok = await signup(client, email)
+        heads.append({**bearer(tok), "X-Environment": "live"})
+    for h in heads[:2]:
+        await client.get("/product/billing/summary", headers=h)
+        await client.get("/product/billing/summary", headers=h)  # asking again never gives it twice
+    assert client.wallet.balance == 200
+    await client.get("/product/billing/summary", headers=heads[2])  # the third is past the limit
+    assert client.wallet.balance == 200
+    async with client.session_factory() as s:
+        assert await billing.bonus_given(s) == 2 and await billing.bonus_left(s) == 0
+
+
+async def test_welcome_shows_the_bonus_that_was_given(client, monkeypatch):
+    monkeypatch.setenv("PRODUCT_SIGNUP_BONUS", "100")
+    _, tok = await signup(client, "a@x.com")
+    h = {**bearer(tok), "X-Environment": "live"}
+    got = (await client.get("/product/billing/welcome", headers=h)).json()
+    assert got["bonus"] == 100 and got["currency"]
+    monkeypatch.setenv("PRODUCT_SIGNUP_BONUS_LIMIT", "1")
+    _, tok2 = await signup(client, "b@x.com")
+    assert (await client.get("/product/billing/welcome", headers={**bearer(tok2), "X-Environment": "live"})).json()["bonus"] == 0

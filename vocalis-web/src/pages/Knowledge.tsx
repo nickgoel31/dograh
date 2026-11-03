@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { FileText, Globe, MessageSquare, Plus, RefreshCw, Type } from 'lucide-react'
+import { FileText, Globe, MessageSquare, Plus, RefreshCw, Type } from '@/components/icons'
 import { toast } from 'sonner'
 import { Button, Card, Dialog, Input, Tab, TabPanel, Tabs, TabsList, Textarea } from '@/components/ui'
 import { CardSkeletons, PageHeader, StatusBadge, useAsync } from '@/components/shared'

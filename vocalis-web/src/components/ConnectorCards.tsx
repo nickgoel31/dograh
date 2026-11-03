@@ -1,18 +1,16 @@
 import * as React from 'react'
-import { Check } from 'lucide-react'
+import { Check } from '@/components/icons'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Card, Dialog, Field, Input } from './ui'
 import { http } from '@/lib/api/http'
+import { BrandLogo } from './BrandLogo'
 
 type Item = {
   id: string; name: string; blurb: string; connected: boolean; info: string | null; does: string[]
   fields: { key: string; label: string; secret: boolean; hint: string; optional: boolean; value: string }[]
 }
 const say = (e: unknown) => toast.error(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
-const brand: Record<string, string> = {
-  google_calendar: '#4285f4', calendly: '#006bff', hubspot: '#ff7a59', salesforce: '#00a1e0', zoho: '#e42527', shopify: '#5e8e3e', slack: '#4a154b', whatsapp: '#25d366', google_sheets: '#188038', razorpay_links: '#3395ff',
-}
 
 /** Every outside service the workspace can connect, with a form for the details each one needs. */
 export function ConnectorGrid() {
@@ -35,7 +33,7 @@ export function ConnectorGrid() {
         {(q.data ?? []).map((i) => (
           <Card key={i.id} className="flex flex-col p-5">
             <div className="flex items-start justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold text-white" style={{ background: brand[i.id] ?? '#64748b' }}>{i.name[0]}</div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl border bg-white"><BrandLogo id={i.id} name={i.name} size={22} /></div>
               {i.connected && <Badge tone="green"><Check size={11} />Connected</Badge>}
             </div>
             <div className="mt-3 font-medium">{i.name}</div>

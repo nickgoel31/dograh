@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Plus, Settings2, ShieldCheck } from 'lucide-react'
+import { Plus, Settings2, ShieldCheck } from '@/components/icons'
 import { toast } from 'sonner'
 import { Badge, Button, Card, Dialog, Field, Input, Select, Switch, Tab, TabPanel, Tabs, TabsList } from '@/components/ui'
 import { CopyButton, EmptyState, PageHeader, StatusBadge, TableSkeleton, useAsync } from '@/components/shared'

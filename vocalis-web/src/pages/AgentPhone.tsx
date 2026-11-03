@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
-import { PhoneCall, PhoneForwarded } from 'lucide-react'
+import { PhoneCall, PhoneForwarded } from '@/components/icons'
 import { toast } from 'sonner'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Card, Field, Input, Switch, Textarea } from '@/components/ui'

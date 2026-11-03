@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
-import { AlertTriangle, CreditCard, Download } from 'lucide-react'
+import { AlertTriangle, CreditCard, Download } from '@/components/icons'
 import { toast } from 'sonner'
 import { Badge, Button, Card, Progress, Select, Slider, Switch } from '@/components/ui'
 import { AdvancedOnly, PageHeader, StatusBadge, TableSkeleton, useAsync } from '@/components/shared'

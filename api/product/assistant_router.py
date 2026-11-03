@@ -87,3 +87,92 @@ async def chat(body: ChatBody, ctx: Ctx = Depends(get_ctx), llm: LLMGateway = De
     except Exception:  # noqa: BLE001 - no model available: answer from the help articles instead
         text = ""
     return ChatOut(reply=text[:2500] or _fallback(last))
+
+
+# ---- the AI home page: the model plans, the person's own browser session carries the plan out -------------------------------------
+# Reads run on their own; anything that changes something is shown to the person to confirm first. The browser calls the normal product
+# endpoints, so roles, workspaces and limits apply exactly as if the person had clicked the buttons.
+TOOLS: dict[str, tuple[str, str]] = {
+    "list_agents": ("read", "{}  -> all agents with id, name, status"),
+    "list_templates": ("read", "{}  -> agent templates (key, name, role, blurb)"),
+    "list_numbers": ("read", "{}  -> phone numbers with id, number, assigned agent"),
+    "list_contacts": ("read", "{q?: string}  -> people who called or were called"),
+    "list_conversations": ("read", "{}  -> recent calls with summary, mood, duration"),
+    "list_campaigns": ("read", "{}  -> outbound campaigns and progress"),
+    "list_knowledge": ("read", "{}  -> knowledge documents the agents use"),
+    "list_integrations": ("read", "{}  -> connected services (calendar, CRM, WhatsApp...)"),
+    "get_wallet": ("read", "{}  -> balance and minutes left"),
+    "go_to": ("ui", "{path: string}  -> open a page. Use only paths from the page list"),
+    "create_agent": ("write", "{name: string, template?: string, business?: string, what_you_do?: string, script?: string, tone?: string}  -> new agent (private test copy)"),
+    "update_agent": ("write", "{agent_id: string, name?, business?, what_you_do?, script?, tone?}  -> change an agent"),
+    "publish_agent": ("write", "{agent_id: string}  -> send the latest changes live"),
+    "assign_number": ("write", "{number_id: string, agent_id: string | null}  -> point a number at an agent (null removes it)"),
+    "block_numbers": ("write", "{numbers: string}  -> add to the do-not-call list"),
+    "add_knowledge_text": ("write", "{title: string, text: string}  -> add a note to knowledge"),
+    "add_knowledge_qa": ("write", "{title: string, pairs: [{q: string, a: string}]}  -> add fixed question/answers"),
+}
+
+
+class PlanBody(BaseModel):
+    messages: list[Msg] = Field(min_length=1, max_length=40)
+    page: str = Field(default="/", max_length=120)
+
+
+class Call(BaseModel):
+    id: str
+    tool: str
+    kind: str
+    args: dict
+
+
+class PlanOut(BaseModel):
+    reply: str
+    calls: list[Call] = Field(default_factory=list)
+
+
+def _plan_system(state: str) -> str:
+    pages = "\n".join(f"- {p}: {d}" for p, d in PAGES)
+    tools = "\n".join(f"- {n} ({k}): {d}" for n, (k, d) in TOOLS.items())
+    return (
+        f"You are the assistant on the home page of {config.PRODUCT_NAME}, a voice-agent platform. You run the platform for the person: you can look things up and, when asked, create and change things.\n"
+        'Reply with ONLY a JSON object: {"reply": "short message to the person", "calls": [{"tool": "name", "args": {...}}]}. No text outside the JSON.\n'
+        "Rules:\n- Use tools instead of guessing. To find ids, call a list_ tool first, then use the ids it returns.\n"
+        "- Results of tools you called come back as a message starting with TOOL RESULTS. Use them to finish the job, then answer with an empty calls list.\n"
+        "- Only call write tools when the person asked for that change. Ask a short question first if something important is missing (for example what a new agent should do). Never invent ids, phone numbers or prices.\n"
+        "- The person confirms every write before it happens, so describe plainly what it will do. Do not ask for passwords, API keys or card details; money, buying numbers and billing are done by the person on the Billing and Phone Numbers pages, so point there with go_to.\n"
+        "- When creating an agent, write a useful script (numbered steps of what the agent should do on a call) from what the person told you.\n"
+        "- Be brief and plain. Short sentences. Use **bold** sparingly and markdown links like [Billing & Usage](/billing) with paths from the page list.\n\n"
+        f"Pages:\n{pages}\n\nTools:\n{tools}\n\nFacts:\n{FACTS}\n\nTheir account right now: {state}"
+    )
+
+
+def _parse_plan(text: str) -> tuple[str, list[dict]]:
+    import json
+
+    raw = text.strip()
+    if raw.startswith("```"):
+        raw = re.sub(r"^```[a-z]*\n?|```$", "", raw).strip()
+    start, end = raw.find("{"), raw.rfind("}")
+    try:
+        data = json.loads(raw[start:end + 1]) if start >= 0 and end > start else None
+    except ValueError:
+        data = None
+    if not isinstance(data, dict):
+        return raw[:2500], []
+    calls = [c for c in (data.get("calls") or []) if isinstance(c, dict) and c.get("tool") in TOOLS][:5]
+    return str(data.get("reply") or "")[:2500], [{"tool": c["tool"], "args": c.get("args") if isinstance(c.get("args"), dict) else {}} for c in calls]
+
+
+@router.post("/plan", response_model=PlanOut)
+async def plan(body: PlanBody, ctx: Ctx = Depends(get_ctx), llm: LLMGateway = Depends(get_llm)):
+    await rate_limit.enforce(f"pplan:{ctx.user.id}", 60, 600, "You're asking quickly. Give it a minute and try again.")
+    messages = [{"role": m.role, "content": m.content} for m in body.messages[-24:]]
+    try:
+        text = await llm.complete(ctx.workspace.test_org_id, ctx.user.id, _plan_system(await _state(ctx)), messages)
+        reply, raw_calls = _parse_plan(text)
+    except Exception:  # noqa: BLE001 - no model available
+        reply, raw_calls = "I couldn't reach the assistant just now. Please try again in a moment.", []
+    import secrets
+
+    calls = [Call(id=secrets.token_hex(4), tool=c["tool"], kind=TOOLS[c["tool"]][0], args=c["args"]) for c in raw_calls]
+    return PlanOut(reply=reply or ("Working on it." if calls else "Done."), calls=calls)

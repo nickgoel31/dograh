@@ -130,6 +130,7 @@ class ProductBillingSettingsModel(Base):
     billing_state = Column(String(2), nullable=True)  # GST state code, e.g. "29"
     billing_address = Column(String(400), nullable=True)
     first_grant_done = Column(Boolean, nullable=False, default=False)
+    signup_bonus_at = Column(DateTime(timezone=True), nullable=True)  # set when the sign-up bonus was given
     human_cost_per_min = Column(Float, nullable=True)  # what a person would cost per minute, for the 'money saved' estimate
 
 

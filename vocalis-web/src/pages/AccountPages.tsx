@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { CheckCircle2, Lock } from 'lucide-react'
+import { CheckCircle2, Lock } from '@/components/icons'
 import { Button, Card, Input } from '@/components/ui'
 import { authApi } from '@/lib/api'
 import { BASE } from '@/lib/api/env'

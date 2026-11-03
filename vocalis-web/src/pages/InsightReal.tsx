@@ -1,7 +1,8 @@
 /** Real Analytics and Testing Lab. Demo versions stay in their own files for mock mode. */
 import { Glyph } from '@/components/Glyph'
 import * as React from 'react'
-import { Lightbulb, Play, Plus, Trash2 } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Circle, Lightbulb, Play, Plus, Trash2 } from '@/components/icons'
+import { AgentAvatar } from '@/components/AgentAvatar'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis } from 'recharts'
@@ -110,9 +111,10 @@ export function TestingReal() {
   return (
     <>
       <PageHeader title="Testing Lab" subtitle="Try your agent before real callers do. Practice is always free." actions={
-        <Select className="w-auto" value={agent} onChange={(e) => setAid(e.target.value)} aria-label="Agent">{agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select>} />
+        <div className="relative"><AgentAvatar id={agent} className="pointer-events-none absolute left-1.5 top-1.5 h-7 w-7" />
+          <Select className="h-10 w-auto min-w-[12rem] rounded-full pl-11 pr-9" value={agent} onChange={(e) => setAid(e.target.value)} aria-label="Agent">{agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select></div>} />
       <Tabs defaultValue="play"><TabsList><Tab value="play">Talk to it</Tab><Tab value="callers">Practice callers</Tab><Tab value="cases">Test cases</Tab><Tab value="ab">A/B test</Tab></TabsList>
-        <TabPanel value="play"><Card className="p-6"><VoicePlayground key={agent} agentId={agent} /></Card></TabPanel>
+        <TabPanel value="play"><VoicePlayground key={agent} agentId={agent} /></TabPanel>
         <TabPanel value="callers"><Callers agent={agent} key={agent} /></TabPanel>
         <TabPanel value="cases"><Cases agent={agent} key={agent} /></TabPanel>
         <TabPanel value="ab"><AbTests agent={agent} key={agent} /></TabPanel>
@@ -128,17 +130,27 @@ function Callers({ agent }: { agent: string }) {
   const [open, setOpen] = React.useState<string | null>(null)
   const run = (persona: string) => http('/lab/sim', { method: 'POST', json: { agent_id: agent, persona } }).then(() => { toast('Practice call started'); qc.invalidateQueries({ queryKey: ['lab', 'sims'] }) }).catch(say)
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <Card className="p-5"><h3 className="font-semibold">Pick a caller</h3><p className="mb-3 text-[13px] text-soft">An AI plays a tricky caller and scores how your agent handled them.</p>
-        <div className="space-y-2">{personas.data?.map((p) => <div key={p.id} className="flex items-center justify-between rounded-lg border p-3"><span className="font-medium">{p.name}</span><Button size="sm" onClick={() => run(p.id)}><Play size={14} />Run</Button></div>)}</div></Card>
-      <Card className="p-5"><h3 className="font-semibold">Results</h3>
+    <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
+      <div>
+        <h3 className="text-[15px] font-semibold">Pick a caller</h3>
+        <p className="mb-4 mt-1 text-[13px] text-soft">An AI plays a tricky caller and scores how your agent handled them.</p>
+        <div className="grid gap-3 sm:grid-cols-2">{personas.data?.map((p) => (
+          <Card key={p.id} className="flex flex-col items-start gap-3 p-4">
+            <AgentAvatar id={p.id} className="h-10 w-10" />
+            <div className="text-sm font-medium">{p.name}</div>
+            <Button size="sm" className="mt-auto rounded-full" onClick={() => run(p.id)}><Play size={13} />Run</Button>
+          </Card>))}</div>
+      </div>
+      <Card className="p-5">
+        <h3 className="text-[15px] font-semibold">Results</h3>
         {!sims.data?.length ? <p className="mt-3 text-sm text-soft">Nothing yet. Run a caller to see how it goes.</p> : (
           <div className="mt-3 space-y-2">{sims.data.map((s) => (
-            <div key={s.id} className="rounded-lg border p-3"><button className="flex w-full items-center gap-3 text-left" onClick={() => setOpen(open === s.id ? null : s.id)}>
-              <span className="flex-1 font-medium">{s.persona_name}</span>
+            <div key={s.id} className="rounded-xl border p-3"><button className="flex w-full items-center gap-3 text-left" onClick={() => setOpen(open === s.id ? null : s.id)}>
+              <span className="flex-1 text-sm font-medium">{s.persona_name}</span>
               {s.status === 'running' ? <Badge>Running…</Badge> : s.status === 'failed' ? <Badge tone="red">Didn't finish</Badge> : <Badge tone={s.passed ? 'green' : 'orange'}>{s.score}/100</Badge>}</button>
               {s.note && <p className="mt-1 text-[13px] text-soft">{s.note}</p>}
-              {open === s.id && <div className="mt-2 space-y-1.5 border-t pt-2 text-sm">{s.turns.map((t, i) => <div key={i}><b>{(t as { who: string }).who === 'agent' ? 'Agent' : 'Caller'}:</b> {(t as { text: string }).text}</div>)}</div>}</div>))}</div>)}</Card>
+              {open === s.id && <div className="mt-2 space-y-1.5 border-t pt-2 text-sm">{s.turns.map((t, i) => <div key={i}><b>{(t as { who: string }).who === 'agent' ? 'Agent' : 'Caller'}:</b> {(t as { text: string }).text}</div>)}</div>}</div>))}</div>)}
+      </Card>
     </div>
   )
 }
@@ -157,7 +169,7 @@ function Cases({ agent }: { agent: string }) {
       <div className="mb-3 flex items-center justify-between"><div><h3 className="font-semibold">Test cases</h3><p className="text-[13px] text-soft">“When the caller says X, the agent should do Y.” Results are kept for this version of the agent.</p></div>
         <div className="flex gap-2"><Button disabled={busy || !list.length} onClick={() => runAll(false)}>{busy ? 'Running…' : 'Run new'}</Button><Button variant="primary" disabled={busy || !list.length} onClick={() => runAll(true)}>Run all</Button></div></div>
       <div className="space-y-2">{list.map((c) => (
-        <div key={c.id} className="flex items-start gap-3 rounded-lg border p-3 text-sm"><span className="mt-0.5"><Glyph e={c.passed === null ? '⚪' : c.passed ? '✅' : '❌'} size={16} className={c.passed === null ? 'text-soft' : c.passed ? 'text-ok' : 'text-bad'} /></span>
+        <div key={c.id} className="flex items-start gap-3 rounded-xl border p-3.5 text-sm"><span className="mt-0.5 shrink-0">{c.passed === null ? <Circle size={17} className="text-soft" /> : c.passed ? <CheckCircle2 size={17} className="text-ok" /> : <AlertCircle size={17} className="text-bad" />}</span>
           <div className="flex-1"><div><b>When:</b> {c.say}</div><div><b>Should:</b> {c.expect}{c.must_call ? ` (using “${c.must_call}”)` : ''}</div>{c.note && <div className="text-[13px] text-soft">{c.note}</div>}</div>
           <Button size="sm" variant="ghost" className="text-bad" onClick={() => http(`/lab/cases/${c.id}`, { method: 'DELETE' }).then(refresh).catch(say)}><Trash2 size={14} /></Button></div>))}</div>
       <div className="mt-4 grid gap-2 border-t pt-4 md:grid-cols-[1fr_1fr_160px_auto]"><Input placeholder="When the caller says…" value={f.say} onChange={(e) => setF({ ...f, say: e.target.value })} /><Input placeholder="The agent should…" value={f.expect} onChange={(e) => setF({ ...f, expect: e.target.value })} />

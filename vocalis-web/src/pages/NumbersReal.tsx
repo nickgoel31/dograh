@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { KycDialog, useKyc } from '@/components/KycDialog'
 import { BringNumber } from '@/components/BringNumber'
-import { Plus, Settings2, ShieldCheck, ShieldQuestion } from 'lucide-react'
+import { Plus, Settings2, ShieldCheck, ShieldQuestion } from '@/components/icons'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Card, Dialog, Field, Input, Select, Switch, Textarea } from '@/components/ui'

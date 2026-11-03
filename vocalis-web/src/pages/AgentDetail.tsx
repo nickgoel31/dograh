@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CallFlowEditor, defaultFlow, type FlowData } from '@/components/CallFlow'
-import { AlertTriangle, Check, History, Mic, Play, Rocket } from 'lucide-react'
+import { AlertTriangle, Check, History, Mic, Play, Rocket } from '@/components/icons'
 import { toast } from 'sonner'
 import { Badge, Button, Card, Chip, Field, Input, Select, Slider, Switch, Tab, TabPanel, Tabs, TabsList, Textarea } from '@/components/ui'
 import { AdvancedOnly, EmptyState, Friendly, PageHeader, SimpleAdvanced, StatusBadge, UnsavedBar, speak } from '@/components/shared'

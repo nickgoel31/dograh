@@ -4,7 +4,7 @@ import io
 import os
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +23,26 @@ def _env_float(name: str, default: float) -> float:
 
 def free_minutes() -> float:
     return _env_float("PRODUCT_FREE_MINUTES", 0.0)
+
+
+def signup_bonus() -> float:
+    """Money given to a new account (in the billing currency). 0 turns it off."""
+    return _env_float("PRODUCT_SIGNUP_BONUS", 100.0)
+
+
+def signup_bonus_limit() -> int:
+    """Only this many accounts ever get the bonus."""
+    return int(_env_float("PRODUCT_SIGNUP_BONUS_LIMIT", 1000))
+
+
+async def bonus_given(session: AsyncSession) -> int:
+    return await session.scalar(select(func.count()).select_from(ProductBillingSettingsModel).where(ProductBillingSettingsModel.signup_bonus_at.is_not(None))) or 0
+
+
+async def bonus_left(session: AsyncSession) -> int:
+    if signup_bonus() <= 0:
+        return 0
+    return max(0, signup_bonus_limit() - await bonus_given(session))
 
 
 def gst_rate() -> float:
@@ -62,6 +82,24 @@ async def ensure_billing(session: AsyncSession, wallet: WalletGateway, ws: Produ
         s.first_grant_done = True
         if free_minutes() > 0:
             await wallet.grant_minutes(ws.live_org_id, free_minutes(), "Welcome minutes", f"welcome:{ws.id}")
+        await _give_signup_bonus(session, wallet, ws, s)
+
+
+async def _give_signup_bonus(session: AsyncSession, wallet: WalletGateway, ws: ProductWorkspaceModel, s: ProductBillingSettingsModel) -> None:
+    """The first accounts to sign up get a little money to try the product. Brought-over organizations and sub-accounts do not."""
+    amount = signup_bonus()
+    created = ws.created_at if ws.created_at is None or ws.created_at.tzinfo else ws.created_at.replace(tzinfo=UTC)
+    if amount <= 0 or ws.adopted or ws.parent_workspace_id is not None or s.signup_bonus_at is not None:
+        return
+    if created is not None and datetime.now(UTC) - created > timedelta(days=3):  # only new sign-ups, not older workspaces opening billing for the first time
+        return
+    bind = session.get_bind()
+    if bind.dialect.name == "postgresql":  # two sign-ups at the same moment must not both take the last place
+        await session.execute(text("SELECT pg_advisory_xact_lock(7101)"))
+    if await bonus_left(session) <= 0:
+        return
+    s.signup_bonus_at = datetime.now(UTC)
+    await wallet.credit(ws.live_org_id, amount, "Welcome bonus", f"signup-bonus:{ws.id}")
 
 
 def month_bounds(period: str) -> tuple[datetime, datetime]:

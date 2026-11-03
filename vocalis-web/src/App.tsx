@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { queryClient } from '@/lib/query'
 import { ApiError, USE_MOCKS, authApi } from '@/lib/api'
@@ -100,7 +100,7 @@ export default function App() {
       <Routes>
         <Route element={<Shell />}>
           <Route index element={<Home />} />
-          <Route path="welcome" element={<Onboarding />} />
+          <Route path="welcome" element={USE_MOCKS ? <Onboarding /> : <Navigate to="/" replace />} />
           <Route path="contacts" element={USE_MOCKS ? <Home /> : <Contacts />} />
           <Route path="agents" element={<Agents />} />
           <Route path="agents/new" element={<NewAgentPage />} />

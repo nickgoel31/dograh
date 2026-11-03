@@ -2,8 +2,8 @@
 import { NetworkSecurity } from '@/components/NetworkSecurity'
 import * as React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import type { LucideIcon } from 'lucide-react'
-import { AlertTriangle, BarChart3, BookOpen, ChevronRight, CheckCircle2, Code2, CreditCard, LifeBuoy, Megaphone, Mic2, Phone, Plus, Rocket, Search, Send, ShieldCheck, Trash2, Users } from 'lucide-react'
+import type { LucideIcon } from '@/components/icons'
+import { AlertTriangle, BarChart3, BookOpen, ChevronRight, CheckCircle2, Code2, CreditCard, LifeBuoy, Megaphone, Mic2, Phone, Plus, Rocket, Search, Send, ShieldCheck, Trash2, Users } from '@/components/icons'
 import { toast } from 'sonner'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Card, Chip, Dialog, Field, Input, Select, Switch, Tab, TabPanel, Tabs, TabsList, Textarea } from '@/components/ui'
@@ -195,6 +195,22 @@ function Security() {
   )
 }
 
+function Preferences() {
+  const view = useUI((s) => s.view)
+  const set = useUI((s) => s.set)
+  return (
+    <Card className="divide-y">
+      <div className="flex items-center justify-between gap-6 p-5">
+        <div>
+          <h3 className="font-semibold">Advanced view</h3>
+          <p className="mt-1 max-w-md text-sm text-soft">Simple shows the basics. Advanced shows every technical option, like the Developers and Testing Lab pages.</p>
+        </div>
+        <Switch checked={view === 'advanced'} onChange={(v) => { set({ view: v ? 'advanced' : 'simple' }); toast(v ? 'Advanced view: all options visible' : 'Simple view: just the basics') }} label="Advanced view" />
+      </div>
+    </Card>
+  )
+}
+
 export function SettingsReal() {
   const qc = useQueryClient()
   const me = useMe().data
@@ -217,7 +233,7 @@ export function SettingsReal() {
   return (
     <>
       <PageHeader title="Team & Settings" subtitle="Who can do what, and how your data is handled." />
-      <Tabs defaultValue="members"><TabsList>{[['members', 'Members'], ['audit', 'Audit log'], ['privacy', 'Privacy & compliance'], ['security', 'Security'], ['ws', 'Sub-accounts']].map(([v, l]) => <Tab key={v} value={v}>{l}</Tab>)}</TabsList>
+      <Tabs defaultValue="members"><TabsList>{[['members', 'Members'], ['prefs', 'Preferences'], ['audit', 'Audit log'], ['privacy', 'Privacy & compliance'], ['security', 'Security'], ['ws', 'Sub-accounts']].map(([v, l]) => <Tab key={v} value={v}>{l}</Tab>)}</TabsList>
         <TabPanel value="members"><Card className="overflow-hidden"><div className="flex items-center justify-between border-b p-5"><h3 className="font-semibold">Members</h3>{manage && <Button variant="primary" size="sm" onClick={() => setInv(true)}><Plus size={14} />Invite</Button>}</div>
           {team.isPending ? <TableSkeleton rows={4} /> : <table className="w-full text-sm"><tbody>
             {team.data?.members.map((m) => (<tr key={m.id} className="border-b last:border-0"><td className="px-5 py-3"><div className="font-medium">{m.name ?? m.email}{m.you && <span className="ml-2 text-xs text-soft">(you)</span>}</div><div className="text-xs text-soft">{m.email}</div></td>
@@ -226,6 +242,7 @@ export function SettingsReal() {
             {team.data?.invites.map((i) => (<tr key={i.id} className="border-b bg-muted/30 last:border-0"><td className="px-5 py-3"><div className="font-medium">{i.email}</div><div className="text-xs text-soft">Invited · expires {when(i.expires)}</div></td><td><Badge tone="orange">{cap(i.role)}</Badge></td>
               <td className="px-5 text-right"><Button size="sm" variant="ghost" onClick={() => P.revokeInvite(i.id).then(refresh).catch(say)}>Cancel</Button></td></tr>))}</tbody></table>}</Card>
           <p className="mt-3 text-xs text-soft">Owner: everything. Admin: everything except deleting the workspace. Developer: build agents, keys and webhooks. Viewer: look only.</p></TabPanel>
+        <TabPanel value="prefs"><Preferences /></TabPanel>
         <TabPanel value="audit"><Card className="divide-y">{!manage ? <p className="p-6 text-sm text-soft">Only owners and admins can see the audit log.</p> : audit.isPending ? <TableSkeleton rows={5} /> : audit.data?.length === 0 ? <p className="p-6 text-sm text-soft">Nothing yet.</p> : audit.data?.map((a, i) => (
           <div key={i} className="flex justify-between gap-4 p-4 text-sm"><span><b>{a.who ?? 'Someone'}</b> {a.action.replace(/[._]/g, ' ')}{a.target ? ` · ${a.target}` : ''}</span><span className="shrink-0 text-soft">{when(a.time)}</span></div>))}</Card></TabPanel>
         <TabPanel value="privacy"><Privacy canEdit={manage} isOwner={isOwner} /></TabPanel>
@@ -300,7 +317,7 @@ export function HelpReal() {
             <>
               <h2 className="mb-3 font-semibold">Browse by topic</h2>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{sections.map((sec) => { const Icon = SECTION_ICON[sec] ?? BookOpen; const n = (all.data ?? []).filter((a) => a.section === sec).length
-                return <button key={sec} onClick={() => setSection(sec)} className="flex items-center gap-3 rounded-xl border bg-surface p-4 text-left shadow-card transition hover:border-accent">
+                return <button key={sec} onClick={() => setSection(sec)} className="flex items-center gap-3 rounded-xl border bg-surface p-4 text-left transition hover:border-accent">
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-soft text-accent"><Icon size={19} /></span>
                   <span><span className="block font-medium">{sec}</span><span className="text-xs text-soft">{n} {n === 1 ? 'article' : 'articles'}</span></span></button> })}</div>
               <h2 className="mb-3 mt-8 font-semibold">Popular questions</h2>
@@ -325,7 +342,7 @@ export function HelpReal() {
           <Card className="p-5">
             <h3 className="font-semibold">Still stuck?</h3>
             <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 text-[13px] font-medium">
-              {([['ask', 'Ask the helper'], ['write', 'Write to us']] as const).map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={cn('rounded-md py-1.5', tab === k ? 'bg-surface shadow-card' : 'text-soft')}>{l}</button>)}</div>
+              {([['ask', 'Ask the helper'], ['write', 'Write to us']] as const).map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={cn('rounded-md py-1.5', tab === k ? 'bg-surface ring-1 ring-line' : 'text-soft')}>{l}</button>)}</div>
             {tab === 'ask' ? (
               <div className="mt-4">
                 <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (question.trim()) ask.mutate() }}>
