@@ -18,14 +18,19 @@ H="X-Ops-Secret: $SECRET"
 
 case "${1:-list}" in
   list)
-    curl -fsS "$API" -H "$H" | python3 -c '
+    RAW="$(curl -fsS "$API" -H "$H")" || { echo "Couldn't reach the API on this server. If you just updated it, wait a minute and try again."; exit 1; }
+    printf '%s' "$RAW" | python3 -c '
 import json, sys
 rows = json.load(sys.stdin)
-if not rows: print("Nothing waiting for review."); sys.exit()
+if not rows:
+    print("Nothing waiting for review.")
+    sys.exit()
 for r in rows:
-    print(f"\nCustomer {r[\"workspace_id\"]}: {r[\"workspace\"]}")
-    for k in ("business","type","pan","gstin","contact","email","phone","address","submitted_at"): print(f"  {k:13} {r[k]}")
-    print("  documents    ", ", ".join(r["documents"]))
+    print("")
+    print("Customer %s: %s" % (r["workspace_id"], r["workspace"]))
+    for k in ("business", "type", "pan", "gstin", "contact", "email", "phone", "address", "submitted_at"):
+        print("  %-13s %s" % (k, r[k]))
+    print("  documents     " + ", ".join(r["documents"]))
 '
     ;;
   docs)
