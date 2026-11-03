@@ -226,39 +226,64 @@ const faq: Record<string, string> = {
   'How much does this cost?': 'One simple price: ₹6 per minute, everything included. Test mode is always free.',
   'How do I teach my agent about my business?': 'Go to Knowledge and add a website, a PDF or a few questions and answers. Your agent learns it in about a minute.',
 }
+const STARTERS = ['How do I get my agent live?', 'Why did my call fail?', 'How is billing worked out?', 'How do I buy a phone number?']
+
+/** Plain text with **bold** and [links](/path) turned into something clickable. */
+function Rich({ text, go }: { text: string; go: (to: string) => void }) {
+  const parts = text.split(/(\[[^\]]+\]\(\/[^)\s]*\)|\*\*[^*]+\*\*)/g)
+  return (
+    <>{parts.map((p, i) => {
+      const link = /^\[([^\]]+)\]\((\/[^)\s]*)\)$/.exec(p)
+      if (link) return <button key={i} type="button" onClick={() => go(link[2])} className="font-semibold text-accent underline underline-offset-2">{link[1]}</button>
+      const bold = /^\*\*([^*]+)\*\*$/.exec(p)
+      return bold ? <strong key={i}>{bold[1]}</strong> : <React.Fragment key={i}>{p}</React.Fragment>
+    })}</>
+  )
+}
+
 function AIHelper() {
   const { helper, set } = useUI()
-  const [log, setLog] = React.useState<{ who: 'me' | 'ai'; t: string }[]>([{ who: 'ai', t: 'Hi! I’m your helper. Ask me anything, or pick a question below.' }])
+  const { pathname } = useLocation()
+  const nav = useNavigate()
+  const [log, setLog] = React.useState<{ who: 'me' | 'ai'; t: string }[]>([{ who: 'ai', t: 'Hi! I can help you set things up and fix problems. Ask me anything about your agents, numbers, billing or integrations.' }])
   const [typing, setTyping] = React.useState(false)
   const [text, setText] = React.useState('')
   const end = React.useRef<HTMLDivElement>(null)
   React.useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth' }) }, [log, typing])
-  const ask = (q: string) => {
-    if (!q.trim()) return
-    setLog((l) => [...l, { who: 'me', t: q }]); setText(''); setTyping(true)
-    setTimeout(() => { setTyping(false); setLog((l) => [...l, { who: 'ai', t: faq[q] ?? 'Good question! In this demo I only know a few answers, but in the real product I’d look through your docs and settings to help.' }]) }, 1300)
+  const go = (to: string) => { nav(to); if (window.innerWidth < 640) set({ helper: false }) }
+  const ask = async (q: string) => {
+    if (!q.trim() || typing) return
+    const next = [...log, { who: 'me' as const, t: q.trim() }]
+    setLog(next); setText(''); setTyping(true)
+    if (USE_MOCKS) { setTimeout(() => { setTyping(false); setLog((l) => [...l, { who: 'ai', t: faq[q] ?? 'In this demo I only know a few answers. In the real product I look at your account and the help articles.' }]) }, 700); return }
+    try {
+      const history = next.filter((m, i) => i > 0).slice(-10).map((m) => ({ role: m.who === 'me' ? 'user' : 'assistant', content: m.t }))
+      const r = await http<{ reply: string }>('/assistant/chat', { method: 'POST', json: { messages: history, page: pathname } })
+      setLog((l) => [...l, { who: 'ai', t: r.reply }])
+    } catch (e) { setLog((l) => [...l, { who: 'ai', t: e instanceof Error ? e.message : 'Something went wrong. Please try again.' }]) } finally { setTyping(false) }
   }
   return (
     <>
       <AnimatePresence>
         {helper && (
           <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16 }} role="dialog" aria-label="AI Helper"
-            className="fixed bottom-24 right-4 z-40 flex h-[480px] max-h-[calc(100vh-8rem)] w-[calc(100vw-2rem)] max-w-[380px] flex-col overflow-hidden rounded-2xl border bg-surface shadow-pop sm:right-6">
-            <div className="flex items-center justify-between border-b bg-accent px-4 py-3 text-accent-fg"><div className="flex items-center gap-2 font-semibold"><Sparkles size={16} />AI Helper</div><button onClick={() => set({ helper: false })} aria-label="Close helper"><X size={16} /></button></div>
+            className="fixed bottom-24 right-4 z-40 flex h-[520px] max-h-[calc(100dvh-8rem)] w-[calc(100vw-2rem)] max-w-[400px] flex-col overflow-hidden rounded-2xl border border-line/80 bg-surface shadow-pop sm:right-6">
+            <div className="brand-gradient flex items-center justify-between px-4 py-3 text-accent-fg"><div className="flex items-center gap-2 font-semibold"><Sparkles size={16} />AI Helper</div>
+              <button onClick={() => set({ helper: false })} aria-label="Close" className="rounded-lg p-1 transition hover:bg-white/15"><X size={16} /></button></div>
             <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
-              {log.map((m, i) => <div key={i} className={cn('flex', m.who === 'me' && 'justify-end')}><div className={cn('max-w-[85%] rounded-2xl px-3.5 py-2 text-sm', m.who === 'me' ? 'bg-accent text-accent-fg' : 'bg-muted')}>{m.t}</div></div>)}
-              {typing && <div className="flex"><div className="flex gap-1 rounded-2xl bg-muted px-4 py-3">{[0, 1, 2].map((i) => <motion.span key={i} className="h-1.5 w-1.5 rounded-full bg-soft" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }} />)}</div></div>}
-              {log.length < 3 && <div className="flex flex-col items-start gap-2 pt-2">{Object.keys(faq).map((q) => <button key={q} onClick={() => ask(q)} className="rounded-xl border bg-surface px-3 py-2 text-left text-[13px] hover:bg-accent-soft">{q}</button>)}</div>}
+              {log.map((m, i) => <div key={i} className={cn('flex', m.who === 'me' && 'justify-end')}><div className={cn('max-w-[88%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm leading-relaxed', m.who === 'me' ? 'brand-gradient text-accent-fg' : 'bg-muted')}>{m.who === 'ai' ? <Rich text={m.t} go={go} /> : m.t}</div></div>)}
+              {typing && <div className="flex"><div className="flex gap-1 rounded-2xl bg-muted px-4 py-3">{[0, 1, 2].map((i) => <motion.span key={i} className="h-1.5 w-1.5 rounded-full bg-soft" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: i * 0.15 }} />)}</div></div>}
+              {log.length < 3 && <div className="flex flex-col items-start gap-2 pt-2">{(USE_MOCKS ? Object.keys(faq) : STARTERS).map((q) => <button key={q} onClick={() => ask(q)} className="rounded-xl border bg-surface px-3 py-2 text-left text-[13px] transition hover:border-accent/40 hover:bg-accent-soft">{q}</button>)}</div>}
               <div ref={end} />
             </div>
-            <form onSubmit={(e) => { e.preventDefault(); ask(text) }} className="flex gap-2 border-t p-3">
-              <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Ask a question…" aria-label="Ask the helper" className="h-9 flex-1 rounded-lg border bg-surface px-3 text-sm" />
-              <Button variant="primary" size="icon" aria-label="Send"><Send size={15} /></Button>
+            <form onSubmit={(e) => { e.preventDefault(); void ask(text) }} className="flex gap-2 border-t border-line/70 p-3">
+              <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Ask a question…" aria-label="Ask the helper" maxLength={500} className="h-10 flex-1 rounded-[10px] border bg-surface px-3 text-sm shadow-field outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/15" />
+              <Button variant="primary" size="icon" aria-label="Send" disabled={typing || !text.trim()}><Send size={15} /></Button>
             </form>
           </motion.div>
         )}
       </AnimatePresence>
-      <button onClick={() => set({ helper: !helper })} aria-label="Open AI Helper" className="fixed bottom-5 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-pop transition hover:scale-105 sm:right-6"><MessageCircle size={24} /></button>
+      <button onClick={() => set({ helper: !helper })} aria-label="Open AI Helper" className="brand-gradient fixed bottom-5 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full text-accent-fg shadow-glow ring-4 ring-surface transition hover:scale-105 sm:right-6">{helper ? <X size={22} /> : <MessageCircle size={24} />}</button>
     </>
   )
 }
@@ -278,11 +303,11 @@ export default function Shell() {
     if (hsl && theme !== 'dark') { root.style.setProperty('--accent', hsl); root.style.setProperty('--accent-soft', hsl.replace(/\d+%$/, '94%')) } else { root.style.removeProperty('--accent'); root.style.removeProperty('--accent-soft') }
     document.title = brand?.name || BRAND
   }, [brand?.color, brand?.name, theme])
-  React.useEffect(() => { set({ mobileNav: false }); window.scrollTo(0, 0) }, [pathname, set])
+  React.useEffect(() => { set({ mobileNav: false }); document.getElementById('app-scroll')?.scrollTo(0, 0) }, [pathname, set])
   return (
     <TooltipProvider>
-      <div className="flex min-h-screen gap-3 p-0 md:p-3">
-        <aside className={cn('sticky top-3 hidden h-[calc(100vh-1.5rem)] shrink-0 rounded-2xl border border-line/70 app-side shadow-raised transition-[width] md:block', collapsed ? 'w-[68px]' : 'w-64')}><SidebarBody collapsed={collapsed} /></aside>
+      <div className="flex h-[100dvh] gap-3 overflow-hidden p-0 md:p-3">
+        <aside className={cn('hidden h-full shrink-0 rounded-2xl border border-line/70 app-side shadow-raised transition-[width] md:block', collapsed ? 'w-[68px]' : 'w-64')}><SidebarBody collapsed={collapsed} /></aside>
         <AnimatePresence>
           {mobileNav && (
             <>
@@ -291,13 +316,13 @@ export default function Shell() {
             </>
           )}
         </AnimatePresence>
-        <div className="flex min-w-0 flex-1 flex-col rounded-none border-line/70 app-panel md:rounded-2xl md:border md:shadow-raised">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-none border-line/70 app-panel md:rounded-2xl md:border md:shadow-raised">
           <Topbar openNav={() => set({ mobileNav: true })} />
-          <main className={cn('w-full flex-1', wide ? '' : 'mx-auto max-w-[1280px] px-4 py-6 pb-28 md:px-8')}>
+          <main id="app-scroll" className="min-h-0 flex-1 overflow-y-auto"><div className={cn('w-full', wide ? '' : 'mx-auto max-w-[1280px] px-4 py-6 pb-28 md:px-8')}>
             <AnimatePresence mode="wait">
               <motion.div key={pathname.split('/')[1] + (pathname.split('/')[2] ?? '')} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}><Outlet /></motion.div>
             </AnimatePresence>
-          </main>
+          </div></main>
         </div>
       </div>
       <CommandPalette /><AIHelper /><PlaygroundModal />

@@ -28,6 +28,7 @@ class AgentOut(BaseModel):
     tone: str
     business: str
     what_you_do: str
+    script: str = ""
     brain: str
     voice_id: str | None
     style: dict = Field(default_factory=dict)
@@ -47,6 +48,7 @@ class AgentCreate(BaseModel):
     role: str | None = Field(default=None, max_length=120)
     business: str = Field(default="", max_length=160)
     what_you_do: str = Field(default="", max_length=2000)
+    script: str = Field(default="", max_length=8000)
     tone: str | None = None
 
 
@@ -58,6 +60,7 @@ class AgentPatch(BaseModel):
     tone: str | None = None
     business: str | None = Field(default=None, max_length=160)
     what_you_do: str | None = Field(default=None, max_length=2000)
+    script: str | None = Field(default=None, max_length=8000)
     brain: str | None = None
     voice_id: str | None = Field(default=None, max_length=64)
     style: dict | None = None
@@ -84,7 +87,7 @@ class TemplateOut(BaseModel):
 def _out(a: ProductAgentModel, prompt: str | None = None) -> AgentOut:
     return AgentOut(
         id=a.public_id, name=a.name, emoji=a.emoji, color=a.color, role=a.role, status=a.status,
-        tone=a.tone, business=a.business, what_you_do=a.what_you_do, brain=a.brain,
+        tone=a.tone, business=a.business, what_you_do=a.what_you_do, script=a.script or "", brain=a.brain,
         voice_id=a.voice_id, style=a.style or {}, brain_applies=models_config.brain_applies(getattr(voices.find(a.voice_id) if a.voice_id else None, 'engine', None)),
         prompt_mode=a.prompt_mode, prompt=prompt, version=a.version,
     )
@@ -121,7 +124,7 @@ async def create_agent(
 ):
     agent = await svc.create_agent(
         ctx.session, gw, ctx.workspace, ctx.user.id, name=body.name, template=body.template,
-        role=body.role, business=body.business, what_you_do=body.what_you_do, tone=body.tone,
+        role=body.role, business=body.business, what_you_do=body.what_you_do, script=body.script, tone=body.tone,
     )
     await ctx.session.commit()
     response.headers["ETag"] = str(agent.version)

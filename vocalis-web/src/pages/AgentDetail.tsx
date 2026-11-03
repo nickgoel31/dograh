@@ -114,7 +114,7 @@ export default function AgentDetail() {
         loadVersions()
       } catch (e) { toast.error(e instanceof Error ? e.message : 'We could not save your call flow.'); return }
     }
-    updateAgent(agent.id, { name: d.name, voiceId: d.voiceId, brain: d.brain, tone: d.tone, business: d.business, whatYouDo: d.whatYouDo, prompt: d.prompt }); setSaved(d); toast.success('Saved!')
+    updateAgent(agent.id, { name: d.name, voiceId: d.voiceId, brain: d.brain, tone: d.tone, business: d.business, whatYouDo: d.whatYouDo, script: d.script, prompt: d.prompt }); setSaved(d); toast.success('Saved!')
   }
 
   const versionList = USE_MOCKS ? versions : (realVersions ?? []).map((v) => ({
@@ -169,6 +169,7 @@ export default function AgentDetail() {
           simple={<Q title="Who is your agent?" hint="Just fill in the blanks. We write the instructions for you.">
             <div className="grid gap-4 sm:grid-cols-2"><Field label="Agent name"><Input value={d.name} onChange={(e) => up({ name: e.target.value })} /></Field><Field label="Business name"><Input value={d.business} onChange={(e) => up({ business: e.target.value })} /></Field></div>
             <Field label="What do you do?" className="mt-4"><Textarea value={d.whatYouDo} onChange={(e) => up({ whatYouDo: e.target.value })} /></Field>
+            <Field label="Script (optional)" hint={<span className="text-xs text-soft">What the agent should say and in what order. It follows it, but stays natural.</span>} className="mt-4"><Textarea className="min-h-[140px]" placeholder={"1. Greet the caller and ask how you can help.\n2. Ask for their name and phone number.\n3. Offer the next free appointment and confirm it."} value={d.script ?? ''} onChange={(e) => up({ script: e.target.value })} /></Field>
             <div className="mt-4"><div className="mb-2 text-[13px] font-medium">How should it sound?</div><div className="flex gap-2">{['Friendly', 'Professional', 'Playful'].map((t) => <Chip key={t} active={d.tone === t} onClick={() => up({ tone: t })}>{t}</Chip>)}</div></div></Q>}
           advanced={<Q title="Raw prompt" hint="The exact instructions the AI follows. Click a chip to insert a variable.">
             <div className="mb-3 flex flex-wrap gap-2">{['{{caller_name}}', '{{business_name}}', '{{current_time}}', '{{caller_phone}}'].map((v) => <button key={v} onClick={() => up({ prompt: d.prompt + ' ' + v })} className="rounded-md bg-accent-soft px-2 py-1 font-mono text-xs text-accent hover:brightness-95">{v}</button>)}</div>

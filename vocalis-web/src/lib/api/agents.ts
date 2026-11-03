@@ -11,7 +11,7 @@ export function toAgent(a: AgentOut, prev?: Agent): Agent {
     status: a.status as Agent['status'],
     callsToday: a.calls_today ?? 0, successRate: a.success_rate ?? 0, spark: a.spark ?? [0, 0, 0, 0, 0, 0, 0, 0],
     voiceId: a.voice_id ?? '', brain: a.brain as Agent['brain'], tone: a.tone, business: a.business,
-    whatYouDo: a.what_you_do,
+    whatYouDo: a.what_you_do, script: a.script ?? '',
     // The list endpoint omits the prompt; keep what we already loaded.
     prompt: a.prompt ?? prev?.prompt ?? '',
     numbers: prev?.numbers ?? [],
@@ -29,6 +29,7 @@ export function toPatch(p: Partial<Agent>): components['schemas']['AgentPatch'] 
   if (p.tone !== undefined) m.tone = p.tone
   if (p.business !== undefined) m.business = p.business
   if (p.whatYouDo !== undefined) m.what_you_do = p.whatYouDo
+  if (p.script !== undefined) m.script = p.script
   if (p.brain !== undefined) m.brain = p.brain
   if (p.voiceId) m.voice_id = p.voiceId
   if (p.prompt !== undefined) m.prompt = p.prompt

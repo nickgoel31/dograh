@@ -76,11 +76,12 @@ async def test_numbers_that_need_verification_say_so(plivo):
         await p.purchase("+918012345678", "https://x/in")
 
 
-async def test_live_numbers_come_from_plivo_when_configured(client, plivo):
+async def test_live_numbers_come_from_plivo_when_configured(client, plivo, monkeypatch):
+    monkeypatch.setenv("PRODUCT_KYC_PREFIXES", "none")  # KYC is covered in test_phase_e
     _, tok = await signup(client, "a@x.com")
     live = bearer(tok, **{"X-Environment": "live"})
     offers = (await client.get("/product/numbers/available?country=IN", headers=live)).json()
-    assert offers == [{"number": "+918012345678", "region": "Bengaluru"}]
+    assert [(o["number"], o["region"]) for o in offers] == [("+918012345678", "Bengaluru")]
     n = (await client.post("/product/numbers", json={"number": "+918012345678"}, headers=live)).json()
     assert n["sandbox"] is False and n["number"] == "+918012345678"
     async with client.session_factory() as s:

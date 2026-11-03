@@ -8791,6 +8791,12 @@
             "title": "What You Do",
             "default": ""
           },
+          "script": {
+            "type": "string",
+            "maxLength": 8000,
+            "title": "Script",
+            "default": ""
+          },
           "tone": {
             "anyOf": [
               {
@@ -8846,6 +8852,11 @@
           "what_you_do": {
             "type": "string",
             "title": "What You Do"
+          },
+          "script": {
+            "type": "string",
+            "title": "Script",
+            "default": ""
           },
           "brain": {
             "type": "string",
@@ -9018,6 +9029,18 @@
               }
             ],
             "title": "What You Do"
+          },
+          "script": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 8000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Script"
           },
           "brain": {
             "anyOf": [
@@ -10777,6 +10800,26 @@
               }
             ],
             "title": "Region"
+          },
+          "monthly": {
+            "type": "number",
+            "title": "Monthly",
+            "default": 0.0
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "INR"
+          },
+          "per_minute": {
+            "type": "number",
+            "title": "Per Minute",
+            "default": 0.0
+          },
+          "kyc_required": {
+            "type": "boolean",
+            "title": "Kyc Required",
+            "default": false
           }
         },
         "type": "object",

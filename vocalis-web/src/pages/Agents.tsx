@@ -107,7 +107,7 @@ export function NewAgentPage() {
       // Keep the friendly pause, but wait for the real result.
       try {
         const [created] = await Promise.all([
-          agentsApi.create({ name: `${g.name}`, template: g.template, business: desc.split('.')[0].slice(0, 60), what_you_do: desc }),
+          agentsApi.create({ name: `${g.name}`, template: g.template, business: desc.split('.')[0].slice(0, 60), what_you_do: desc, script: '' }),
           sleep(2000),
         ])
         const a = toAgent(await agentsApi.get(created.id))

@@ -51,7 +51,7 @@ async def list_agents(session: AsyncSession, ws: ProductWorkspaceModel) -> list[
 
 def _compile(a: ProductAgentModel) -> str:
     text = prompts.compile_prompt(
-        business=a.business, what_you_do=a.what_you_do, role=a.role, tone=a.tone
+        business=a.business, what_you_do=a.what_you_do, role=a.role, tone=a.tone, script=a.script or ""
     )
     langs = (a.style or {}).get("languages")
     if langs:
@@ -71,6 +71,7 @@ async def create_agent(
     business: str,
     what_you_do: str,
     tone: str | None,
+    script: str = "",
 ) -> ProductAgentModel:
     tpl = BY_KEY.get(template) if template else None
     if template and tpl is None:
@@ -85,6 +86,7 @@ async def create_agent(
         tone=tone or (tpl.tone if tpl else prompts.DEFAULT_TONE),
         business=business.strip(),
         what_you_do=what_you_do.strip(),
+        script=script.strip(),
         status="draft",
         test_workflow_id=0,
     )
@@ -125,7 +127,7 @@ async def update_agent(
         changes.setdefault("role", None)  # recompile the instructions below so the language line is included
     if changes.get("voice_id") and voice_catalogue.find(changes["voice_id"]) is None:
         raise product_error(400, "unknown_voice", "That voice isn't available. Pick one from the voice list.")
-    for field in ("name", "emoji", "color", "role", "tone", "business", "what_you_do", "voice_id"):
+    for field in ("name", "emoji", "color", "role", "tone", "business", "what_you_do", "script", "voice_id"):
         if field in changes and changes[field] is not None:
             setattr(agent, field, changes[field].strip() if isinstance(changes[field], str) else changes[field])
     if changes.get("brain") is not None:
@@ -173,7 +175,7 @@ async def duplicate_agent(
         workspace_id=ws.id,
         name=f"{src.name} (copy)"[:120],
         emoji=src.emoji, color=src.color, role=src.role, tone=src.tone, business=src.business,
-        what_you_do=src.what_you_do, brain=src.brain, voice_id=src.voice_id,
+        what_you_do=src.what_you_do, script=src.script or "", brain=src.brain, voice_id=src.voice_id,
         prompt_mode=src.prompt_mode, status="draft", test_workflow_id=0,
     )
     copy.test_workflow_id = await gw.create_agent(ws.test_org_id, user_id, copy.name, graph)

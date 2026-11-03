@@ -15,7 +15,7 @@ TONES = {
 DEFAULT_TONE = "Friendly"
 
 
-def compile_prompt(*, business: str, what_you_do: str, role: str, tone: str) -> str:
+def compile_prompt(*, business: str, what_you_do: str, role: str, tone: str, script: str = "") -> str:
     business = business.strip() or "the business"
     tone_line = TONES.get(tone, TONES[DEFAULT_TONE])
     about = what_you_do.strip()
@@ -24,6 +24,8 @@ def compile_prompt(*, business: str, what_you_do: str, role: str, tone: str) -> 
     ]
     if about:
         lines += ["", f"About the business: {about}"]
+    if script.strip():
+        lines += ["", "Call script. Follow this order and these key lines where they fit, but sound natural. If the caller goes off-script, answer them, then steer back:", script.strip()]
     lines += [
         "",
         f"Style: {tone_line}",

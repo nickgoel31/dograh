@@ -35,7 +35,7 @@ export default function Onboarding() {
     setBusy(true)
     try {
       const t = templates.data?.find((x) => x.key === tpl)
-      const a = await agentsApi.create({ name: t?.name ?? 'My agent', template: tpl, business: biz.business, what_you_do: biz.what })
+      const a = await agentsApi.create({ name: t?.name ?? 'My agent', template: tpl, business: biz.business, what_you_do: biz.what, script: '' })
       const patched = voiceId ? await agentsApi.patch(a.id, { voiceId }, a.version) : a
       upsert(toAgent(patched)); setAgentId(a.id); setStep(3)
     } catch (e) { say(e) } finally { setBusy(false) }

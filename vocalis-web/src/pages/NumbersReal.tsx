@@ -1,6 +1,7 @@
 import * as React from 'react'
+import { KycDialog, useKyc } from '@/components/KycDialog'
 import { BringNumber } from '@/components/BringNumber'
-import { Plus, Settings2, ShieldQuestion } from 'lucide-react'
+import { Plus, Settings2, ShieldCheck, ShieldQuestion } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Card, Dialog, Field, Input, Select, Switch, Textarea } from '@/components/ui'
@@ -33,13 +34,14 @@ export default function RealNumbers() {
   const { data, isPending } = useQuery({ queryKey: ['numbers', mode], queryFn: () => http<N[]>('/numbers') })
   const [buy, setBuy] = React.useState(false)
   const [bring, setBring] = React.useState(false)
+  const [kycOpen, setKycOpen] = React.useState(false)
   const [sel, setSel] = React.useState<N | null>(null)
   const refresh = () => qc.invalidateQueries({ queryKey: ['numbers'] })
   const list = data ?? []
 
   return (
     <>
-      <PageHeader title="Phone Numbers" subtitle="The numbers people call to reach your agents." actions={<><Button onClick={() => setBring(true)}>Bring your own</Button><Button variant="primary" onClick={() => setBuy(true)}><Plus size={16} />Get a number</Button></>} />
+      <PageHeader title="Phone Numbers" subtitle="The numbers people call to reach your agents." actions={<><Button onClick={() => setKycOpen(true)}><ShieldCheck size={15} />Verify identity</Button><Button onClick={() => setBring(true)}>Bring your own</Button><Button variant="primary" onClick={() => setBuy(true)}><Plus size={16} />Get a number</Button></>} />
       <Card className="overflow-hidden">
         {isPending ? <TableSkeleton rows={4} /> : list.length === 0 ? (
           <div className="p-6"><EmptyState emoji="📞" title="No numbers yet" text={mode === 'test' ? 'Practice numbers are free and never ring a real phone.' : 'Get a number so real people can call your agent.'} action={<Button variant="primary" size="lg" onClick={() => setBuy(true)}>Get a number</Button>} /></div>
@@ -56,14 +58,17 @@ export default function RealNumbers() {
               </tr>))}</tbody></table></div>
         )}
       </Card>
-      <BuyDialog open={buy} onClose={() => setBuy(false)} onBought={refresh} />
+      <BuyDialog open={buy} onClose={() => setBuy(false)} onBought={refresh} onKyc={() => setKycOpen(true)} />
+      <KycDialog open={kycOpen} onClose={() => setKycOpen(false)} />
       <BringNumber open={bring} onClose={() => setBring(false)} onDone={refresh} />
       {sel && <SettingsDialog key={sel.id} n={sel} agents={agents} onClose={() => setSel(null)} onSaved={refresh} />}
     </>
   )
 }
 
-function BuyDialog({ open, onClose, onBought }: { open: boolean; onClose: () => void; onBought: () => void }) {
+function BuyDialog({ open, onClose, onBought, onKyc }: { open: boolean; onClose: () => void; onBought: () => void; onKyc: () => void }) {
+  const kyc = useKyc(open)
+  const needsKyc = (offers0: Offer[] | null) => !!offers0?.some((o) => o.kyc_required)
   const [country, setCountry] = React.useState('IN')
   const [kind, setKind] = React.useState('local')
   const [offers, setOffers] = React.useState<Offer[] | null>(null)
@@ -73,6 +78,7 @@ function BuyDialog({ open, onClose, onBought }: { open: boolean; onClose: () => 
     http<Offer[]>(`/numbers/available?country=${country}&kind=${kind}`).then(setOffers).catch((e) => { say(e); setOffers([]) })
   }, [country, kind])
   React.useEffect(() => { if (open) search() }, [open, search])
+  const needsKycNow = needsKyc(offers)
   const buyIt = async (number: string) => {
     setBusy(number)
     try { await http('/numbers', { method: 'POST', json: { number, kind } }); toast.success('Number added!'); onBought(); onClose() } catch (e) { say(e) } finally { setBusy(null) }
@@ -83,9 +89,30 @@ function BuyDialog({ open, onClose, onBought }: { open: boolean; onClose: () => 
         <Field label="Country"><Select value={country} onChange={(e) => setCountry(e.target.value)}><option value="IN">India</option><option value="US">United States</option><option value="GB">United Kingdom</option></Select></Field>
         <Field label="Type"><Select value={kind} onChange={(e) => setKind(e.target.value)}><option value="local">Local</option><option value="toll_free">Toll-free</option></Select></Field>
       </div>
+      {needsKycNow && (
+        <div className={`mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${kyc.data?.status === 'approved' ? 'border-ok/25 bg-ok/10 text-ok' : kyc.data?.status === 'rejected' ? 'border-bad/25 bg-bad/10 text-bad' : 'border-warn/25 bg-warn/10 text-warn'}`}>
+          <span className="flex items-center gap-2"><ShieldCheck size={16} />{kyc.data?.status === 'approved' ? 'Identity verified. You can buy numbers in India.' : kyc.data?.status === 'submitted' ? 'Your verification is under review. You can buy as soon as it is approved.' : kyc.data?.status === 'rejected' ? `Your verification needs changes: ${kyc.data.note}` : 'Numbers in India need identity verification (KYC) first.'}</span>
+          {kyc.data?.status !== 'approved' && <Button size="sm" onClick={onKyc}>{kyc.data?.status === 'submitted' ? 'Update details' : kyc.data?.status === 'rejected' ? 'Fix and resend' : 'Verify identity'}</Button>}
+        </div>
+      )}
       <div className="mt-4 space-y-2">
         {offers === null ? <p className="text-sm text-soft">Looking for numbers…</p> : offers.length === 0 ? <p className="text-sm text-soft">No numbers found. Try another type or country.</p> :
-          offers.map((o) => <div key={o.number} className="flex items-center justify-between rounded-lg border p-3"><span className="num font-medium">{o.number}<span className="ml-2 text-xs text-soft">{o.region}</span></span><Button size="sm" variant="primary" disabled={!!busy} onClick={() => buyIt(o.number)}>{busy === o.number ? 'Adding…' : 'Get this number'}</Button></div>)}
+          offers.map((o) => {
+            const blocked = o.kyc_required && kyc.data?.status !== 'approved'
+            return (
+              <div key={o.number} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5">
+                <div className="min-w-0">
+                  <div className="num text-[15px] font-semibold">{o.number}<span className="ml-2 text-xs font-normal text-soft">{o.region}</span></div>
+                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-[12.5px] text-soft">
+                    <span><b className="num text-ink">{o.monthly > 0 ? `${money(o.monthly)}` : 'Rent set by your plan'}</b>{o.monthly > 0 ? ' / month rent' : ''}</span>
+                    <span><b className="num text-ink">{money(o.per_minute)}</b> / minute for calls</span>
+                    <span>billed per minute, rounded up</span>
+                  </div>
+                </div>
+                <Button size="sm" variant="primary" disabled={!!busy || blocked} title={blocked ? 'Verify your identity first' : undefined} onClick={() => buyIt(o.number)}>{busy === o.number ? 'Adding…' : 'Get this number'}</Button>
+              </div>
+            )
+          })}
       </div>
     </Dialog>
   )

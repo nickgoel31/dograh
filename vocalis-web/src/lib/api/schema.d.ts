@@ -1529,6 +1529,11 @@ export interface components {
              * @default
              */
             what_you_do: string;
+            /**
+             * Script
+             * @default
+             */
+            script: string;
             /** Tone */
             tone?: string | null;
         };
@@ -1552,6 +1557,11 @@ export interface components {
             business: string;
             /** What You Do */
             what_you_do: string;
+            /**
+             * Script
+             * @default
+             */
+            script: string;
             /** Brain */
             brain: string;
             /** Voice Id */
@@ -1597,6 +1607,8 @@ export interface components {
             business?: string | null;
             /** What You Do */
             what_you_do?: string | null;
+            /** Script */
+            script?: string | null;
             /** Brain */
             brain?: string | null;
             /** Voice Id */
@@ -2200,6 +2212,26 @@ export interface components {
             number: string;
             /** Region */
             region: string | null;
+            /**
+             * Monthly
+             * @default 0
+             */
+            monthly: number;
+            /**
+             * Currency
+             * @default INR
+             */
+            currency: string;
+            /**
+             * Per Minute
+             * @default 0
+             */
+            per_minute: number;
+            /**
+             * Kyc Required
+             * @default false
+             */
+            kyc_required: boolean;
         };
         /** ParamIn */
         ParamIn: {

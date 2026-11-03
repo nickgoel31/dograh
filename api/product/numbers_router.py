@@ -44,6 +44,10 @@ class NumberOut(BaseModel):
 class OfferOut(BaseModel):
     number: str
     region: str | None
+    monthly: float = 0.0  # rent per month, in the account currency (set with PRODUCT_NUMBER_MONTHLY_LOCAL / _TOLL_FREE)
+    currency: str = "INR"
+    per_minute: float = 0.0  # what each minute of calls costs now (billed per minute, rounded up)
+    kyc_required: bool = False
 
 
 class BuyBody(BaseModel):
@@ -144,7 +148,10 @@ async def available(
         found = await _provider(ctx).search(country, kind, contains)
     except providers.NumberError as e:
         raise product_error(502, "lookup_failed", str(e))
-    return [OfferOut(number=o.number, region=o.region) for o in found]
+    from api.product import config, kyc_router, rates
+
+    per_min = await rates.workspace_rate(ctx.session, ctx.workspace)
+    return [OfferOut(number=o.number, region=o.region, monthly=_monthly(kind), currency=config.CURRENCY, per_minute=per_min, kyc_required=ctx.environment == "live" and kyc_router.needed_for(o.number)) for o in found]
 
 
 @router.post("", response_model=NumberOut, status_code=201)
@@ -154,6 +161,10 @@ async def buy(body: BuyBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE))):
 
     if body.kind not in KINDS or not _E164.match(body.number):
         raise product_error(400, "bad_number", "That doesn't look like a phone number we can buy.")
+    from api.product import kyc_router
+
+    if ctx.environment == "live" and kyc_router.needed_for(body.number) and not await kyc_router.is_approved(ctx.session, ctx.workspace.id):
+        raise product_error(403, "kyc_required", "Numbers in this country need identity verification first. Open “Verify identity” on this page, send your details, and we'll tell you when you're approved.")
     prov = _provider(ctx)
     cfg = await _config(ctx)
     canonical = normalize_telephony_address(body.number).canonical

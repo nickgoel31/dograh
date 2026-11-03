@@ -12,6 +12,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    Text,
     UniqueConstraint,
 )
 
@@ -80,6 +81,7 @@ class ProductAgentModel(Base):
     tone = Column(String(24), nullable=False, default="Friendly")
     business = Column(String(160), nullable=False, default="")
     what_you_do = Column(String(2000), nullable=False, default="")
+    script = Column(Text, nullable=False, default="")  # the call script the agent follows
     brain = Column(String(16), nullable=False, default="balanced")
     voice_id = Column(String(64), nullable=True)
     # "simple": prompt is compiled from the fields above. "custom": user-written.
@@ -523,3 +525,17 @@ class ProductPushModel(Base):
     workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
     ok = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), default=_now)
+
+
+class ProductKycModel(Base):
+    """Identity verification for a workspace (needed to buy numbers where the carrier asks for it). Documents are kept for review."""
+
+    __tablename__ = "product_kyc"
+
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), primary_key=True)
+    status = Column(String(12), nullable=False, default="submitted")  # submitted | approved | rejected
+    data = Column(JSON, nullable=True)
+    docs = Column(JSON, nullable=True)  # [{kind, name, mime, b64}]
+    note = Column(String(400), nullable=True)
+    submitted_at = Column(DateTime(timezone=True), nullable=True)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
