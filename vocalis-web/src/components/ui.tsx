@@ -92,7 +92,7 @@ export function Dialog({ open, onOpenChange, title, description, children, wide,
     <DialogP.Root open={open} onOpenChange={onOpenChange}>
       <DialogP.Portal>
         <DialogP.Overlay className="fixed inset-0 z-50 bg-[hsl(228_40%_4%/.55)] backdrop-blur-[6px]" />
-        <DialogP.Content className={cn('fixed z-50 flex max-h-[90vh] flex-col overflow-hidden border border-line/80 bg-surface shadow-pop animate-pop-in', side ? 'inset-y-0 right-0 w-full max-w-md rounded-l-2xl max-h-none' : cn('left-1/2 top-1/2 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl', wide ? 'max-w-3xl' : 'max-w-lg'))}>
+        <DialogP.Content className={cn('fixed z-50 flex max-h-[90vh] flex-col overflow-hidden border border-line/80 bg-surface shadow-pop animate-fade-in', side ? 'inset-y-0 right-0 w-full max-w-md rounded-l-2xl max-h-none' : cn('left-1/2 top-1/2 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl', wide ? 'max-w-3xl' : 'max-w-lg'))}>
           <div className="flex items-start justify-between gap-4 border-b border-line/70 bg-gradient-to-b from-muted/50 to-transparent p-5">
             <div><DialogP.Title className="text-[17px] font-bold tracking-tight">{title}</DialogP.Title>
               {description ? <DialogP.Description className="mt-1 text-sm text-soft">{description}</DialogP.Description> : <DialogP.Description className="sr-only">{title}</DialogP.Description>}</div>
