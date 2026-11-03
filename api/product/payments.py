@@ -128,7 +128,8 @@ def get_wallet() -> WalletGateway:
 async def _core_charge(self, org_id, minutes, rate, description, key):
     from api.services.billing import wallet_service
 
-    have = float((await wallet_service.get_summary(org_id)).get("minutes_available", 0) or 0)
+    # Free minutes only: "minutes_available" also counts the minutes the money balance could buy, which can't be removed.
+    have = float((await wallet_service.get_summary(org_id)).get("minutes_remaining", 0) or 0)
     take = min(minutes, have)
     if take > 0:
         await wallet_service.remove_minutes(org_id, take, description=description)

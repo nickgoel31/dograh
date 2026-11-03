@@ -228,3 +228,27 @@ def test_billing_is_per_minute_rounded_up():
     from api.product import pricing
 
     assert [pricing.billed_minutes(s) for s in (None, 0, 1, 60, 61, 119, 120, 121)] == [0, 0, 1, 1, 2, 2, 2, 3]
+
+
+async def test_charge_takes_money_when_only_the_balance_is_left(monkeypatch):
+    """The balance's minutes can't be removed like free minutes: a call with no free minutes left is charged in money."""
+    from api.product import payments
+    from api.services.billing import wallet_service as ws
+
+    calls = {"removed": [], "credits": []}
+
+    async def summary(org_id):
+        return {"minutes_available": 1626.0, "minutes_remaining": 0.0}
+
+    async def remove(org_id, minutes, description=None):
+        calls["removed"].append(minutes)
+        raise ws.WalletError("Only 0 minutes available to remove")
+
+    async def credit(org_id, amount, description=None, idempotency_key=None):
+        calls["credits"].append(amount)
+
+    monkeypatch.setattr(ws, "get_summary", summary)
+    monkeypatch.setattr(ws, "remove_minutes", remove)
+    monkeypatch.setattr(ws, "credit_money", credit)
+    taken = await payments.CoreWallet().charge(11, 2.0, 6.0, "Practice call #1", "practice:1")
+    assert taken == 12.0 and calls["removed"] == [] and calls["credits"] == [-12.0]

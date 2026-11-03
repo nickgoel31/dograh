@@ -231,7 +231,11 @@ async def ops_tick(x_ops_secret: str | None = Header(default=None), session=Depe
     out.update(await post_call.contacts_and_texts(session))
     from api.product import practice, rates
 
-    out["practice_charged"] = await practice.charge_practice_calls(session, wallet)
+    try:
+        out["practice_charged"] = await practice.charge_practice_calls(session, wallet)
+    except Exception:  # noqa: BLE001 - the rest of the job still runs
+        await session.rollback()
+        out["practice_charged"] = -1
     await rates.sync_all(session)
     out["reports"] = await post_call.weekly_reports(session, mailer)
     from api.product import push
