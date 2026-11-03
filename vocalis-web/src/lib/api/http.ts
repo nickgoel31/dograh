@@ -10,7 +10,7 @@ export class ApiError extends Error {
 const FALLBACK = 'Something went wrong on our side. Please try again in a moment.'
 
 /** Every request carries the session cookie plus the active workspace and Test/Live mode. */
-export async function http<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
+export async function http<T>(path: string, init: RequestInit & { json?: unknown; timeoutMs?: number } = {}): Promise<T> {
   const { workspaceId, mode } = useUI.getState()
   const headers = new Headers(init.headers)
   if (!headers.has('X-Environment')) headers.set('X-Environment', mode)
@@ -21,11 +21,14 @@ export async function http<T>(path: string, init: RequestInit & { json?: unknown
     body = JSON.stringify(init.json)
   }
   let res: Response
+  const ctl = new AbortController()
+  const timer = setTimeout(() => ctl.abort(), init.timeoutMs ?? 60000) // a request that never answers becomes an error, not a page that loads forever
   try {
-    res = await fetch(`${API_URL}${path}`, { ...init, headers, body, credentials: 'include' })
-  } catch {
+    res = await fetch(`${API_URL}${path}`, { ...init, headers, body, credentials: 'include', signal: init.signal ?? ctl.signal })
+  } catch (e) {
+    if (ctl.signal.aborted) throw new ApiError(0, 'timeout', 'This is taking too long. Please try again in a moment.')
     throw new ApiError(0, 'offline', "We can't reach the server. Check your connection and try again.")
-  }
+  } finally { clearTimeout(timer) }
   if (!res.ok) {
     let code = 'unknown', message = FALLBACK
     try {

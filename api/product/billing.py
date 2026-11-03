@@ -4,7 +4,7 @@ import io
 import os
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -93,9 +93,6 @@ async def _give_signup_bonus(session: AsyncSession, wallet: WalletGateway, ws: P
         return
     if created is not None and datetime.now(UTC) - created > timedelta(days=3):  # only new sign-ups, not older workspaces opening billing for the first time
         return
-    bind = session.get_bind()
-    if bind.dialect.name == "postgresql":  # two sign-ups at the same moment must not both take the last place
-        await session.execute(text("SELECT pg_advisory_xact_lock(7101)"))
     if await bonus_left(session) <= 0:
         return
     s.signup_bonus_at = datetime.now(UTC)
