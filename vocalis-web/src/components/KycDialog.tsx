@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Dialog, Field, Input, Select } from './ui'
 import { http } from '@/lib/api/http'
 
-export type Kyc = { required_for: string[]; status: 'none' | 'submitted' | 'approved' | 'rejected'; note?: string | null; data: Record<string, string>; documents: { kind: string; label: string; name: string }[]; submitted_at?: string | null }
+export type Kyc = { required_for: string[]; status: 'none' | 'submitted' | 'approved' | 'rejected'; note?: string | null; data: Record<string, string>; documents: { kind: string; label: string; name: string }[]; submitted_at?: string | null; auto?: boolean }
 
 export const useKyc = (enabled = true) => useQuery({ queryKey: ['kyc'], queryFn: () => http<Kyc>('/kyc'), enabled })
 
@@ -24,7 +24,8 @@ export function KycDialog({ open, onClose }: { open: boolean; onClose: () => voi
   const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [key]: e.target.value })
   const have = new Set((k.data?.documents ?? []).map((d) => d.kind))
   const locked = k.data?.status === 'approved'
-  const need = ['business_name', 'contact_name', 'contact_email', 'contact_phone', 'address', 'city', 'state', 'postal_code', 'pan'].some((x) => !(f[x] ?? '').trim()) || !(files.pan || have.has('pan')) || !(files.address_proof || have.has('address_proof'))
+  const biz = !!k.data?.auto && (f.business_type === 'company' || f.business_type === 'partnership')
+  const need = biz && (!(files.business_proof || have.has('business_proof')) || !(files.gst || have.has('gst')) || !(f.gstin ?? '').trim()) || ['business_name', 'contact_name', 'contact_email', 'contact_phone', 'address', 'city', 'state', 'postal_code', 'pan'].some((x) => !(f[x] ?? '').trim()) || !(files.pan || have.has('pan')) || !(files.address_proof || have.has('address_proof'))
   const send = async () => {
     setBusy(true)
     try {
@@ -34,7 +35,7 @@ export function KycDialog({ open, onClose }: { open: boolean; onClose: () => voi
     } catch (e) { toast.error(e instanceof Error ? e.message : 'We could not send that.') } finally { setBusy(false) }
   }
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()} wide title="Verify your identity" description="Phone companies require this before numbers in India can be switched on. It usually takes 1-2 working days.">
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()} wide title="Verify your identity" description="Phone companies require this before numbers in India can be switched on. We send it for you and show the answer here, usually within a day or two.">
       <div className="space-y-4">
         {k.data?.status === 'approved' && <p className="flex items-center gap-2 rounded-xl border border-ok/25 bg-ok/10 px-4 py-3 text-sm text-ok"><ShieldCheck size={16} />You're verified. You can buy numbers.</p>}
         {k.data?.status === 'submitted' && <p className="rounded-xl border border-warn/25 bg-warn/10 px-4 py-3 text-sm text-warn">Under review. You can send updated details below if something was wrong.</p>}
@@ -55,13 +56,14 @@ export function KycDialog({ open, onClose }: { open: boolean; onClose: () => voi
         </div>
         <div className="space-y-2">
           <div className="text-[13px] font-medium">Documents (PDF, JPG or PNG, up to 2.5 MB each)</div>
-          {DOCS.map(([kind, label, must]) => (
+          {DOCS.map(([kind, label, must0]) => { const must = must0 || (biz && (kind === 'business_proof' || kind === 'gst')); return (
+
             <label key={kind} className="flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition hover:bg-muted/50">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">{files[kind] || have.has(kind) ? <FileCheck2 size={16} /> : <Upload size={16} />}</span>
               <span className="min-w-0 flex-1"><span className="block text-sm font-medium">{label} {must ? <Badge tone="orange">Required</Badge> : null}</span><span className="block truncate text-xs text-soft">{files[kind]?.name ?? (have.has(kind) ? 'Already uploaded. Choose a file to replace it.' : 'Choose a file')}</span></span>
               <input type="file" accept="application/pdf,image/jpeg,image/png" className="sr-only" disabled={locked} onChange={(e) => setFiles({ ...files, [kind]: e.target.files?.[0] ?? null })} />
             </label>
-          ))}
+          ) })}
         </div>
         <Button variant="primary" className="w-full" disabled={locked || busy || need} onClick={send}>{busy ? 'Sending…' : k.data?.status === 'none' || !k.data ? 'Send for review' : 'Send again'}</Button>
         <p className="text-xs text-soft">Your documents are used only to verify you with the phone company and are never shown to other customers.</p>

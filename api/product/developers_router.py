@@ -241,6 +241,13 @@ async def ops_tick(x_ops_secret: str | None = Header(default=None), session=Depe
     from api.product import push
 
     out["pushed"] = await push.push_calls(session, llm)
+    from api.product import kyc_router, plivo_kyc
+
+    try:
+        out["kyc"] = await kyc_router.sync_all(session, plivo_kyc.get_compliance(), mailer)
+    except Exception:  # noqa: BLE001 - the rest of the job still runs
+        await session.rollback()
+        out["kyc"] = -1
     from api.product import autotopup
 
     out["topup_links"] = await autotopup.send_links(session, wallet, mailer)

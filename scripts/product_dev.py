@@ -61,6 +61,7 @@ for r in (assistant_router, connectors_router, kyc_router):
     app.include_router(r.router, prefix="/api/v1")
 app.include_router(connectors_router.hooks, prefix="/api/v1")
 app.include_router(kyc_router.ops_router, prefix="/api/v1")
+app.include_router(kyc_router.hooks_router, prefix="/api/v1")
 fake, wallet = FakeGateway(), FakeWallet()
 kb, tl, cp = FakeKB(), FakeTools(), FakeCampaigns()
 app.dependency_overrides.update({

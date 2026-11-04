@@ -363,6 +363,7 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(assistant_router.router)
     app.include_router(kyc_router.router)
     app.include_router(kyc_router.ops_router)
+    app.include_router(kyc_router.hooks_router)
     for r in (analytics_router, labs_router, handoff_router, import_router, campaigns_router, home_router, knowledge_router, notifications, tools_router,
               developers_router, help_router, public_api, team_router, widget_router, google_auth, account_router, phonetest_router, integrations_router, contacts_router, flowtry_router):
         app.include_router(r.router)

@@ -114,6 +114,29 @@ async def wallet_chip(ctx: Ctx = Depends(get_ctx), wallet: WalletGateway = Depen
     return WalletOut(balance=float(w.get("balance", 0)), minutes_available=float(w.get("minutes_available", 0)), currency=config.CURRENCY, low_balance=bool(w.get("low_balance")))
 
 
+class PriceOut(BaseModel):
+    currency: str
+    slabs: list[dict]  # [{up_to, rate}]: minutes in the wallet, price per minute
+    contact_sales_above: int
+    number_monthly_local: float
+    number_monthly_toll_free: float
+    signup_bonus: float
+    bonus_left: int
+
+
+@router.get("/pricing", response_model=PriceOut)
+async def price_list(ctx: Ctx = Depends(get_ctx)):
+    """The public price list, for the pricing page. Any member may see it."""
+    from api.product import pricing
+    from api.product.numbers_router import _monthly
+
+    return PriceOut(
+        currency=config.CURRENCY, slabs=[{"up_to": a, "rate": b} for a, b in pricing.slabs()], contact_sales_above=pricing.slabs()[-1][0],
+        number_monthly_local=_monthly("local"), number_monthly_toll_free=_monthly("toll_free"),
+        signup_bonus=bl.signup_bonus(), bonus_left=await bl.bonus_left(ctx.session),
+    )
+
+
 class WelcomeOut(BaseModel):
     bonus: float  # the sign-up bonus this workspace received, 0 if none
     currency: str

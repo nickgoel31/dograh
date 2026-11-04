@@ -23,4 +23,10 @@ mv .env.tmp .env
 chmod 600 .env
 echo "Saved. Restarting the API (calls in progress drop for a moment)..."
 sudo docker compose --profile remote up -d api
-echo "Done. Open the home page and ask the assistant something."
+sleep 6
+if sudo docker compose exec -T api printenv PRODUCT_ASSISTANT_OPENAI_KEY >/dev/null 2>&1; then
+  echo "Done. The API can see the key. Open the home page and ask the assistant something."
+else
+  echo "The key was saved, but the running API cannot see it yet."
+  echo "Rebuild the API so it has the newest code, then try again:  bash ~/deploy.sh api"
+fi

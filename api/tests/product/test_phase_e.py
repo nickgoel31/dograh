@@ -141,3 +141,87 @@ async def test_the_assistant_uses_the_platform_key_but_other_features_do_not(mon
     monkeypatch.setenv("PRODUCT_ASSISTANT_OPENAI_KEY", "sk-platform")
     out = await llm_gateway.CoreLLM().complete(1, 1, "sys", [{"role": "user", "content": "x"}], platform=True)
     assert out == "hi" and seen["cfg"] == ("openai", "gpt-4.1-mini", "sk-platform")
+
+
+class FakePlivoCompliance:
+    """Stands in for Plivo's compliance service."""
+
+    def __init__(self, fail=False):
+        self.fail, self.sent, self.state, self.linked = fail, [], ("submitted", None), []
+
+    async def submit(self, data, docs, callback_url):
+        if self.fail:
+            from api.product.plivo_kyc import ComplianceError
+
+            raise ComplianceError("Plivo returned no document list")
+        self.sent.append((data["business_name"], sorted(d["kind"] for d in docs), callback_url))
+        return "cmp-123"
+
+    async def status(self, cid):
+        assert cid == "cmp-123"
+        return self.state
+
+    async def link(self, number, cid):
+        self.linked.append((number, cid))
+
+
+def _form(kind="company"):
+    form = {"business_name": "Smile Dental", "business_type": kind, "contact_name": "Asha Rao", "contact_email": "asha@smile.in", "contact_phone": "+919999999999",
+            "address": "12 MG Road", "city": "Pune", "state": "Maharashtra", "postal_code": "411001", "pan": "ABCDE1234F", "gstin": "27ABCDE1234F1Z5"}
+    docs = [{"kind": k, "name": f"{k}.pdf", "mime": "application/pdf", "data_b64": PDF} for k in ("pan", "address_proof", "business_proof", "gst")]
+    return form, docs
+
+
+async def test_kyc_is_sent_to_the_carrier_and_settles_by_itself(client, monkeypatch):
+    from api.product import kyc_router, plivo_kyc
+
+    fake = FakePlivoCompliance()
+    client._transport.app.dependency_overrides[plivo_kyc.get_compliance] = lambda: fake
+    monkeypatch.setenv("PRODUCT_OPS_SECRET", "ops")
+    _, tok = await signup(client, "a@x.com")
+    live = {**bearer(tok), "X-Environment": "live"}
+    form, docs = _form()
+    # a business must send its registration and GST papers
+    assert (await client.put("/product/kyc", json={**form, "documents": docs[:2]}, headers=live)).json()["detail"]["code"] == "documents_missing"
+    sent = (await client.put("/product/kyc", json={**form, "documents": docs}, headers=live)).json()
+    assert sent["status"] == "submitted" and "plivo_id" not in sent["data"] and fake.sent[0][0] == "Smile Dental" and fake.sent[0][1] == ["address_proof", "business_proof", "gst", "pan"]
+    assert fake.sent[0][2].endswith("/api/v1/product/hooks/plivo-kyc")
+    # still being checked: nothing changes
+    assert (await client.get("/product/kyc", headers=live)).json()["status"] == "submitted"
+    # the carrier approves; the callback makes us ask it, and the workspace is approved without anyone clicking
+    fake.state = ("approved", None)
+    assert (await client.post("/product/hooks/plivo-kyc", json={"compliance_id": "cmp-123"})).status_code == 200
+    assert (await client.get("/product/kyc", headers=live)).json()["status"] == "approved"
+
+
+async def test_a_rejection_comes_back_with_the_reason_and_a_failed_submission_falls_back_to_a_person(client, monkeypatch):
+    from api.product import kyc_router, plivo_kyc
+
+    fake = FakePlivoCompliance()
+    client._transport.app.dependency_overrides[plivo_kyc.get_compliance] = lambda: fake
+    _, tok = await signup(client, "a@x.com")
+    live = {**bearer(tok), "X-Environment": "live"}
+    form, docs = _form()
+    await client.put("/product/kyc", json={**form, "documents": docs}, headers=live)
+    fake.state = ("rejected", "GST certificate is blurry")
+    async with client.session_factory() as s:
+        assert await kyc_router.sync_all(s, fake, None) == 1
+    got = (await client.get("/product/kyc", headers=live)).json()
+    assert got["status"] == "rejected" and got["note"] == "GST certificate is blurry"
+    # when the carrier can't be reached the verification is simply waiting for a person, like before
+    broken = FakePlivoCompliance(fail=True)
+    client._transport.app.dependency_overrides[plivo_kyc.get_compliance] = lambda: broken
+    again = (await client.put("/product/kyc", json={**form, "documents": docs}, headers=live)).json()
+    assert again["status"] == "submitted"
+    async with client.session_factory() as s:
+        row = await kyc_router.get_row(s, (await workspace(client)).id)
+        assert "no document list" in row.data["auto_error"] and "plivo_id" not in row.data
+
+
+def test_plivo_requirements_are_read_whatever_the_reply_looks_like():
+    from api.product import plivo_kyc
+
+    reply = {"api_id": "x", "requirements": {"documents": [{"document_type_id": "d1", "name": "Registration Certificate", "proof_required": True, "data_fields": [{"field_name": "business_name"}]},
+                                                           {"document_type_id": "d2", "name": "GST Registration Certificate", "proof_required": True}]}}
+    got = plivo_kyc._doc_types(reply)
+    assert [(d["id"], plivo_kyc.kind_of(d["name"]), d["fields"]) for d in got] == [("d1", "business_proof", ["business_name"]), ("d2", "gst", [])]

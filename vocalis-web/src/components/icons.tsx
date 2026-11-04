@@ -117,3 +117,6 @@ export const X = wrap(I.Xmark as React.ComponentType<React.SVGProps<SVGSVGElemen
 export const XCircle = wrap(I.XmarkCircle as React.ComponentType<React.SVGProps<SVGSVGElement>>)
 export const Zap = wrap(I.Flash as React.ComponentType<React.SVGProps<SVGSVGElement>>)
 export const Info = wrap(I.InfoCircle as React.ComponentType<React.SVGProps<SVGSVGElement>>)
+export const Key = wrap(I.Key as React.ComponentType<React.SVGProps<SVGSVGElement>>)
+export const Coins = wrap(I.Coins as React.ComponentType<React.SVGProps<SVGSVGElement>>)
+export const Terminal = wrap(I.Terminal as React.ComponentType<React.SVGProps<SVGSVGElement>>)

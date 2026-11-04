@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass, field
 from types import SimpleNamespace
@@ -78,7 +79,8 @@ class CoreLLM:
         try:
             llm = create_llm_service_from_provider(cfg["provider"], cfg.get("model"), cfg["api_key"], **extra)
             return (await _run_llm_inference(llm, messages, system)) or ""
-        except Exception:  # noqa: BLE001 - provider errors are not for customers
+        except Exception as e:  # noqa: BLE001 - provider errors are not for customers, but we keep the real reason in the server log
+            logging.getLogger(__name__).warning("assistant model call failed (%s, model %s): %s", cfg.get("provider"), cfg.get("model"), e, exc_info=True)
             raise product_error(502, "ai_failed", "The AI helper didn't answer. Please try again in a moment.")
 
 

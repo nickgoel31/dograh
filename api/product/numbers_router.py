@@ -176,6 +176,19 @@ async def buy(body: BuyBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE))):
         ref = await prov.purchase(body.number, f"{BACKEND_API_ENDPOINT}/api/v1/telephony/inbound/run")
     except providers.NumberError as e:
         raise product_error(409, "purchase_failed", str(e))
+    if prov.name == "plivo" and kyc_router.needed_for(body.number):
+        from api.product import plivo_kyc
+
+        krow = await kyc_router.get_row(ctx.session, ctx.workspace.id)
+        pid = (krow.data or {}).get("plivo_id") if krow else None
+        comp = plivo_kyc.get_compliance()
+        if comp is not None and pid:
+            try:
+                await comp.link(body.number, pid)
+            except Exception as e:  # noqa: BLE001 - the number is bought; an operator can link it by hand
+                import logging
+
+                logging.getLogger(__name__).warning("could not link %s to its verification: %s", body.number, e)
     try:
         n = normalize_telephony_address(body.number)
         row = TelephonyPhoneNumberModel(

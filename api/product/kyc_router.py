@@ -5,24 +5,28 @@ the carrier's own process, then approves or rejects here. Until a workspace is a
 """
 
 import base64
+import json
+import logging
 import os
 import re
 import secrets
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from api.db.product_models import ProductKycModel, ProductWorkspaceModel
-from api.product import audit, emailer
+from api.product import audit, emailer, plivo_kyc
 from api.product.deps import Ctx, get_ctx, get_session, require
 from api.product.errors import product_error
 from api.product.notifications import notify
 from api.product.roles import Perm
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/product/kyc", tags=["kyc"])
+hooks_router = APIRouter(prefix="/product/hooks", tags=["kyc"])
 ops_router = APIRouter(prefix="/product/ops/kyc", tags=["ops"])
 MAX_DOC = 2_500_000
 DOC_KINDS = {"pan": "PAN card", "address_proof": "Address proof", "business_proof": "Business registration", "gst": "GST certificate"}
@@ -77,6 +81,7 @@ class KycOut(BaseModel):
     data: dict = {}
     documents: list[dict] = []
     submitted_at: str | None = None
+    auto: bool = False  # the carrier checks it automatically (business papers are then required)
 
 
 def _mask(pan: str) -> str:
@@ -85,20 +90,92 @@ def _mask(pan: str) -> str:
 
 def _view(row: ProductKycModel | None) -> KycOut:
     if row is None:
-        return KycOut(required_for=prefixes(), status="none")
-    d = dict(row.data or {})
+        return KycOut(required_for=prefixes(), status="none", auto=plivo_kyc.enabled())
+    d = {k: v for k, v in (row.data or {}).items() if k not in ("plivo_id", "auto_error", "checked_at")}
     return KycOut(required_for=prefixes(), status=row.status, note=row.note, data={**d, "pan": _mask(d.get("pan", ""))},
                   documents=[{"kind": x["kind"], "label": DOC_KINDS.get(x["kind"], x["kind"]), "name": x["name"]} for x in row.docs or []],
-                  submitted_at=row.submitted_at.isoformat() if row.submitted_at else None)
+                  submitted_at=row.submitted_at.isoformat() if row.submitted_at else None, auto=plivo_kyc.enabled())
 
 
 @router.get("", response_model=KycOut)
-async def status(ctx: Ctx = Depends(get_ctx)):
-    return _view(await get_row(ctx.session, ctx.workspace.id))
+async def status(ctx: Ctx = Depends(get_ctx), comp=Depends(plivo_kyc.get_compliance), mailer: emailer.Mailer = Depends(emailer.get_mailer)):
+    row = await get_row(ctx.session, ctx.workspace.id)
+    if row is not None and comp is not None and row.status == "submitted" and (row.data or {}).get("plivo_id"):
+        last = float((row.data or {}).get("checked_at") or 0)
+        if datetime.now(UTC).timestamp() - last > 60:  # ask the carrier at most once a minute
+            await sync_one(ctx.session, row, comp, mailer)
+    return _view(row)
+
+
+async def _finish(session, row: ProductKycModel, new: str, note: str | None, mailer: emailer.Mailer | None) -> None:
+    """Record an approval or rejection and tell the customer."""
+    row.status, row.note, row.reviewed_at = new, (note or "").strip()[:400] or None, datetime.now(UTC)
+    ok = new == "approved"
+    await notify(session, row.workspace_id, "kyc", "Verification approved" if ok else "Verification needs changes",
+                 "You can now buy numbers in India." if ok else (row.note or "Open Phone Numbers to see what to fix."), "/numbers", f"kyc-dec:{int(row.reviewed_at.timestamp())}")
+    await session.commit()
+    to = (row.data or {}).get("contact_email")
+    if to and mailer is not None:
+        await mailer.send(to, "Your verification was approved" if ok else "Your verification needs changes",
+                          "You can now buy phone numbers." if ok else f"Please fix this and submit again: {row.note}")
+
+
+async def sync_one(session, row: ProductKycModel, comp, mailer: emailer.Mailer | None) -> bool:
+    """Ask the carrier how a verification is going and record the answer. True when it was decided."""
+    pid = (row.data or {}).get("plivo_id")
+    if not pid:
+        return False
+    row.data = {**(row.data or {}), "checked_at": datetime.now(UTC).timestamp()}
+    try:
+        new, why = await comp.status(pid)
+    except Exception as e:  # noqa: BLE001 - try again on the next check
+        log.warning("kyc status check failed for workspace %s: %s", row.workspace_id, e)
+        await session.commit()
+        return False
+    if new == "submitted":
+        await session.commit()
+        return False
+    await _finish(session, row, new, why if new == "rejected" else None, mailer)
+    return True
+
+
+async def sync_all(session, comp, mailer: emailer.Mailer | None) -> int:
+    """Part of the scheduled job: settle every verification the carrier is checking."""
+    if comp is None:
+        return 0
+    rows = (await session.scalars(select(ProductKycModel).where(ProductKycModel.status == "submitted"))).all()
+    done = 0
+    for r in rows:
+        if (r.data or {}).get("plivo_id") and await sync_one(session, r, comp, mailer):
+            done += 1
+    return done
+
+
+@hooks_router.post("/plivo-kyc")
+async def plivo_callback(request: Request, session=Depends(get_session), comp=Depends(plivo_kyc.get_compliance), mailer: emailer.Mailer = Depends(emailer.get_mailer)):
+    """The carrier tells us a verification changed. We never trust what the message says: we ask the carrier directly."""
+    if comp is None:
+        return {"ok": True}
+    cid = None
+    try:
+        text = (await request.body()).decode("utf-8", "ignore")
+        try:
+            j = json.loads(text)
+            cid = (j.get("compliance_id") or (j.get("data") or {}).get("compliance_id")) if isinstance(j, dict) else None
+        except ValueError:
+            m = re.search(r"compliance_id=([0-9a-fA-F-]{8,})", text)
+            cid = m.group(1) if m else None
+    except Exception:  # noqa: BLE001
+        cid = None
+    rows = (await session.scalars(select(ProductKycModel).where(ProductKycModel.status == "submitted"))).all()
+    for r in rows:
+        if (r.data or {}).get("plivo_id") and (not cid or (r.data or {}).get("plivo_id") == cid):
+            await sync_one(session, r, comp, mailer)
+    return {"ok": True}
 
 
 @router.put("", response_model=KycOut)
-async def submit(body: KycBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE)), mailer: emailer.Mailer = Depends(emailer.get_mailer)):
+async def submit(body: KycBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE)), mailer: emailer.Mailer = Depends(emailer.get_mailer), comp=Depends(plivo_kyc.get_compliance)):
     row = await get_row(ctx.session, ctx.workspace.id)
     if row is not None and row.status == "approved":
         raise product_error(409, "kyc_approved", "Your verification is already approved. Contact support to change it.")
@@ -127,7 +204,21 @@ async def submit(body: KycBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE))
         raise product_error(400, "documents_missing", "Please upload your PAN card and an address proof.")
     if row is not None and not docs:
         docs = row.docs or []
+    if comp is not None and plivo_kyc.needs_business_papers(body.business_type):
+        if not {"business_proof", "gst"} <= (kinds | have_before) or not gst:
+            raise product_error(400, "documents_missing", "For a business we also need your registration certificate, your GST certificate and your GST number.")
     data = {**body.model_dump(exclude={"documents"}), "pan": pan, "gstin": gst}
+    if comp is not None:
+        from api.constants import BACKEND_API_ENDPOINT
+
+        merged = {d["kind"]: d for d in (row.docs if row and row.docs else [])}
+        merged.update({d["kind"]: d for d in docs})
+        try:
+            data["plivo_id"] = await comp.submit(data, list(merged.values()), f"{BACKEND_API_ENDPOINT}/api/v1/product/hooks/plivo-kyc")
+            data["auto"] = True
+        except Exception as e:  # noqa: BLE001 - a person reviews it instead, as before
+            data["auto_error"] = str(e)[:300]
+            log.warning("automatic KYC submission failed for workspace %s: %s", ctx.workspace.id, e)
     now = datetime.now(UTC)
     if row is None:
         row = ProductKycModel(workspace_id=ctx.workspace.id)
@@ -137,8 +228,9 @@ async def submit(body: KycBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE))
     await notify(ctx.session, ctx.workspace.id, "kyc", "Verification received", "We'll review your documents and tell you here, usually within 1-2 working days.", "/numbers", f"kyc-sub:{int(now.timestamp())}")
     await ctx.session.commit()
     to = os.getenv("PRODUCT_KYC_NOTIFY", "").strip()
-    if to:
-        await mailer.send(to, "New KYC to review", f"{ctx.workspace.name} (workspace {ctx.workspace.id}) submitted KYC: {body.business_name}.")
+    if to and not (row.data or {}).get("plivo_id"):  # when the carrier is checking it, nobody else needs to
+        failed = (row.data or {}).get("auto_error")
+        await mailer.send(to, "New KYC to review", f"{ctx.workspace.name} (workspace {ctx.workspace.id}) submitted KYC: {body.business_name}." + (f" The automatic check failed: {failed}" if failed else ""))
     return _view(row)
 
 

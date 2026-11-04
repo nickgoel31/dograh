@@ -307,3 +307,9 @@ async def test_the_wallet_is_only_asked_after_our_own_changes_are_saved(client, 
     base = commits["n"]
     await client.get("/product/billing/summary", headers={**bearer(tok), "X-Environment": "live"})
     assert client.wallet.balance == 100 and seen["commits_before"] > base
+
+
+async def test_price_list_is_open_to_every_member(client):
+    _, tok = await signup(client, "a@x.com")
+    got = (await client.get("/product/billing/pricing", headers=bearer(tok))).json()
+    assert got["slabs"][0]["rate"] == 6.75 and got["currency"] and got["contact_sales_above"] >= 100000

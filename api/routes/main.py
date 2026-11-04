@@ -99,13 +99,13 @@ from api.product.google_auth import router as product_google_router  # noqa: E40
 from api.product.contacts_router import router as product_contacts_router  # noqa: E402
 from api.product.flowtry_router import router as product_flowtry_router  # noqa: E402
 from api.product.assistant_router import router as product_assistant_router  # noqa: E402
-from api.product.kyc_router import ops_router as product_kyc_ops_router, router as product_kyc_router  # noqa: E402
+from api.product.kyc_router import hooks_router as product_kyc_hooks_router, ops_router as product_kyc_ops_router, router as product_kyc_router  # noqa: E402
 from api.product.connectors_router import hooks as product_connector_hooks_router, router as product_connectors_router  # noqa: E402
 from api.product.integrations_router import hooks as product_calendar_hooks_router, router as product_integrations_router  # noqa: E402
 from api.product.phonetest_router import router as product_phonetest_router  # noqa: E402
 from api.product.account_router import router as product_account_router  # noqa: E402
 
-for _r in (product_developers_router, product_ops_router, product_help_router, product_public_router, product_team_router, product_widget_router, product_google_router, product_account_router, product_phonetest_router, product_integrations_router, product_calendar_hooks_router, product_connectors_router, product_connector_hooks_router, product_assistant_router, product_kyc_router, product_kyc_ops_router, product_contacts_router, product_flowtry_router,
+for _r in (product_developers_router, product_ops_router, product_help_router, product_public_router, product_team_router, product_widget_router, product_google_router, product_account_router, product_phonetest_router, product_integrations_router, product_calendar_hooks_router, product_connectors_router, product_connector_hooks_router, product_assistant_router, product_kyc_router, product_kyc_ops_router, product_kyc_hooks_router, product_contacts_router, product_flowtry_router,
            product_analytics_router, product_lab_router, product_handoff_router, product_import_router, product_campaigns_router, product_home_router, product_knowledge_router, product_notifications_router, product_tools_router):
     router.include_router(_r)
 

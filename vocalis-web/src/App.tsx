@@ -12,6 +12,7 @@ import { useData } from '@/store/data'
 import { agentsApi, toAgent } from '@/lib/api/agents'
 import Shell from '@/layout/Shell'
 import Home from '@/pages/Home'
+import { ApiDocsPage, ApiModelsPage, ApiOverviewPage, ApiPricingPage, ChatAgentsPage } from '@/pages/Platforms'
 import Agents, { NewAgentPage, TemplatesPage } from '@/pages/Agents'
 import AgentDetail from '@/pages/AgentDetail'
 import Conversations, { CallDetail } from '@/pages/Conversations'
@@ -117,6 +118,11 @@ export default function App() {
           <Route path="voices" element={<Voices />} />
           <Route path="testing" element={<Testing />} />
           <Route path="analytics" element={<Analytics />} />
+          <Route path="chat" element={<ChatAgentsPage />} />
+          <Route path="swarvo-api" element={<ApiOverviewPage />} />
+          <Route path="swarvo-api/docs" element={<ApiDocsPage />} />
+          <Route path="swarvo-api/models" element={<ApiModelsPage />} />
+          <Route path="swarvo-api/pricing" element={<ApiPricingPage />} />
           <Route path="developers" element={USE_MOCKS ? <Developers /> : <DevelopersReal />} />
           <Route path="billing" element={<Billing />} />
           <Route path="settings" element={USE_MOCKS ? <SettingsPage /> : <SettingsReal />} />

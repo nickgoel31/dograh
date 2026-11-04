@@ -4,7 +4,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { Command } from 'cmdk'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  AlertCircle, AlertTriangle, CheckCircle2, Info, Loader2, BarChart3, BookOpen, Bell, Bot, ChevronDown, ChevronRight, Code2, CreditCard, FlaskConical, HelpCircle, Home, Megaphone, Menu as MenuIcon,
+  AlertCircle, AlertTriangle, CheckCircle2, Coins, Info, Key, Loader2, BarChart3, BookOpen, Bell, Bot, ChevronDown, ChevronRight, Code2, CreditCard, FlaskConical, HelpCircle, Home, Megaphone, Menu as MenuIcon,
   MessageCircle, Mic2, Moon, Plus, Users, Wallet, PanelLeftClose, PanelLeftOpen, Phone, PhoneCall, Plug, Search, Send, Settings, Sparkles, Sun, X, Check, ChevronsUpDown,
 } from '@/components/icons'
 import { Toaster, toast } from 'sonner'
@@ -32,14 +32,42 @@ const main = [
 ]
 const build = [{ to: '/developers', label: 'Developers', icon: Code2 }, { to: '/billing', label: 'Billing & Usage', icon: CreditCard }]
 const all = Object.fromEntries([...main, ...build].map((n) => [n.to, n])) as Record<string, (typeof main)[number]>
-const pick = (...paths: string[]) => paths.map((p) => all[p])
-const groups: { title?: string; items: (typeof main)[number][] }[] = [
-  { items: pick('/') },
-  { title: 'Build', items: pick('/agents', '/voices', '/knowledge', '/tools', '/testing') },
-  { title: 'Data', items: pick('/conversations', '/contacts', '/analytics') },
-  { title: 'Reach', items: pick('/numbers', '/campaigns') },
-  { title: 'Account', items: pick('/billing', '/developers') },
+const extra = [
+  { to: '/chat', label: 'Chat Agents', icon: MessageCircle }, { to: '/swarvo-api', label: 'Overview', icon: Code2 },
+  { to: '/swarvo-api/docs', label: 'Documentation', icon: BookOpen }, { to: '/swarvo-api/models', label: 'Models', icon: Sparkles }, { to: '/swarvo-api/pricing', label: 'Pricing', icon: Coins },
+  { to: '/developers', label: 'API keys & webhooks', icon: Key },
 ]
+for (const n of extra) if (!all[n.to] || n.to === '/developers') all[n.to] = n.to === '/developers' ? all[n.to] : n
+const pick = (...paths: string[]) => paths.map((p) => all[p])
+type Group = { title?: string; items: (typeof main)[number][] }
+const GROUPS: Record<'voice' | 'chat' | 'api', Group[]> = {
+  voice: [
+    { items: pick('/') },
+    { title: 'Build', items: pick('/agents', '/voices', '/knowledge', '/tools', '/testing') },
+    { title: 'Data', items: pick('/conversations', '/contacts', '/analytics') },
+    { title: 'Reach', items: pick('/numbers', '/campaigns') },
+    { title: 'Account', items: pick('/billing', '/developers') },
+  ],
+  chat: [{ items: pick('/chat') }],
+  api: [
+    { items: pick('/swarvo-api') },
+    { title: 'Build', items: [{ to: '/developers', label: 'API keys & webhooks', icon: Key }, ...pick('/swarvo-api/docs')] },
+    { title: 'Platform', items: pick('/swarvo-api/models', '/swarvo-api/pricing') },
+    { title: 'Account', items: pick('/billing') },
+  ],
+}
+export const PLATFORMS = [
+  { id: 'voice' as const, label: 'Voice Agents', blurb: 'Answer and make phone calls', icon: Mic2, home: '/' },
+  { id: 'chat' as const, label: 'Chat Agents', blurb: 'Coming soon', icon: MessageCircle, home: '/chat' },
+  { id: 'api' as const, label: 'Swarvo API', blurb: 'Keys, docs, models and pricing', icon: Code2, home: '/swarvo-api' },
+]
+/** Pages that belong to one platform only. Billing, settings and help are shared, so they keep whichever platform you are in. */
+export const platformOf = (path: string): 'voice' | 'chat' | 'api' | null => {
+  if (path.startsWith('/chat')) return 'chat'
+  if (path.startsWith('/swarvo-api') || path.startsWith('/developers')) return 'api'
+  if (['/billing', '/settings', '/help', '/welcome', '/invite'].some((p) => path.startsWith(p))) return null
+  return 'voice'
+}
 const bottom = [{ to: '/settings', label: 'Team & Settings', icon: Settings }, { to: '/help', label: 'Help', icon: HelpCircle }]
 const demoWorkspaces = ['Sunrise Dental', 'GlowUp Salon']
 
@@ -83,7 +111,9 @@ function NavItem({ to, label, icon: Icon, collapsed, onClick }: (typeof main)[nu
 }
 
 function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => void }) {
-  const { workspace, workspaceId, view, set } = useUI()
+  const { workspace, workspaceId, view, set, platform } = useUI()
+  const nav = useNavigate()
+  const here = PLATFORMS.find((x) => x.id === platform) ?? PLATFORMS[0]
   const advancedOnly = new Set(['/developers', '/testing']) // shown only in Advanced view
   const { data: me } = useMe()
   // Real mode: the user's actual workspaces. Mock mode: the demo list.
@@ -94,6 +124,24 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
   return (
     <div className="flex h-full flex-col gap-5 px-3 pb-2 pt-5">
       <div className={cn('flex items-center px-1 pt-1', 'justify-between')}>{collapsed ? <img src={`${import.meta.env.BASE_URL}swarvo-logo.webp`} alt="" className="ml-1 h-6 w-6 rounded-md object-contain dark:invert" /> : <Logo name={me?.branding?.name} logo={me?.branding?.logo} />}</div>
+      {!collapsed && (
+        <Menu>
+          <MenuTrigger asChild>
+            <button className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm transition hover:bg-muted" aria-label="Switch platform">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-ink text-surface"><here.icon size={15} /></span>
+              <span className="flex-1 truncate font-medium">{here.label}</span><ChevronsUpDown size={14} className="text-soft" />
+            </button>
+          </MenuTrigger>
+          <MenuContent align="start" className="w-64">
+            {PLATFORMS.map((x) => (
+              <MenuItem key={x.id} onSelect={() => { set({ platform: x.id }); close?.(); nav(x.home) }} className="gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted"><x.icon size={16} /></span>
+                <span className="min-w-0 flex-1"><span className="block text-[13.5px] font-medium">{x.label}</span><span className="block text-xs text-soft">{x.blurb}</span></span>
+                {x.id === platform && <Check size={14} />}
+              </MenuItem>))}
+          </MenuContent>
+        </Menu>
+      )}
       {!collapsed && (
         <Menu>
           <MenuTrigger asChild>
@@ -108,7 +156,7 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
         </Menu>
       )}
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Main">
-        {groups.map((g, gi) => {
+        {GROUPS[platform].map((g, gi) => {
           const shown = g.items.filter((n) => view === 'advanced' || !advancedOnly.has(n.to))
           if (!shown.length) return null
           return (
@@ -124,7 +172,7 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
   )
 }
 
-const crumbNames: Record<string, string> = { agents: 'Agents', conversations: 'Conversations', contacts: 'Contacts', numbers: 'Phone Numbers', campaigns: 'Campaigns', knowledge: 'Knowledge', tools: 'Tools & Integrations', voices: 'Voices', testing: 'Testing Lab', analytics: 'Analytics', developers: 'Developers', billing: 'Billing & Usage', settings: 'Team & Settings', help: 'Help', new: 'New', templates: 'Templates' }
+const crumbNames: Record<string, string> = { agents: 'Agents', conversations: 'Conversations', contacts: 'Contacts', numbers: 'Phone Numbers', campaigns: 'Campaigns', knowledge: 'Knowledge', tools: 'Tools & Integrations', voices: 'Voices', testing: 'Testing Lab', analytics: 'Analytics', developers: 'Developers', billing: 'Billing & Usage', 'swarvo-api': 'Swarvo API', chat: 'Chat Agents', docs: 'Documentation', models: 'Models', pricing: 'Pricing', settings: 'Team & Settings', help: 'Help', new: 'New', templates: 'Templates' }
 function Breadcrumbs() {
   const { pathname } = useLocation()
   const agents = useData((s) => s.agents)
@@ -380,6 +428,7 @@ export default function Shell() {
     if (hsl && theme !== 'dark') { root.style.setProperty('--accent', hsl); root.style.setProperty('--accent-soft', hsl.replace(/\d+%$/, '94%')) } else { root.style.removeProperty('--accent'); root.style.removeProperty('--accent-soft') }
     document.title = brand?.name || BRAND
   }, [brand?.color, brand?.name, theme])
+  React.useEffect(() => { const pl = platformOf(pathname); if (pl && pl !== useUI.getState().platform) set({ platform: pl }) }, [pathname, set])
   React.useEffect(() => { set({ mobileNav: false }); document.getElementById('app-scroll')?.scrollTo(0, 0) }, [pathname, set])
   return (
     <TooltipProvider>
