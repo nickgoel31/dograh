@@ -21,6 +21,7 @@ import { calls } from '@/mock/calls'
 import { Button, Menu, MenuContent, MenuItem, MenuSep, MenuTrigger, Switch, TooltipProvider } from '@/components/ui'
 import { PlaygroundModal } from '@/components/Playground'
 import { AgentAvatar } from '@/components/AgentAvatar'
+import { CHAT_LIVE } from '@/config/features'
 import { WelcomeTour } from '@/components/WelcomeTour'
 import { cn, money } from '@/lib/utils'
 
@@ -48,7 +49,7 @@ const GROUPS: Record<'voice' | 'chat' | 'api', Group[]> = {
     { title: 'Reach', items: pick('/numbers', '/campaigns') },
     { title: 'Account', items: pick('/billing', '/developers') },
   ],
-  chat: [{ items: pick('/chat') }, { title: 'Conversations', items: pick('/chat/inbox') }, { title: 'Set up', items: pick('/chat/channels') }],
+  chat: CHAT_LIVE ? [{ items: pick('/chat') }, { title: 'Conversations', items: pick('/chat/inbox') }, { title: 'Set up', items: pick('/chat/channels') }] : [{ items: [{ to: '/chat', label: 'Chat Agents', icon: MessageCircle }] }],
   api: [
     { items: pick('/swarvo-api') },
     { title: 'Build', items: [{ to: '/developers', label: 'API keys & webhooks', icon: Key }, ...pick('/swarvo-api/docs')] },
@@ -58,7 +59,7 @@ const GROUPS: Record<'voice' | 'chat' | 'api', Group[]> = {
 }
 export const PLATFORMS = [
   { id: 'voice' as const, label: 'Voice Agents', blurb: 'Answer and make phone calls', icon: Mic2, home: '/' },
-  { id: 'chat' as const, label: 'Chat Agents', blurb: 'Website and WhatsApp chat', icon: MessageCircle, home: '/chat' },
+  { id: 'chat' as const, label: 'Chat Agents', blurb: CHAT_LIVE ? 'Website and WhatsApp chat' : 'Coming soon', icon: MessageCircle, home: '/chat' },
   { id: 'api' as const, label: 'Swarvo API', blurb: 'Keys, docs, models and pricing', icon: Code2, home: '/swarvo-api' },
 ]
 /** Pages that belong to one platform only. Billing, settings and help are shared, so they keep whichever platform you are in. */
