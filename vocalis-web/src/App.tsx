@@ -12,7 +12,9 @@ import { useData } from '@/store/data'
 import { agentsApi, toAgent } from '@/lib/api/agents'
 import Shell from '@/layout/Shell'
 import Home from '@/pages/Home'
-import { ApiDocsPage, ApiModelsPage, ApiOverviewPage, ApiPricingPage, ChatAgentsPage } from '@/pages/Platforms'
+import { ApiDocsPage, ApiModelsPage, ApiOverviewPage, ApiPricingPage } from '@/pages/Platforms'
+import { ChatChannelsPage, ChatInboxPage, ChatOverviewPage } from '@/pages/Chat'
+import ChatWidgetPage from '@/pages/ChatWidget'
 import Agents, { NewAgentPage, TemplatesPage } from '@/pages/Agents'
 import AgentDetail from '@/pages/AgentDetail'
 import Conversations, { CallDetail } from '@/pages/Conversations'
@@ -89,6 +91,9 @@ export default function App() {
   if (window.location.pathname.startsWith(`${BASE}/widget/`)) {
     return <BrowserRouter basename={BASE}><Routes><Route path="widget/:agentId" element={<WidgetPage />} /></Routes></BrowserRouter>
   }
+  if (window.location.pathname.startsWith(`${BASE}/chat-widget/`)) {
+    return <BrowserRouter basename={BASE}><Routes><Route path="chat-widget/:key" element={<ChatWidgetPage />} /></Routes></BrowserRouter>
+  }
   const p = window.location.pathname
   if (p === `${BASE}/reset` || p === `${BASE}/verify`) {
     return <QueryClientProvider client={queryClient}>{p.endsWith('/reset') ? <ResetPage /> : <VerifyPage />}</QueryClientProvider>
@@ -118,7 +123,9 @@ export default function App() {
           <Route path="voices" element={<Voices />} />
           <Route path="testing" element={<Testing />} />
           <Route path="analytics" element={<Analytics />} />
-          <Route path="chat" element={<ChatAgentsPage />} />
+          <Route path="chat" element={<ChatOverviewPage />} />
+          <Route path="chat/inbox" element={<ChatInboxPage />} />
+          <Route path="chat/channels" element={<ChatChannelsPage />} />
           <Route path="swarvo-api" element={<ApiOverviewPage />} />
           <Route path="swarvo-api/docs" element={<ApiDocsPage />} />
           <Route path="swarvo-api/models" element={<ApiModelsPage />} />

@@ -540,3 +540,52 @@ class ProductKycModel(Base):
     note = Column(String(400), nullable=True)
     submitted_at = Column(DateTime(timezone=True), nullable=True)
     reviewed_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class ProductChatSettingsModel(Base):
+    """One per workspace: which agent answers chats, how the website chat looks, where it may be shown, and the WhatsApp connection."""
+
+    __tablename__ = "product_chat_settings"
+
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), primary_key=True)
+    key = Column(String(40), nullable=False, unique=True, index=True)  # the public key in the one-line snippet
+    agent_id = Column(Integer, ForeignKey("product_agents.id", ondelete="SET NULL"), nullable=True)
+    enabled = Column(Boolean, nullable=False, default=True)
+    config = Column(JSON, nullable=True)
+    origins = Column(JSON, nullable=True)  # websites allowed to show the chat; empty means any
+    whatsapp = Column(JSON, nullable=True)  # {phone_number_id, token, app_secret, verify_token}
+    wa_phone_id = Column(String(40), nullable=True, index=True)  # the WhatsApp number id, so an incoming message finds its workspace
+    notify_email = Column(String(160), nullable=True)
+
+
+class ProductChatSessionModel(Base):
+    __tablename__ = "product_chat_sessions"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    agent_id = Column(Integer, nullable=True)
+    channel = Column(String(12), nullable=False, default="web")  # web | whatsapp
+    contact = Column(String(80), nullable=False, default="")  # website visitor id or WhatsApp number
+    name = Column(String(120), nullable=True)
+    email = Column(String(160), nullable=True)
+    run_id = Column(Integer, nullable=True)  # the platform's run that holds the agent's memory of this chat
+    status = Column(String(8), nullable=False, default="bot")  # bot | human | closed
+    unread = Column(Integer, nullable=False, default=0)
+    rating = Column(Integer, nullable=True)
+    last_text = Column(String(200), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_now)
+    last_at = Column(DateTime(timezone=True), default=_now)
+    handoff_at = Column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (Index("ix_product_chat_sessions_ws_last", "workspace_id", "last_at"),)
+
+
+class ProductChatMessageModel(Base):
+    __tablename__ = "product_chat_messages"
+
+    id = Column(Integer, primary_key=True)
+    session_id = Column(Integer, ForeignKey("product_chat_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    role = Column(String(8), nullable=False)  # visitor | agent | human
+    text = Column(Text, nullable=False)
+    ext_id = Column(String(80), nullable=True, index=True)  # the WhatsApp message id, so a retried delivery is not answered twice
+    created_at = Column(DateTime(timezone=True), default=_now)

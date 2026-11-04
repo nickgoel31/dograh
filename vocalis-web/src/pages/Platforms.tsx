@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, BookOpen, CheckCircle2, Code2, Coins, Key, MessageCircle, Sparkles, Terminal } from '@/components/icons'
+import { ArrowRight, BookOpen, CheckCircle2, Code2, Coins, Key, MessageCircle, Mic, Sparkles, Terminal } from '@/components/icons'
 import { Badge, Button, Card, Chip, Tab, TabPanel, Tabs, TabsList } from '@/components/ui'
 import { CodeBlock, PageHeader } from '@/components/shared'
 import { MeshBadge } from '@/layout/Shell'
@@ -10,6 +10,11 @@ import { API_URL } from '@/lib/api/env'
 import { cn } from '@/lib/utils'
 
 const fmt = (n: number, cur = 'INR', d = 2) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: cur, maximumFractionDigits: d }).format(n)
+/** Swarvo TTS 3 price steps by minutes of speech a month. Change them here. */
+const TTS_STEPS = [
+  { from: 0, to: 1000, rate: 2.0 }, { from: 1000, to: 5000, rate: 1.6 }, { from: 5000, to: 15000, rate: 1.3 },
+  { from: 15000, to: 50000, rate: 1.0 }, { from: 50000, to: Infinity, rate: 0.8 },
+]
 const base = () => (API_URL.startsWith('http') ? API_URL : `${window.location.origin}${API_URL}`)
 
 /* ---------- Chat agents: coming soon ---------- */
@@ -45,8 +50,8 @@ export function ApiOverviewPage() {
   const cards = [
     { to: '/developers', icon: Key, t: 'API keys and webhooks', d: 'Create keys, set up webhooks and see recent requests.' },
     { to: '/swarvo-api/docs', icon: BookOpen, t: 'Documentation', d: 'Every endpoint with an example you can copy.' },
-    { to: '/swarvo-api/models', icon: Sparkles, t: 'Models', d: 'The AI models your agents can think with.' },
-    { to: '/swarvo-api/pricing', icon: Coins, t: 'Pricing', d: 'Per-minute prices and how they drop as your wallet grows.' },
+    { to: '/swarvo-api/models', icon: Sparkles, t: 'Models', d: 'Swarvo TTS 3, our own text to speech model.' },
+    { to: '/swarvo-api/pricing', icon: Coins, t: 'Pricing', d: 'Prices for voice agents and for Swarvo TTS 3.' },
   ]
   return (
     <>
@@ -116,45 +121,39 @@ export function ApiDocsPage() {
 }
 
 /* ---------- Swarvo API: models ---------- */
-type Model = { id: string; label: string; level: string | null }
-const LEVEL: Record<string, string> = { fast: 'Fastest replies', balanced: 'Balanced', smartest: 'Smartest' }
 export function ApiModelsPage() {
-  const q = useQuery({ queryKey: ['models'], queryFn: () => http<Model[]>('/agents/models') })
-  const voices = useQuery({ queryKey: ['voices-count'], queryFn: () => http<{ id: string; language: string; provider: string }[]>('/voices') })
-  const [f, setF] = React.useState<string>('all')
-  const list = (q.data ?? []).filter((m) => f === 'all' || m.level === f)
-  const engines = Object.entries((voices.data ?? []).reduce<Record<string, number>>((a, v) => ({ ...a, [v.provider]: (a[v.provider] ?? 0) + 1 }), {}))
+  const facts = [['Type', 'Text to speech'], ['Status', 'Coming soon'], ['Price', `From ${fmt(TTS_STEPS[0].rate)} down to ${fmt(TTS_STEPS[TTS_STEPS.length - 1].rate)} a minute`]]
   return (
     <>
-      <PageHeader title="Models" subtitle="The AI models your agents can think with, and the voices they can speak in." />
-      <div className="mb-4 flex flex-wrap gap-2">{[['all', 'All'], ['fast', 'Fast'], ['balanced', 'Balanced'], ['smartest', 'Smartest']].map(([k, l]) => <Chip key={k} active={f === k} onClick={() => setF(k)}>{l}</Chip>)}</div>
-      <Card className="overflow-hidden">
-        <table className="w-full text-sm"><thead className="border-b"><tr>{['Model', 'Id', 'Best for'].map((h) => <th key={h} className="px-5 py-2.5 text-left text-xs font-medium text-soft">{h}</th>)}</tr></thead>
-          <tbody>{q.isPending ? <tr><td className="px-5 py-8 text-soft" colSpan={3}>Loading…</td></tr> : list.length === 0 ? <tr><td className="px-5 py-8 text-center text-soft" colSpan={3}>No models match.</td></tr> : list.map((m) => (
-            <tr key={m.id} className="border-b last:border-0 hover:bg-muted/30">
-              <td className="px-5 py-3.5 font-medium">{m.label}</td>
-              <td className="px-5 py-3.5"><code className="rounded bg-muted px-1.5 py-0.5 text-xs">{m.id}</code></td>
-              <td className="px-5 py-3.5 text-soft">{m.level ? LEVEL[m.level] ?? m.level : 'Available on request'}</td>
-            </tr>))}</tbody></table>
+      <PageHeader title="Models" subtitle="Our own models, available through the Swarvo API." />
+      <Card className="relative overflow-hidden p-6 sm:p-8">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[#22d3ee]/20 blur-3xl" aria-hidden />
+        <div className="pointer-events-none absolute -bottom-24 right-10 h-56 w-56 rounded-full bg-[#8b5cf6]/15 blur-3xl" aria-hidden />
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <MeshBadge className="h-14 w-14 rounded-2xl"><Mic size={22} /></MeshBadge>
+            <div><h2 className="text-[22px] font-semibold tracking-[-0.02em]">Swarvo TTS 3</h2><p className="mt-0.5 text-sm text-soft">Natural, fast text to speech for voice agents and apps.</p></div>
+          </div>
+          <Badge>Coming soon</Badge>
+        </div>
+        <dl className="relative mt-6 grid gap-4 sm:grid-cols-3">{facts.map(([k, v]) => <div key={k} className="rounded-xl border bg-surface/70 p-4"><dt className="text-xs text-soft">{k}</dt><dd className="mt-1 text-[14px] font-medium">{v}</dd></div>)}</dl>
+        <div className="relative mt-6 flex flex-wrap gap-2">
+          <Link to="/swarvo-api/pricing"><Button variant="primary">See pricing</Button></Link>
+          <Link to="/help"><Button>Ask for early access</Button></Link>
+        </div>
       </Card>
-      <h3 className="mb-3 mt-8 text-[15px] font-semibold">Voices</h3>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {engines.map(([name, n]) => <Card key={name} className="p-4"><div className="text-[13.5px] font-semibold">{name}</div><div className="mt-1 text-xs text-soft">{n} voices</div></Card>)}
-        <Link to="/voices" className="flex items-center justify-between rounded-2xl border bg-surface p-4 text-[13.5px] font-medium transition hover:bg-muted/40">Browse and play voices<ArrowRight size={14} /></Link>
-      </div>
     </>
   )
 }
 
 /* ---------- Swarvo API: pricing ---------- */
 type Price = { currency: string; slabs: { up_to: number; rate: number }[]; contact_sales_above: number; number_monthly_local: number; number_monthly_toll_free: number; signup_bonus: number; bonus_left: number }
-export function ApiPricingPage() {
+function AgentPricing() {
   const q = useQuery({ queryKey: ['pricing'], queryFn: () => http<Price>('/billing/pricing') })
   const p = q.data
   const rows = (p?.slabs ?? []).map((s, i, all) => ({ from: i === 0 ? 0 : all[i - 1].up_to, to: s.up_to, rate: s.rate, unlock: (i === 0 ? 0 : all[i - 1].up_to) * s.rate }))
   return (
     <>
-      <PageHeader title="Pricing" subtitle="One price per minute. It covers the AI, the voice, the phone line, recordings and analytics." />
       {!p ? <Card className="p-8 text-sm text-soft">Loading…</Card> : (
         <>
           <div className="grid gap-4 sm:grid-cols-3">
@@ -176,6 +175,36 @@ export function ApiPricingPage() {
           </div>
         </>)}
       <p className="mt-6 flex items-center gap-1.5 text-xs text-soft"><Code2 size={12} />Prices are in {p?.currency ?? 'INR'} and may change; the price on your Billing page is what you are charged.</p>
+    </>
+  )
+}
+
+function TtsPricing() {
+  return (
+    <>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="p-5"><div className="text-[13px] text-soft">Starting price</div><div className="num mt-2 text-[28px] font-semibold leading-none">{fmt(TTS_STEPS[0].rate)}<span className="ml-1 text-sm font-normal text-soft">/ min</span></div><div className="mt-2 text-xs text-soft">Per minute of speech</div></Card>
+        <Card className="p-5"><div className="text-[13px] text-soft">Lowest price</div><div className="num mt-2 text-[28px] font-semibold leading-none">{fmt(TTS_STEPS[TTS_STEPS.length - 1].rate)}<span className="ml-1 text-sm font-normal text-soft">/ min</span></div><div className="mt-2 text-xs text-soft">With {TTS_STEPS[TTS_STEPS.length - 1].from.toLocaleString('en-IN')}+ minutes a month</div></Card>
+        <Card className="p-5"><div className="text-[13px] text-soft">Availability</div><div className="mt-2 text-[28px] font-semibold leading-none">Coming soon</div><div className="mt-2 text-xs text-soft">Prices may change before launch</div></Card>
+      </div>
+      <Card className="mt-4 overflow-hidden">
+        <div className="border-b px-5 py-4"><h3 className="text-[15px] font-semibold">Swarvo TTS 3 price steps</h3><p className="mt-0.5 text-[13px] text-soft">The more speech you generate in a month, the lower the price per minute.</p></div>
+        <table className="w-full text-sm"><thead className="border-b"><tr>{['Minutes a month', 'Price per minute'].map((h, i) => <th key={h} className={cn('px-5 py-2.5 text-xs font-medium text-soft', i === 1 ? 'text-right' : 'text-left')}>{h}</th>)}</tr></thead>
+          <tbody>{TTS_STEPS.map((r) => <tr key={r.from} className="border-b last:border-0 hover:bg-muted/30"><td className="num px-5 py-3.5">{r.to === Infinity ? `${r.from.toLocaleString('en-IN')}+` : `${r.from.toLocaleString('en-IN')} to ${r.to.toLocaleString('en-IN')}`}</td><td className="num px-5 py-3.5 text-right font-semibold">{fmt(r.rate)}</td></tr>)}</tbody></table>
+      </Card>
+    </>
+  )
+}
+
+export function ApiPricingPage() {
+  return (
+    <>
+      <PageHeader title="Pricing" subtitle="What each part of the Swarvo platform costs." />
+      <Tabs defaultValue="agents">
+        <TabsList><Tab value="agents">Voice agents</Tab><Tab value="tts">Swarvo TTS 3</Tab></TabsList>
+        <TabPanel value="agents"><AgentPricing /></TabPanel>
+        <TabPanel value="tts"><TtsPricing /></TabPanel>
+      </Tabs>
     </>
   )
 }

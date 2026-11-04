@@ -12,7 +12,7 @@ from sqlalchemy.pool import StaticPool
 from api.db import models, product_models
 from api.product import (agents_router, analytics_router, billing_router, calls_router, campaigns_router, config, conversations_router, deps, gateway,
                          developers, developers_router, emailer, account_router, contacts_router, flowtry_router, google_auth, handoff_router, integrations_router, phonetest_router, help_router, home_router, import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, public_api, team_router, tools_router, voices_router, widget_router)
-from api.product import assistant_router, connectors_router, kyc_router
+from api.product import assistant_router, chat_router, connectors_router, kyc_router
 from api.product import router as product_router
 
 TABLES = [
@@ -56,6 +56,9 @@ TABLES = [
     product_models.ProductCallInsightModel.__table__,
     product_models.ProductPushModel.__table__,
     product_models.ProductKycModel.__table__,
+    product_models.ProductChatSettingsModel.__table__,
+    product_models.ProductChatSessionModel.__table__,
+    product_models.ProductChatMessageModel.__table__,
 ]
 
 
@@ -364,6 +367,8 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(kyc_router.router)
     app.include_router(kyc_router.ops_router)
     app.include_router(kyc_router.hooks_router)
+    for r in (chat_router.router, chat_router.public, chat_router.hooks, chat_router.chat_js):
+        app.include_router(r)
     for r in (analytics_router, labs_router, handoff_router, import_router, campaigns_router, home_router, knowledge_router, notifications, tools_router,
               developers_router, help_router, public_api, team_router, widget_router, google_auth, account_router, phonetest_router, integrations_router, contacts_router, flowtry_router):
         app.include_router(r.router)
