@@ -52,7 +52,7 @@ export function useAgentCall(agentId: string, widget?: WidgetOpts) {
     ws.current?.close(); ws.current = null
     pc.current?.close(); pc.current = null
     stream.current?.getTracks().forEach((t) => t.stop()); stream.current = null
-    if (audio.current) { audio.current.srcObject = null; audio.current = null }
+    if (audio.current) { audio.current.srcObject = null; audio.current.remove(); audio.current = null }
   }, [])
   React.useEffect(() => cleanup, [cleanup])
 
@@ -74,7 +74,7 @@ export function useAgentCall(agentId: string, widget?: WidgetOpts) {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error('This browser cannot use the microphone.')
       const [ice, mic] = await Promise.all([
         http<components['schemas']['IceOut']>(widget ? '/public/widget/ice' : '/call/ice'),
-        navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }),
+        navigator.mediaDevices.getUserMedia({ audio: true }), // the browser's own defaults, as the classic app asks for them (echo cancellation, noise suppression and gain control on)
       ])
       stream.current = mic
       const peer = new RTCPeerConnection({
@@ -84,8 +84,10 @@ export function useAgentCall(agentId: string, widget?: WidgetOpts) {
       mic.getTracks().forEach((t) => peer.addTrack(t, mic))
       peer.ontrack = (e) => {
         if (e.track.kind !== 'audio') return
-        const el = audio.current ?? new Audio()
-        el.autoplay = true; el.srcObject = e.streams[0]; audio.current = el
+        // Like the classic app: a real <audio autoplay> element in the page (not a detached one), so the browser plays and echo-cancels it as a normal call.
+        let el = audio.current
+        if (!el) { el = document.createElement('audio'); el.autoplay = true; el.setAttribute('playsinline', ''); el.style.display = 'none'; document.body.appendChild(el); audio.current = el }
+        el.srcObject = e.streams[0]
         void el.play().catch(() => {})
       }
       peer.oniceconnectionstatechange = () => {
