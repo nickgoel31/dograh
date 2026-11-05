@@ -24,6 +24,7 @@ from pipecat.utils.text.simple_text_aggregator import SimpleTextAggregator
 from pipecat.utils.tracing.service_decorators import traced_tts
 
 SAMPLE_RATE = 24000
+PREOPEN = os.getenv("SWARVO_TTS_PREOPEN", "0") == "1"  # keeps one idle connection open per call; it may count towards the key's simultaneous-streams limit
 COLD_START_WAIT = 180  # seconds to wait for the first audio when the GPU container is starting
 
 
@@ -95,6 +96,7 @@ class SwarvoTTSService(TTSService):
         self._mode = mode if mode in ("read", "chat") else "chat"
         self._http: aiohttp.ClientSession | None = None
         self._warm_task: asyncio.Task | None = None
+        self._spare: asyncio.Task | None = None  # next sentence's connection, opened while the current one plays (SWARVO_TTS_PREOPEN=1)
         self._inflight = 0  # sentences being generated right now: more than 1 means two are overlapping
         self._count = 0
 
@@ -115,10 +117,15 @@ class SwarvoTTSService(TTSService):
     async def start(self, frame):
         await super().start(frame)
         self._warm_task = asyncio.create_task(self._warm())
+        if PREOPEN:
+            self._spare = asyncio.create_task(self._open())
 
     async def _close(self):
         if self._warm_task and not self._warm_task.done():
             self._warm_task.cancel()
+        if self._spare is not None:
+            self._spare.cancel()
+            self._spare = None
         if self._http and not self._http.closed:
             await self._http.close()
 
@@ -136,7 +143,9 @@ class SwarvoTTSService(TTSService):
     async def _audio(self, text: str) -> AsyncIterator[bytes]:
         voice = assert_given(self._settings.voice) or "Ritvik"
         lang = assert_given(self._settings.language) or "hi"
-        body = {"api_key": self._api_key, "text": text, "voice": voice, "lang": str(lang).split("-")[0].lower(), "format": "pcm16", "speed": self._speed, "mode": self._mode}
+        body = {"api_key": self._api_key, "text": text, "voice": voice, "lang": str(lang).split("-")[0].lower(), "format": "pcm16", "mode": self._mode}
+        if abs(self._speed - 1.0) > 0.01:  # at normal speed leave it out: the service changes speed with signal processing, which we do not want to run needlessly
+            body["speed"] = self._speed
         self._inflight += 1
         self._count += 1
         n, t0 = self._count, time.monotonic()
@@ -147,9 +156,30 @@ class SwarvoTTSService(TTSService):
         finally:
             self._inflight -= 1
 
+    async def _open(self):
+        return await self._session().ws_connect(self._url, heartbeat=20, max_msg_size=0)
+
+    async def _connection(self):
+        """A connection for the next sentence: the spare one opened earlier if there is one, else a new one."""
+        ws = None
+        if self._spare is not None:
+            task, self._spare = self._spare, None
+            try:
+                ws = await task
+                if ws.closed:
+                    ws = None
+            except Exception:  # noqa: BLE001 - the spare never worked: open a fresh one below
+                ws = None
+        if ws is None:
+            ws = await self._open()
+        if PREOPEN:  # open the one for the sentence after this while this one plays
+            self._spare = asyncio.create_task(self._open())
+        return ws
+
     async def _stream(self, body: dict, text: str, n: int, t0: float) -> AsyncIterator[bytes]:
         first, total = None, 0
-        async with self._session().ws_connect(self._url, heartbeat=20, max_msg_size=0) as ws:
+        ws = await self._connection()
+        async with ws:
             connected = time.monotonic() - t0
             await ws.send_str(json.dumps(body))
             async for msg in ws:

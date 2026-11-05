@@ -313,3 +313,34 @@ def test_the_echo_check_scores_a_doubled_voice_higher_than_a_clean_one():
     doubled[delay:] += (voice[:-delay] * 0.8).astype(np.int32)
     assert echo_score(doubled.clip(-32768, 32767).astype("<i2")) > echo_score(voice) + 0.2
     assert echo_score(np.zeros(100, dtype="<i2")) == 0.0
+
+
+def test_normal_speed_is_not_sent_to_the_service_at_all():
+    svc = SwarvoTTSService(api_key="K", base_url="https://x.test", speed=1.0, settings=SwarvoTTSService.Settings(model="swarvo-tts-2.5", voice="Ritvik", language="hi"))
+    assert svc._speed == 1.0 and abs(svc._speed - 1.0) <= 0.01  # the request body leaves "speed" out in this case (checked in the stream test below)
+
+
+async def test_a_speed_of_one_leaves_the_field_out_of_the_request(unused_tcp_port):
+    seen = {}
+
+    async def stream(request):
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+        seen["first"] = json.loads(await ws.receive_str())
+        await ws.send_bytes(b"\x01\x00" * 10)
+        await ws.send_str(json.dumps({"type": "end"}))
+        await ws.close()
+        return ws
+
+    app = web.Application()
+    app.router.add_get("/v1/stream", stream)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    await web.TCPSite(runner, "127.0.0.1", unused_tcp_port).start()
+    try:
+        svc = SwarvoTTSService(api_key="K", base_url=f"http://127.0.0.1:{unused_tcp_port}", speed=1.0, settings=SwarvoTTSService.Settings(model="swarvo-tts-2.5", voice="Ritvik", language="hi"))
+        [c async for c in svc._audio("नमस्ते")]
+        assert "speed" not in seen["first"]
+        await svc._close()
+    finally:
+        await runner.cleanup()

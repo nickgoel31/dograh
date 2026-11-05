@@ -41,10 +41,10 @@ def wav_to_pcm(data: bytes) -> tuple[np.ndarray, int]:
         return np.frombuffer(w.readframes(w.getnframes()), dtype="<i2"), w.getframerate()
 
 
-async def one(base: str, key: str, mode: str) -> dict:
-    out = {"mode": mode}
+async def one(base: str, key: str, mode: str, voice: str = "Ritvik", speed: float | None = None) -> dict:
+    out = {"mode": mode, "voice": voice, "speed": speed}
     async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=240)) as s:
-        async with s.post(f"{base}/v1/speak", headers={"Authorization": f"Bearer {key}"}, json={"text": TEXT, "voice": "Ritvik", "lang": "hi", "mode": mode}) as r:
+        async with s.post(f"{base}/v1/speak", headers={"Authorization": f"Bearer {key}"}, json={"text": TEXT, "voice": voice, "lang": "hi", "mode": mode, **({"speed": speed} if speed is not None else {})}) as r:
             body = await r.read()
             if r.status != 200:
                 return {**out, "error": f"speak {r.status}: {body[:150]!r}"}
@@ -52,7 +52,7 @@ async def one(base: str, key: str, mode: str) -> dict:
             out["speak"] = {"seconds": round(len(pcm) / sr, 2), "service_says": r.headers.get("X-Audio-Seconds"), "echo": round(echo_score(pcm, sr), 3)}
         ws_url = base.replace("https://", "wss://", 1).replace("http://", "ws://", 1) + "/v1/stream"
         async with s.ws_connect(ws_url, max_msg_size=0) as ws:
-            await ws.send_str(json.dumps({"api_key": key, "text": TEXT, "voice": "Ritvik", "lang": "hi", "format": "pcm16", "mode": mode}))
+            await ws.send_str(json.dumps({"api_key": key, "text": TEXT, "voice": voice, "lang": "hi", "format": "pcm16", "mode": mode, **({"speed": speed} if speed is not None else {})}))
             chunks, end = [], {}
             async for m in ws:
                 if m.type == aiohttp.WSMsgType.BINARY:
@@ -80,9 +80,10 @@ async def main() -> int:
         return 1
     base = tts["base_url"].rstrip("/")
     print(f"Asking {len(TEXT)} characters of Hindi, voice Ritvik. The first call may take a minute if the service is asleep.\n")
-    for mode in ("read", "chat"):
-        r = await one(base, tts["api_key"], mode)
-        print(f"mode={mode}")
+    # The same text with and without an explicit speed of 1.0 (the call sends one), for two voices.
+    for mode, voice, speed in (("chat", "Ritvik", None), ("chat", "Ritvik", 1.0), ("chat", "Ahana", None), ("chat", "Ahana", 1.0), ("read", "Ritvik", 1.0)):
+        r = await one(base, tts["api_key"], mode, voice, speed)
+        print(f"mode={mode} voice={voice} speed={'not sent' if speed is None else speed}")
         if "error" in r:
             print("  ", r["error"])
             continue
