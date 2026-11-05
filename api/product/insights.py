@@ -66,7 +66,8 @@ async def ensure(session, llm, *, workspace_id: int, org_id: int, user_id: int, 
         return existing
     transcript = "\n".join(f"{'Agent' if t['who'] == 'agent' else 'Caller'}: {t['text']}" for t in turns if t.get("text"))[:6000]
     try:
-        raw = await llm.complete(org_id, user_id, SYSTEM, [{"role": "user", "content": transcript}])
+        # Summaries run on the platform's own OpenAI key (the same one as the home assistant), so they work for every workspace.
+        raw = await llm.complete(org_id, user_id, SYSTEM, [{"role": "user", "content": transcript}], platform=True)
         parsed = parse(raw)
     except Exception:  # noqa: BLE001 - no model available: show the call without a summary and try again next time
         return None
