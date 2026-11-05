@@ -298,3 +298,18 @@ async def test_the_first_piece_of_a_reply_goes_to_speech_at_the_first_pause_not_
     await agg.flush()
     again = [a.text async for a in agg.aggregate("Aapka naam kya hai, bataiye. ")]
     assert again[0] == "Aapka naam kya hai,"
+
+
+def test_the_echo_check_scores_a_doubled_voice_higher_than_a_clean_one():
+    import numpy as np
+
+    from api.product.tts_check import echo_score
+
+    rng = np.random.default_rng(1)
+    t = np.arange(24000 * 3) / 24000
+    voice = (rng.normal(0, 1, t.size) * (1 + np.sin(2 * np.pi * 3 * t)) * 3000).astype("<i2")  # speech-like: no repeating pattern
+    delay = int(0.15 * 24000)
+    doubled = voice.astype(np.int32)
+    doubled[delay:] += (voice[:-delay] * 0.8).astype(np.int32)
+    assert echo_score(doubled.clip(-32768, 32767).astype("<i2")) > echo_score(voice) + 0.2
+    assert echo_score(np.zeros(100, dtype="<i2")) == 0.0
