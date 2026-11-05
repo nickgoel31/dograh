@@ -2143,6 +2143,8 @@ export interface components {
             };
             /** Brand */
             brand: string;
+            /** Is Admin */
+            is_admin?: boolean;
         };
         /** ModelOut */
         ModelOut: {

@@ -163,7 +163,7 @@ async def summary(ctx: Ctx = Depends(require(Perm.BILLING_MANAGE)), wallet: Wall
     await ctx.session.commit()
     w = await wallet.summary(ctx.workspace.live_org_id)
     start, end = bl.month_bounds(bl.current_period())
-    entries = await bl.usage_entries(ctx.session, ctx.workspace.live_org_id, start, end)
+    entries = await bl.usage_entries(ctx.session, ctx.workspace.live_org_id, start, end) + await bl.practice_entries(ctx.session, ctx.workspace, start, end)
     balance = float(w.get("balance", 0) or 0)
     rate = await rates.workspace_rate(ctx.session, ctx.workspace)
     nxt = pricing.next_balance_step(balance, rate)
@@ -190,26 +190,31 @@ async def summary(ctx: Ctx = Depends(require(Perm.BILLING_MANAGE)), wallet: Wall
 @router.get("/usage")
 async def usage(days: int = Query(default=30, ge=1, le=365), ctx: Ctx = Depends(require(Perm.BILLING_MANAGE))):
     end = datetime.now(UTC) + timedelta(days=1)
-    entries = await bl.usage_entries(ctx.session, ctx.workspace.live_org_id, end - timedelta(days=days + 1), end)
+    since = end - timedelta(days=days + 1)
+    entries = await bl.usage_entries(ctx.session, ctx.workspace.live_org_id, since, end) + await bl.practice_entries(ctx.session, ctx.workspace, since, end)
     runs = {}
     if entries:
         from api.db.models import WorkflowRunModel
 
         ids = [e["run_id"] for e in entries if e["run_id"]]
         runs = dict((await ctx.session.execute(select(WorkflowRunModel.id, WorkflowRunModel.workflow_id).where(WorkflowRunModel.id.in_(ids)))).all()) if ids else {}
-    agents = {a.live_workflow_id: a for a in (await ctx.session.scalars(
-        select(ProductAgentModel).where(ProductAgentModel.workspace_id == ctx.workspace.id))).all() if a.live_workflow_id}
+    rows = (await ctx.session.scalars(select(ProductAgentModel).where(ProductAgentModel.workspace_id == ctx.workspace.id))).all()
+    agents = {a.live_workflow_id: a for a in rows if a.live_workflow_id}
+    agents.update({a.test_workflow_id: a for a in rows if a.test_workflow_id})  # practice calls run on the private test copy
     by_day: dict[str, dict] = {}
     by_agent: dict[str, dict] = {}
+    practice = {"minutes": 0.0, "value": 0.0}
     for e in entries:
         d = by_day.setdefault(e["at"].strftime("%Y-%m-%d"), {"day": e["at"].strftime("%Y-%m-%d"), "minutes": 0.0, "value": 0.0})
         d["minutes"] += e["minutes"]; d["value"] += e["value"]
+        if e.get("practice"):
+            practice["minutes"] += e["minutes"]; practice["value"] += e["value"]
         a = agents.get(runs.get(e["run_id"]))
         key = a.public_id if a else "other"
         g = by_agent.setdefault(key, {"agent_id": a.public_id if a else None, "name": a.name if a else "Other", "minutes": 0.0, "value": 0.0})
         g["minutes"] += e["minutes"]; g["value"] += e["value"]
     rnd = lambda rows: [{**r, "minutes": round(r["minutes"], 2), "value": round(r["value"], 2)} for r in rows]
-    return {"currency": config.CURRENCY, "by_day": rnd(sorted(by_day.values(), key=lambda r: r["day"])), "by_agent": rnd(by_agent.values())}
+    return {"currency": config.CURRENCY, "by_day": rnd(sorted(by_day.values(), key=lambda r: r["day"])), "by_agent": rnd(by_agent.values()), "practice": rnd([practice])[0]}
 
 
 @router.patch("/settings", response_model=SettingsOut)

@@ -55,6 +55,12 @@ def _set_session(response: Response, user: UserModel) -> None:
     )
 
 
+def _is_admin(user: UserModel) -> bool:
+    from api.product.admin_router import is_admin
+
+    return is_admin(user)
+
+
 async def _me(session: AsyncSession, user: UserModel, workspace_id: str | None, env: str) -> MeOut:
     views = await list_workspaces(session, user.id)
     cur = next((v for v in views if v.workspace.public_id == workspace_id), None) or default_view(views)
@@ -80,6 +86,7 @@ async def _me(session: AsyncSession, user: UserModel, workspace_id: str | None, 
         plan="free",
         feature_flags={"sso": False, "ip_allowlist": False, "voice_cloning": False},
         brand=config.PRODUCT_NAME,
+        is_admin=_is_admin(user),
     )
 
 
@@ -95,7 +102,9 @@ async def signup(
         f"psignup:{_client_ip(request)}", 10, 3600, "Too many sign-up attempts. Try again later."
     )
     email = body.email.lower()
-    if await session.scalar(select(UserModel.id).where(UserModel.email == email).limit(1)):
+    from api.product.admin_router import admin_emails
+
+    if email in admin_emails() or await session.scalar(select(UserModel.id).where(UserModel.email == email).limit(1)):
         raise product_error(
             400,
             "signup_failed",

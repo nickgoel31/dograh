@@ -162,5 +162,20 @@ def catalogue() -> list[Voice]:
     return sorted(seen.values(), key=lambda v: (first.get(v.language, 9), v.language, v.name))
 
 
+def google_access() -> list[str]:
+    """Who may use the Google voices: full email addresses, or '@domain.com' for everyone at a company. Set PRODUCT_GOOGLE_VOICE_ACCESS (comma separated)."""
+    raw = os.getenv("PRODUCT_GOOGLE_VOICE_ACCESS")
+    raw = "thewalkingjumbo@gmail.com,@twjlabs.com" if raw is None else raw
+    return [p.strip().lower() for p in raw.split(",") if p.strip()]
+
+
+def can_use(v: Voice, email: str | None) -> bool:
+    """Google voices are limited to a few accounts for now; every other voice is open to everyone."""
+    if v.engine != "google":
+        return True
+    e = (email or "").strip().lower()
+    return bool(e) and any(e == p or (p.startswith("@") and e.endswith(p)) for p in google_access())
+
+
 def find(voice_id_: str) -> Voice | None:
     return next((v for v in catalogue() if v.id == voice_id_), None)

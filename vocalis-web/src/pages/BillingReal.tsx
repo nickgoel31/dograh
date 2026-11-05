@@ -15,7 +15,7 @@ import type { components } from '@/lib/api/schema'
 
 type Summary = components['schemas']['SummaryOut']
 type Invoice = components['schemas']['InvoiceOut']
-type Usage = { currency: string; by_day: { day: string; minutes: number; value: number }[]; by_agent: { name: string; minutes: number; value: number }[] }
+type Usage = { currency: string; by_day: { day: string; minutes: number; value: number }[]; by_agent: { name: string; minutes: number; value: number }[]; practice?: { minutes: number; value: number } }
 type Payment = { order_id: string; amount: number; currency: string; status: string; at: string | null }
 const say = (e: unknown) => toast.error(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
 const fmt = (n: number, cur: string, d = 2) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: cur, maximumFractionDigits: d }).format(n)
@@ -254,6 +254,7 @@ export default function RealBilling() {
         <Stat label="Minutes this month" value={s.month_minutes} hint="Calls answered or made" />
         <Stat label="Average per minute" value={s.month_minutes ? fmt(s.month_usage_value / s.month_minutes, s.currency) : '—'} hint="Matches your price when everything is included" />
       </div>
+      {!!u?.practice?.minutes && <p className="mt-3 text-[13px] text-soft">Practice calls from your browser are included: {u.practice.minutes} min, {fmt(u.practice.value, s.currency)} in the last {days} days. They are billed like real calls.</p>}
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[1.6fr_1fr]">
         <Panel className="p-5 sm:p-6">

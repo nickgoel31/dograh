@@ -10,8 +10,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.db.models import OrganizationModel, WalletLedgerModel
-from api.db.product_models import ProductBillingSettingsModel, ProductInvoiceModel, ProductWorkspaceModel
-from api.product import config
+from api.db.product_models import ProductBillingSettingsModel, ProductInvoiceModel, ProductPracticeChargeModel, ProductWorkspaceModel
+from api.product import config, phone_verify
 from api.product.payments import WalletGateway
 
 log = logging.getLogger(__name__)
@@ -89,25 +89,29 @@ async def ensure_billing(session: AsyncSession, wallet: WalletGateway, ws: Produ
     try:
         if free_minutes() > 0:
             await wallet.grant_minutes(ws.live_org_id, free_minutes(), "Welcome minutes", f"welcome:{ws.id}")
-        await _give_signup_bonus(session, wallet, ws, s)
+        if await _give_signup_bonus(session, wallet, ws, s) is False:
+            return  # waiting for the WhatsApp number check: ask again once it is done
     except Exception:  # noqa: BLE001 - a wallet problem must not stop the page; it is tried again next time (both grants are idempotent)
         log.warning("welcome grant failed for workspace %s", ws.id, exc_info=True)
         return
     s.first_grant_done = True
 
 
-async def _give_signup_bonus(session: AsyncSession, wallet: WalletGateway, ws: ProductWorkspaceModel, s: ProductBillingSettingsModel) -> None:
+async def _give_signup_bonus(session: AsyncSession, wallet: WalletGateway, ws: ProductWorkspaceModel, s: ProductBillingSettingsModel) -> bool:
     """The first accounts to sign up get a little money to try the product. Brought-over organizations and sub-accounts do not."""
     amount = signup_bonus()
     created = ws.created_at if ws.created_at is None or ws.created_at.tzinfo else ws.created_at.replace(tzinfo=UTC)
     if amount <= 0 or ws.adopted or ws.parent_workspace_id is not None or s.signup_bonus_at is not None:
-        return
+        return True
     if created is not None and datetime.now(UTC) - created > timedelta(days=3):  # only new sign-ups, not older workspaces opening billing for the first time
-        return
+        return True
+    if phone_verify.required(ws, s):  # no free money until the person has proved they own a WhatsApp number
+        return False
     if await bonus_left(session) <= 0:
-        return
+        return True
     s.signup_bonus_at = datetime.now(UTC)
     await wallet.credit(ws.live_org_id, amount, "Welcome bonus", f"signup-bonus:{ws.id}")
+    return True
 
 
 def month_bounds(period: str) -> tuple[datetime, datetime]:
@@ -137,6 +141,18 @@ async def usage_entries(session: AsyncSession, org_id: int, start: datetime, end
             "charged": round(-float(r.money_delta or 0), 4),          # what was actually taken from the balance
         })
     return out
+
+
+async def practice_entries(session: AsyncSession, ws: ProductWorkspaceModel, start: datetime, end: datetime) -> list[dict]:
+    """Browser practice calls already charged to the Live wallet. They are not 'usage' rows in the platform ledger, so list them here."""
+    rows = (await session.scalars(
+        select(ProductPracticeChargeModel).where(
+            ProductPracticeChargeModel.workspace_id == ws.id, ProductPracticeChargeModel.created_at >= start, ProductPracticeChargeModel.created_at < end
+        ).order_by(ProductPracticeChargeModel.run_id)
+    )).all()
+    # Free minutes are not money, so what a practice call is worth is what it cost plus nothing for the free part.
+    return [{"run_id": r.run_id, "at": r.created_at, "minutes": float(r.minutes or 0), "value": round(float(r.amount or 0), 4),
+             "charged": round(float(r.amount or 0), 4), "practice": True} for r in rows]
 
 
 def limit_state(limit: float | None, value: float) -> str:

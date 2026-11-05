@@ -157,7 +157,7 @@ async def patch_agent(
             expected = int(if_match.strip('"'))
         except ValueError:
             raise product_error(400, "bad_etag", "That edit was out of date. Reload and try again.")
-    await svc.update_agent(ctx.session, gw, ctx.workspace, agent, body.model_dump(exclude_unset=True), expected)
+    await svc.update_agent(ctx.session, gw, ctx.workspace, agent, body.model_dump(exclude_unset=True), expected, ctx.user.email)
     await ctx.session.commit()
     response.headers["ETag"] = str(agent.version)
     graph = await gw.working_definition(ctx.workspace.test_org_id, agent.test_workflow_id) or {}

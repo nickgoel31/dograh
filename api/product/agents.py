@@ -108,6 +108,7 @@ async def update_agent(
     agent: ProductAgentModel,
     changes: dict,
     expected_version: int | None,
+    email: str | None = None,
 ) -> ProductAgentModel:
     if expected_version is not None and expected_version != agent.version:
         raise product_error(
@@ -125,7 +126,7 @@ async def update_agent(
     touches_models = bool({"voice_id", "brain"} & changes.keys()) or new_style is not None
     if new_style is not None and "languages" in new_style and agent.prompt_mode == "simple":
         changes.setdefault("role", None)  # recompile the instructions below so the language line is included
-    if changes.get("voice_id") and voice_catalogue.find(changes["voice_id"]) is None:
+    if changes.get("voice_id") and ((v := voice_catalogue.find(changes["voice_id"])) is None or (email is not None and not voice_catalogue.can_use(v, email))):
         raise product_error(400, "unknown_voice", "That voice isn't available. Pick one from the voice list.")
     for field in ("name", "emoji", "color", "role", "tone", "business", "what_you_do", "script", "voice_id"):
         if field in changes and changes[field] is not None:

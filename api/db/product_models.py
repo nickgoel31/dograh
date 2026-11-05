@@ -132,6 +132,15 @@ class ProductBillingSettingsModel(Base):
     first_grant_done = Column(Boolean, nullable=False, default=False)
     signup_bonus_at = Column(DateTime(timezone=True), nullable=True)  # set when the sign-up bonus was given
     human_cost_per_min = Column(Float, nullable=True)  # what a person would cost per minute, for the 'money saved' estimate
+    # WhatsApp number check: a number can belong to one workspace only (unique), so one person cannot claim the sign-up bonus many times.
+    verified_phone = Column(String(20), nullable=True, unique=True)
+    phone_verified_at = Column(DateTime(timezone=True), nullable=True)
+    otp_phone = Column(String(20), nullable=True)  # the number the pending code was sent to
+    otp_hash = Column(String(64), nullable=True)
+    otp_expires_at = Column(DateTime(timezone=True), nullable=True)
+    otp_sent_at = Column(DateTime(timezone=True), nullable=True)
+    otp_tries = Column(Integer, nullable=False, default=0)
+    otp_sends_today = Column(Integer, nullable=False, default=0)
 
 
 class ProductPaymentModel(Base):

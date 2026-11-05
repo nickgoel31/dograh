@@ -4,7 +4,8 @@ import { CallFlowEditor, defaultFlow, type FlowData } from '@/components/CallFlo
 import { AlertTriangle, Check, History, Mic, Play, Rocket } from '@/components/icons'
 import { toast } from 'sonner'
 import { Badge, Button, Card, Chip, Field, Input, Select, Slider, Switch, Tab, TabPanel, Tabs, TabsList, Textarea } from '@/components/ui'
-import { AdvancedOnly, EmptyState, Friendly, PageHeader, SimpleAdvanced, StatusBadge, UnsavedBar, speak } from '@/components/shared'
+import { AdvancedOnly, EmptyState, Friendly, PageHeader, SearchPill, SimpleAdvanced, StatusBadge, UnsavedBar, speak } from '@/components/shared'
+import { AgentAvatar } from '@/components/AgentAvatar'
 import { VoicePlayground } from '@/components/Playground'
 import { useData } from '@/store/data'
 import { USE_MOCKS } from '@/lib/api/env'
@@ -44,22 +45,38 @@ export function VoicePick({ voices, value, onPick }: { voices: import('@/mock/ty
   const [shown, setShown] = React.useState(24)
   const langs = [...new Set(voices.map((v) => v.lang))].sort()
   const list = voices.filter((v) => (!lang || v.lang === lang) && (!gender || v.gender === gender) && (!q || `${v.name} ${v.style} ${v.description ?? ''}`.toLowerCase().includes(q.toLowerCase())))
+  const reset = () => setShown(24)
+  const pill = (on: boolean) => cn('shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] transition', on ? 'border-ink bg-ink text-surface' : 'bg-surface text-soft hover:border-soft/50 hover:text-ink')
   return (
     <div>
-      <div className="mb-3 flex flex-wrap gap-2">
-        <Input className="w-56" placeholder="Search voices" aria-label="Search voices" value={q} onChange={(e) => { setQ(e.target.value); setShown(24) }} />
-        <Select className="w-auto" value={lang} onChange={(e) => { setLang(e.target.value); setShown(24) }} aria-label="Language"><option value="">All languages</option>{langs.map((l) => <option key={l}>{l}</option>)}</Select>
-        <Select className="w-auto" value={gender} onChange={(e) => { setGender(e.target.value); setShown(24) }} aria-label="Gender"><option value="">Any gender</option><option>Female</option><option>Male</option></Select>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <SearchPill value={q} onChange={(v) => { setQ(v); reset() }} placeholder="Search voices" className="sm:max-w-xs" />
+        <div className="flex gap-2">{['', 'Female', 'Male'].map((g) => <button key={g || 'any'} onClick={() => { setGender(g); reset() }} className={pill(gender === g)}>{g || 'Any'}</button>)}</div>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{list.slice(0, shown).map((v) => (
-        <button key={v.id} disabled={v.available === false} onClick={() => onPick(v.id)} title={v.description}
-          className={cn('flex items-center gap-3 rounded-xl border p-3 text-left transition', value === v.id ? 'border-accent bg-accent-soft' : 'hover:border-accent', v.available === false && 'cursor-not-allowed opacity-50')}>
-          <div className="min-w-0 flex-1"><div className="font-medium">{v.name}</div><div className="truncate text-xs text-soft">{[v.lang, v.gender, v.style].filter(Boolean).join(' · ')}</div></div>
-          {v.available === false ? <Badge tone="accent">Soon</Badge> : value === v.id && <Check size={16} className="text-accent" />}
-        </button>))}
-        {list.length === 0 && <p className="text-sm text-soft">No voices match. Try other words.</p>}
+      {langs.length > 1 && (
+        <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Language">
+          <button onClick={() => { setLang(''); reset() }} className={pill(!lang)}>All languages</button>
+          {langs.map((l) => <button key={l} onClick={() => { setLang(l); reset() }} className={pill(lang === l)}>{l}</button>)}
+        </div>
+      )}
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">{list.slice(0, shown).map((v) => {
+        const on = value === v.id
+        const off = v.available === false
+        return (
+          <button key={v.id} disabled={off} onClick={() => onPick(v.id)} title={v.description} aria-pressed={on}
+            className={cn('flex min-h-[64px] items-center gap-3 rounded-2xl border bg-surface p-3 text-left transition', on ? 'border-ink ring-1 ring-ink' : 'hover:border-soft/50', off && 'cursor-not-allowed opacity-50')}>
+            <AgentAvatar id={v.id} className="h-10 w-10" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[14px] font-medium">{v.name}</span>
+              <span className="block truncate text-xs text-soft">{[v.lang, v.gender].filter(Boolean).join(' · ')}</span>
+              {v.style && <span className="mt-1 block truncate text-xs text-soft/80">{v.style}</span>}
+            </span>
+            {off ? <Badge tone="accent">Soon</Badge> : on && <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink text-surface"><Check size={13} /></span>}
+          </button>)
+      })}
+        {list.length === 0 && <p className="col-span-full py-6 text-center text-sm text-soft">No voices match. Try other words.</p>}
       </div>
-      {list.length > shown && <Button variant="ghost" className="mt-3" onClick={() => setShown(shown + 24)}>Show more ({list.length - shown} left)</Button>}
+      {list.length > shown && <Button variant="ghost" className="mt-3 w-full sm:w-auto" onClick={() => setShown(shown + 24)}>Show more ({list.length - shown} left)</Button>}
     </div>
   )
 }

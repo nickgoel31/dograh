@@ -39,7 +39,7 @@ def live_overrides(client):
 
 
 async def test_inworld_voice_follows_the_brain_level(client):
-    _, tok = await signup(client, "a@x.com")
+    _, tok = await signup(client, "a@twjlabs.com")
     h = bearer(tok)
     seema = await voice(client, h, "Seema")
     assert seema["available"] is True and seema["gender"] == "Female" and seema["language"].startswith("Hindi")
@@ -54,7 +54,7 @@ async def test_inworld_voice_follows_the_brain_level(client):
 
 
 async def test_google_voice_has_no_brain_levels_and_waits_for_a_key(client):
-    _, tok = await signup(client, "a@x.com")
+    _, tok = await signup(client, "a@twjlabs.com")
     h = bearer(tok)
     zephyr = await voice(client, h, "Zephyr")
     assert zephyr["available"] is False  # no key yet
@@ -77,14 +77,14 @@ async def test_google_voice_has_no_brain_levels_and_waits_for_a_key(client):
 
 
 async def test_no_keys_or_vendor_names_in_responses(client):
-    _, tok = await signup(client, "a@x.com")
+    _, tok = await signup(client, "a@twjlabs.com")
     h = bearer(tok)
     seen = (await client.get("/product/voices", headers=h)).text + (await client.get("/product/me", headers=h)).text
     assert not any(k in seen for k in ("KEY-", "inworld", "Inworld", "assemblyai", "google_realtime"))
 
 
 async def test_human_feel_settings_reach_the_voice_and_the_call(client):
-    _, tok = await signup(client, "a@x.com")
+    _, tok = await signup(client, "a@twjlabs.com")
     h = bearer(tok)
     seema = await voice(client, h, "Seema")
     aid = (await client.post("/product/agents", json={"name": "P", "template": "receptionist"}, headers=h)).json()["id"]
@@ -124,7 +124,7 @@ async def test_voice_samples_come_from_the_engine_and_are_kept(client, monkeypat
 
     real = httpx.AsyncClient
     monkeypatch.setattr(voice_samples.httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handler), **{k: v for k, v in kw.items() if k != "transport"}))
-    _, tok = await signup(client, "a@x.com")
+    _, tok = await signup(client, "a@twjlabs.com")
     h = bearer(tok)
     seema, zephyr = await voice(client, h, "Seema"), await voice(client, h, "Zephyr")
     assert seema["has_sample"] is True and zephyr["has_sample"] is False
@@ -135,7 +135,7 @@ async def test_voice_samples_come_from_the_engine_and_are_kept(client, monkeypat
 
 
 async def test_exact_ai_model_can_be_chosen(client):
-    _, tok = await signup(client, "a@x.com")
+    _, tok = await signup(client, "a@twjlabs.com")
     h = bearer(tok)
     models = (await client.get("/product/agents/models", headers=h)).json()
     ids = {m["id"]: m for m in models}

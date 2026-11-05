@@ -46,6 +46,7 @@ class MeOut(BaseModel):
     plan: str
     feature_flags: dict[str, bool]
     brand: str
+    is_admin: bool = False  # the platform owner: the app shows the Admin area
 
 
 class SetupOut(BaseModel):

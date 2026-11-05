@@ -222,6 +222,9 @@ async def test_practice_calls_are_charged_once_to_the_live_wallet(client):
         assert await practice.charge_practice_calls(s, client.wallet) == 1
         assert await practice.charge_practice_calls(s, client.wallet) == 0  # never twice
     assert client.wallet.minutes == 0.0 and round(client.wallet.balance, 4) == round(100 - 2 * 6.0, 4)  # 3 minutes billed: 1 free, 2 paid
+    use = (await client.get("/product/billing/usage", headers=h)).json()  # practice calls show up in Billing & Usage
+    assert use["practice"]["minutes"] == 3.0 and use["practice"]["value"] == 12.0 and sum(d["minutes"] for d in use["by_day"]) == 3.0
+    assert (await client.get("/product/billing/summary", headers=h)).json()["month_minutes"] == 3.0
 
 
 def test_billing_is_per_minute_rounded_up():

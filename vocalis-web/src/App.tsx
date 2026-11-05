@@ -28,6 +28,7 @@ import Testing from '@/pages/Testing'
 import Analytics from '@/pages/Analytics'
 import Developers from '@/pages/Developers'
 import Billing from '@/pages/Billing'
+import AdminPage from '@/pages/Admin'
 import { HelpPage, SettingsPage } from '@/pages/SettingsHelp'
 import { AcceptInvite, DevelopersReal, HelpReal, SettingsReal } from '@/pages/PlatformReal'
 import WidgetPage from '@/pages/Widget'
@@ -133,6 +134,7 @@ export default function App() {
           <Route path="swarvo-api/pricing" element={<ApiPricingPage />} />
           <Route path="developers" element={USE_MOCKS ? <Developers /> : <DevelopersReal />} />
           <Route path="billing" element={<Billing />} />
+          <Route path="admin" element={<AdminPage />} />
           <Route path="settings" element={USE_MOCKS ? <SettingsPage /> : <SettingsReal />} />
           <Route path="invite/:token" element={<AcceptInvite />} />
           <Route path="help" element={USE_MOCKS ? <HelpPage /> : <HelpReal />} />

@@ -54,6 +54,8 @@ async def list_voices(
     ready = {e: await models_config.engine_ready(ctx.session, e) for e in ("inworld", "google")}
     out = []
     for v in catalogue.catalogue():
+        if not catalogue.can_use(v, ctx.user.email):
+            continue
         if language and v.language.lower() != language.lower():
             continue
         if q and q.lower() not in f"{v.name} {v.style or ''} {v.tts.get('description') or ''}".lower():
@@ -78,7 +80,7 @@ async def sample(voice_id: str, ctx: Ctx = Depends(get_ctx)):
 @router.put("/{voice_id}/favorite", response_model=VoiceOut)
 async def favorite(voice_id: str, ctx: Ctx = Depends(get_ctx)):
     v = catalogue.find(voice_id)
-    if v is None:
+    if v is None or not catalogue.can_use(v, ctx.user.email):
         raise product_error(404, "voice_not_found", "We couldn't find that voice.")
     if voice_id not in await _favs(ctx):
         ctx.session.add(ProductVoiceFavoriteModel(user_id=ctx.user.id, voice_id=voice_id))
@@ -89,7 +91,7 @@ async def favorite(voice_id: str, ctx: Ctx = Depends(get_ctx)):
 @router.delete("/{voice_id}/favorite", response_model=VoiceOut)
 async def unfavorite(voice_id: str, ctx: Ctx = Depends(get_ctx)):
     v = catalogue.find(voice_id)
-    if v is None:
+    if v is None or not catalogue.can_use(v, ctx.user.email):
         raise product_error(404, "voice_not_found", "We couldn't find that voice.")
     await ctx.session.execute(
         delete(ProductVoiceFavoriteModel).where(

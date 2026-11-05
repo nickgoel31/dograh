@@ -9,6 +9,7 @@ import {
 } from '@/components/icons'
 import { Toaster, toast } from 'sonner'
 import { Bubble } from '@typebot.io/react'
+import { VerifyPhone, useVerify } from '@/components/VerifyPhone'
 import { BRAND } from '@/config/brand'
 import { useMe } from '@/lib/useMe'
 import { http } from '@/lib/api/http'
@@ -67,7 +68,7 @@ export const PLATFORMS = [
 export const platformOf = (path: string): 'voice' | 'chat' | 'api' | null => {
   if (path.startsWith('/chat')) return 'chat'
   if (path.startsWith('/swarvo-api') || path.startsWith('/developers')) return 'api'
-  if (['/billing', '/settings', '/help', '/welcome', '/invite'].some((p) => path.startsWith(p))) return null
+  if (['/billing', '/settings', '/help', '/welcome', '/invite', '/admin'].some((p) => path.startsWith(p))) return null
   return 'voice'
 }
 const bottom = [{ to: '/settings', label: 'Team & Settings', icon: Settings }, { to: '/help', label: 'Help', icon: HelpCircle }]
@@ -150,7 +151,7 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
             </div>
           )
         })}
-        <div className="mt-auto pt-4">{bottom.map((n) => <NavItem key={n.to} {...n} collapsed={collapsed} onClick={close} />)}</div>
+        <div className="mt-auto pt-4">{(me?.is_admin ? [{ to: '/admin', label: 'Admin', icon: Key }, ...bottom] : bottom).map((n) => <NavItem key={n.to} {...n} collapsed={collapsed} onClick={close} />)}</div>
       </nav>
       {!collapsed && (
         <Menu>
@@ -377,6 +378,8 @@ export default function Shell() {
   }, [brand?.color, brand?.name, theme])
   React.useEffect(() => { const pl = platformOf(pathname); if (pl && pl !== useUI.getState().platform) set({ platform: pl }) }, [pathname, set])
   React.useEffect(() => { set({ mobileNav: false }); document.getElementById('app-scroll')?.scrollTo(0, 0) }, [pathname, set])
+  const verify = useVerify()
+  if (verify.data?.required) return <><VerifyPhone status={verify.data} /><Toaster position="top-center" closeButton theme={theme === 'dark' ? 'dark' : 'light'} /></>
   return (
     <TooltipProvider>
       <div className="flex h-[100dvh] gap-2 overflow-hidden p-0 md:p-2">
