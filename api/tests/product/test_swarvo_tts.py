@@ -138,7 +138,7 @@ async def test_the_streaming_client_sends_the_key_in_the_first_message_and_reads
             got = [chunk async for chunk in svc._audio("नमस्ते")]
             assert b"".join(got) == b"\x01\x00" * 100 + b"\x02\x00" * 50
         f = seen["first"]
-        assert f["api_key"] == "KEY-SW" and f["voice"] == "Ahana" and f["lang"] == "hi" and f["format"] == "pcm16" and f["speed"] == 1.2 and f["mode"] == "read" and f["text"] == "नमस्ते"
+        assert f["api_key"] == "KEY-SW" and f["voice"] == "Ahana" and f["lang"] == "hi" and f["format"] == "pcm16" and "speed" not in f and f["mode"] == "read" and f["text"] == "नमस्ते"
     finally:
         await runner.cleanup()
 
@@ -381,25 +381,20 @@ async def test_paced_delivery_spreads_a_sentence_over_its_playing_time(monkeypat
     assert stamps[0] < 0.1 and 0.6 <= stamps[-1] <= 1.2  # the first piece goes at once, the last about (1 s - 0.2 s head start) later
 
 
-async def test_the_speaking_pace_slider_is_turned_into_a_sensible_swarvo_speed(client):
+async def test_the_speaking_pace_slider_never_puts_a_speed_on_a_swarvo_voice(client):
     await add_swarvo(client)
     _, tok = await signup(client, "a@twjlabs.com")
     h = bearer(tok)
     ahana = next(v for v in (await client.get("/product/voices", headers=h)).json() if v["name"] == "Ahana")
     aid = (await client.post("/product/agents", json={"name": "P", "template": "receptionist"}, headers=h)).json()["id"]
     await client.patch(f"/product/agents/{aid}", json={"voice_id": ahana["id"]}, headers=h)
-
-    async def speed_for(pace):
+    for pace in (0.75, 1.05, 1.25, 1.5, 1.75):
         await client.patch(f"/product/agents/{aid}", json={"style": {"pace": pace}}, headers=h)
-        return [o for o in client.fake.overrides.values() if o][-1]["tts"]["speed"]
-
-    assert await speed_for(1.25) == 1.0   # the natural middle of the slider is exactly normal speed: nothing for the service to process
-    assert await speed_for(1.5) == 1.2    # the old Studio default of 1.5 is no longer sent as the service's fastest setting
-    assert await speed_for(1.75) == 1.4
-    assert await speed_for(0.75) == 0.7   # clamped to what the service accepts
+        assert "speed" not in [o for o in client.fake.overrides.values() if o][-1]["tts"]
 
 
-async def test_a_speed_close_to_normal_is_not_sent_but_a_real_change_is(unused_tcp_port):
+
+async def test_no_speed_is_ever_sent_to_the_service(unused_tcp_port):
     seen = []
 
     async def stream(request):
@@ -421,6 +416,6 @@ async def test_a_speed_close_to_normal_is_not_sent_but_a_real_change_is(unused_t
             svc = SwarvoTTSService(api_key="K", base_url=f"http://127.0.0.1:{unused_tcp_port}", speed=speed, settings=SwarvoTTSService.Settings(model="m", voice="Ritvik", language="hi"))
             [c async for c in svc._audio("x")]
             await svc._close()
-        assert ["speed" in b for b in seen] == [False, False, True] and seen[2]["speed"] == 1.2
+        assert ["speed" in b for b in seen] == [False, False, False]  # never sent, whatever speed the settings hold
     finally:
         await runner.cleanup()

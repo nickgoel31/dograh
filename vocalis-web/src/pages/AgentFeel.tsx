@@ -39,7 +39,7 @@ export function HumanFeel({ agent, studio, swarvo = false }: { agent: Agent; stu
     <Card className="mt-6 p-6">
       <div className="flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent"><Sparkles size={17} /></span>
         <div><h3 className="font-semibold">Make it sound human</h3><p className="text-[13px] text-soft">Small choices that change how natural the conversation feels.</p></div></div>
-      {!studio && <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-xs text-soft">{swarvo ? 'With this voice, speaking pace, interruptions and call limits apply. Patience, delivery and steering are for Studio voices.' : 'Pace, patience, delivery and steering apply to Studio voices. With this voice, only interruptions and call limits apply.'}</p>}
+      {!studio && <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-xs text-soft">{swarvo ? 'With this voice, interruptions and call limits apply. Speaking pace, patience, delivery and steering are for Studio voices (this voice always speaks at its natural pace, which keeps it fast and clean).' : 'Pace, patience, delivery and steering apply to Studio voices. With this voice, only interruptions and call limits apply.'}</p>}
       {swarvo && (
         <div className="mt-5 rounded-xl border p-4">
           <div className="text-[13px] font-medium">Listening</div><div className="mb-2 text-xs text-soft">What turns the caller's voice into text for this agent. Deepgram is very fast and covers Hindi, Tamil, Telugu, Kannada, Marathi, Bengali, Gujarati, Punjabi and Urdu.</div>
@@ -51,7 +51,7 @@ export function HumanFeel({ agent, studio, swarvo = false }: { agent: Agent; stu
         </div>
       )}
       <div className={`mt-5 grid gap-6 md:grid-cols-2 ${studio || swarvo ? '' : 'opacity-50'}`}>
-        <Field label="Speaking pace" hint={<span className="text-xs text-soft">{pace < 1.05 ? 'Slow and calm' : pace > 1.4 ? 'Quick' : 'Natural'}</span>}>
+        <Field className={swarvo ? 'pointer-events-none opacity-50' : undefined} label="Speaking pace" hint={<span className="text-xs text-soft">{pace < 1.05 ? 'Slow and calm' : pace > 1.4 ? 'Quick' : 'Natural'}</span>}>
           <Slider value={Math.round((pace - 0.75) * 100)} min={0} max={100} onChange={(v) => set({ pace: Math.round((0.75 + v / 100) * 20) / 20 })} label="Speaking pace" /></Field>
         <Choice off={swarvo} label="How long it waits for you to finish" hint="Quick can cut people off. Patient suits people who pause to think." value={s.patience} onChange={(v) => set({ patience: v })} options={[['quick', 'Quick'], ['balanced', 'Balanced'], ['patient', 'Patient']]} />
         <Choice off={swarvo} label="Delivery" hint="Steady is consistent. Balanced is in between. Expressive sounds livelier." value={s.steadiness} onChange={(v) => set({ steadiness: v })} options={[['steady', 'Steady'], ['balanced', 'Balanced'], ['expressive', 'Expressive']]} />
