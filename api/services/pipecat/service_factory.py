@@ -249,6 +249,19 @@ def create_stt_service(
             keyterms=keyterms,
             sample_rate=audio_config.transport_in_sample_rate,
         )
+    elif user_config.stt.provider == ServiceProviders.INWORLD_STT.value:
+        from api.services.pipecat.inworld_stt import InworldSTTService
+
+        return InworldSTTService(
+            api_key=user_config.stt.api_key,
+            sample_rate=audio_config.transport_in_sample_rate,
+            settings=InworldSTTService.Settings(
+                model=user_config.stt.model,
+                language=getattr(user_config.stt, "language", None),
+                prompts=list(keyterms or []) or None,
+                max_turn_silence_ms=getattr(user_config.stt, "max_turn_silence_ms", None),
+            ),
+        )
     elif user_config.stt.provider == ServiceProviders.SARVAM.value:
         language = getattr(user_config.stt, "language", None)
         language_mapping = {
@@ -747,6 +760,12 @@ def create_llm_service_from_provider(
             api_key=api_key,
             settings=GroqLLMSettings(model=model, temperature=0.1),
         )
+    elif provider == ServiceProviders.INWORLD_LLM.value:
+        return OpenAILLMService(
+            api_key=api_key,
+            base_url=base_url or "https://api.inworld.ai/v1",
+            settings=OpenAILLMSettings(model=model, temperature=0.3 if temperature is None else temperature),
+        )
     elif provider == ServiceProviders.OPENROUTER.value:
         kwargs = {}
         if base_url:
@@ -1046,6 +1065,9 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
         raw_speed = _get_attr(realtime_config, "tts_speed", 1.5)
         delivery_mode = _get_attr(realtime_config, "delivery_mode", "STABLE")
         conversational = _get_attr(realtime_config, "conversational", False)
+        steering = _get_attr(realtime_config, "steering", "off")
+        backchannel = bool(_get_attr(realtime_config, "backchannel", False))
+        slow_filler = bool(_get_attr(realtime_config, "slow_filler", False))
         try:
             tts_speed = float(raw_speed)
         except (ValueError, TypeError):
@@ -1064,6 +1086,9 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
             tts_speed=tts_speed,
             delivery_mode=delivery_mode,
             conversational=conversational,
+            steering=steering,
+            backchannel=backchannel,
+            slow_filler=slow_filler,
         )
 
     else:
@@ -1083,6 +1108,9 @@ def create_llm_service(user_config):
         kwargs["base_url"] = user_config.llm.base_url
     elif provider == ServiceProviders.OPENROUTER.value:
         kwargs["base_url"] = user_config.llm.base_url
+    elif provider == ServiceProviders.INWORLD_LLM.value:
+        kwargs["base_url"] = user_config.llm.base_url
+        kwargs["temperature"] = user_config.llm.temperature
     elif provider == ServiceProviders.AZURE.value:
         kwargs["endpoint"] = user_config.llm.endpoint
     elif provider == ServiceProviders.SPEACHES.value:

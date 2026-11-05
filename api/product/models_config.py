@@ -61,7 +61,7 @@ async def engine_ready(session: AsyncSession, engine: str) -> bool:
 
 def brain_applies(engine: str | None) -> bool:
     """Brain levels pick the AI model on the 'inworld' engine only; the Google realtime model is a single model."""
-    return engine not in ("google", "swarvo")
+    return engine != "google"
 
 
 def profile_slugs() -> dict[str, str]:
@@ -120,7 +120,13 @@ async def build_overrides(session: AsyncSession, *, brain: str, voice_id: str | 
         tts = deepcopy(c["tts"])
         tts["voice"] = voice.tts["voice"]
         tts["language"] = voice.tts.get("lang", tts.get("language", "hi"))
-        out = {"is_realtime": False, "llm": deepcopy(c["llm"]), "stt": deepcopy(c["stt"]), "tts": tts}
+        pace = (style or {}).get("pace")
+        if pace:
+            tts["speed"] = round(min(1.5, max(0.7, float(pace))), 2)  # the service accepts 0.7 to 1.5
+        llm = deepcopy(c["llm"])
+        if llm.get("provider") == "inworld_llm":  # the Brain level picks the Inworld model, as it does for the other Studio voices
+            llm["model"] = (style or {}).get("model") or inworld_model(brain)
+        out = {"is_realtime": False, "llm": llm, "stt": deepcopy(c["stt"]), "tts": tts}
         if c.get("embeddings"):
             out["embeddings"] = deepcopy(c["embeddings"])
         return out

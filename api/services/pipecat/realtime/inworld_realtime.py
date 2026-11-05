@@ -87,6 +87,28 @@ KB_FILLER_INSTRUCTIONS = (
 _STALE_RESPONSE_SECONDS = 10.0
 
 
+# Steering: the voice (inworld-tts-2) can be directed with a short English instruction in square brackets at the start of a reply.
+# These blocks are added to the agent's instructions so the AI writes that direction itself, only when the moment calls for it.
+_STEERING_BASE = (
+    "VOICE DELIVERY (steering). Your replies are spoken aloud by a voice that can be directed. "
+    "A direction is a short instruction in square brackets, written in English, at the very start of a reply, for example [say warmly and calmly]. "
+    "It is never shown or spoken. Write it in lowercase without punctuation, use only one clear direction at a time, "
+    "and make it match the feeling of what you are about to say and what the caller just expressed. "
+    "Never put anything else in square brackets. The words you speak stay in the caller's language."
+)
+STEERING_GUIDES = {
+    "off": "",
+    "low": _STEERING_BASE + " Use a direction only for clear emotional moments: the caller is upset, worried or in a hurry, you are apologising or giving bad news, or the news is very good. "
+    "Keep it subtle, two to four words. For ordinary replies add no direction at all.",
+    "medium": _STEERING_BASE + " Use a direction on most replies where tone matters: greetings, empathy, confirmations, apologies, urgency and good news. "
+    "Use short descriptive phrases of three to six words that give the mood and the pace. Skip it for plain factual one-line answers.",
+    "high": _STEERING_BASE + " Begin nearly every reply with a rich direction of six to twelve words that layers mood, pace and manner, "
+    "for example [say warmly with a smile and an easy relaxed pace]. Change it as the caller's mood changes. "
+    "You may switch direction once in the middle of a reply with another bracket, and use [reset] to return to the normal voice. "
+    "A light [laugh] or [sigh] is fine now and then. Never contradict the words you are saying.",
+}
+
+
 class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
     """Inworld Realtime with Dograh engine integration quirks. See module docstring."""
 
@@ -132,8 +154,11 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
         stt_eagerness: Literal["low", "medium", "high", "auto"] = "low",
         transcription_prompt: str | None = None,
         tts_speed: float = 1.5,
-        delivery_mode: Literal["STABLE", "CREATIVE"] = "STABLE",
+        delivery_mode: Literal["STABLE", "BALANCED", "CREATIVE"] = "STABLE",
         conversational: bool = False,
+        steering: str = "off",
+        backchannel: bool = False,
+        slow_filler: bool = False,
         kb_search_filler: bool = True,
         kb_search_filler_instructions: str | None = None,
         **kwargs,
@@ -258,6 +283,13 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
             **kwargs,
         )
         self._tts_speed = parsed_speed
+        self._delivery_mode = delivery_mode
+        self._steering = steering if steering in STEERING_GUIDES else "off"
+        self._extra_provider_data = {}
+        if backchannel:
+            self._extra_provider_data["backchannel"] = {"enabled": True}
+        if slow_filler:
+            self._extra_provider_data["responsiveness"] = {"enabled": True}
         self._tts_model = tts_model
         self._stt_model = stt_model
         self._llm_model = llm_model
@@ -296,8 +328,9 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
         inject the tag into ``session.instructions`` right before transmission.
         """
         tag = self._speed_to_steering_tag(self._tts_speed)
+        guide = STEERING_GUIDES.get(self._steering, "") if self._tts_model and "tts-2" in self._tts_model.lower() else ""
 
-        if not (tag and self._tts_model and "tts-2" in self._tts_model.lower()):
+        if not ((tag or guide or self._extra_provider_data) and self._tts_model and "tts-2" in self._tts_model.lower()):
             await super()._send_session_update()
             return
 
@@ -312,15 +345,18 @@ class DograhInworldRealtimeLLMService(InworldRealtimeLLMService):
                 raw = sp.instructions or ""
                 if tag and not raw.strip().startswith(tag):
                     sp.instructions = f"{tag}\n{raw}" if raw else tag
+                if guide and guide not in (sp.instructions or ""):
+                    sp.instructions = f"{sp.instructions}\n\n{guide}" if sp.instructions else guide
                 base_pd = sp.provider_data or {}
                 sp.provider_data = {
                     **base_pd,
+                    **self._extra_provider_data,
                     "tts": {
                         **(base_pd.get("tts") or {}),
                         "steering_handling": "emit_once",
                         "segmenter_strategy": "sentence",
                         "timestamp_transport_strategy": "ASYNC",
-                        "delivery_mode": "STABLE",
+                        "delivery_mode": self._delivery_mode,
                     },
                     "metadata": {"sdk": "pipecat-realtime"},
                 }

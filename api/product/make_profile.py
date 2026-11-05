@@ -81,34 +81,45 @@ async def run(email: str) -> int:
             print(f"Profile '{slug}' already exists; no new key given, left as it is.")
         done[slug] = bool(key or ((existing.config or {}).get("realtime", {}).get("api_key") if existing else ""))
 
-    # swarvo-tts: our own speech model. It only speaks, so its profile is a normal listen > think > speak one: the thinking (llm) and
-    # listening (stt) models are copied from the account above, the speech part points at the swarvo-tts service.
+    # swarvo-tts: our own speech model. It only speaks, so its profile is a normal listen > think > speak one, and the listening (STT) and
+    # thinking (LLM) parts are separate services (not a realtime one): listening is AssemblyAI (universal-3-5-pro, its own website and key),
+    # thinking is the Inworld model router with the same Inworld key as the Inworld voices.
     swarvo_key, swarvo_url = os.getenv("SWARVO_TTS_KEY", "").strip(), os.getenv("SWARVO_TTS_BASE_URL", "").strip().rstrip("/")
-    existing = next((p for p in await db_client.list_model_profiles() if p.slug == "swarvo"), None)
-    if existing is None and swarvo_key:
-        if not base.get("stt"):
-            print("The swarvo-tts profile needs a speech-to-text model, and that account has none in the classic UI. Set one there, then run this again.")
-        elif not swarvo_url:
-            print("The swarvo-tts profile needs the service address (SWARVO_TTS_BASE_URL).")
-        else:
-            tts = {"provider": "swarvo_tts", "api_key": swarvo_key, "model": "swarvo-tts-2.5", "voice": "Ritvik", "language": "hi", "base_url": swarvo_url}
-            cfg = {"is_realtime": False, "tts": tts, **{k: base[k] for k in ("llm", "stt", "embeddings") if base.get(k)}}
-            await db_client.create_model_profile(slug="swarvo", display_name="swarvo-tts 2.5", description=None, tier=None, capabilities=[], config=profile_service.normalize_config(cfg), allowed_org_ids=[], is_active=True)
-            print("Created profile 'swarvo' with a key.")
-            existing = True
-    elif existing is not None and (swarvo_key or swarvo_url):
-        cfg = dict(existing.config or {})
-        tts = dict(cfg.get("tts") or {"provider": "swarvo_tts", "model": "swarvo-tts-2.5", "voice": "Ritvik", "language": "hi"})
+    profiles = await db_client.list_model_profiles()
+    existing = next((p for p in profiles if p.slug == "swarvo"), None)
+    inworld_row = next((p for p in profiles if p.slug == "inworld"), None)
+    aai_key = os.getenv("ASSEMBLYAI_API_KEY", "").strip() or (((existing.config or {}).get("stt") or {}).get("api_key") if existing and ((existing.config or {}).get("stt") or {}).get("provider") == "assemblyai" else "")
+    ik = inworld_key or (((inworld_row.config or {}).get("realtime") or {}).get("api_key") if inworld_row else "") or ""
+    if existing is None and not swarvo_key:
+        pass
+    elif not ik:
+        print("The swarvo-tts profile thinks through Inworld, so it needs the Inworld key. Give it here or set up the Inworld voices first.")
+    elif not aai_key:
+        print("The swarvo-tts profile listens through AssemblyAI, so it needs the AssemblyAI key.")
+    else:
+        old_tts = dict(((existing.config or {}).get("tts") or {})) if existing else {}
+        tts = {"provider": "swarvo_tts", "model": "swarvo-tts-2.5", "voice": "Ritvik", "language": "hi", **old_tts}
         if swarvo_key:
             tts["api_key"] = swarvo_key
         if swarvo_url:
             tts["base_url"] = swarvo_url
-        cfg["tts"] = tts
-        await db_client.update_model_profile(existing.id, config=profile_service.normalize_config(cfg))
-        print("Updated the swarvo-tts profile.")
-    elif existing is not None:
-        print("Profile 'swarvo' already exists; nothing new given, left as it is.")
-    done["swarvo"] = bool(existing and ((existing is True) or (existing.config or {}).get("tts", {}).get("api_key")))
+        if not tts.get("api_key") or not tts.get("base_url"):
+            print("The swarvo-tts profile needs both the swarvo-tts key and its service address.")
+        else:
+            cfg = {"is_realtime": False, "tts": tts,
+                   "llm": {"provider": "inworld_llm", "api_key": ik, "model": "google-ai-studio/gemini-3.1-flash-lite"},
+                   "stt": {"provider": "assemblyai", "api_key": aai_key, "model": "universal-3-5-pro", "language": "en"}}
+            if base.get("embeddings"):
+                cfg["embeddings"] = base["embeddings"]
+            cfg = profile_service.normalize_config(cfg)
+            if existing is None:
+                await db_client.create_model_profile(slug="swarvo", display_name="swarvo-tts 2.5", description=None, tier=None, capabilities=[], config=cfg, allowed_org_ids=[], is_active=True)
+                print("Created profile 'swarvo' (swarvo-tts speech, Inworld listening and thinking).")
+            else:
+                await db_client.update_model_profile(existing.id, config=cfg)
+                print("Updated profile 'swarvo'.")
+            existing = True
+    done["swarvo"] = bool(existing)
 
     # Customer workspaces made by the new app use the Inworld profile by default (brought-over organizations are left alone).
     prof = next(p for p in await db_client.list_model_profiles() if p.slug == "inworld")

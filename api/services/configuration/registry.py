@@ -100,6 +100,8 @@ class ServiceProviders(str, Enum):
     INWORLD_REALTIME = "inworld_realtime"
     INWORLD_TTS = "inworld_tts"
     SWARVO_TTS = "swarvo_tts"
+    INWORLD_STT = "inworld_stt"
+    INWORLD_LLM = "inworld_llm"
 
 
 class BaseServiceConfiguration(BaseModel):
@@ -132,6 +134,8 @@ class BaseServiceConfiguration(BaseModel):
         ServiceProviders.INWORLD_REALTIME,
         ServiceProviders.INWORLD_TTS,
         ServiceProviders.SWARVO_TTS,
+        ServiceProviders.INWORLD_STT,
+        ServiceProviders.INWORLD_LLM,
     ]
     api_key: str | list[str]
 
@@ -447,6 +451,21 @@ class OpenRouterLLMConfiguration(BaseLLMConfiguration):
         default="https://openrouter.ai/api/v1",
         description="Override only if proxying OpenRouter through your own gateway.",
     )
+
+
+@register_llm
+class InworldLLMConfiguration(BaseLLMConfiguration):
+    """Inworld's model router (OpenAI-compatible): the same models the Inworld realtime voices think with, used as a plain chat model."""
+
+    model_config = provider_model_config("Inworld")
+    provider: Literal[ServiceProviders.INWORLD_LLM] = ServiceProviders.INWORLD_LLM
+    model: str = Field(
+        default="google-ai-studio/gemini-3.1-flash-lite",
+        description="Inworld router model id.",
+        json_schema_extra={"examples": INWORLD_REALTIME_MODELS, "allow_custom_input": True},
+    )
+    base_url: str = Field(default="https://api.inworld.ai/v1", description="Inworld router address.")
+    temperature: float = Field(default=0.3, ge=0.0, le=2.0, description="Sampling temperature.")
 
 
 @register_llm
@@ -893,9 +912,19 @@ class InworldRealtimeLLMConfiguration(BaseLLMConfiguration):
             "'CREATIVE' allows the model to be more expressive and natural."
         ),
         json_schema_extra={
-            "examples": ["STABLE", "CREATIVE"],
+            "examples": ["STABLE", "BALANCED", "CREATIVE"],
         },
     )
+    steering: str = Field(
+        default="off",
+        description=(
+            "Steering: the voice is told how to sound for the moment (a short bracketed direction at the start of a reply). "
+            "off, low (only clear emotional moments), medium (most replies where tone matters) or high (rich, frequent directions). inworld-tts-2 only."
+        ),
+        json_schema_extra={"examples": ["off", "low", "medium", "high"]},
+    )
+    backchannel: bool = Field(default=False, description="Short acknowledgements ('mm-hm') while the caller is still talking. Needs support enabled on the Inworld account.")
+    slow_filler: bool = Field(default=False, description="Say a short filler if the AI is slow to start its answer. Needs support enabled on the Inworld account.")
     conversational: bool = Field(
         default=False,
         description=(
@@ -932,6 +961,7 @@ LLMConfig = Annotated[
         MiniMaxLLMConfiguration,
         SarvamLLMConfiguration,
         TogetherLLMService,
+        InworldLLMConfiguration,
     ],
     Field(discriminator="provider"),
 ]
@@ -1655,7 +1685,7 @@ class SpeachesSTTConfiguration(BaseSTTConfiguration):
     )
 
 
-ASSEMBLYAI_STT_MODELS = ["u3-rt-pro"]
+ASSEMBLYAI_STT_MODELS = ["universal-3-5-pro", "u3-rt-pro"]
 ASSEMBLYAI_STT_LANGUAGES = ["en", "es", "de", "fr", "pt", "it"]
 
 
@@ -1736,6 +1766,21 @@ class SmallestAISTTConfiguration(BaseSTTConfiguration):
     )
 
 
+@register_stt
+class InworldSTTConfiguration(BaseSTTConfiguration):
+    """Inworld speech-to-text as its own listening service (separate from the realtime voices)."""
+
+    model_config = provider_model_config("Inworld")
+    provider: Literal[ServiceProviders.INWORLD_STT] = ServiceProviders.INWORLD_STT
+    model: str = Field(
+        default="assemblyai/universal-3-5-pro",
+        description="Inworld STT model. Third-party models (AssemblyAI and others) need that provider enabled on your Inworld account.",
+        json_schema_extra={"examples": ["assemblyai/universal-3-5-pro", "inworld/inworld-stt-1"], "allow_custom_input": True},
+    )
+    language: str | None = Field(default=None, description="Optional language hint (e.g. 'hi', 'en'). Empty lets Inworld detect it.")
+    max_turn_silence_ms: int | None = Field(default=None, ge=20, le=5000, description="Silence that ends a turn (Inworld's own model only).")
+
+
 STTConfig = Annotated[
     Union[
         SmallestAISTTConfiguration,
@@ -1748,6 +1793,7 @@ STTConfig = Annotated[
         SarvamSTTConfiguration,
         SpeachesSTTConfiguration,
         AssemblyAISTTConfiguration,
+        InworldSTTConfiguration,
         GladiaSTTConfiguration,
         AzureSpeechSTTConfiguration,
     ],

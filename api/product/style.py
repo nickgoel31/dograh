@@ -11,7 +11,8 @@ DEFAULT_SILENCE_SECONDS = 10
 
 PATIENCE = {"quick": "high", "balanced": "medium", "patient": "low"}  # how long to wait before assuming the caller is done
 TURNS = {"smart": "semantic_vad", "fast": "server_vad"}  # smart = understands when a sentence is finished; fast = reacts to silence
-STEADINESS = {"steady": "STABLE", "expressive": "CREATIVE"}
+STEADINESS = {"steady": "STABLE", "balanced": "BALANCED", "expressive": "CREATIVE"}
+STEERING = ("off", "low", "medium", "high")  # how often the voice is directed for the moment (Studio voices)
 
 
 def allowed_models() -> list[str]:
@@ -47,9 +48,13 @@ def clean(raw: dict | None) -> dict:
             out[k] = v
         elif k == "steadiness":
             if v not in STEADINESS:
-                raise ValueError("Delivery must be steady or expressive.")
+                raise ValueError("Delivery must be steady, balanced or expressive.")
             out[k] = v
-        elif k in ("fillers", "interruptions"):
+        elif k == "steering":
+            if v not in STEERING:
+                raise ValueError("Steering must be off, low, medium or high.")
+            out[k] = v
+        elif k in ("fillers", "interruptions", "backchannel", "slow_filler"):
             out[k] = bool(v)
         elif k == "vocabulary":
             out[k] = str(v).strip()[:300]
@@ -100,6 +105,12 @@ def overlay(realtime: dict, style: dict | None) -> dict:
         rt["delivery_mode"] = STEADINESS[s["steadiness"]]
     if "fillers" in s:
         rt["conversational"] = s["fillers"]
+    if s.get("steering") in STEERING:
+        rt["steering"] = s["steering"]
+    if "backchannel" in s:
+        rt["backchannel"] = s["backchannel"]
+    if "slow_filler" in s:
+        rt["slow_filler"] = s["slow_filler"]
     if s.get("vocabulary"):
         rt["transcription_prompt"] = s["vocabulary"]
     return rt
