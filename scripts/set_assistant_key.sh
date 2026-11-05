@@ -12,6 +12,10 @@ MODEL="${1:-}"
 read -r -s -p "Paste your OpenAI key (starts with sk-) and press Enter: " key
 echo
 key="$(printf '%s' "$key" | tr -d '[:space:]')"
+# a key pasted twice in a row is one half too long: keep one copy
+half=$(( ${#key} / 2 ))
+if [ $(( ${#key} % 2 )) -eq 0 ] && [ "${key:0:$half}" = "${key:$half}" ]; then key="${key:0:$half}"; echo "The key was pasted twice. Using one copy."; fi
+if [ ${#key} -gt 260 ]; then echo "That is far too long for an OpenAI key (${#key} characters). Nothing was changed."; exit 1; fi
 case "$key" in
   sk-*) ;;
   *) echo "That does not look like an OpenAI key. Nothing was changed."; exit 1 ;;

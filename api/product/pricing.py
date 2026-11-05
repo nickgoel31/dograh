@@ -2,11 +2,11 @@
 
 The rate falls as a workspace holds more minutes in its wallet (volume slabs): the more you load, the cheaper every minute is.
 The slab is found from the wallet balance - the cheapest slab whose minutes the balance can still buy at that slab's own rate
-(so ₹6,000 buys 1,000 minutes at ₹6.00, which is why ₹6,000 is where the ₹6.00 slab starts). Above the last slab, customers
+(so ₹27,500 buys 5,000 minutes at ₹5.50, which is where the ₹5.50 slab starts). Above the last slab, customers
 talk to sales; the last rate keeps applying meanwhile.
 
 Where a minute's price goes: phone first (PHONE_PER_MIN), then the rest is split voice 60%, speech to text 30%, AI brain 10%.
-Override the slabs with PRODUCT_PRICE_SLABS, a JSON list like [[1000, 6.75], [5000, 6]] (up to this many minutes a month, rate).
+Override the slabs with PRODUCT_PRICE_SLABS, a JSON list like [[5000, 6], [15000, 5.5]] (up to this many minutes a month, rate).
 """
 
 import json
@@ -14,7 +14,7 @@ import math
 import os
 
 DEFAULT_SLABS: list[tuple[int, float]] = [
-    (1_000, 6.75), (5_000, 6.0), (15_000, 5.5), (25_000, 5.0), (37_500, 4.6), (50_000, 4.2), (75_000, 3.8), (100_000, 3.4),
+    (5_000, 6.0), (15_000, 5.5), (25_000, 5.2), (37_500, 4.8), (50_000, 4.5), (75_000, 4.0), (100_000, 3.7),
 ]
 PHONE_PER_MIN = 0.4
 SHARES = (("Voice", 0.60), ("Speech to text", 0.30), ("AI brain", 0.10))

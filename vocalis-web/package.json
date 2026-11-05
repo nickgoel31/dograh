@@ -19,6 +19,7 @@
     "@radix-ui/react-tooltip": "^1.4.1",
     "@tanstack/react-query": "^5.105.0",
     "@tanstack/react-table": "^8.21.3",
+    "@typebot.io/react": "^0.10.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

@@ -97,10 +97,10 @@ async def test_list_detail_scoping_and_environments(client):
 
     page = (await client.get("/product/conversations", headers=ha)).json()
     assert page["total"] == 1 and page["calls"][0]["outcome"] == "booked"
-    assert page["calls"][0]["agent_id"] == aid and page["calls"][0]["cost"] == 13.5 and page["calls"][0]["test"] is True  # practice calls cost the same as real ones
+    assert page["calls"][0]["agent_id"] == aid and page["calls"][0]["cost"] == 12.0 and page["calls"][0]["test"] is True  # practice calls cost the same as real ones
     assert page["calls"][0]["duration"] == 90 and page["calls"][0]["phone"] == "+911234567890"
     live = (await client.get("/product/conversations", headers={**ha, "X-Environment": "live"})).json()
-    assert live["total"] == 1 and live["calls"][0]["cost"] == 13.5  # 90 seconds is billed as 2 minutes
+    assert live["total"] == 1 and live["calls"][0]["cost"] == 12.0  # 90 seconds is billed as 2 minutes
 
     assert (await client.get("/product/conversations?outcome=booked", headers=ha)).json()["total"] == 1
     assert (await client.get("/product/conversations?outcome=failed", headers=ha)).json()["total"] == 0

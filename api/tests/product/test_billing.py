@@ -61,14 +61,14 @@ async def test_summary_enables_live_billing_and_gives_free_minutes_once(client, 
     _, tok = await signup(client, "a@x.com")
     h = bearer(tok)
     s = (await client.get("/product/billing/summary", headers=h)).json()
-    assert s["price_per_min"] == 6.75 and s["free_mode"] is False and s["minutes_available"] == 20
+    assert s["price_per_min"] == 6.0 and s["free_mode"] is False and s["minutes_available"] == 20
     await client.get("/product/billing/summary", headers=h)
     assert client.wallet.minutes == 20  # not granted twice
     ws = await ws_of(client)
     async with client.session_factory() as s2:
         live = await s2.get(models.OrganizationModel, ws.live_org_id)
         test = await s2.get(models.OrganizationModel, ws.test_org_id)
-    assert live.wallet_enabled and live.billing_rate == 6.75 and not test.wallet_enabled  # Test never bills
+    assert live.wallet_enabled and live.billing_rate == 6.0 and not test.wallet_enabled  # Test never bills
     assert (await client.get("/product/billing/summary", headers={**h, "X-Environment": "live"})).json()["free_mode"] is False
 
 
@@ -177,12 +177,12 @@ async def test_billing_needs_billing_permission(client):
 def test_price_follows_the_minutes_in_the_wallet():
     from api.product import pricing
 
-    balances = (0, 5999.99, 6000, 10979.75, 27499.99, 27500, 74999, 75000, 340000, 5_000_000)
-    assert [pricing.rate_for_balance(b) for b in balances] == [6.75, 6.75, 6.0, 6.0, 6.0, 5.5, 5.5, 5.0, 3.4, 3.4]
-    # a wallet of Rs 10,979.75 holds ~1,830 minutes at its own rate, so it is in the Rs 6.00 slab, not Rs 6.75
-    assert 1000 <= 10979.75 / pricing.rate_for_balance(10979.75) < 5000
+    balances = (0, 27499.99, 27500, 77999, 78000, 277499, 277500, 5_000_000)
+    assert [pricing.rate_for_balance(b) for b in balances] == [6.0, 6.0, 5.5, 5.5, 5.2, 4.0, 3.7, 3.7]
+    # a wallet of Rs 10,979.75 holds ~1,830 minutes at its own rate, so it is in the first Rs 6.00 slab
+    assert 0 <= 10979.75 / pricing.rate_for_balance(10979.75) < 5000
     assert pricing.next_balance_step(10979.75) == (27500.0, 5.5, 5000)
-    assert pricing.next_balance_step(0) == (6000.0, 6.0, 1000)
+    assert pricing.next_balance_step(0) == (27500.0, 5.5, 5000)
     assert pricing.next_balance_step(5_000_000) is None
     # every balance's slab really can hold the minutes that balance buys (no gaps, no negative jumps)
     last = 0.0
@@ -195,11 +195,11 @@ def test_price_follows_the_minutes_in_the_wallet():
 def test_volume_slabs_and_where_a_minute_goes():
     from api.product import pricing
 
-    assert [pricing.rate_for(m) for m in (0, 999, 1000, 4999, 5000, 14999, 24999, 37499, 49999, 74999, 99999, 100000, 500000)] == [6.75, 6.75, 6.0, 6.0, 5.5, 5.5, 5.0, 4.6, 4.2, 3.8, 3.4, 3.4, 3.4]
-    assert pricing.next_step(500) == (1000, 6.0) and pricing.next_step(100000) is None
-    parts = {p["name"]: p["value"] for p in pricing.split(2, 6.75)}  # a two minute call
-    assert parts["Phone"] == 0.8 and round(parts["Voice"], 4) == round((13.5 - 0.8) * 0.6, 4)
-    assert round(parts["Speech to text"] / parts["AI brain"], 3) == 3.0 and round(sum(parts.values()), 4) == 13.5
+    assert [pricing.rate_for(m) for m in (0, 4999, 5000, 14999, 15000, 24999, 37499, 49999, 74999, 99999, 100000, 500000)] == [6.0, 6.0, 5.5, 5.5, 5.2, 5.2, 4.8, 4.5, 4.0, 3.7, 3.7, 3.7]
+    assert pricing.next_step(500) == (5000, 5.5) and pricing.next_step(100000) is None
+    parts = {p["name"]: p["value"] for p in pricing.split(2, 6.0)}  # a two minute call
+    assert parts["Phone"] == 0.8 and round(parts["Voice"], 4) == round((12.0 - 0.8) * 0.6, 4)
+    assert round(parts["Speech to text"] / parts["AI brain"], 3) == 3.0 and round(sum(parts.values()), 4) == 12.0
 
 
 async def test_practice_calls_are_charged_once_to_the_live_wallet(client):
@@ -221,7 +221,7 @@ async def test_practice_calls_are_charged_once_to_the_live_wallet(client):
         await s.commit()
         assert await practice.charge_practice_calls(s, client.wallet) == 1
         assert await practice.charge_practice_calls(s, client.wallet) == 0  # never twice
-    assert client.wallet.minutes == 0.0 and round(client.wallet.balance, 4) == round(100 - 2 * 6.75, 4)  # 3 minutes billed: 1 free, 2 paid
+    assert client.wallet.minutes == 0.0 and round(client.wallet.balance, 4) == round(100 - 2 * 6.0, 4)  # 3 minutes billed: 1 free, 2 paid
 
 
 def test_billing_is_per_minute_rounded_up():
@@ -312,4 +312,4 @@ async def test_the_wallet_is_only_asked_after_our_own_changes_are_saved(client, 
 async def test_price_list_is_open_to_every_member(client):
     _, tok = await signup(client, "a@x.com")
     got = (await client.get("/product/billing/pricing", headers=bearer(tok))).json()
-    assert got["slabs"][0]["rate"] == 6.75 and got["currency"] and got["contact_sales_above"] >= 100000
+    assert got["slabs"][0]["rate"] == 6.0 and got["currency"] and got["contact_sales_above"] >= 100000

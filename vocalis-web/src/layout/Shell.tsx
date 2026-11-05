@@ -5,9 +5,10 @@ import { Command } from 'cmdk'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   AlertCircle, AlertTriangle, CheckCircle2, Coins, Globe, Info, Key, Loader2, Mail, BarChart3, BookOpen, Bell, Bot, ChevronDown, ChevronRight, Code2, CreditCard, FlaskConical, HelpCircle, Home, Megaphone, Menu as MenuIcon,
-  MessageCircle, Mic2, Moon, Plus, Users, Wallet, PanelLeftClose, PanelLeftOpen, Phone, PhoneCall, Plug, Search, Send, Settings, Sparkles, Sun, X, Check, ChevronsUpDown,
+  MessageCircle, Mic2, Moon, Plus, Users, Wallet, PanelLeftClose, PanelLeftOpen, Phone, PhoneCall, Plug, Search, Settings, Sparkles, Sun, Check, ChevronsUpDown,
 } from '@/components/icons'
 import { Toaster, toast } from 'sonner'
+import { Bubble } from '@typebot.io/react'
 import { BRAND } from '@/config/brand'
 import { useMe } from '@/lib/useMe'
 import { http } from '@/lib/api/http'
@@ -346,14 +347,6 @@ function CommandPalette() {
   )
 }
 
-const faq: Record<string, string> = {
-  'How do I make my agent transfer to a human?': 'Easy! Open your agent, go to Tools, and switch on “Transfer to a human”. Then add the phone number of the person who should pick up. Want me to take you there?',
-  'Why did my call fail?': 'Most failed calls come from a disconnected calendar or a dropped phone line. Open Conversations, tick “Failed only”, and click a call. We explain what happened in plain words.',
-  'How much does this cost?': 'One simple price: ₹6 per minute, everything included. Test mode is always free.',
-  'How do I teach my agent about my business?': 'Go to Knowledge and add a website, a PDF or a few questions and answers. Your agent learns it in about a minute.',
-}
-const STARTERS = ['How do I get my agent live?', 'Why did my call fail?', 'How is billing worked out?', 'How do I buy a phone number?']
-
 /** Plain text with **bold** and [links](/path) turned into something clickable. */
 export function Rich({ text, go }: { text: string; go: (to: string) => void }) {
   const parts = text.split(/(\[[^\]]+\]\(\/[^)\s]*\)|\*\*[^*]+\*\*)/g)
@@ -364,53 +357,6 @@ export function Rich({ text, go }: { text: string; go: (to: string) => void }) {
       const bold = /^\*\*([^*]+)\*\*$/.exec(p)
       return bold ? <strong key={i}>{bold[1]}</strong> : <React.Fragment key={i}>{p}</React.Fragment>
     })}</>
-  )
-}
-
-function AIHelper() {
-  const { helper, set } = useUI()
-  const { pathname } = useLocation()
-  const nav = useNavigate()
-  const [log, setLog] = React.useState<{ who: 'me' | 'ai'; t: string }[]>([{ who: 'ai', t: 'Hi! I can help you set things up and fix problems. Ask me anything about your agents, numbers, billing or integrations.' }])
-  const [typing, setTyping] = React.useState(false)
-  const [text, setText] = React.useState('')
-  const end = React.useRef<HTMLDivElement>(null)
-  React.useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth' }) }, [log, typing])
-  const go = (to: string) => { nav(to); if (window.innerWidth < 640) set({ helper: false }) }
-  const ask = async (q: string) => {
-    if (!q.trim() || typing) return
-    const next = [...log, { who: 'me' as const, t: q.trim() }]
-    setLog(next); setText(''); setTyping(true)
-    if (USE_MOCKS) { setTimeout(() => { setTyping(false); setLog((l) => [...l, { who: 'ai', t: faq[q] ?? 'In this demo I only know a few answers. In the real product I look at your account and the help articles.' }]) }, 700); return }
-    try {
-      const history = next.filter((m, i) => i > 0).slice(-10).map((m) => ({ role: m.who === 'me' ? 'user' : 'assistant', content: m.t }))
-      const r = await http<{ reply: string }>('/assistant/chat', { method: 'POST', json: { messages: history, page: pathname } })
-      setLog((l) => [...l, { who: 'ai', t: r.reply }])
-    } catch (e) { setLog((l) => [...l, { who: 'ai', t: e instanceof Error ? e.message : 'Something went wrong. Please try again.' }]) } finally { setTyping(false) }
-  }
-  return (
-    <>
-      <AnimatePresence>
-        {helper && (
-          <motion.div initial={{ opacity: 0, y: 16, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16 }} role="dialog" aria-label="AI Helper"
-            className="fixed bottom-24 right-4 z-40 flex h-[520px] max-h-[calc(100dvh-8rem)] w-[calc(100vw-2rem)] max-w-[400px] flex-col overflow-hidden rounded-2xl border border-line/80 bg-surface shadow-pop sm:right-6">
-            <div className="bg-ink flex items-center justify-between px-4 py-3 text-surface"><div className="flex items-center gap-2 font-semibold"><Sparkles size={16} />AI Helper</div>
-              <button onClick={() => set({ helper: false })} aria-label="Close" className="rounded-lg p-1 transition hover:bg-white/15"><X size={16} /></button></div>
-            <div className="flex-1 space-y-2.5 overflow-y-auto p-4">
-              {log.map((m, i) => <div key={i} className={cn('flex', m.who === 'me' && 'justify-end')}><div className={cn('max-w-[88%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm leading-relaxed', m.who === 'me' ? 'bg-ink text-surface' : 'bg-muted')}>{m.who === 'ai' ? <Rich text={m.t} go={go} /> : m.t}</div></div>)}
-              {typing && <div className="flex"><div className="flex gap-1 rounded-2xl bg-muted px-4 py-3">{[0, 1, 2].map((i) => <motion.span key={i} className="h-1.5 w-1.5 rounded-full bg-soft" animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: i * 0.15 }} />)}</div></div>}
-              {log.length < 3 && <div className="flex flex-col items-start gap-2 pt-2">{(USE_MOCKS ? Object.keys(faq) : STARTERS).map((q) => <button key={q} onClick={() => ask(q)} className="rounded-xl border bg-surface px-3 py-2 text-left text-[13px] transition hover:border-accent/40 hover:bg-accent-soft">{q}</button>)}</div>}
-              <div ref={end} />
-            </div>
-            <form onSubmit={(e) => { e.preventDefault(); void ask(text) }} className="flex gap-2 border-t border-line/70 p-3">
-              <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Ask a question…" aria-label="Ask the helper" maxLength={500} className="h-10 flex-1 rounded-[10px] border bg-surface px-3 text-sm shadow-field outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/15" />
-              <Button variant="primary" size="icon" aria-label="Send" disabled={typing || !text.trim()}><Send size={15} /></Button>
-            </form>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <button onClick={() => set({ helper: !helper })} aria-label="Open AI Helper" className="bg-ink text-surface fixed bottom-5 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full ring-4 ring-surface transition hover:scale-105 sm:right-6">{helper ? <X size={22} /> : <MessageCircle size={24} />}</button>
-    </>
   )
 }
 
@@ -452,7 +398,12 @@ export default function Shell() {
           </div></main>
         </div>
       </div>
-      <CommandPalette /><AIHelper /><PlaygroundModal />{!USE_MOCKS && <WelcomeTour />}
+      <CommandPalette /><PlaygroundModal />{!USE_MOCKS && <WelcomeTour />}
+      <Bubble
+        typebot="open-ai-assistant-chat-ufibgmc"
+        apiHost="https://bot.swarvoai.com"
+        theme={{ button: { backgroundColor: "#1D1D1D" } }}
+      />
       <Toaster position="bottom-left" closeButton theme={theme === 'dark' ? 'dark' : 'light'}
         icons={{ success: <CheckCircle2 size={18} className="text-ok" />, error: <AlertCircle size={18} className="text-bad" />, warning: <AlertTriangle size={18} className="text-warn" />, info: <Info size={18} className="text-soft" />, loading: <Loader2 size={18} className="animate-spin text-soft" /> }} />
     </TooltipProvider>

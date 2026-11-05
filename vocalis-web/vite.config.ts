@@ -7,7 +7,11 @@ export default defineConfig(({ mode }) => {
     // Served from the site root by default; the production build under a path uses VITE_BASE=/new/.
     base: env.VITE_BASE || '/',
     plugins: [react()],
-    resolve: { alias: { '@': path.resolve(__dirname, 'src') } },
+    resolve: {
+      alias: { '@': path.resolve(__dirname, 'src') },
+      // @typebot.io/react pulls its own React 19; force one copy so hooks work.
+      dedupe: ['react', 'react-dom', 'react/jsx-runtime'],
+    },
     // Same-origin in dev so the session cookie works without CORS setup.
     server: { proxy: { '/api': { target: env.VITE_PROXY_TARGET || 'http://localhost:8000', changeOrigin: true } } },
   }

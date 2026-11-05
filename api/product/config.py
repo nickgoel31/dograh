@@ -13,5 +13,5 @@ WORKSPACE_HEADER = "X-Workspace"
 ENVIRONMENT_HEADER = "X-Environment"
 DEFAULT_ENVIRONMENT = "test"
 
-PRICE_PER_MIN = float(os.getenv("PRICE_PER_MIN", "6.75"))  # fallback only; the real rate comes from the volume slabs (pricing.py)
+PRICE_PER_MIN = float(os.getenv("PRICE_PER_MIN", "6"))  # fallback only; the real rate comes from the volume slabs (pricing.py)
 CURRENCY = os.getenv("CURRENCY", "INR")
