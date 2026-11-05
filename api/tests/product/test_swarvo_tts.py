@@ -397,3 +397,30 @@ async def test_the_speaking_pace_slider_is_turned_into_a_sensible_swarvo_speed(c
     assert await speed_for(1.5) == 1.2    # the old Studio default of 1.5 is no longer sent as the service's fastest setting
     assert await speed_for(1.75) == 1.4
     assert await speed_for(0.75) == 0.7   # clamped to what the service accepts
+
+
+async def test_a_speed_close_to_normal_is_not_sent_but_a_real_change_is(unused_tcp_port):
+    seen = []
+
+    async def stream(request):
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+        seen.append(json.loads(await ws.receive_str()))
+        await ws.send_bytes(b"\x01\x00" * 10)
+        await ws.send_str(json.dumps({"type": "end"}))
+        await ws.close()
+        return ws
+
+    app = web.Application()
+    app.router.add_get("/v1/stream", stream)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    await web.TCPSite(runner, "127.0.0.1", unused_tcp_port).start()
+    try:
+        for speed in (1.05, 0.95, 1.2):
+            svc = SwarvoTTSService(api_key="K", base_url=f"http://127.0.0.1:{unused_tcp_port}", speed=speed, settings=SwarvoTTSService.Settings(model="m", voice="Ritvik", language="hi"))
+            [c async for c in svc._audio("x")]
+            await svc._close()
+        assert ["speed" in b for b in seen] == [False, False, True] and seen[2]["speed"] == 1.2
+    finally:
+        await runner.cleanup()

@@ -173,7 +173,7 @@ class SwarvoTTSService(TTSService):
         voice = assert_given(self._settings.voice) or "Ritvik"
         lang = assert_given(self._settings.language) or "hi"
         body = {"api_key": self._api_key, "text": text, "voice": voice, "lang": str(lang).split("-")[0].lower(), "format": "pcm16", "mode": self._mode}
-        if abs(self._speed - 1.0) > 0.01:  # at normal speed leave it out: the service changes speed with signal processing, which we do not want to run needlessly
+        if abs(self._speed - 1.0) > 0.1:  # close to normal speed: leave it out. The service changes any other speed with signal processing, which can smear the voice
             body["speed"] = self._speed
         self._inflight += 1
         self._count += 1
