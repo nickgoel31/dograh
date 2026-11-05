@@ -358,3 +358,24 @@ def test_a_sentence_is_converted_to_the_call_rate_in_one_pass_without_changing_i
     crossings = int(np.sum(np.diff(np.signbit(out.astype(float))) != 0))
     assert 590 <= crossings <= 610  # 300 Hz: two zero crossings per cycle, so the pitch did not move
     assert resample_once(pcm, 24000, 24000) == pcm and resample_once(b"", 24000, 16000) == b""
+
+
+async def test_paced_delivery_spreads_a_sentence_over_its_playing_time(monkeypatch):
+    import time
+
+    import numpy as np
+    from api.services.pipecat import swarvo_tts as mod
+
+    monkeypatch.setattr(mod, "PACE_LEAD", 0.2)
+    svc = SwarvoTTSService(api_key="K", base_url="https://x.test", settings=SwarvoTTSService.Settings(model="m", voice="Ritvik", language="hi"))
+    svc._sample_rate = 16000
+    pcm = (np.sin(2 * np.pi * 300 * np.arange(24000 * 1) / 24000) * 5000).astype("<i2").tobytes()  # one second at 24 kHz
+
+    async def fake_audio(text):
+        yield pcm
+
+    svc._audio = fake_audio
+    t0, stamps = time.monotonic(), []
+    async for f in svc.run_tts("x", "c"):
+        stamps.append(time.monotonic() - t0)
+    assert stamps[0] < 0.1 and 0.6 <= stamps[-1] <= 1.2  # the first piece goes at once, the last about (1 s - 0.2 s head start) later

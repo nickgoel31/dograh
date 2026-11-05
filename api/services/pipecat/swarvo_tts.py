@@ -24,6 +24,12 @@ from pipecat.utils.text.simple_text_aggregator import SimpleTextAggregator
 from pipecat.utils.tracing.service_decorators import traced_tts
 
 SAMPLE_RATE = 24000
+# SWARVO_TTS_PACE_LEAD=1.5 hands audio to the call at normal playback speed (keeping that many seconds of head start), the way a streaming voice
+# does, instead of all of a sentence at once. 0 (the default) keeps the old "everything at once" behaviour.
+try:
+    PACE_LEAD = float(os.getenv("SWARVO_TTS_PACE_LEAD", "0") or 0)
+except ValueError:
+    PACE_LEAD = 0.0
 PREOPEN = os.getenv("SWARVO_TTS_PREOPEN", "0") == "1"  # keeps one idle connection open per call; it may count towards the key's simultaneous-streams limit
 COLD_START_WAIT = 180  # seconds to wait for the first audio when the GPU container is starting
 
@@ -238,7 +244,12 @@ class SwarvoTTSService(TTSService):
             rate = self.sample_rate or SAMPLE_RATE
             audio = resample_once(bytes(raw), SAMPLE_RATE, rate)
             step = max(2, (rate // 10) * 2)  # 100 ms pieces
+            t_first = time.monotonic()
             for i in range(0, len(audio), step):
+                if PACE_LEAD > 0:  # wait until this piece is due: its start time in the audio, minus the head start
+                    wait = i / (2 * rate) - PACE_LEAD - (time.monotonic() - t_first)
+                    if wait > 0:
+                        await asyncio.sleep(wait)
                 await self.stop_ttfb_metrics()
                 if first_frame is None:
                     first_frame = time.monotonic() - started
