@@ -95,6 +95,8 @@ class SwarvoTTSService(TTSService):
         self._mode = mode if mode in ("read", "chat") else "chat"
         self._http: aiohttp.ClientSession | None = None
         self._warm_task: asyncio.Task | None = None
+        self._inflight = 0  # sentences being generated right now: more than 1 means two are overlapping
+        self._count = 0
 
     def _session(self) -> aiohttp.ClientSession:
         if self._http is None or self._http.closed:
@@ -135,7 +137,18 @@ class SwarvoTTSService(TTSService):
         voice = assert_given(self._settings.voice) or "Ritvik"
         lang = assert_given(self._settings.language) or "hi"
         body = {"api_key": self._api_key, "text": text, "voice": voice, "lang": str(lang).split("-")[0].lower(), "format": "pcm16", "speed": self._speed, "mode": self._mode}
-        t0, first, total = time.monotonic(), None, 0
+        self._inflight += 1
+        self._count += 1
+        n, t0 = self._count, time.monotonic()
+        logger.info(f"swarvo-tts #{n} start (in flight: {self._inflight}): {text[:40]!r}")
+        try:
+            async for chunk in self._stream(body, text, n, t0):
+                yield chunk
+        finally:
+            self._inflight -= 1
+
+    async def _stream(self, body: dict, text: str, n: int, t0: float) -> AsyncIterator[bytes]:
+        first, total = None, 0
         async with self._session().ws_connect(self._url, heartbeat=20, max_msg_size=0) as ws:
             connected = time.monotonic() - t0
             await ws.send_str(json.dumps(body))
@@ -148,7 +161,7 @@ class SwarvoTTSService(TTSService):
                 elif msg.type == aiohttp.WSMsgType.TEXT:
                     info = json.loads(msg.data)
                     if info.get("type") == "end":
-                        logger.info(f"swarvo-tts: {len(text)} chars, connect {int(connected * 1000)} ms, first audio {int((first or 0) * 1000)} ms, "
+                        logger.info(f"swarvo-tts #{n} done: {len(text)} chars, connect {int(connected * 1000)} ms, first audio {int((first or 0) * 1000)} ms, "
                                     f"{total / (2 * SAMPLE_RATE):.1f}s of audio, service says first audio {info.get('server_first_audio_ms')} ms, total {int((time.monotonic() - t0) * 1000)} ms")
                         return
                     if info.get("type") == "error":
