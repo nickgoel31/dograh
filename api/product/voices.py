@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Protocol
 
 # Provider names are aliased so customers never see the real vendor.
-PROVIDER_ALIASES = {"sarvam": "Engine A", "inworld": "Studio", "google": "Gemini"}
+PROVIDER_ALIASES = {"sarvam": "Engine A", "inworld": "Studio", "google": "Gemini", "swarvo": "Swarvo"}
 
 LANGUAGE_NAMES = {
     "hi": "Hindi", "en": "English", "bn": "Bengali", "gu": "Gujarati", "kn": "Kannada",
@@ -145,11 +145,28 @@ class GoogleAdapter:
         ]
 
 
-ENGINES = {"inworld": InworldAdapter, "google": GoogleAdapter, "sarvam": SarvamAdapter}
+# swarvo-tts 2.5 built-in voices (names are case sensitive). Hindi is the language it was tested in.
+SWARVO_FEMALE = ("Ahana", "Vaidehi", "Malini", "Charvi", "Jahnavi", "Nivedita", "Ishwari", "Vrinda", "Kayal", "Tanushree")
+SWARVO_MALE = ("Anirban", "Nakul", "Vasant", "Siddhant", "Satvik", "Abhay", "Ritvik", "Sreekar", "Shaunak", "Akshat")
+
+
+class SwarvoAdapter:
+    """Our own speech model. It only speaks (no thinking), so these voices run the normal listen > think > speak pipeline."""
+
+    def list(self) -> list[Voice]:
+        out = []
+        for gender, names in (("Female", SWARVO_FEMALE), ("Male", SWARVO_MALE)):
+            for n in names:
+                out.append(Voice(id=voice_id("swarvo", "tts-2.5", n), name=n, language="Hindi", style="swarvo-tts 2.5", provider=PROVIDER_ALIASES["swarvo"], gender=gender,
+                                 tts={"engine": "swarvo", "voice": n, "lang": "hi"}))
+        return out
+
+
+ENGINES = {"inworld": InworldAdapter, "google": GoogleAdapter, "swarvo": SwarvoAdapter, "sarvam": SarvamAdapter}
 
 
 def _adapters() -> list[VoiceAdapter]:
-    names = [n.strip() for n in os.getenv("PRODUCT_VOICE_ENGINES", "inworld,google").split(",") if n.strip() in ENGINES]
+    names = [n.strip() for n in os.getenv("PRODUCT_VOICE_ENGINES", "inworld,google,swarvo").split(",") if n.strip() in ENGINES]
     return [ENGINES[n]() for n in names]
 
 

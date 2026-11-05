@@ -15,12 +15,15 @@ EMAIL="${1:-}"
 S="-s"; [ "${SHOW_KEYS:-}" = "1" ] && S=""   # SHOW_KEYS=1 shows what you type, in case pasting into a hidden prompt does not work
 read -r $S -p "Inworld API key (press Enter to keep the current one): " INWORLD_KEY; echo
 read -r $S -p "Google API key (press Enter to skip / keep the current one): " GOOGLE_KEY; echo
-echo "Got ${#INWORLD_KEY} characters for the Inworld key and ${#GOOGLE_KEY} for the Google key."
+read -r $S -p "swarvo-tts API key (press Enter to skip / keep the current one): " SWARVO_KEY; echo
+read -r -p "swarvo-tts service address, https://... (press Enter to keep the current one): " SWARVO_URL
+echo "Got ${#INWORLD_KEY} characters for the Inworld key, ${#GOOGLE_KEY} for the Google key and ${#SWARVO_KEY} for the swarvo-tts key."
 
-sudo docker exec -e INWORLD_API_KEY="$INWORLD_KEY" -e GOOGLE_API_KEY="$GOOGLE_KEY" dograh-api-1 python -m api.product.make_profile --email "$EMAIL"
+sudo docker exec -e INWORLD_API_KEY="$INWORLD_KEY" -e GOOGLE_API_KEY="$GOOGLE_KEY" -e SWARVO_TTS_KEY="$SWARVO_KEY" -e SWARVO_TTS_BASE_URL="$SWARVO_URL" dograh-api-1 python -m api.product.make_profile --email "$EMAIL"
 
 set_env() { if grep -q "^$1=" .env; then sed -i "s|^$1=.*|$1=$2|" .env; else echo "$1=$2" >> .env; fi; }
-set_env PRODUCT_PROFILES "'{\"default\":\"inworld\",\"inworld\":\"inworld\",\"google\":\"google\"}'"
+[ -z "$SWARVO_URL" ] || set_env SWARVO_TTS_BASE_URL "$SWARVO_URL"
+set_env PRODUCT_PROFILES "'{\"default\":\"inworld\",\"inworld\":\"inworld\",\"google\":\"google\",\"swarvo\":\"swarvo\"}'"
 echo "Restarting the API so it uses the new settings (calls in progress drop for a moment)..."
 sudo docker compose --profile remote up -d api
 echo "Done."

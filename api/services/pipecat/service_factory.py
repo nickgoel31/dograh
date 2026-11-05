@@ -662,6 +662,21 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
+    elif user_config.tts.provider == ServiceProviders.SWARVO_TTS.value:
+        from api.services.pipecat.swarvo_tts import SwarvoTTSService
+
+        return SwarvoTTSService(
+            api_key=user_config.tts.api_key,
+            base_url=getattr(user_config.tts, "base_url", None),
+            speed=getattr(user_config.tts, "speed", 1.0),
+            mode=getattr(user_config.tts, "mode", "chat"),
+            settings=SwarvoTTSService.Settings(
+                model=user_config.tts.model, voice=getattr(user_config.tts, "voice", None) or "Ritvik", language=getattr(user_config.tts, "language", None) or "hi"
+            ),
+            text_filters=[xml_function_tag_filter],
+            skip_aggregator_types=["recording_router", "recording"],
+            silence_time_s=1.0,
+        )
     elif user_config.tts.provider == ServiceProviders.INWORLD_TTS.value:
         from pipecat.services.inworld.tts import InworldHttpTTSService, InworldTTSSettings
         import aiohttp

@@ -33,7 +33,7 @@ def _out(v: catalogue.Voice, favs: set[str], ready: dict[str, bool] | None = Non
     return VoiceOut(
         id=v.id, name=v.name, language=v.language, style=v.style, gender=v.gender,
         age=v.age, accent=v.accent, provider=v.provider, favorite=v.id in favs,
-        available=(ready or {}).get(v.engine, True), description=v.tts.get("description"), brain_levels=models_config.brain_applies(v.engine), has_sample=v.engine == "inworld" and (ready or {}).get("inworld", False),
+        available=(ready or {}).get(v.engine, True), description=v.tts.get("description"), brain_levels=models_config.brain_applies(v.engine), has_sample=v.engine in ("inworld", "swarvo") and (ready or {}).get(v.engine, False),
     )
 
 
@@ -51,7 +51,7 @@ async def list_voices(
     ctx: Ctx = Depends(get_ctx),
 ):
     favs = await _favs(ctx)
-    ready = {e: await models_config.engine_ready(ctx.session, e) for e in ("inworld", "google")}
+    ready = {e: await models_config.engine_ready(ctx.session, e) for e in ("inworld", "google", "swarvo")}
     out = []
     for v in catalogue.catalogue():
         if not catalogue.can_use(v, ctx.user.email):
@@ -67,6 +67,13 @@ async def list_voices(
 @router.get("/{voice_id}/sample")
 async def sample(voice_id: str, ctx: Ctx = Depends(get_ctx)):
     v = catalogue.find(voice_id)
+    if v is not None and v.engine == "swarvo" and catalogue.can_use(v, ctx.user.email):
+        prof = await models_config.engine_profile(ctx.session, "swarvo")
+        t = ((prof.config or {}).get("tts") or {}) if prof else {}
+        audio = await voice_samples.make_swarvo(t.get("base_url"), t.get("api_key"), v.tts["voice"]) if t.get("api_key") else None
+        if audio is None:
+            raise product_error(502, "sample_failed", "We couldn't make a sample right now. Please try again.")
+        return Response(audio, media_type="audio/wav", headers={"Cache-Control": "private, max-age=86400"})
     prof = await models_config.engine_profile(ctx.session, "inworld") if v and v.engine == "inworld" else None
     key = ((prof.config or {}).get("realtime") or {}).get("api_key") if prof else None
     if v is None or not key:

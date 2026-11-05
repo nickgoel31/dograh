@@ -46,19 +46,22 @@ def inworld_model(brain: str) -> str:
 
 async def engine_profile(session: AsyncSession, engine: str) -> ModelProfileModel | None:
     """The profile that serves a voice engine ('inworld' / 'google'), mapped in PRODUCT_PROFILES."""
-    return await _by_slug(session, profile_slugs().get(engine))
+    return await _by_slug(session, profile_slugs().get(engine) or engine)
 
 
 async def engine_ready(session: AsyncSession, engine: str) -> bool:
     """True when that engine's profile exists and has an API key."""
     prof = await engine_profile(session, engine)
+    if engine == "swarvo":  # a normal listen > think > speak profile: needs the speech key, a thinking model and a listening model
+        c = (prof.config or {}) if prof else {}
+        return bool((c.get("tts") or {}).get("api_key") and c.get("llm") and c.get("stt"))
     rt = (prof.config or {}).get("realtime") if prof else None
     return bool(rt and rt.get("api_key"))
 
 
 def brain_applies(engine: str | None) -> bool:
     """Brain levels pick the AI model on the 'inworld' engine only; the Google realtime model is a single model."""
-    return engine != "google"
+    return engine not in ("google", "swarvo")
 
 
 def profile_slugs() -> dict[str, str]:
@@ -109,6 +112,18 @@ async def build_overrides(session: AsyncSession, *, brain: str, voice_id: str | 
     overrides: dict = {}
 
     voice = voice_catalogue.find(voice_id) if voice_id else None
+    if voice is not None and voice.engine == "swarvo":
+        prof = await engine_profile(session, "swarvo")
+        c = (prof.config or {}) if prof else {}
+        if not (c.get("tts") and c.get("llm") and c.get("stt")):
+            return None
+        tts = deepcopy(c["tts"])
+        tts["voice"] = voice.tts["voice"]
+        tts["language"] = voice.tts.get("lang", tts.get("language", "hi"))
+        out = {"is_realtime": False, "llm": deepcopy(c["llm"]), "stt": deepcopy(c["stt"]), "tts": tts}
+        if c.get("embeddings"):
+            out["embeddings"] = deepcopy(c["embeddings"])
+        return out
     if voice is not None and voice.engine in ("inworld", "google"):
         prof = await engine_profile(session, voice.engine)
         rt = (prof.config or {}).get("realtime") if prof else None

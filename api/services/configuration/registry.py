@@ -99,6 +99,7 @@ class ServiceProviders(str, Enum):
     TOGETHER = "together"
     INWORLD_REALTIME = "inworld_realtime"
     INWORLD_TTS = "inworld_tts"
+    SWARVO_TTS = "swarvo_tts"
 
 
 class BaseServiceConfiguration(BaseModel):
@@ -130,6 +131,7 @@ class BaseServiceConfiguration(BaseModel):
         ServiceProviders.AZURE_REALTIME,
         ServiceProviders.INWORLD_REALTIME,
         ServiceProviders.INWORLD_TTS,
+        ServiceProviders.SWARVO_TTS,
     ]
     api_key: str | list[str]
 
@@ -296,6 +298,7 @@ INWORLD_REALTIME_PROVIDER_MODEL_CONFIG = provider_model_config(
     description="Inworld Realtime API — low-latency speech-to-speech conversations.",
     provider_docs_url="https://docs.inworld.ai/realtime/overview",
 )
+SWARVO_TTS_PROVIDER_MODEL_CONFIG = provider_model_config("Swarvo")
 INWORLD_TTS_PROVIDER_MODEL_CONFIG = provider_model_config(
     "Inworld TTS",
     description="Inworld TTS API.",
@@ -1369,6 +1372,18 @@ class InworldTTSConfiguration(BaseTTSConfiguration):
 
 
 @register_tts
+class SwarvoTTSConfiguration(BaseTTSConfiguration):
+    model_config = SWARVO_TTS_PROVIDER_MODEL_CONFIG
+    provider: Literal[ServiceProviders.SWARVO_TTS] = ServiceProviders.SWARVO_TTS
+    model: str = Field(default="swarvo-tts-2.5", description="swarvo-tts model.", json_schema_extra={"examples": ["swarvo-tts-2.5"]})
+    voice: str = Field(default="Ritvik", description="Built-in voice name (case sensitive), or clone:<consent_id>.")
+    language: str = Field(default="hi", description="Language code. Hindi (hi) is the tested language.")
+    base_url: str | None = Field(default=None, description="Service address. Defaults to the SWARVO_TTS_BASE_URL environment variable.")
+    speed: float = Field(default=1.0, ge=0.7, le=1.5, description="Speech speed (0.7 to 1.5).")
+    mode: Literal["read", "chat"] = Field(default="chat", description="chat adds natural pauses and short fillers; read says exactly the words.")
+
+
+@register_tts
 class AzureSpeechTTSConfiguration(BaseTTSConfiguration):
     model_config = AZURE_SPEECH_PROVIDER_MODEL_CONFIG
     provider: Literal[ServiceProviders.AZURE_SPEECH] = ServiceProviders.AZURE_SPEECH
@@ -1424,6 +1439,7 @@ TTSConfig = Annotated[
         MiniMaxTTSConfiguration,
         InworldTTSConfiguration,
         AzureSpeechTTSConfiguration,
+        SwarvoTTSConfiguration,
     ],
     Field(discriminator="provider"),
 ]

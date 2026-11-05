@@ -65,6 +65,7 @@ class UserConfigurationValidator:
             ServiceProviders.MINIMAX.value: self._check_minimax_api_key,
             ServiceProviders.INWORLD_REALTIME.value: self._check_inworld_realtime_api_key,
             ServiceProviders.INWORLD_TTS.value: self._check_inworld_tts_api_key,
+            ServiceProviders.SWARVO_TTS.value: self._check_inworld_tts_api_key,  # no cheap key check; a bad key shows on the first call
         }
 
     async def validate(

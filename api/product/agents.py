@@ -187,7 +187,7 @@ async def duplicate_agent(
 
 async def _voice_ready_check(session: AsyncSession, agent: ProductAgentModel) -> list[Check]:
     v = voice_catalogue.find(agent.voice_id) if agent.voice_id else None
-    if v is None or v.engine not in ("inworld", "google") or await models_config.engine_ready(session, v.engine):
+    if v is None or v.engine not in ("inworld", "google", "swarvo") or await models_config.engine_ready(session, v.engine):
         return []
     return [Check("voice_ready", "Your chosen voice is available", "blocker", "This voice isn't available yet. Pick another voice on the Voice tab.")]
 

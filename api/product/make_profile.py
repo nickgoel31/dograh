@@ -81,6 +81,35 @@ async def run(email: str) -> int:
             print(f"Profile '{slug}' already exists; no new key given, left as it is.")
         done[slug] = bool(key or ((existing.config or {}).get("realtime", {}).get("api_key") if existing else ""))
 
+    # swarvo-tts: our own speech model. It only speaks, so its profile is a normal listen > think > speak one: the thinking (llm) and
+    # listening (stt) models are copied from the account above, the speech part points at the swarvo-tts service.
+    swarvo_key, swarvo_url = os.getenv("SWARVO_TTS_KEY", "").strip(), os.getenv("SWARVO_TTS_BASE_URL", "").strip().rstrip("/")
+    existing = next((p for p in await db_client.list_model_profiles() if p.slug == "swarvo"), None)
+    if existing is None and swarvo_key:
+        if not base.get("stt"):
+            print("The swarvo-tts profile needs a speech-to-text model, and that account has none in the classic UI. Set one there, then run this again.")
+        elif not swarvo_url:
+            print("The swarvo-tts profile needs the service address (SWARVO_TTS_BASE_URL).")
+        else:
+            tts = {"provider": "swarvo_tts", "api_key": swarvo_key, "model": "swarvo-tts-2.5", "voice": "Ritvik", "language": "hi", "base_url": swarvo_url}
+            cfg = {"is_realtime": False, "tts": tts, **{k: base[k] for k in ("llm", "stt", "embeddings") if base.get(k)}}
+            await db_client.create_model_profile(slug="swarvo", display_name="swarvo-tts 2.5", description=None, tier=None, capabilities=[], config=profile_service.normalize_config(cfg), allowed_org_ids=[], is_active=True)
+            print("Created profile 'swarvo' with a key.")
+            existing = True
+    elif existing is not None and (swarvo_key or swarvo_url):
+        cfg = dict(existing.config or {})
+        tts = dict(cfg.get("tts") or {"provider": "swarvo_tts", "model": "swarvo-tts-2.5", "voice": "Ritvik", "language": "hi"})
+        if swarvo_key:
+            tts["api_key"] = swarvo_key
+        if swarvo_url:
+            tts["base_url"] = swarvo_url
+        cfg["tts"] = tts
+        await db_client.update_model_profile(existing.id, config=profile_service.normalize_config(cfg))
+        print("Updated the swarvo-tts profile.")
+    elif existing is not None:
+        print("Profile 'swarvo' already exists; nothing new given, left as it is.")
+    done["swarvo"] = bool(existing and ((existing is True) or (existing.config or {}).get("tts", {}).get("api_key")))
+
     # Customer workspaces made by the new app use the Inworld profile by default (brought-over organizations are left alone).
     prof = next(p for p in await db_client.list_model_profiles() if p.slug == "inworld")
     async with db_client.async_session() as s:
