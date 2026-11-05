@@ -344,3 +344,17 @@ async def test_a_speed_of_one_leaves_the_field_out_of_the_request(unused_tcp_por
         await svc._close()
     finally:
         await runner.cleanup()
+
+
+def test_a_sentence_is_converted_to_the_call_rate_in_one_pass_without_changing_its_length_or_pitch():
+    import numpy as np
+
+    from api.services.pipecat.swarvo_tts import resample_once
+
+    t = np.arange(24000) / 24000  # one second of a 300 Hz tone at 24 kHz
+    pcm = (np.sin(2 * np.pi * 300 * t) * 8000).astype("<i2").tobytes()
+    out = np.frombuffer(resample_once(pcm, 24000, 16000), dtype="<i2")
+    assert abs(len(out) - 16000) <= 2  # a second stays a second
+    crossings = int(np.sum(np.diff(np.signbit(out.astype(float))) != 0))
+    assert 590 <= crossings <= 610  # 300 Hz: two zero crossings per cycle, so the pitch did not move
+    assert resample_once(pcm, 24000, 24000) == pcm and resample_once(b"", 24000, 16000) == b""

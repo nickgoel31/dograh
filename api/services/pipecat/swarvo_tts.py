@@ -16,7 +16,7 @@ from dataclasses import dataclass
 import aiohttp
 from loguru import logger
 
-from pipecat.frames.frames import ErrorFrame, Frame
+from pipecat.frames.frames import ErrorFrame, Frame, TTSAudioRawFrame
 from pipecat.services.settings import TTSSettings, assert_given
 from pipecat.services.tts_service import TTSService
 from pipecat.utils.text.base_text_aggregator import Aggregation, AggregationType
@@ -37,6 +37,29 @@ def stream_url(base_url: str) -> str:
 
 FIRST_CHUNK_BREAKS = ",;:\u2014\u0964"  # comma, semicolon, colon, dash and the Hindi danda
 FIRST_CHUNK_MIN_CHARS = 12
+
+
+def resample_once(pcm: bytes, from_rate: int, to_rate: int) -> bytes:
+    """Convert 16-bit mono audio to another sample rate in one go (no running state between pieces)."""
+    pcm = pcm[: len(pcm) // 2 * 2]
+    if from_rate == to_rate or not pcm:
+        return pcm
+    import numpy as np
+    import soxr
+
+    return soxr.resample(np.frombuffer(pcm, dtype="<i2"), from_rate, to_rate, quality="VHQ").astype("<i2").tobytes()
+
+
+def _score(pcm: bytes, rate: int) -> float:
+    """How much of the sound repeats itself 40-400 ms later (see tts_check). Never raises: this is only for the log."""
+    try:
+        import numpy as np
+
+        from api.product.tts_check import echo_score
+
+        return echo_score(np.frombuffer(pcm[: len(pcm) // 2 * 2], dtype="<i2"), rate)
+    except Exception:  # noqa: BLE001
+        return 0.0
 
 
 class FastStartAggregator(SimpleTextAggregator):
@@ -177,7 +200,7 @@ class SwarvoTTSService(TTSService):
         return ws
 
     async def _stream(self, body: dict, text: str, n: int, t0: float) -> AsyncIterator[bytes]:
-        first, total = None, 0
+        first, total, raw = None, 0, bytearray()
         ws = await self._connection()
         async with ws:
             connected = time.monotonic() - t0
@@ -187,11 +210,13 @@ class SwarvoTTSService(TTSService):
                     if first is None:
                         first = time.monotonic() - t0
                     total += len(msg.data)
+                    raw.extend(msg.data)
                     yield msg.data
                 elif msg.type == aiohttp.WSMsgType.TEXT:
                     info = json.loads(msg.data)
                     if info.get("type") == "end":
-                        logger.info(f"swarvo-tts #{n} done: {len(text)} chars, connect {int(connected * 1000)} ms, first audio {int((first or 0) * 1000)} ms, "
+                        self._raw_score = _score(bytes(raw), SAMPLE_RATE)
+                        logger.info(f"swarvo-tts #{n} done: {len(text)} chars, connect {int(connected * 1000)} ms, time to first audio {int((first or 0) * 1000)} ms from the request start ({int(((first or 0) - connected) * 1000)} ms after sending the text), "
                                     f"{total / (2 * SAMPLE_RATE):.1f}s of audio, service says first audio {info.get('server_first_audio_ms')} ms, total {int((time.monotonic() - t0) * 1000)} ms")
                         return
                     if info.get("type") == "error":
@@ -202,13 +227,30 @@ class SwarvoTTSService(TTSService):
     @traced_tts
     async def run_tts(self, text: str, context_id: str) -> AsyncGenerator[Frame, None]:
         logger.debug(f"{self}: swarvo-tts [{text}]")
+        emitted, frames, n, started, first_frame = bytearray(), 0, self._count + 1, time.monotonic(), None
         try:
             await self.start_tts_usage_metrics(text)
-            async for frame in self._stream_audio_frames_from_iterator(self._audio(text), in_sample_rate=SAMPLE_RATE, context_id=context_id):
+            # The service hands over a sentence's audio in one lump, so take all of it and convert it ONCE to the call's rate, in a single
+            # pass, then pass it on in small pieces. (Converting piece by piece with a running converter was the suspect for the doubled voice.)
+            raw = bytearray()
+            async for chunk in self._audio(text):
+                raw.extend(chunk)
+            rate = self.sample_rate or SAMPLE_RATE
+            audio = resample_once(bytes(raw), SAMPLE_RATE, rate)
+            step = max(2, (rate // 10) * 2)  # 100 ms pieces
+            for i in range(0, len(audio), step):
                 await self.stop_ttfb_metrics()
-                yield frame
+                if first_frame is None:
+                    first_frame = time.monotonic() - started
+                piece = audio[i : i + step]
+                emitted.extend(piece)
+                frames += 1
+                yield TTSAudioRawFrame(piece, rate, 1, context_id=context_id)
         except Exception as e:  # noqa: BLE001 - a failed sentence must not end the call
             logger.error(f"{self} exception: {e}")
             yield ErrorFrame(error=f"swarvo-tts failed: {e}")
         finally:
             await self.stop_ttfb_metrics()
+            if emitted and self.sample_rate:  # what leaves this component towards the call: the same sentence at the call's rate
+                logger.info(f"swarvo-tts #{n} handed on {len(emitted) / (2 * self.sample_rate):.1f}s of audio at {self.sample_rate} Hz in {frames} frames, first audio handed on after {int((first_frame or 0) * 1000)} ms, "
+                            f"echo score {_score(bytes(emitted), self.sample_rate):.3f} (as received from the service: {getattr(self, '_raw_score', 0.0):.3f})")
