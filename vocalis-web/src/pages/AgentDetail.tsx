@@ -14,6 +14,7 @@ import { fromWorkflowDefinition, toWorkflowDefinition } from '@/lib/flowConvert'
 import { AttachPicker } from '@/components/AttachPicker'
 import { AgentPhone } from '@/pages/AgentPhone'
 import { HumanFeel } from '@/pages/AgentFeel'
+import { CallSettings } from '@/components/CallSettings'
 import { QAEditor } from '@/components/QAEditor'
 import { TryAgent } from '@/components/TryAgent'
 import { BrainModel } from '@/pages/BrainModel'
@@ -195,6 +196,7 @@ export default function AgentDetail() {
         <TabPanel value="voice"><Q title="Pick a voice" hint="Press play to hear each one.">
           <VoicePick voices={voices} value={d.voiceId} onPick={(id) => up({ voiceId: id })} />
           {!USE_MOCKS && <HumanFeel agent={agent} studio={voice.brainLevels !== false && voice.provider !== 'Swarvo'} swarvo={voice.provider === 'Swarvo'} />}
+          {!USE_MOCKS && <CallSettings agent={agent} />}
           {USE_MOCKS && <>
           <div className="mt-6 grid gap-6 sm:grid-cols-3">
             <Field label="Language"><Select defaultValue={voice.lang}>{[...new Set(voices.map((v) => v.lang))].map((l) => <option key={l}>{l}</option>)}</Select></Field>

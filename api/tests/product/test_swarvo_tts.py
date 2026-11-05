@@ -203,3 +203,73 @@ def test_the_call_pipeline_builds_assemblyai_listening_and_inworld_thinking_serv
     assert isinstance(stt, AssemblyAISTTService) and stt._settings.model == "universal-3-5-pro"
     llm = create_llm_service(c)
     assert type(llm).__name__ == "OpenAILLMService" and "api.inworld.ai/v1" in str(llm._client.base_url)
+
+
+async def test_the_classic_call_settings_are_saved_exactly_and_reach_the_agent(client):
+    _, tok = await signup(client, "a@twjlabs.com")
+    h = bearer(tok)
+    aid = (await client.post("/product/agents", json={"name": "P", "template": "receptionist"}, headers=h)).json()["id"]
+    style = {"call_ambient": {"enabled": True, "volume": 0.5}, "call_turn_strategy": "turn_analyzer", "call_turn_secs": 0.5, "call_compaction": True,
+             "call_max_seconds": 600, "call_idle_seconds": 8, "call_concurrency": 4}
+    a = (await client.patch(f"/product/agents/{aid}", json={"style": style}, headers=h)).json()
+    assert a["style"]["call_turn_secs"] == 0.5 and a["style"]["call_concurrency"] == 4
+    settings = [s for s in client.fake.settings.values() if s][-1]
+    assert settings["turn_stop_strategy"] == "turn_analyzer" and settings["smart_turn_stop_secs"] == 0.5 and settings["context_compaction_enabled"] is True
+    assert settings["max_call_duration"] == 600 and settings["max_user_idle_timeout"] == 8.0 and settings["ambient_noise_configuration"] == {"enabled": True, "volume": 0.5}
+    # nothing set means the platform's own defaults stay
+    b = (await client.post("/product/agents", json={"name": "Q", "template": "receptionist"}, headers=h)).json()["id"]
+    await client.patch(f"/product/agents/{b}", json={"style": {"pace": 1.2}}, headers=h)
+    assert "turn_stop_strategy" not in [s for s in client.fake.settings.values() if s][-1]
+    for bad in ({"call_turn_secs": 0.1}, {"call_turn_strategy": "magic"}, {"call_ambient": {"volume": 2}}, {"call_max_seconds": 0}):
+        assert (await client.patch(f"/product/agents/{aid}", json={"style": bad}, headers=h)).status_code == 400
+
+
+async def test_concurrency_limit_follows_the_agent_to_its_live_copy_and_respects_the_organization(client):
+    _, tok = await signup(client, "a@twjlabs.com")
+    h = bearer(tok)
+    aid = (await client.post("/product/agents", json={"name": "P", "template": "receptionist"}, headers=h)).json()["id"]
+    await client.patch(f"/product/agents/{aid}", json={"voice_id": None, "style": {"call_concurrency": 3}}, headers=h)
+    assert (await client.get(f"/product/agents/{aid}/concurrency", headers=h)).json() == {"org_limit": None, "allocated_others": 0}
+    await client.patch(f"/product/agents/{aid}", json={"voice_id": next(v for v in (await client.get("/product/voices", headers=h)).json() if v["provider"] == "Studio")["id"]}, headers=h)
+    assert (await client.post(f"/product/agents/{aid}/publish", headers=h)).status_code == 200
+    assert list(client.fake.concurrency.values()) == [3]  # saved on the Live copy when it went live
+    client.fake.org_limit = 5
+    other = (await client.post("/product/agents", json={"name": "Q", "template": "receptionist"}, headers=h)).json()["id"]
+    too_many = await client.patch(f"/product/agents/{other}", json={"style": {"call_concurrency": 3}}, headers=h)
+    assert too_many.status_code == 400 and too_many.json()["detail"]["code"] == "concurrency_exceeded"  # 3 are already held by the first agent, 5 in total
+    assert (await client.patch(f"/product/agents/{other}", json={"style": {"call_concurrency": 2}}, headers=h)).status_code == 200
+    again = await client.patch(f"/product/agents/{aid}", json={"style": {"call_concurrency": 9}}, headers=h)
+    assert again.status_code == 400 and again.json()["detail"]["code"] == "concurrency_exceeded"
+    await client.patch(f"/product/agents/{aid}", json={"style": {"call_concurrency": 0}}, headers=h)
+    assert list(client.fake.concurrency.values()) == [None]  # empty = no limit
+
+
+async def test_a_swarvo_agent_can_listen_with_assemblyai_or_deepgram(client):
+    await add_swarvo(client)
+    _, tok = await signup(client, "a@twjlabs.com")
+    h = bearer(tok)
+    opts = {e["id"]: e for e in (await client.get("/product/voices/listening", headers=h)).json()["engines"]}
+    assert opts["assemblyai"]["available"] is True and opts["deepgram"]["available"] is False  # no Deepgram key yet
+    assert {"hi", "ta", "te", "kn", "mr", "bn", "gu", "pa", "ur", "en", "multi"} == {l["id"] for l in opts["deepgram"]["languages"]}
+    ahana = next(v for v in (await client.get("/product/voices", headers=h)).json() if v["name"] == "Ahana")
+    aid = (await client.post("/product/agents", json={"name": "P", "template": "receptionist"}, headers=h)).json()["id"]
+    await client.patch(f"/product/agents/{aid}", json={"voice_id": ahana["id"]}, headers=h)
+    await client.patch(f"/product/agents/{aid}", json={"style": {"stt_engine": "deepgram", "stt_language": "ta"}}, headers=h)
+    checks = {c["id"]: c["level"] for c in (await client.get(f"/product/agents/{aid}/readiness", headers=h)).json()}
+    assert checks["voice_ready"] == "blocker"  # chosen, but the Deepgram key isn't there yet
+    for bad in ({"stt_engine": "whisper"}, {"stt_language": "ml"}):
+        assert (await client.patch(f"/product/agents/{aid}", json={"style": bad}, headers=h)).status_code == 400
+
+    async with client.session_factory() as s:  # the operator adds the Deepgram key
+        s.add(models.ModelProfileModel(slug="swarvo_deepgram", display_name="dg", is_active=True,
+                                       config={"stt": {"provider": "deepgram", "api_key": "KEY-DG", "model": "nova-3-general", "language": "hi"}}))
+        await s.commit()
+    assert {e["id"]: e["available"] for e in (await client.get("/product/voices/listening", headers=h)).json()["engines"]}["deepgram"] is True
+    assert (await client.post(f"/product/agents/{aid}/publish", headers=h)).status_code == 200
+    ov = [o for o in client.fake.overrides.values() if o][-1]
+    assert ov["stt"]["provider"] == "deepgram" and ov["stt"]["model"] == "nova-3-general" and ov["stt"]["language"] == "ta" and ov["stt"]["api_key"] == "KEY-DG"
+    assert ov["tts"]["provider"] == "swarvo_tts" and ov["llm"]["provider"] == "inworld_llm"  # speaking and thinking are unchanged
+    # back to AssemblyAI
+    await client.patch(f"/product/agents/{aid}", json={"style": {"stt_engine": "assemblyai"}}, headers=h)
+    assert (await client.post(f"/product/agents/{aid}/publish", headers=h)).status_code == 200
+    assert [o for o in client.fake.overrides.values() if o][-1]["stt"]["provider"] == "assemblyai"

@@ -12,6 +12,9 @@ DEFAULT_SILENCE_SECONDS = 10
 PATIENCE = {"quick": "high", "balanced": "medium", "patient": "low"}  # how long to wait before assuming the caller is done
 TURNS = {"smart": "semantic_vad", "fast": "server_vad"}  # smart = understands when a sentence is finished; fast = reacts to silence
 STEADINESS = {"steady": "STABLE", "balanced": "BALANCED", "expressive": "CREATIVE"}
+STT_ENGINES = ("assemblyai", "deepgram")  # what a swarvo-tts voice listens with
+# Deepgram Nova-3 languages for India (plus English and automatic). Malayalam is not offered by Deepgram's streaming models.
+DEEPGRAM_LANGUAGES = {"hi": "Hindi", "ta": "Tamil", "te": "Telugu", "kn": "Kannada", "mr": "Marathi", "bn": "Bengali", "gu": "Gujarati", "pa": "Punjabi", "ur": "Urdu", "en": "English", "multi": "Automatic"}
 STEERING = ("off", "low", "medium", "high")  # how often the voice is directed for the moment (Studio voices)
 
 
@@ -75,6 +78,43 @@ def clean(raw: dict | None) -> dict:
                 if q and a:
                     pairs.append({"q": q[:300], "a": a[:1200]})
             out[k] = pairs
+        elif k == "stt_engine":
+            if v not in STT_ENGINES:
+                raise ValueError("Listening must be AssemblyAI or Deepgram.")
+            out[k] = v
+        elif k == "stt_language":
+            if v not in DEEPGRAM_LANGUAGES:
+                raise ValueError("Pick one of the listed languages.")
+            out[k] = v
+        elif k == "call_ambient":
+            if not isinstance(v, dict):
+                raise ValueError("Ambient noise settings are not valid.")
+            vol = v.get("volume", 0.3)
+            if not isinstance(vol, (int, float)) or not 0 <= vol <= 1:
+                raise ValueError("Ambient noise volume must be between 0 and 1.")
+            out[k] = {"enabled": bool(v.get("enabled")), "volume": round(float(vol), 2)}
+        elif k == "call_turn_strategy":
+            if v not in ("transcription", "turn_analyzer"):
+                raise ValueError("Detection strategy must be transcription or turn_analyzer.")
+            out[k] = v
+        elif k == "call_turn_secs":
+            if not isinstance(v, (int, float)) or not 0.5 <= v <= 10:
+                raise ValueError("Incomplete turn timeout must be between 0.5 and 10 seconds.")
+            out[k] = round(float(v), 1)
+        elif k == "call_compaction":
+            out[k] = bool(v)
+        elif k == "call_max_seconds":
+            if not isinstance(v, int) or not 1 <= v <= 14400:
+                raise ValueError("Max call duration must be between 1 and 14400 seconds.")
+            out[k] = v
+        elif k == "call_idle_seconds":
+            if not isinstance(v, int) or not 1 <= v <= 3600:
+                raise ValueError("Max user idle timeout must be between 1 and 3600 seconds.")
+            out[k] = v
+        elif k == "call_concurrency":
+            if not isinstance(v, int) or not 0 <= v <= 100000:
+                raise ValueError("Concurrency limit must be a whole number, or empty for no limit.")
+            out[k] = v
         elif k in ("daily_call_cap", "monthly_spend_cap"):
             if not isinstance(v, int) or not 0 <= v <= 1_000_000:
                 raise ValueError("Limits must be whole numbers, or 0 for no limit.")
@@ -119,4 +159,18 @@ def overlay(realtime: dict, style: dict | None) -> dict:
 def workflow_settings(style: dict | None) -> dict:
     """Call-level settings every voice honours."""
     s = style or {}
-    return {"max_call_duration": int(s.get("max_minutes", DEFAULT_MAX_MINUTES)) * 60, "max_user_idle_timeout": float(s.get("silence_seconds", DEFAULT_SILENCE_SECONDS))}
+    out = {"max_call_duration": int(s.get("max_minutes", DEFAULT_MAX_MINUTES)) * 60, "max_user_idle_timeout": float(s.get("silence_seconds", DEFAULT_SILENCE_SECONDS))}
+    # The platform's own call settings, set exactly as in the classic UI; anything left unset keeps the platform's default.
+    if "call_max_seconds" in s:
+        out["max_call_duration"] = s["call_max_seconds"]
+    if "call_idle_seconds" in s:
+        out["max_user_idle_timeout"] = float(s["call_idle_seconds"])
+    if "call_turn_strategy" in s:
+        out["turn_stop_strategy"] = s["call_turn_strategy"]
+    if "call_turn_secs" in s:
+        out["smart_turn_stop_secs"] = s["call_turn_secs"]
+    if "call_compaction" in s:
+        out["context_compaction_enabled"] = s["call_compaction"]
+    if "call_ambient" in s:
+        out["ambient_noise_configuration"] = s["call_ambient"]
+    return out

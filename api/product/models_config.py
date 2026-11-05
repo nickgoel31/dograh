@@ -126,7 +126,15 @@ async def build_overrides(session: AsyncSession, *, brain: str, voice_id: str | 
         llm = deepcopy(c["llm"])
         if llm.get("provider") == "inworld_llm":  # the Brain level picks the Inworld model, as it does for the other Studio voices
             llm["model"] = (style or {}).get("model") or inworld_model(brain)
-        out = {"is_realtime": False, "llm": llm, "stt": deepcopy(c["stt"]), "tts": tts}
+        stt = deepcopy(c["stt"])
+        if (style or {}).get("stt_engine") == "deepgram":  # the agent listens with Deepgram instead of AssemblyAI
+            dg = await _deepgram_stt(session)
+            if dg is None:
+                return None
+            stt = dg
+            if (style or {}).get("stt_language"):
+                stt["language"] = style["stt_language"]
+        out = {"is_realtime": False, "llm": llm, "stt": stt, "tts": tts}
         if c.get("embeddings"):
             out["embeddings"] = deepcopy(c["embeddings"])
         return out
@@ -159,6 +167,21 @@ async def build_overrides(session: AsyncSession, *, brain: str, voice_id: str | 
             merged["language"] = voice.tts["language"]
         overrides["tts"] = merged
     return overrides or None
+
+
+async def _deepgram_stt(session: AsyncSession) -> dict | None:
+    """The Deepgram listening settings (profile 'swarvo_deepgram'), or None until a Deepgram key has been added."""
+    prof = await _by_slug(session, "swarvo_deepgram")
+    stt = (prof.config or {}).get("stt") if prof else None
+    return deepcopy(stt) if stt and stt.get("api_key") else None
+
+
+async def listening_ready(session: AsyncSession, engine: str) -> bool:
+    """Is that listening choice for swarvo-tts voices set up?"""
+    if engine == "deepgram":
+        return await _deepgram_stt(session) is not None
+    prof = await engine_profile(session, "swarvo")
+    return bool(((prof.config or {}).get("stt") or {}).get("api_key")) if prof else False
 
 
 async def presets_available(session: AsyncSession) -> dict[str, bool]:

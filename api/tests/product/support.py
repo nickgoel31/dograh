@@ -461,5 +461,19 @@ async def _list_agents(self, org_id):
 FakeGateway.list_agents = _list_agents
 FakeGateway.list_versions = _list_versions
 FakeGateway.set_model_overrides = _set_model_overrides
+
+
+async def _set_concurrency_limit(self, org_id, agent_ref, limit):
+    self.concurrency = getattr(self, "concurrency", {})
+    self.concurrency[(org_id, agent_ref)] = limit or None
+
+
+async def _concurrency_status(self, org_id, exclude_ref=None):
+    held = getattr(self, "concurrency", {})
+    return {"org_limit": getattr(self, "org_limit", None), "allocated_others": sum(v for (o, i), v in held.items() if o == org_id and v and i != exclude_ref)}
+
+
+FakeGateway.set_concurrency_limit = _set_concurrency_limit
+FakeGateway.concurrency_status = _concurrency_status
 FakeGateway.start_test_run = _start_test_run
 FakeGateway.serve_signaling = _serve_signaling

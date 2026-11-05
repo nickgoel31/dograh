@@ -33,6 +33,14 @@ class PlatformGateway(Protocol):
         """Set (or clear) the agent's per-agent model/voice overrides on its draft."""
         ...
 
+    async def set_concurrency_limit(self, org_id: int, agent_ref: int, limit: int | None) -> None:
+        """How many calls this agent may run at once (None or 0 = no limit of its own)."""
+        ...
+
+    async def concurrency_status(self, org_id: int, exclude_ref: int | None = None) -> dict:
+        """{org_limit, allocated_others}: the organization's total and what the other agents already hold."""
+        ...
+
     async def start_test_run(self, org_id: int, user_id: int, agent_ref: int) -> int:
         """Create a browser test call against the draft (or published) graph."""
         ...
@@ -124,6 +132,22 @@ class CoreGateway:
             cfg.pop("model_overrides", None)
         cfg.update(settings or {})  # call length and silence timeout
         await db.save_workflow_draft(agent_ref, workflow_configurations=cfg)
+
+    async def set_concurrency_limit(self, org_id, agent_ref, limit) -> None:
+        from sqlalchemy import update
+
+        from api.db.models import WorkflowModel
+
+        async with self._db().async_session() as s:
+            await s.execute(update(WorkflowModel).where(WorkflowModel.id == agent_ref, WorkflowModel.organization_id == org_id).values(concurrency_limit=limit or None))
+            await s.commit()
+
+    async def concurrency_status(self, org_id, exclude_ref=None) -> dict:
+        db = self._db()
+        org = await db.get_organization_by_id(org_id)
+        workflows = await db.get_all_workflows(organization_id=org_id)
+        return {"org_limit": org.concurrency_limit if org else None,
+                "allocated_others": sum(w.concurrency_limit for w in workflows if w.concurrency_limit is not None and w.id != exclude_ref)}
 
     async def start_test_run(self, org_id, user_id, agent_ref) -> int:
         import time

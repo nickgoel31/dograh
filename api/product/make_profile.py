@@ -121,6 +121,21 @@ async def run(email: str) -> int:
             existing = True
     done["swarvo"] = bool(existing)
 
+    # Optional second listening choice for swarvo-tts voices: Deepgram Nova-3 (Hindi and the other Indian languages it supports, very fast).
+    dg_key = os.getenv("DEEPGRAM_API_KEY", "").strip()
+    dg = next((p for p in await db_client.list_model_profiles() if p.slug == "swarvo_deepgram"), None)
+    if dg_key:
+        old = dict(((dg.config or {}).get("stt") or {})) if dg else {}
+        cfg = profile_service.normalize_config({"stt": {"provider": "deepgram", "model": "nova-3-general", "language": "hi", **old, "api_key": dg_key}})
+        if dg is None:
+            await db_client.create_model_profile(slug="swarvo_deepgram", display_name="swarvo-tts listening: Deepgram", description=None, tier=None, capabilities=[], config=cfg, allowed_org_ids=[], is_active=True)
+            print("Created the Deepgram listening option.")
+        else:
+            await db_client.update_model_profile(dg.id, config=cfg)
+            print("Updated the Deepgram key.")
+        dg = True
+    done["deepgram listening"] = bool(dg)
+
     # Customer workspaces made by the new app use the Inworld profile by default (brought-over organizations are left alone).
     prof = next(p for p in await db_client.list_model_profiles() if p.slug == "inworld")
     async with db_client.async_session() as s:

@@ -1,15 +1,15 @@
 import * as React from 'react'
 import { Sparkles } from '@/components/icons'
 import { toast } from 'sonner'
-import { Button, Card, Chip, Field, Input, Slider, Switch, Textarea } from '@/components/ui'
-import { AdvancedOnly } from '@/components/shared'
+import { useQuery } from '@tanstack/react-query'
+import { Button, Card, Chip, Field, Input, Select, Slider, Switch, Textarea } from '@/components/ui'
 import { agentsApi, toAgent } from '@/lib/api/agents'
 import { http } from '@/lib/api/http'
 import { useData } from '@/store/data'
 import type { Agent } from '@/mock/types'
 import type { components } from '@/lib/api/schema'
 
-type Style = { pace?: number; patience?: string; turns?: string; steadiness?: string; steering?: string; backchannel?: boolean; slow_filler?: boolean; fillers?: boolean; interruptions?: boolean; vocabulary?: string; max_minutes?: number; silence_seconds?: number; languages?: string[]; daily_call_cap?: number; monthly_spend_cap?: number }
+type Style = { pace?: number; patience?: string; turns?: string; steadiness?: string; stt_engine?: string; stt_language?: string; steering?: string; backchannel?: boolean; slow_filler?: boolean; fillers?: boolean; interruptions?: boolean; vocabulary?: string; max_minutes?: number; silence_seconds?: number; languages?: string[]; daily_call_cap?: number; monthly_spend_cap?: number }
 
 const Choice = ({ label, hint, value, options, onChange, off }: { label: string; hint: string; value?: string; options: [string, string][]; onChange: (v: string) => void; off?: boolean }) => (
   <div className={off ? 'pointer-events-none opacity-50' : ''}><div className="text-[13px] font-medium">{label}</div><div className="mb-2 text-xs text-soft">{hint}</div>
@@ -32,11 +32,24 @@ export function HumanFeel({ agent, studio, swarvo = false }: { agent: Agent; stu
   }
   void agentsApi
   const pace = s.pace ?? 1.25
+  const listen = useQuery({ queryKey: ['listening'], enabled: swarvo, queryFn: () => http<{ engines: { id: string; label: string; available: boolean; languages?: { id: string; label: string }[]; default_language?: string }[] }>('/voices/listening'), retry: false })
+  const engine = s.stt_engine ?? 'assemblyai'
+  const dg = listen.data?.engines.find((e) => e.id === 'deepgram')
   return (
     <Card className="mt-6 p-6">
       <div className="flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent"><Sparkles size={17} /></span>
         <div><h3 className="font-semibold">Make it sound human</h3><p className="text-[13px] text-soft">Small choices that change how natural the conversation feels.</p></div></div>
       {!studio && <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-xs text-soft">{swarvo ? 'With this voice, speaking pace, interruptions and call limits apply. Patience, delivery and steering are for Studio voices.' : 'Pace, patience, delivery and steering apply to Studio voices. With this voice, only interruptions and call limits apply.'}</p>}
+      {swarvo && (
+        <div className="mt-5 rounded-xl border p-4">
+          <div className="text-[13px] font-medium">Listening</div><div className="mb-2 text-xs text-soft">What turns the caller's voice into text for this agent. Deepgram is very fast and covers Hindi, Tamil, Telugu, Kannada, Marathi, Bengali, Gujarati, Punjabi and Urdu.</div>
+          <div className="flex flex-wrap gap-2">{(listen.data?.engines ?? [{ id: 'assemblyai', label: 'AssemblyAI Universal 3.5 Pro', available: true }, { id: 'deepgram', label: 'Deepgram Nova-3', available: true }]).map((e) => (
+            <button key={e.id} disabled={!e.available} onClick={() => set({ stt_engine: e.id })} className={`rounded-full border px-3.5 py-1.5 text-[13px] transition ${engine === e.id ? 'border-ink bg-ink text-surface' : 'bg-surface text-soft hover:border-soft/50 hover:text-ink'} ${e.available ? '' : 'cursor-not-allowed opacity-50'}`}>{e.label}{e.available ? '' : ' (not set up)'}</button>))}</div>
+          {engine === 'deepgram' && dg?.languages && (
+            <div className="mt-3 max-w-xs"><div className="mb-1.5 text-[13px] font-medium">Language the caller speaks</div>
+              <Select value={s.stt_language ?? dg.default_language ?? 'hi'} onChange={(e) => set({ stt_language: e.target.value })}>{dg.languages.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}</Select></div>)}
+        </div>
+      )}
       <div className={`mt-5 grid gap-6 md:grid-cols-2 ${studio || swarvo ? '' : 'opacity-50'}`}>
         <Field label="Speaking pace" hint={<span className="text-xs text-soft">{pace < 1.05 ? 'Slow and calm' : pace > 1.4 ? 'Quick' : 'Natural'}</span>}>
           <Slider value={Math.round((pace - 0.75) * 100)} min={0} max={100} onChange={(v) => set({ pace: Math.round((0.75 + v / 100) * 20) / 20 })} label="Speaking pace" /></Field>
@@ -58,9 +71,7 @@ export function HumanFeel({ agent, studio, swarvo = false }: { agent: Agent; stu
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <Field label="Most calls per day" hint={<span className="text-xs text-soft">0 = no limit. Callers hear a polite message after this.</span>}><Input type="number" min={0} value={s.daily_call_cap ?? 0} onChange={(e) => set({ daily_call_cap: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} /></Field>
         <Field label="Most spend per month" hint={<span className="text-xs text-soft">0 = no limit. Counts this agent's calls only.</span>}><Input type="number" min={0} value={s.monthly_spend_cap ?? 0} onChange={(e) => set({ monthly_spend_cap: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} /></Field></div>
-      <AdvancedOnly><div className="mt-5 grid gap-4 sm:grid-cols-2">
-        <Field label="Longest call (minutes)"><Input type="number" min={1} max={60} value={s.max_minutes ?? 15} onChange={(e) => set({ max_minutes: Number(e.target.value) })} /></Field>
-        <Field label="Hang up after silence (seconds)"><Input type="number" min={5} max={60} value={s.silence_seconds ?? 10} onChange={(e) => set({ silence_seconds: Number(e.target.value) })} /></Field></div></AdvancedOnly>
+
       <Button variant="primary" className="mt-5" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save'}</Button>
     </Card>
   )

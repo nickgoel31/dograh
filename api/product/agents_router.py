@@ -164,6 +164,17 @@ async def patch_agent(
     return _out(agent, defn.get_prompt(graph))
 
 
+@router.get("/{agent_id}/concurrency")
+async def concurrency(
+    agent_id: str,
+    ctx: Ctx = Depends(require(Perm.READ)),
+    gw: PlatformGateway = Depends(get_gateway),
+):
+    """The organization's total call limit and how much the other agents already hold (for the Concurrency Limit field)."""
+    agent = await svc.get_agent(ctx.session, ctx.workspace, agent_id)
+    return await gw.concurrency_status(ctx.workspace.live_org_id, agent.live_workflow_id)
+
+
 @router.post("/{agent_id}/duplicate", response_model=AgentOut, status_code=201)
 async def duplicate(
     agent_id: str,

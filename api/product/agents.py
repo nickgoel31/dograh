@@ -160,6 +160,14 @@ async def update_agent(
             await models_config.build_overrides(session, brain=agent.brain, voice_id=agent.voice_id, style=agent.style),
             style_mod.workflow_settings(agent.style),
         )
+    if new_style is not None and "call_concurrency" in style_mod.clean(new_style):
+        limit = agent.style.get("call_concurrency") or 0
+        if limit:
+            st = await gw.concurrency_status(ws.live_org_id, agent.live_workflow_id)
+            if st.get("org_limit") is not None and st["allocated_others"] + limit > st["org_limit"]:
+                raise product_error(400, "concurrency_exceeded", f"Cannot set the concurrency limit to {limit}. Your organization's total limit ({st['org_limit']}) would be exceeded.")
+        if agent.live_workflow_id:  # campaigns run on the Live copy
+            await gw.set_concurrency_limit(ws.live_org_id, agent.live_workflow_id, limit)
     agent.version += 1
     await session.flush()
     return agent
@@ -187,6 +195,8 @@ async def duplicate_agent(
 
 async def _voice_ready_check(session: AsyncSession, agent: ProductAgentModel) -> list[Check]:
     v = voice_catalogue.find(agent.voice_id) if agent.voice_id else None
+    if v is not None and v.engine == "swarvo" and (agent.style or {}).get("stt_engine") == "deepgram" and not await models_config.listening_ready(session, "deepgram"):
+        return [Check("voice_ready", "Your chosen voice is available", "blocker", "Deepgram listening isn't set up yet. Pick AssemblyAI on the Voice tab, or ask support.")]
     if v is None or v.engine not in ("inworld", "google", "swarvo") or await models_config.engine_ready(session, v.engine):
         return []
     return [Check("voice_ready", "Your chosen voice is available", "blocker", "This voice isn't available yet. Pick another voice on the Voice tab.")]
@@ -255,6 +265,8 @@ async def go_live(
         style_mod.workflow_settings(agent.style),
     )
     await gw.publish(ws.live_org_id, agent.live_workflow_id)
+    if "call_concurrency" in (agent.style or {}):
+        await gw.set_concurrency_limit(ws.live_org_id, agent.live_workflow_id, agent.style["call_concurrency"])
     agent.status = "live"
     agent.version += 1
     await session.flush()

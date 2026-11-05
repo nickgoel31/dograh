@@ -64,6 +64,20 @@ async def list_voices(
     return out
 
 
+@router.get("/listening")
+async def listening(ctx: Ctx = Depends(get_ctx)):
+    """What a swarvo-tts voice can listen with, and whether each is set up."""
+    from api.product import style as style_mod
+
+    return {
+        "engines": [
+            {"id": "assemblyai", "label": "AssemblyAI Universal 3.5 Pro", "available": await models_config.listening_ready(ctx.session, "assemblyai")},
+            {"id": "deepgram", "label": "Deepgram Nova-3", "available": await models_config.listening_ready(ctx.session, "deepgram"),
+             "languages": [{"id": k, "label": v} for k, v in style_mod.DEEPGRAM_LANGUAGES.items()], "default_language": "hi"},
+        ],
+    }
+
+
 @router.get("/{voice_id}/sample")
 async def sample(voice_id: str, ctx: Ctx = Depends(get_ctx)):
     v = catalogue.find(voice_id)
