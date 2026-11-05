@@ -178,7 +178,7 @@ class SwarvoTTSService(TTSService):
         self._inflight += 1
         self._count += 1
         n, t0 = self._count, time.monotonic()
-        logger.info(f"swarvo-tts #{n} start (in flight: {self._inflight}): {text[:40]!r}")
+        logger.info(f"swarvo-tts #{n} start (in flight: {self._inflight}, voice {body.get('voice')}, speed {body.get('speed', 'not sent')}, mode {body.get('mode')}): {text[:40]!r}")
         try:
             async for chunk in self._stream(body, text, n, t0):
                 yield chunk

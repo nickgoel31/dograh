@@ -379,3 +379,21 @@ async def test_paced_delivery_spreads_a_sentence_over_its_playing_time(monkeypat
     async for f in svc.run_tts("x", "c"):
         stamps.append(time.monotonic() - t0)
     assert stamps[0] < 0.1 and 0.6 <= stamps[-1] <= 1.2  # the first piece goes at once, the last about (1 s - 0.2 s head start) later
+
+
+async def test_the_speaking_pace_slider_is_turned_into_a_sensible_swarvo_speed(client):
+    await add_swarvo(client)
+    _, tok = await signup(client, "a@twjlabs.com")
+    h = bearer(tok)
+    ahana = next(v for v in (await client.get("/product/voices", headers=h)).json() if v["name"] == "Ahana")
+    aid = (await client.post("/product/agents", json={"name": "P", "template": "receptionist"}, headers=h)).json()["id"]
+    await client.patch(f"/product/agents/{aid}", json={"voice_id": ahana["id"]}, headers=h)
+
+    async def speed_for(pace):
+        await client.patch(f"/product/agents/{aid}", json={"style": {"pace": pace}}, headers=h)
+        return [o for o in client.fake.overrides.values() if o][-1]["tts"]["speed"]
+
+    assert await speed_for(1.25) == 1.0   # the natural middle of the slider is exactly normal speed: nothing for the service to process
+    assert await speed_for(1.5) == 1.2    # the old Studio default of 1.5 is no longer sent as the service's fastest setting
+    assert await speed_for(1.75) == 1.4
+    assert await speed_for(0.75) == 0.7   # clamped to what the service accepts

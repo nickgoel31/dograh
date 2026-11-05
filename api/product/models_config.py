@@ -122,7 +122,10 @@ async def build_overrides(session: AsyncSession, *, brain: str, voice_id: str | 
         tts["language"] = voice.tts.get("lang", tts.get("language", "hi"))
         pace = (style or {}).get("pace")
         if pace:
-            tts["speed"] = round(min(1.5, max(0.7, float(pace))), 2)  # the service accepts 0.7 to 1.5
+            # The "Speaking pace" slider is on the Studio scale, where 1.25 is the natural middle. swarvo-tts speed 1.0 is natural, and the service
+            # changes any other speed with signal processing (which can smear the voice), so near the middle we leave it at exactly 1.0.
+            speed = float(pace) / 1.25
+            tts["speed"] = 1.0 if abs(speed - 1.0) <= 0.05 else round(min(1.5, max(0.7, speed)), 2)  # the service accepts 0.7 to 1.5
         llm = deepcopy(c["llm"])
         if llm.get("provider") == "inworld_llm":  # the Brain level picks the Inworld model, as it does for the other Studio voices
             llm["model"] = (style or {}).get("model") or inworld_model(brain)

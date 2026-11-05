@@ -81,7 +81,7 @@ async def main() -> int:
     base = tts["base_url"].rstrip("/")
     print(f"Asking {len(TEXT)} characters of Hindi, voice Ritvik. The first call may take a minute if the service is asleep.\n")
     # The same text with and without an explicit speed of 1.0 (the call sends one), for two voices.
-    for mode, voice, speed in (("chat", "Ritvik", None), ("chat", "Ritvik", 1.0), ("chat", "Ahana", None), ("chat", "Ahana", 1.0), ("read", "Ritvik", 1.0)):
+    for mode, voice, speed in (("chat", "Ritvik", None), ("chat", "Ritvik", 1.0), ("chat", "Ritvik", 1.25), ("chat", "Ritvik", 1.5), ("chat", "Ahana", None), ("chat", "Ahana", 1.25)):
         r = await one(base, tts["api_key"], mode, voice, speed)
         print(f"mode={mode} voice={voice} speed={'not sent' if speed is None else speed}")
         if "error" in r:
