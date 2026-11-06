@@ -275,30 +275,6 @@ async def test_a_swarvo_agent_can_listen_with_assemblyai_or_deepgram(client):
     assert [o for o in client.fake.overrides.values() if o][-1]["stt"]["provider"] == "assemblyai"
 
 
-async def test_the_first_piece_of_a_reply_goes_to_speech_at_the_first_pause_not_the_end_of_the_sentence():
-    from api.services.pipecat.swarvo_tts import FastStartAggregator
-    from pipecat.utils.text.base_text_aggregator import AggregationType
-
-    async def run(chunks):
-        agg = FastStartAggregator(aggregation_type=AggregationType.SENTENCE)
-        out = []
-        for c in chunks:
-            out += [a.text async for a in agg.aggregate(c)]
-        tail = await agg.flush()
-        return out + ([tail.text] if tail else [])
-
-    # "Namaste, main aapki madad kar sakti hoon." leaves at the comma, the rest follows as its own piece
-    first = await run(["Namaste Rahul ji, ", "main aapki ", "madad kar sakti hoon. ", "Boliye."])
-    assert first[0] == "Namaste Rahul ji," and " ".join(first[1:]).replace("  ", " ").startswith("main aapki madad kar sakti hoon.")
-    assert (await run(["Haan, ", "theek hai."]))[0] != "Haan,"  # too short to be worth its own request
-    # only the first piece of a reply is split early; the next reply gets the fast start again
-    agg = FastStartAggregator(aggregation_type=AggregationType.SENTENCE)
-    got = [a.text async for a in agg.aggregate("Theek hai ji, main dekhta hoon, ek second. ")]
-    assert got[0] == "Theek hai ji,"
-    await agg.flush()
-    again = [a.text async for a in agg.aggregate("Aapka naam kya hai, bataiye. ")]
-    assert again[0] == "Aapka naam kya hai,"
-
 
 def test_the_echo_check_scores_a_doubled_voice_higher_than_a_clean_one():
     import numpy as np

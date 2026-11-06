@@ -19,8 +19,6 @@ from loguru import logger
 from pipecat.frames.frames import ErrorFrame, Frame, TTSAudioRawFrame
 from pipecat.services.settings import TTSSettings, assert_given
 from pipecat.services.tts_service import TTSService
-from pipecat.utils.text.base_text_aggregator import Aggregation, AggregationType
-from pipecat.utils.text.simple_text_aggregator import SimpleTextAggregator
 from pipecat.utils.tracing.service_decorators import traced_tts
 
 SAMPLE_RATE = 24000
@@ -39,10 +37,6 @@ def stream_url(base_url: str) -> str:
     if not base:
         raise ValueError("swarvo-tts needs its service address (SWARVO_TTS_BASE_URL)")
     return base.replace("https://", "wss://", 1).replace("http://", "ws://", 1) + "/v1/stream"
-
-
-FIRST_CHUNK_BREAKS = ",;:\u2014\u0964"  # comma, semicolon, colon, dash and the Hindi danda
-FIRST_CHUNK_MIN_CHARS = 12
 
 
 def resample_once(pcm: bytes, from_rate: int, to_rate: int) -> bytes:
@@ -68,40 +62,6 @@ def _score(pcm: bytes, rate: int) -> float:
         return 0.0
 
 
-class FastStartAggregator(SimpleTextAggregator):
-    """Sentence aggregation that lets the FIRST piece of each reply go out at the first natural pause (a comma, for example)
-    instead of waiting for the whole first sentence. Waiting for a full sentence was the biggest delay before the voice started."""
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._first_sent = False
-
-    async def aggregate(self, text: str):
-        if self._aggregation_type == AggregationType.TOKEN:
-            async for a in super().aggregate(text):
-                yield a
-            return
-        for char in text:
-            self._text += char
-            if not self._first_sent and char in FIRST_CHUNK_BREAKS and len(self._text.strip()) >= FIRST_CHUNK_MIN_CHARS and len(self._text.split()) >= 2:
-                piece, self._text, self._needs_lookahead, self._first_sent = self._text.strip(" "), "", False, True
-                yield Aggregation(text=piece, type=AggregationType.SENTENCE)
-                continue
-            result = await self._check_sentence_with_lookahead(char)
-            if result:
-                self._first_sent = True
-                yield result
-
-    async def flush(self):
-        out = await super().flush()
-        self._first_sent = False  # the reply is over: the next one gets a fast start again
-        return out
-
-    async def handle_interruption(self):
-        await super().handle_interruption()
-        self._first_sent = False
-
-
 @dataclass
 class SwarvoTTSSettings(TTSSettings):
     """Settings for SwarvoTTSService. ``model`` is only a label; the service has one model."""
@@ -118,7 +78,6 @@ class SwarvoTTSService(TTSService):
         if settings is not None:
             default_settings.apply_update(settings)
         super().__init__(push_start_frame=True, push_stop_frames=True, settings=default_settings, **kwargs)
-        self._text_aggregator = FastStartAggregator(aggregation_type=self._text_aggregation_mode)
         self._api_key = api_key
         self._url = stream_url(base_url or os.getenv("SWARVO_TTS_BASE_URL", ""))
         self._speed = min(1.5, max(0.7, float(speed or 1.0)))
