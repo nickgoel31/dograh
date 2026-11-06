@@ -6,10 +6,12 @@ import { Button } from '@/components/ui'
 import { AgentAvatar } from '@/components/AgentAvatar'
 import { MeshBadge, Rich } from '@/layout/Shell'
 import { http } from '@/lib/api/http'
+import { USE_MOCKS } from '@/lib/api/env'
 import { agentsApi, toAgent } from '@/lib/api/agents'
 import { useMe } from '@/lib/useMe'
 import { useData } from '@/store/data'
 import { useUI } from '@/store/ui'
+import { loadSetup } from '@/components/GetStarted'
 import { cn } from '@/lib/utils'
 
 type Call = { id: string; tool: string; kind: 'read' | 'write' | 'ui'; args: Record<string, any> }
@@ -87,6 +89,24 @@ const bucket = (t: number) => { const d = (Date.now() - t) / 864e5; return d < 1
 const ago = (t: number) => { const m = Math.max(1, Math.round((Date.now() - t) / 6e4)); return m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago` }
 
 const refreshAgents = async () => { try { useData.getState().setAgents((await agentsApi.list()).map((x) => toAgent(x))) } catch { /* the Agents page reloads on its own */ } }
+
+/** A small button to start the setup guide, or carry on where the person stopped. */
+function SetupPill({ userId }: { userId: string }) {
+  const set = useUI((s) => s.set)
+  const guide = useUI((s) => s.guide)
+  const agents = useData((s) => s.agents)
+  const [, tick] = React.useReducer((n: number) => n + 1, 0)
+  React.useEffect(() => { if (!guide) tick() }, [guide])
+  const saved = userId ? loadSetup(userId) : null
+  if (USE_MOCKS || !userId) return null
+  const started = !!saved && saved.step > 0 && !saved.finished
+  if (saved?.finished && agents.length > 0) return null
+  return (
+    <button onClick={() => set({ guide: true })} className="mb-6 inline-flex items-center gap-2 rounded-full border bg-surface px-3.5 py-1.5 text-[13px] text-soft transition hover:border-soft/50 hover:text-ink">
+      <Sparkles size={14} />{started ? `Continue setting up · step ${Math.min(saved!.step + 1, 5)} of 5` : agents.length === 0 ? 'Set up your first agent in 3 minutes' : 'Open the setup guide'}
+    </button>
+  )
+}
 
 export default function AssistantHome() {
   const nav = useNavigate()
@@ -261,6 +281,7 @@ export default function AssistantHome() {
     return (
       <div className="relative mx-auto flex min-h-[calc(100dvh-11rem)] max-w-3xl flex-col items-center justify-center py-6">
         {bar}
+        <SetupPill userId={me?.user.id ?? ''} />
         <MeshBadge className="h-14 w-14 rounded-2xl"><Sparkles size={24} /></MeshBadge>
         <h1 className="mt-6 text-center text-[32px] font-semibold leading-tight tracking-[-0.03em] sm:text-[38px]">{name ? `Hi ${name}, what should we set up?` : 'What should we set up?'}</h1>
         <p className="mt-2 text-center text-[15px] text-soft">I can build agents, manage numbers, contacts, calls, campaigns and knowledge for you.</p>

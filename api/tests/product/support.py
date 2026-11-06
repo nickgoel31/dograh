@@ -12,7 +12,7 @@ from sqlalchemy.pool import StaticPool
 from api.db import models, product_models
 from api.product import (agents_router, analytics_router, billing_router, calls_router, campaigns_router, config, conversations_router, deps, gateway,
                          developers, developers_router, emailer, account_router, contacts_router, flowtry_router, google_auth, handoff_router, integrations_router, phonetest_router, help_router, home_router, import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, public_api, team_router, tools_router, voices_router, widget_router)
-from api.product import assistant_router, chat_router, connectors_router, kyc_router, verify_router, admin_router
+from api.product import assistant_router, chat_router, connectors_router, kyc_router, verify_router, admin_router, profile_router
 from api.product import router as product_router
 
 TABLES = [
@@ -367,6 +367,7 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(kyc_router.router)
     app.include_router(verify_router.router)
     app.include_router(admin_router.router)
+    app.include_router(profile_router.router)
     app.include_router(kyc_router.ops_router)
     app.include_router(kyc_router.hooks_router)
     for r in (chat_router.router, chat_router.public, chat_router.hooks, chat_router.chat_js):

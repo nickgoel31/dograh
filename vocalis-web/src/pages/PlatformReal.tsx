@@ -1,4 +1,5 @@
 /** Real Developers, Team & Settings and Help. Demo versions stay in Developers.tsx and SettingsHelp.tsx for mock mode. */
+import { AccountSettings } from '@/pages/Account'
 import { NetworkSecurity } from '@/components/NetworkSecurity'
 import * as React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -232,8 +233,9 @@ export function SettingsReal() {
   const addSub = useMutation({ mutationFn: () => P.newSubAccount(sub), onSuccess: () => { toast.success('Sub-account created. Switch to it from the workspace menu.'); setSub(''); qc.invalidateQueries({ queryKey: ['subs'] }); qc.invalidateQueries({ queryKey: ['me'] }) }, onError: say })
   return (
     <>
-      <PageHeader title="Team & Settings" subtitle="Who can do what, and how your data is handled." />
-      <Tabs defaultValue="members"><TabsList>{[['members', 'Members'], ['prefs', 'Preferences'], ['audit', 'Audit log'], ['privacy', 'Privacy & compliance'], ['security', 'Security'], ['ws', 'Sub-accounts']].map(([v, l]) => <Tab key={v} value={v}>{l}</Tab>)}</TabsList>
+      <PageHeader title="Settings" subtitle="Your account, your team, and how your data is handled." />
+      <Tabs defaultValue="account"><TabsList>{[['account', 'Account'], ['members', 'Team'], ['prefs', 'Preferences'], ['audit', 'Audit log'], ['privacy', 'Privacy & compliance'], ['security', 'Security'], ['ws', 'Sub-accounts']].map(([v, l]) => <Tab key={v} value={v}>{l}</Tab>)}</TabsList>
+        <TabPanel value="account"><AccountSettings /></TabPanel>
         <TabPanel value="members"><Card className="overflow-hidden"><div className="flex items-center justify-between border-b p-5"><h3 className="font-semibold">Members</h3>{manage && <Button variant="primary" size="sm" onClick={() => setInv(true)}><Plus size={14} />Invite</Button>}</div>
           {team.isPending ? <TableSkeleton rows={4} /> : <table className="w-full text-sm"><tbody>
             {team.data?.members.map((m) => (<tr key={m.id} className="border-b last:border-0"><td className="px-5 py-3"><div className="font-medium">{m.name ?? m.email}{m.you && <span className="ml-2 text-xs text-soft">(you)</span>}</div><div className="text-xs text-soft">{m.email}</div></td>

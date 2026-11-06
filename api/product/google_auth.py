@@ -3,6 +3,7 @@
 
 import os
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, Field
@@ -64,7 +65,7 @@ async def google_login(body: GoogleBody, request: Request, response: Response, s
         session.add(user)
         await session.flush()
         name = claims.get("name") or email.split("@")[0]
-        session.add(ProductUserProfileModel(user_id=user.id, display_name=name))
+        session.add(ProductUserProfileModel(user_id=user.id, display_name=name, email_verified_at=datetime.now(UTC)))  # Google already checked the address
         if company is None:
             await create_workspace(session, user, f"{name}'s workspace")
         else:  # the company requires Google sign-in: people join its workspace instead of getting their own
@@ -75,6 +76,13 @@ async def google_login(body: GoogleBody, request: Request, response: Response, s
         await session.commit()
     elif await rollout.is_held_back(session, user):
         raise product_error(403, "not_enabled", rollout.NOT_ENABLED)
+    prof = await session.get(ProductUserProfileModel, user.id)  # signing in with Google proves the address: Google checked it
+    if prof is None:
+        prof = ProductUserProfileModel(user_id=user.id, display_name=claims.get("name") or email.split("@")[0])
+        session.add(prof)
+    if prof.email_verified_at is None:
+        prof.email_verified_at = datetime.now(UTC)
+        await session.commit()
     _set_session(response, user)
     if not await list_workspaces(session, user.id):
         return SetupOut(user=UserOut(id=user_public_id(user.provider_id), email=user.email, name=await get_display_name(session, user.id)))

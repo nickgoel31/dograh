@@ -126,6 +126,11 @@ class SwarvoTTSService(TTSService):
         self._http: aiohttp.ClientSession | None = None
         self._warm_task: asyncio.Task | None = None
         self._spare: asyncio.Task | None = None  # next sentence's connection, opened while the current one plays (SWARVO_TTS_PREOPEN=1)
+        try:  # connect to the service as soon as the call is being set up, so the first sentence (the greeting) does not wait for the connection
+            asyncio.get_running_loop()
+            self._spare = asyncio.create_task(self._open())
+        except RuntimeError:  # no running loop (only in tests that build the service outside one)
+            pass
         self._inflight = 0  # sentences being generated right now: more than 1 means two are overlapping
         self._count = 0
 
@@ -146,7 +151,7 @@ class SwarvoTTSService(TTSService):
     async def start(self, frame):
         await super().start(frame)
         self._warm_task = asyncio.create_task(self._warm())
-        if PREOPEN:
+        if PREOPEN and self._spare is None:
             self._spare = asyncio.create_task(self._open())
 
     async def _close(self):

@@ -114,6 +114,16 @@ class ProductUserProfileModel(Base):
     totp_secret = Column(String(64), nullable=True)
     totp_enabled = Column(Boolean, nullable=False, default=False)
     email_verified_at = Column(DateTime(timezone=True), nullable=True)
+    # The person's own WhatsApp number, proved with a code (same flow as the sign-up bonus check). One number belongs to one person.
+    verified_phone = Column(String(20), nullable=True, unique=True)
+    phone_verified_at = Column(DateTime(timezone=True), nullable=True)
+    otp_phone = Column(String(20), nullable=True)
+    otp_hash = Column(String(64), nullable=True)
+    otp_expires_at = Column(DateTime(timezone=True), nullable=True)
+    otp_sent_at = Column(DateTime(timezone=True), nullable=True)
+    otp_tries = Column(Integer, nullable=False, default=0)
+    otp_sends_today = Column(Integer, nullable=False, default=0)
+    timezone = Column(String(64), nullable=True)  # e.g. Asia/Kolkata
 
 
 class ProductBillingSettingsModel(Base):

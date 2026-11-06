@@ -106,9 +106,10 @@ from api.product.integrations_router import hooks as product_calendar_hooks_rout
 from api.product.phonetest_router import router as product_phonetest_router  # noqa: E402
 from api.product.verify_router import router as product_verify_router  # noqa: E402
 from api.product.admin_router import router as product_admin_router  # noqa: E402
+from api.product.profile_router import router as product_profile_router  # noqa: E402
 from api.product.account_router import router as product_account_router  # noqa: E402
 
-for _r in (product_developers_router, product_ops_router, product_help_router, product_public_router, product_team_router, product_widget_router, product_google_router, product_account_router, product_phonetest_router, product_integrations_router, product_calendar_hooks_router, product_connectors_router, product_connector_hooks_router, product_assistant_router, product_verify_router, product_admin_router, product_kyc_router, product_kyc_ops_router, product_kyc_hooks_router, product_chat_router, product_chat_js_router, product_chat_public_router, product_chat_hooks_router, product_contacts_router, product_flowtry_router,
+for _r in (product_developers_router, product_ops_router, product_help_router, product_public_router, product_team_router, product_widget_router, product_google_router, product_account_router, product_phonetest_router, product_integrations_router, product_calendar_hooks_router, product_connectors_router, product_connector_hooks_router, product_assistant_router, product_verify_router, product_admin_router, product_profile_router, product_kyc_router, product_kyc_ops_router, product_kyc_hooks_router, product_chat_router, product_chat_js_router, product_chat_public_router, product_chat_hooks_router, product_contacts_router, product_flowtry_router,
            product_analytics_router, product_lab_router, product_handoff_router, product_import_router, product_campaigns_router, product_home_router, product_knowledge_router, product_notifications_router, product_tools_router):
     router.include_router(_r)
 

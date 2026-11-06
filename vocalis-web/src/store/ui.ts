@@ -9,6 +9,7 @@ interface UI {
   platform: 'voice' | 'chat' | 'api'
   mobileNav: boolean
   palette: boolean
+  guide: boolean // opens the setup guide
   playground: string | null // agent id when voice modal open
   workspace: number
   workspaceId: string | null
@@ -19,7 +20,7 @@ export const useUI = create<UI>()(
   persist(
     (set) => ({
       mode: 'live', view: 'simple', theme: 'light', collapsed: false, platform: 'voice', mobileNav: false,
-      palette: false, playground: null, workspace: 0, workspaceId: null, dirty: false,
+      palette: false, guide: false, playground: null, workspace: 0, workspaceId: null, dirty: false,
       set: (p) => set(p),
     }),
     { name: 'vocalis-ui', partialize: (s) => ({ mode: s.mode, view: s.view, theme: s.theme, collapsed: s.collapsed, platform: s.platform, workspace: s.workspace, workspaceId: s.workspaceId }) },

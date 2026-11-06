@@ -24,7 +24,7 @@ import { Button, Menu, MenuContent, MenuItem, MenuSep, MenuTrigger, Switch, Tool
 import { PlaygroundModal } from '@/components/Playground'
 import { AgentAvatar } from '@/components/AgentAvatar'
 import { CHAT_LIVE } from '@/config/features'
-import { WelcomeTour } from '@/components/WelcomeTour'
+import { GetStarted } from '@/components/GetStarted'
 import { cn, money } from '@/lib/utils'
 
 const main = [
@@ -71,7 +71,7 @@ export const platformOf = (path: string): 'voice' | 'chat' | 'api' | null => {
   if (['/billing', '/settings', '/help', '/welcome', '/invite', '/admin'].some((p) => path.startsWith(p))) return null
   return 'voice'
 }
-const bottom = [{ to: '/settings', label: 'Team & Settings', icon: Settings }, { to: '/help', label: 'Help', icon: HelpCircle }]
+const bottom = [{ to: '/settings', label: 'Settings', icon: Settings }, { to: '/help', label: 'Help', icon: HelpCircle }]
 const demoWorkspaces = ['Sunrise Dental', 'GlowUp Salon']
 
 /** A small soft two-colour gradient tile, used for the organization, wallet and profile icons. */
@@ -336,6 +336,7 @@ function CommandPalette() {
       <div className="flex items-center gap-3 border-b px-4"><Search size={16} className="text-soft" /><Command.Input value={q} onValueChange={setQ} placeholder="Search agents, calls, contacts, numbers, knowledge…" className="h-[52px] flex-1 bg-transparent text-[15px] outline-none placeholder:text-soft/70" />{loading && <Loader2 size={15} className="animate-spin text-soft" />}</div>
       <Command.List className={cn('max-h-[55vh] overflow-y-auto p-2', head)}>
         {needle.length >= 3 && real && <Command.Item value="ask" onSelect={ask} className={item}><span className={cn(tile, 'bg-accent-soft text-accent')}><Sparkles size={14} /></span><span className="min-w-0 truncate">Ask the assistant: <b className="font-medium">{q.trim()}</b></span></Command.Item>}
+        {!needle && <Command.Item value="setup guide" onSelect={() => { set({ palette: false, guide: true }) }} className={item}><span className={cn(tile, 'bg-accent-soft text-accent')}><Sparkles size={14} /></span><span className="min-w-0 truncate">Open the setup guide</span></Command.Item>}
         {total === 0 && !loading && <div className="py-10 text-center text-sm text-soft">{needle ? 'Nothing found. Try another word.' : 'Start typing to search.'}</div>}
         {agentHits.length > 0 && <Command.Group heading="Agents">{agentHits.map((a) => <Command.Item key={a.id} value={'agent ' + a.id} onSelect={() => go('/agents/' + a.id)} className={item}><AgentAvatar id={a.id} className="h-7 w-7" /><span className="truncate">{a.name}</span><span className="ml-auto text-xs capitalize text-soft">{a.status}</span></Command.Item>)}</Command.Group>}
         {callHits.length > 0 && <Command.Group heading="Calls">{callHits.map((c) => <Command.Item key={c.id} value={'call ' + c.id} onSelect={() => go('/conversations/' + c.id)} className={item}><span className={tile}><PhoneCall size={14} /></span><span className="truncate">{c.caller || c.phone}</span>{c.agent_name && <span className="ml-auto truncate text-xs text-soft">{c.agent_name}</span>}</Command.Item>)}</Command.Group>}
@@ -401,7 +402,7 @@ export default function Shell() {
           </div></main>
         </div>
       </div>
-      <CommandPalette /><PlaygroundModal />{!USE_MOCKS && <WelcomeTour />}
+      <CommandPalette /><PlaygroundModal />{!USE_MOCKS && <GetStarted />}
       <Bubble
         typebot="open-ai-assistant-chat-ufibgmc"
         apiHost="https://bot.swarvoai.com"

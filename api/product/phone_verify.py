@@ -121,15 +121,21 @@ def get_sender() -> OtpSender:
     return _sender
 
 
-async def start(session, ws: ProductWorkspaceModel, s: ProductBillingSettingsModel, raw_phone: str, sender: OtpSender) -> str:
-    """Send a code to the number. Returns the cleaned number. Caller commits."""
-    if s.phone_verified_at is not None:
+async def start(session, ws, s, raw_phone: str, sender: OtpSender, taken=None, change: bool = False) -> str:
+    """Send a code to the number. Returns the cleaned number. Caller commits.
+
+    `ws` only needs an `.id` (it salts the code), and `s` any record holding the verified_phone / otp_* fields (the workspace billing settings, or a
+    person's profile). `taken(phone)` says whether another record already uses the number; by default that is checked on the billing settings."""
+    if s.phone_verified_at is not None and not change:
         raise VerifyError(409, "already_verified", "Your number is already verified.")
     phone = normalize(raw_phone)
     from sqlalchemy import select
 
-    taken = await session.scalar(select(ProductBillingSettingsModel.workspace_id).where(ProductBillingSettingsModel.verified_phone == phone, ProductBillingSettingsModel.workspace_id != ws.id))
-    if taken:
+    if taken is not None:
+        used = await taken(phone)
+    else:
+        used = await session.scalar(select(ProductBillingSettingsModel.workspace_id).where(ProductBillingSettingsModel.verified_phone == phone, ProductBillingSettingsModel.workspace_id != ws.id))
+    if used:
         raise VerifyError(409, "phone_in_use", "That number is already used by another account. Use a different WhatsApp number.")
     t = now()
     last = _aware(s.otp_sent_at)
@@ -149,9 +155,9 @@ async def start(session, ws: ProductWorkspaceModel, s: ProductBillingSettingsMod
     return phone
 
 
-def check(ws: ProductWorkspaceModel, s: ProductBillingSettingsModel, code: str) -> None:
+def check(ws, s, code: str, change: bool = False) -> None:
     """Accept the code or raise. On success the number is saved on the account. Caller commits (and handles a number claimed twice)."""
-    if s.phone_verified_at is not None:
+    if s.phone_verified_at is not None and not change:
         return
     if not s.otp_hash or not s.otp_phone or not s.otp_expires_at:
         raise VerifyError(400, "no_code", "Ask for a code first.")
