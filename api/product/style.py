@@ -15,6 +15,25 @@ STEADINESS = {"steady": "STABLE", "balanced": "BALANCED", "expressive": "CREATIV
 STT_ENGINES = ("assemblyai", "deepgram")  # what a swarvo-tts voice listens with
 # Deepgram Nova-3 languages for India (plus English and automatic). Malayalam is not offered by Deepgram's streaming models.
 DEEPGRAM_LANGUAGES = {"hi": "Hindi", "ta": "Tamil", "te": "Telugu", "kn": "Kannada", "mr": "Marathi", "bn": "Bengali", "gu": "Gujarati", "pa": "Punjabi", "ur": "Urdu", "en": "English", "multi": "Automatic"}
+# The languages an agent can speak (up to two per agent) and the script each one is written in. The AI is told to write every language in its own script,
+# so Hindi is always Devanagari and English is always Latin letters, which is also what the voice reads best.
+LANGUAGES = {
+    "English": "Latin letters (the English alphabet)",
+    "Hindi": "Devanagari (\u0926\u0947\u0935\u0928\u093e\u0917\u0930\u0940)",
+    "Marathi": "Devanagari (\u0926\u0947\u0935\u0928\u093e\u0917\u0930\u0940)",
+    "Gujarati": "Gujarati script (\u0a97\u0ac1\u0a9c\u0ab0\u0abe\u0aa4\u0ac0)",
+    "Tamil": "Tamil script (\u0ba4\u0bae\u0bbf\u0bb4\u0bcd)",
+    "Telugu": "Telugu script (\u0c24\u0c46\u0c32\u0c41\u0c17\u0c41)",
+    "Kannada": "Kannada script (\u0c95\u0ca8\u0ccd\u0ca8\u0ca1)",
+    "Malayalam": "Malayalam script (\u0d2e\u0d32\u0d2f\u0d3e\u0d33\u0d02)",
+    "Bengali": "Bengali script (\u09ac\u09be\u0982\u09b2\u09be)",
+    "Punjabi": "Gurmukhi (\u0a17\u0a41\u0a30\u0a2e\u0a41\u0a16\u0a40)",
+    "Odia": "Odia script (\u0b13\u0b21\u0b3c\u0b3f\u0b06)",
+    "Urdu": "Urdu script (\u0627\u0631\u062f\u0648)",
+}
+MAX_LANGUAGES = 2
+TTS_MODES = ("chat", "read")  # swarvo-tts: chat adds natural pauses and short fillers, read says exactly the words
+TTS_CHAT_LEVELS = ("light", "normal", "heavy")  # only matters in chat mode
 STEERING = ("off", "low", "medium", "high")  # how often the voice is directed for the moment (Studio voices)
 
 
@@ -66,9 +85,23 @@ def clean(raw: dict | None) -> dict:
                 raise ValueError("That AI model isn't available.")
             out[k] = v or ""
         elif k == "languages":
-            if not isinstance(v, list) or len(v) > 6 or not all(isinstance(x, str) and 1 <= len(x.strip()) <= 30 for x in v):
-                raise ValueError("Pick up to 6 languages.")
-            out[k] = [x.strip() for x in v]
+            if not isinstance(v, list):
+                raise ValueError("Pick up to 2 languages.")
+            names: list[str] = []
+            for x in v:
+                x = str(x).strip()
+                for n in (["Hindi", "English"] if x == "Hinglish" else [x]):  # an older choice: Hindi and English together
+                    if n in LANGUAGES and n not in names:
+                        names.append(n)
+            out[k] = names[:MAX_LANGUAGES]
+        elif k == "tts_mode":
+            if v not in TTS_MODES:
+                raise ValueError("Voice mode must be chat or read.")
+            out[k] = v
+        elif k == "tts_chat_level":
+            if v not in TTS_CHAT_LEVELS:
+                raise ValueError("Chat level must be light, normal or heavy.")
+            out[k] = v
         elif k == "qa":
             if not isinstance(v, list) or len(v) > 60:
                 raise ValueError("Add up to 60 questions and answers.")
@@ -128,6 +161,22 @@ def clean(raw: dict | None) -> dict:
                 raise ValueError("Silence timeout must be between 5 and 60 seconds.")
             out[k] = v
     return out
+
+
+def language_rule(langs: list[str] | None) -> str:
+    """Instructions that make the AI write each language in its own script. Empty when no language is chosen."""
+    names = [n for n in (langs or []) if n in LANGUAGES][:MAX_LANGUAGES]
+    if not names:
+        return ""
+    per = "; ".join(f"{n} in {LANGUAGES[n]}" for n in names)
+    first = (
+        f"You speak {names[0]}." if len(names) == 1 else f"You speak {names[0]} and {names[1]}. Answer in the language the caller uses, and start in {names[0]} if you cannot tell."
+    )
+    return (
+        f"Languages: {first} ALWAYS write every language in its own native script, never in another script: {per}. "
+        "For example, never write Hindi in English letters. If you mix two languages in one sentence, write each word in its own language's script "
+        "(English words in Latin letters, inside a sentence written in the other language's script). Do not use emoji."
+    )
 
 
 def overlay(realtime: dict, style: dict | None) -> dict:

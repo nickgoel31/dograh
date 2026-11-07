@@ -53,9 +53,9 @@ def _compile(a: ProductAgentModel) -> str:
     text = prompts.compile_prompt(
         business=a.business, what_you_do=a.what_you_do, role=a.role, tone=a.tone, script=a.script or ""
     )
-    langs = (a.style or {}).get("languages")
-    if langs:
-        text += chr(10) * 2 + f"Languages: speak in the language the caller uses. You can switch between {', '.join(langs)} at any point in the call, even mid-sentence, and mix them naturally if the caller does (for example Hinglish)."
+    rule = style_mod.language_rule((a.style or {}).get("languages"))
+    if rule:
+        text += chr(10) * 2 + rule
     return text
 
 

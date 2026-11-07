@@ -1411,6 +1411,7 @@ class SwarvoTTSConfiguration(BaseTTSConfiguration):
     base_url: str | None = Field(default=None, description="Service address. Defaults to the SWARVO_TTS_BASE_URL environment variable.")
     speed: float = Field(default=1.0, ge=0.7, le=1.5, description="Speech speed (0.7 to 1.5).")
     mode: Literal["read", "chat"] = Field(default="chat", description="chat adds natural pauses and short fillers; read says exactly the words.")
+    chat_level: Literal["light", "normal", "heavy"] = Field(default="normal", description="How many pauses and fillers chat mode adds. Only matters when mode is chat.")
 
 
 @register_tts

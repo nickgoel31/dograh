@@ -683,6 +683,7 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             base_url=getattr(user_config.tts, "base_url", None),
             speed=getattr(user_config.tts, "speed", 1.0),
             mode=getattr(user_config.tts, "mode", "chat"),
+            chat_level=getattr(user_config.tts, "chat_level", "normal"),
             settings=SwarvoTTSService.Settings(
                 model=user_config.tts.model, voice=getattr(user_config.tts, "voice", None) or "Ritvik", language=getattr(user_config.tts, "language", None) or "hi"
             ),

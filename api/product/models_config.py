@@ -121,6 +121,10 @@ async def build_overrides(session: AsyncSession, *, brain: str, voice_id: str | 
         tts["voice"] = voice.tts["voice"]
         tts["language"] = voice.tts.get("lang", tts.get("language", "hi"))
         tts.pop("speed", None)  # no speed is ever sent to swarvo-tts: any change from 1.0 is signal-processed by the service (echo and slower)
+        if (style or {}).get("tts_mode"):
+            tts["mode"] = style["tts_mode"]
+        if (style or {}).get("tts_chat_level"):
+            tts["chat_level"] = style["tts_chat_level"]  # only used in chat mode: read mode adds no fillers
         llm = deepcopy(c["llm"])
         if llm.get("provider") == "inworld_llm":  # the Brain level picks the Inworld model, as it does for the other Studio voices
             llm["model"] = (style or {}).get("model") or inworld_model(brain)

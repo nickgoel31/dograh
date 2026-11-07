@@ -69,7 +69,7 @@ async def test_agent_limits_languages_and_transcript_search(client):
     assert r.status_code == 200 and r.json()["style"]["languages"] == ["English", "Hindi"]
     assert (await client.patch(f"/product/agents/{aid}", json={"style": {"daily_call_cap": -5}}, headers=h)).status_code == 400
     prompt = (await client.get(f"/product/agents/{aid}", headers=h)).json()["prompt"]
-    assert "English, Hindi" in prompt  # callers can switch language mid-call
+    assert "English in Latin letters" in prompt and "Hindi in Devanagari" in prompt  # each language is written in its own script
 
     await client.post(f"/product/agents/{aid}/publish", headers=h)
     async with client.session_factory() as s:

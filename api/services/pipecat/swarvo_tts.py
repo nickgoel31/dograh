@@ -73,7 +73,7 @@ class SwarvoTTSService(TTSService):
     Settings = SwarvoTTSSettings
     _settings: Settings
 
-    def __init__(self, *, api_key: str, base_url: str | None = None, speed: float = 1.0, mode: str = "chat", settings: Settings | None = None, **kwargs):
+    def __init__(self, *, api_key: str, base_url: str | None = None, speed: float = 1.0, mode: str = "chat", chat_level: str = "normal", settings: Settings | None = None, **kwargs):
         default_settings = self.Settings(model="swarvo-tts-2.5", voice="Ritvik", language="hi")
         if settings is not None:
             default_settings.apply_update(settings)
@@ -82,6 +82,7 @@ class SwarvoTTSService(TTSService):
         self._url = stream_url(base_url or os.getenv("SWARVO_TTS_BASE_URL", ""))
         self._speed = min(1.5, max(0.7, float(speed or 1.0)))
         self._mode = mode if mode in ("read", "chat") else "chat"
+        self._chat_level = chat_level if chat_level in ("light", "normal", "heavy") else "normal"
         self._http: aiohttp.ClientSession | None = None
         self._warm_task: asyncio.Task | None = None
         self._spare: asyncio.Task | None = None  # next sentence's connection, opened while the current one plays (SWARVO_TTS_PREOPEN=1)
@@ -137,12 +138,14 @@ class SwarvoTTSService(TTSService):
         voice = assert_given(self._settings.voice) or "Ritvik"
         lang = assert_given(self._settings.language) or "hi"
         body = {"api_key": self._api_key, "text": text, "voice": voice, "lang": str(lang).split("-")[0].lower(), "format": "pcm16", "mode": self._mode}
+        if self._mode == "chat" and self._chat_level != "normal":  # normal is the service's own default; read mode adds no fillers, so the level would do nothing
+            body["chat_level"] = self._chat_level
         # Speed is NEVER sent for swarvo-tts. The service changes any speed other than 1.0 with signal processing, which smeared the voice (echo) and made it
         # wait for the whole sentence before sending anything (slow). Normal speed keeps true streaming and the cleanest voice.
         self._inflight += 1
         self._count += 1
         n, t0 = self._count, time.monotonic()
-        logger.info(f"swarvo-tts #{n} start (in flight: {self._inflight}, voice {body.get('voice')}, speed not sent, mode {body.get('mode')}): {text[:40]!r}")
+        logger.info(f"swarvo-tts #{n} start (in flight: {self._inflight}, voice {body.get('voice')}, speed not sent, mode {body.get('mode')}, chat level {body.get('chat_level', 'normal')}): {text[:40]!r}")
         try:
             async for chunk in self._stream(body, text, n, t0):
                 yield chunk

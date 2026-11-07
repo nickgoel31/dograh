@@ -9,7 +9,9 @@ import { useData } from '@/store/data'
 import type { Agent } from '@/mock/types'
 import type { components } from '@/lib/api/schema'
 
-type Style = { pace?: number; patience?: string; turns?: string; steadiness?: string; stt_engine?: string; stt_language?: string; steering?: string; backchannel?: boolean; slow_filler?: boolean; fillers?: boolean; interruptions?: boolean; vocabulary?: string; max_minutes?: number; silence_seconds?: number; languages?: string[]; daily_call_cap?: number; monthly_spend_cap?: number }
+type Style = { pace?: number; patience?: string; turns?: string; steadiness?: string; stt_engine?: string; stt_language?: string; tts_mode?: string; tts_chat_level?: string; steering?: string; backchannel?: boolean; slow_filler?: boolean; fillers?: boolean; interruptions?: boolean; vocabulary?: string; max_minutes?: number; silence_seconds?: number; languages?: string[]; daily_call_cap?: number; monthly_spend_cap?: number }
+
+const LANGS: [string, string][] = [['English', 'Latin'], ['Hindi', 'देवनागरी'], ['Marathi', 'देवनागरी'], ['Gujarati', 'ગુજરાતી'], ['Tamil', 'தமிழ்'], ['Telugu', 'తెలుగు'], ['Kannada', 'ಕನ್ನಡ'], ['Malayalam', 'മലയാളം'], ['Bengali', 'বাংলা'], ['Punjabi', 'ਗੁਰਮੁਖੀ'], ['Odia', 'ଓଡ଼ିଆ'], ['Urdu', 'اردو']]
 
 const Choice = ({ label, hint, value, options, onChange, off }: { label: string; hint: string; value?: string; options: [string, string][]; onChange: (v: string) => void; off?: boolean }) => (
   <div className={off ? 'pointer-events-none opacity-50' : ''}><div className="text-[13px] font-medium">{label}</div><div className="mb-2 text-xs text-soft">{hint}</div>
@@ -41,6 +43,7 @@ export function HumanFeel({ agent, studio, swarvo = false }: { agent: Agent; stu
         <div><h3 className="font-semibold">Make it sound human</h3><p className="text-[13px] text-soft">Small choices that change how natural the conversation feels.</p></div></div>
       {!studio && <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-xs text-soft">{swarvo ? 'With this voice, interruptions and call limits apply. Speaking pace, patience, delivery and steering are for Studio voices (this voice always speaks at its natural pace, which keeps it fast and clean).' : 'Pace, patience, delivery and steering apply to Studio voices. With this voice, only interruptions and call limits apply.'}</p>}
       {swarvo && (
+        <>
         <div className="mt-5 rounded-xl border p-4">
           <div className="text-[13px] font-medium">Listening</div><div className="mb-2 text-xs text-soft">What turns the caller's voice into text for this agent. Deepgram is very fast and covers Hindi, Tamil, Telugu, Kannada, Marathi, Bengali, Gujarati, Punjabi and Urdu.</div>
           <div className="flex flex-wrap gap-2">{(listen.data?.engines ?? [{ id: 'assemblyai', label: 'AssemblyAI Universal 3.5 Pro', available: true }, { id: 'deepgram', label: 'Deepgram Nova-3', available: true }]).map((e) => (
@@ -49,6 +52,15 @@ export function HumanFeel({ agent, studio, swarvo = false }: { agent: Agent; stu
             <div className="mt-3 max-w-xs"><div className="mb-1.5 text-[13px] font-medium">Language the caller speaks</div>
               <Select value={s.stt_language ?? dg.default_language ?? 'hi'} onChange={(e) => set({ stt_language: e.target.value })}>{dg.languages.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}</Select></div>)}
         </div>
+        <div className="mt-3 rounded-xl border p-4">
+          <div className="text-[13px] font-medium">Voice mode</div><div className="mb-2 text-xs text-soft">Chat adds natural pauses and short fillers, like a person talking. Read says exactly the words, nothing added.</div>
+          <div className="flex flex-wrap gap-2">{([['chat', 'Chat'], ['read', 'Read']] as const).map(([k, l]) => <Chip key={k} active={(s.tts_mode ?? 'chat') === k} onClick={() => set({ tts_mode: k })}>{l}</Chip>)}</div>
+          {(s.tts_mode ?? 'chat') === 'chat' && (
+            <div className="mt-3"><div className="mb-1.5 text-[13px] font-medium">How much to add</div>
+              <div className="flex flex-wrap gap-2">{([['light', 'Light'], ['normal', 'Normal'], ['heavy', 'Heavy']] as const).map(([k, l]) => <Chip key={k} active={(s.tts_chat_level ?? 'normal') === k} onClick={() => set({ tts_chat_level: k })}>{l}</Chip>)}</div>
+              <p className="mt-1.5 text-xs text-soft">Light adds only a few pauses and fillers. Heavy adds many.</p></div>)}
+        </div>
+        </>
       )}
       <div className={`mt-5 grid gap-6 md:grid-cols-2 ${studio || swarvo ? '' : 'opacity-50'}`}>
         <Field className={swarvo ? 'pointer-events-none opacity-50' : undefined} label="Speaking pace" hint={<span className="text-xs text-soft">{pace < 1.05 ? 'Slow and calm' : pace > 1.4 ? 'Quick' : 'Natural'}</span>}>
@@ -64,9 +76,13 @@ export function HumanFeel({ agent, studio, swarvo = false }: { agent: Agent; stu
         <div className={`flex items-center justify-between rounded-lg border p-3 ${studio ? '' : 'pointer-events-none opacity-50'}`}><div><div className="text-sm font-medium">Filler when slow</div><div className="text-xs text-soft">Says a short phrase if the answer takes a moment (Studio voices)</div></div><Switch label="Filler when slow" checked={!!s.slow_filler} onChange={(v) => set({ slow_filler: v })} /></div>
         <div className="flex items-center justify-between rounded-lg border p-3"><div><div className="text-sm font-medium">Callers can interrupt</div><div className="text-xs text-soft">It stops talking when the caller speaks</div></div><Switch checked={s.interruptions ?? true} onChange={(v) => set({ interruptions: v })} label="Callers can interrupt" /></div>
       </div>
-      <div className="mt-6"><div className="text-[13px] font-medium">Languages it can switch between</div><div className="mb-2 text-xs text-soft">It answers in the language the caller uses and can mix them, like Hinglish.</div>
-        <div className="flex flex-wrap gap-2">{['English', 'Hindi', 'Hinglish', 'Marathi', 'Gujarati', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 'Bengali', 'Punjabi'].map((l) => (
-          <Chip key={l} active={(s.languages ?? []).includes(l)} onClick={() => set({ languages: (s.languages ?? []).includes(l) ? (s.languages ?? []).filter((x) => x !== l) : [...(s.languages ?? []), l].slice(0, 6) })}>{l}</Chip>))}</div></div>
+      <div className="mt-6"><div className="text-[13px] font-medium">Languages <span className="font-normal text-soft">(pick up to 2)</span></div>
+        <div className="mb-2 text-xs text-soft">The agent answers in the language the caller uses. Each language is always written in its own script, so Hindi is Devanagari and English is Latin letters.</div>
+        <div className="flex flex-wrap gap-2">{LANGS.map(([l, script]) => {
+          const cur = s.languages ?? []
+          return <Chip key={l} active={cur.includes(l)} onClick={() => set({ languages: cur.includes(l) ? cur.filter((x) => x !== l) : [...cur, l].slice(-2) })}>{l}<span className="ml-1.5 text-[11px] opacity-70">{script}</span></Chip>
+        })}</div>
+        {(s.languages ?? []).length === 2 && <p className="mt-2 text-xs text-soft">Starts in {s.languages![0]} when it cannot tell which language the caller speaks. Pick a third and the first one drops off.</p>}</div>
       <Field label="Words it should get right" className="mt-5" hint={<span className="text-xs text-soft">Names, places, products. Comma separated.</span>}><Textarea className="min-h-[60px]" value={s.vocabulary ?? ''} onChange={(e) => set({ vocabulary: e.target.value })} placeholder="Dr. Rao, Koregaon Park, Invisalign" /></Field>
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <Field label="Most calls per day" hint={<span className="text-xs text-soft">0 = no limit. Callers hear a polite message after this.</span>}><Input type="number" min={0} value={s.daily_call_cap ?? 0} onChange={(e) => set({ daily_call_cap: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} /></Field>

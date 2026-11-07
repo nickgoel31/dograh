@@ -395,3 +395,84 @@ async def test_no_speed_is_ever_sent_to_the_service(unused_tcp_port):
         assert ["speed" in b for b in seen] == [False, False, False]  # never sent, whatever speed the settings hold
     finally:
         await runner.cleanup()
+
+
+def test_language_choices_are_cleaned_to_at_most_two_known_languages():
+    from api.product import style
+
+    assert style.clean({"languages": ["Hinglish", "Marathi", "Tamil"]})["languages"] == ["Hindi", "English"]  # the old Hinglish choice means Hindi and English
+    assert style.clean({"languages": ["Klingon", "Tamil", "Hindi", "English"]})["languages"] == ["Tamil", "Hindi"]
+    assert style.clean({"languages": []})["languages"] == []
+    with pytest.raises(ValueError):
+        style.clean({"languages": "Hindi"})
+
+
+def test_the_language_rule_names_each_languages_own_script():
+    from api.product import style
+
+    both = style.language_rule(["Hindi", "English"])
+    assert "Devanagari" in both and "Latin letters" in both and "never write Hindi in English letters" in both and "start in Hindi" in both
+    tamil = style.language_rule(["Tamil"])
+    assert "Tamil script" in tamil and "You speak Tamil." in tamil
+    mr_gu = style.language_rule(["Marathi", "Gujarati"])
+    assert "Marathi in Devanagari" in mr_gu and "Gujarati in Gujarati script" in mr_gu
+    assert style.language_rule([]) == "" and style.language_rule(None) == ""
+
+
+async def test_an_agents_instructions_get_its_languages_and_scripts(client):
+    _, tok = await signup(client, "a@twjlabs.com")
+    h = bearer(tok)
+    aid = (await client.post("/product/agents", json={"name": "P", "template": "receptionist"}, headers=h)).json()["id"]
+    assert "Devanagari" not in (await client.get(f"/product/agents/{aid}", headers=h)).json()["prompt"]
+    await client.patch(f"/product/agents/{aid}", json={"style": {"languages": ["Hindi", "English", "Tamil"]}}, headers=h)
+    a = (await client.get(f"/product/agents/{aid}", headers=h)).json()
+    assert a["style"]["languages"] == ["Hindi", "English"]  # a third is not kept
+    assert "Hindi in Devanagari" in a["prompt"] and "English in Latin letters" in a["prompt"] and "Tamil" not in a["prompt"]
+    await client.patch(f"/product/agents/{aid}", json={"style": {"languages": ["Telugu"]}}, headers=h)
+    assert "Telugu in Telugu script" in (await client.get(f"/product/agents/{aid}", headers=h)).json()["prompt"]
+
+
+async def test_a_swarvo_agent_has_a_voice_mode_and_chat_level(client):
+    await add_swarvo(client)
+    _, tok = await signup(client, "a@twjlabs.com")
+    h = bearer(tok)
+    ahana = next(v for v in (await client.get("/product/voices", headers=h)).json() if v["name"] == "Ahana")
+    aid = (await client.post("/product/agents", json={"name": "P", "template": "receptionist"}, headers=h)).json()["id"]
+    await client.patch(f"/product/agents/{aid}", json={"voice_id": ahana["id"]}, headers=h)
+
+    async def tts_for(style):
+        await client.patch(f"/product/agents/{aid}", json={"style": style}, headers=h)
+        return [o for o in client.fake.overrides.values() if o][-1]["tts"]
+
+    t = await tts_for({"tts_mode": "chat", "tts_chat_level": "heavy"})
+    assert t["mode"] == "chat" and t["chat_level"] == "heavy"
+    t = await tts_for({"tts_mode": "read"})
+    assert t["mode"] == "read"
+    for bad in ({"tts_mode": "shout"}, {"tts_chat_level": "extreme"}):
+        assert (await client.patch(f"/product/agents/{aid}", json={"style": bad}, headers=h)).status_code == 400
+
+
+@pytest.mark.parametrize("mode,level,sent", [("chat", "heavy", "heavy"), ("chat", "light", "light"), ("chat", "normal", None), ("read", "heavy", None)])
+async def test_chat_level_is_only_sent_in_chat_mode_and_when_not_the_default(mode, level, sent, unused_tcp_port):
+    seen = {}
+
+    async def stream(request):
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+        seen["first"] = json.loads(await ws.receive_str())
+        await ws.send_str(json.dumps({"type": "end"}))
+        await ws.close()
+        return ws
+
+    app = web.Application()
+    app.router.add_get("/v1/stream", stream)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    await web.TCPSite(runner, "127.0.0.1", unused_tcp_port).start()
+    try:
+        svc = SwarvoTTSService(api_key="K", base_url=f"http://127.0.0.1:{unused_tcp_port}", mode=mode, chat_level=level, settings=SwarvoTTSService.Settings(model="m", voice="Ritvik", language="hi"))
+        [c async for c in svc._audio("x")]
+        await svc._close()
+        assert seen["first"]["mode"] == mode and seen["first"].get("chat_level") == sent
+    finally:
+        await runner.cleanup()
