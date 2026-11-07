@@ -213,3 +213,23 @@ async def test_validation_and_no_platform_names(client):
     a = await new_agent(client, tok)
     assert (await client.patch(f"/product/agents/{a['id']}", json={"brain": "huge"}, headers=h)).status_code == 400
     assert "dograh" not in (await client.get(f"/product/agents/{a['id']}", headers=h)).text.lower()
+
+
+def test_language_paragraph_is_swapped_in_a_hand_edited_prompt():
+    from api.product import style as st
+
+    one = "Be kind.\n\n" + st.language_rule(["English"])
+    two = st.with_language_rule(one, ["English", "Hindi"])
+    assert two.startswith("Be kind.") and "You speak English and Hindi" in two and two.count("Languages:") == 1
+    assert "Languages:" not in st.with_language_rule(two, [])
+
+
+async def test_saving_languages_updates_a_hand_edited_prompt(client):
+    _, tok = await signup(client, "a@x.com")
+    a = await new_agent(client, tok)
+    h = bearer(tok)
+    await client.patch(f"/product/agents/{a['id']}", json={"prompt": "Custom text."}, headers=h)
+    r = await client.patch(f"/product/agents/{a['id']}", json={"style": {"languages": ["English", "Hindi"]}}, headers=h)
+    assert r.status_code == 200, r.text
+    p = r.json()["prompt"]
+    assert p.startswith("Custom text.") and "English and Hindi" in p

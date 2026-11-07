@@ -112,6 +112,15 @@ export default function AgentDetail() {
   const [d, setD] = React.useState<Draft | null>(base)
   const [diff, setDiff] = React.useState<number | null>(null)
   React.useEffect(() => { setSaved(base); setD(base) }, [base])
+  // The instructions can change from another tab (saving Languages rewrites them). Pull that in, unless the text here has unsaved edits.
+  const lastPrompt = React.useRef(agent?.prompt)
+  React.useEffect(() => {
+    if (!agent || agent.prompt === lastPrompt.current) return
+    const old = lastPrompt.current
+    lastPrompt.current = agent.prompt
+    setSaved((s) => (s ? { ...s, prompt: agent.prompt } : s))
+    setD((x) => (x && x.prompt === old ? { ...x, prompt: agent.prompt } : x))
+  }, [agent?.prompt]) // eslint-disable-line react-hooks/exhaustive-deps
   // Opening the Call flow tab shows the latest instructions, tools and knowledge, unless there are unsaved flow edits.
   const flowTab = sp.get('tab') === 'flow'
   React.useEffect(() => {
@@ -132,7 +141,7 @@ export default function AgentDetail() {
         loadVersions()
       } catch (e) { toast.error(e instanceof Error ? e.message : 'We could not save your call flow.'); return }
     }
-    updateAgent(agent.id, { name: d.name, voiceId: d.voiceId, brain: d.brain, tone: d.tone, business: d.business, whatYouDo: d.whatYouDo, script: d.script, prompt: d.prompt }); setSaved(d); toast.success('Saved!')
+    updateAgent(agent.id, { name: d.name, voiceId: d.voiceId, brain: d.brain, tone: d.tone, business: d.business, whatYouDo: d.whatYouDo, script: d.script, ...(d.prompt !== saved.prompt ? { prompt: d.prompt } : {}) }); setSaved(d); toast.success('Saved!')
   }
 
   const versionList = USE_MOCKS ? versions : (realVersions ?? []).map((v) => ({

@@ -4,6 +4,7 @@ Pace, patience, turn detection, steadiness, fillers and vocabulary tune the Stud
 call length and silence timeout apply to every voice. Anything left unset keeps the voice profile's own default.
 """
 
+import re
 from copy import deepcopy
 
 DEFAULT_MAX_MINUTES = 15  # the platform's own default is 5, which cuts real conversations short
@@ -177,6 +178,16 @@ def language_rule(langs: list[str] | None) -> str:
         "For example, never write Hindi in English letters. If you mix two languages in one sentence, write each word in its own language's script "
         "(English words in Latin letters, inside a sentence written in the other language's script). Do not use emoji."
     )
+
+
+_RULE_AT_END = re.compile(r"\s*Languages: You speak .*?Do not use emoji\.\s*$", re.DOTALL)
+
+
+def with_language_rule(prompt: str, langs: list[str] | None) -> str:
+    """For hand-edited prompts: swap the language paragraph at the end for the current one (or remove it), leaving the rest as written."""
+    base = _RULE_AT_END.sub("", prompt or "").rstrip()
+    rule = language_rule(langs)
+    return f"{base}\n\n{rule}" if rule else base
 
 
 def overlay(realtime: dict, style: dict | None) -> dict:

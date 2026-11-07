@@ -148,6 +148,8 @@ async def update_agent(
             prompt=_compile(agent),
             greeting=prompts.compile_greeting(business=agent.business),
         )
+    elif new_style is not None and "languages" in new_style:  # a hand-edited prompt keeps its own text; only the language paragraph is brought up to date
+        graph = defn.with_prompt(graph, name=agent.name, prompt=style_mod.with_language_rule(defn.get_prompt(graph) or "", agent.style.get("languages")))
     else:
         graph = defn.with_prompt(graph, name=agent.name)
     if new_style is not None and "interruptions" in (agent.style or {}):
