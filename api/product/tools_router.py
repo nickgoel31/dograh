@@ -80,11 +80,12 @@ class CoreTools:
         await self._call(core.delete_tool(tool_uuid, user=self._user(org_id, user_id)))
 
 
-_tools: ToolsGateway = CoreTools()
+# Not called "_tools": a helper further down has that name, and it replaced this object, so get_tools() handed back a function and publishing broke.
+_tools_gateway: ToolsGateway = CoreTools()
 
 
 def get_tools() -> ToolsGateway:
-    return _tools
+    return _tools_gateway
 
 
 class ParamIn(BaseModel):

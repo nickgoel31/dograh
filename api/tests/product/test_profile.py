@@ -99,3 +99,12 @@ async def test_nobody_can_read_or_change_another_persons_account(client):
     assert (await client.get("/product/account", headers=b)).json()["name"] == "Bob"
     client.cookies.clear()
     assert (await client.get("/product/account")).status_code in (401, 403)  # not signed in
+
+
+def test_the_real_tools_service_is_what_the_app_hands_out_not_a_helper_function():
+    """Publishing broke once because a helper function had the same name as the tools service and replaced it. The tests swap the service
+    out, so they never saw it: check the real one."""
+    from api.product import tools_router
+
+    svc = tools_router.get_tools()
+    assert isinstance(svc, tools_router.CoreTools) and hasattr(svc, "list") and not callable(getattr(svc, "__call__", None))
