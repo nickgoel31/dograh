@@ -49,8 +49,12 @@ def test_with_prompt_only_touches_start_node():
     assert d2["nodes"][1] == d["nodes"][1] and d2["edges"] == d["edges"]
 
 
-def test_eight_templates_with_unique_keys():
-    assert len(TEMPLATES) == 13 and len({t.key for t in TEMPLATES}) == 13
+def test_templates_are_unique_grouped_and_have_scripts():
+    from api.product.templates import INDUSTRIES
+
+    assert len({t.key for t in TEMPLATES}) == len(TEMPLATES) >= 25
+    assert all(t.industry in INDUSTRIES and len(t.script) > 150 and t.what_you_do and t.blurb for t in TEMPLATES)
+    assert all(t.tone in prompt.TONES for t in TEMPLATES)
 
 
 # ---------- API ----------
@@ -68,7 +72,28 @@ async def test_list_and_templates(client):
     await new_agent(client, tok)
     assert len((await client.get("/product/agents", headers=bearer(tok))).json()) == 1
     t = (await client.get("/product/agents/templates", headers=bearer(tok))).json()
-    assert len(t) == 13
+    assert len(t) == len(TEMPLATES) and all(x["industry"] and x["script"] for x in t)
+
+
+async def test_generate_draft_uses_the_ai_and_cleans_its_answer(client):
+    _, tok = await signup(client, "a@x.com")
+    r = await client.post("/product/agents/generate", json={"usecase": "dental", "description": "Dental clinic in Pune"}, headers=bearer(tok))
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert d["generated"] is True and d["name"] == "Asha" and d["tone"] == "Friendly" and d["script"].startswith("1.")
+
+
+async def test_generate_draft_falls_back_to_the_template_when_the_ai_is_down(client):
+    _, tok = await signup(client, "a@x.com")
+    client.llm.draft = "not json at all"
+    d = (await client.post("/product/agents/generate", json={"usecase": "salon", "description": "Glow Salon. Open daily."}, headers=bearer(tok))).json()
+    assert d["generated"] is False and d["business"] == "Glow Salon" and "1." in d["script"]
+
+
+async def test_template_script_and_emoji_carry_into_the_new_agent(client):
+    _, tok = await signup(client, "a@x.com")
+    a = await new_agent(client, tok, template="dental", emoji="🪥")
+    assert a["emoji"] == "🪥" and "dental" in a["script"].lower() or "pain" in a["script"].lower()
 
 
 async def test_other_workspace_cannot_touch_agent(client):

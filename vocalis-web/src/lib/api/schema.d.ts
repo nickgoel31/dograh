@@ -1536,6 +1536,8 @@ export interface components {
             script: string;
             /** Tone */
             tone?: string | null;
+            /** Emoji */
+            emoji?: string | null;
         };
         /** AgentOut */
         AgentOut: {
@@ -2448,6 +2450,25 @@ export interface components {
             tone: string;
             /** Blurb */
             blurb: string;
+            /** Industry */
+            industry?: string;
+            /** Business */
+            business?: string;
+            /** What You Do */
+            what_you_do?: string;
+            /** Script */
+            script?: string;
+        };
+        /** DraftOut */
+        DraftOut: {
+            name: string;
+            emoji: string;
+            role: string;
+            tone: string;
+            business: string;
+            what_you_do: string;
+            script: string;
+            generated: boolean;
         };
         /** TestBody */
         TestBody: {

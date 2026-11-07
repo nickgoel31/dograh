@@ -12,6 +12,8 @@ from api.product.errors import product_error
 from api.product.gateway import PlatformGateway, get_gateway
 from api.product.knowledge_router import get_knowledge
 from api.product.tools_router import get_tools
+from api.product import agent_writer
+from api.product.llm_gateway import LLMGateway, get_llm
 from api.product.roles import Perm
 from api.product.templates import TEMPLATES
 
@@ -50,6 +52,25 @@ class AgentCreate(BaseModel):
     what_you_do: str = Field(default="", max_length=2000)
     script: str = Field(default="", max_length=8000)
     tone: str | None = None
+    emoji: str | None = Field(default=None, max_length=16)
+
+
+class GenerateBody(BaseModel):
+    usecase: str = Field(default="receptionist", max_length=40)  # a template key; unknown values are treated as a free-form goal
+    description: str = Field(default="", max_length=2000)
+    industry: str = Field(default="", max_length=60)
+    language: str = Field(default="", max_length=60)
+
+
+class DraftOut(BaseModel):
+    name: str
+    emoji: str
+    role: str
+    tone: str
+    business: str
+    what_you_do: str
+    script: str
+    generated: bool  # false when the AI could not be reached and the closest template was used
 
 
 class AgentPatch(BaseModel):
@@ -82,6 +103,10 @@ class TemplateOut(BaseModel):
     role: str
     tone: str
     blurb: str
+    industry: str = "General"
+    business: str = ""
+    what_you_do: str = ""
+    script: str = ""
 
 
 def _out(a: ProductAgentModel, prompt: str | None = None) -> AgentOut:
@@ -110,6 +135,15 @@ async def templates(ctx: Ctx = Depends(get_ctx)):
     return [TemplateOut(**t.__dict__) for t in TEMPLATES]
 
 
+@router.post("/generate", response_model=DraftOut)
+async def generate_draft(body: GenerateBody, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE)), llm: LLMGateway = Depends(get_llm)):
+    """A first draft of an agent from a plain description, written on the platform's own AI key. Nothing is saved until the agent is created."""
+    draft, generated = await agent_writer.write_agent(
+        llm, ctx.workspace.test_org_id, ctx.user.id, usecase=body.usecase, description=body.description, industry=body.industry, language=body.language
+    )
+    return DraftOut(**draft, generated=generated)
+
+
 @router.get("", response_model=list[AgentOut])
 async def list_agents(ctx: Ctx = Depends(get_ctx)):
     return [_out(a) for a in await svc.list_agents(ctx.session, ctx.workspace)]
@@ -124,7 +158,7 @@ async def create_agent(
 ):
     agent = await svc.create_agent(
         ctx.session, gw, ctx.workspace, ctx.user.id, name=body.name, template=body.template,
-        role=body.role, business=body.business, what_you_do=body.what_you_do, script=body.script, tone=body.tone,
+        role=body.role, business=body.business, what_you_do=body.what_you_do, script=body.script, tone=body.tone, emoji=body.emoji,
     )
     await ctx.session.commit()
     response.headers["ETag"] = str(agent.version)

@@ -72,6 +72,7 @@ async def create_agent(
     what_you_do: str,
     tone: str | None,
     script: str = "",
+    emoji: str | None = None,
 ) -> ProductAgentModel:
     tpl = BY_KEY.get(template) if template else None
     if template and tpl is None:
@@ -80,13 +81,13 @@ async def create_agent(
         public_id=new_public_id("agt"),
         workspace_id=ws.id,
         name=name.strip(),
-        emoji=tpl.emoji if tpl else "🤖",
+        emoji=(emoji or "").strip()[:16] or (tpl.emoji if tpl else "🤖"),
         color=tpl.color if tpl else "#6356f1",
         role=(role or (tpl.role if tpl else "help callers")).strip(),
         tone=tone or (tpl.tone if tpl else prompts.DEFAULT_TONE),
         business=business.strip(),
         what_you_do=what_you_do.strip(),
-        script=script.strip(),
+        script=script.strip() or (tpl.script if tpl else ""),
         status="draft",
         test_workflow_id=0,
     )

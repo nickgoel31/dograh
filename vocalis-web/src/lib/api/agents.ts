@@ -44,6 +44,10 @@ export const agentsApi = {
     http<AgentOut>(`/agents/${id}`, {
       method: 'PATCH', json: toPatch(p), headers: version !== undefined ? { 'If-Match': String(version) } : undefined,
     }),
+  templates: () => http<components['schemas']['TemplateOut'][]>('/agents/templates'),
+  /** A first draft written by the platform's AI from a plain description. Nothing is saved until the agent is created. */
+  generate: (b: { usecase: string; description: string; industry?: string; language?: string }) =>
+    http<components['schemas']['DraftOut']>('/agents/generate', { method: 'POST', json: b, timeoutMs: 120000 }),
   duplicate: (id: string) => http<AgentOut>(`/agents/${id}/duplicate`, { method: 'POST' }),
   remove: (id: string) => http<void>(`/agents/${id}`, { method: 'DELETE' }),
   pause: (id: string) => http<AgentOut>(`/agents/${id}/pause`, { method: 'POST' }),

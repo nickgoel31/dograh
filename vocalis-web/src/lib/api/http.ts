@@ -43,5 +43,7 @@ export async function http<T>(path: string, init: RequestInit & { json?: unknown
     } catch { /* non-JSON error body: keep the friendly fallback */ }
     throw new ApiError(res.status, code, message)
   }
-  return res.json() as Promise<T>
+  if (res.status === 204 || res.status === 205) return undefined as T // "done, nothing to send back" (deleting something)
+  const text = await res.text()
+  return (text ? JSON.parse(text) : undefined) as T
 }

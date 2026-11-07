@@ -1,19 +1,15 @@
 import * as React from 'react'
-import { Glyph } from '@/components/Glyph'
-import { Link, useNavigate } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
-import { Copy, Mic, Pause, Play, Plus, Search, Sparkles, Trash2, Wand2 } from '@/components/icons'
+import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Copy, Mic, Pause, Play, Plus, Search, Trash2 } from '@/components/icons'
 import { AgentAvatar } from '@/components/AgentAvatar'
 import { toast } from 'sonner'
-import { Badge, Button, Card, Chip, Input, Menu, MenuContent, MenuItem, MenuTrigger, Textarea } from '@/components/ui'
+import { Button, Card, Chip } from '@/components/ui'
 import { CardSkeletons, ConfirmDialog, EmptyState, PageHeader, Sparkline, StatusBadge, useAsync } from '@/components/shared'
 import { useData } from '@/store/data'
 import { useUI } from '@/store/ui'
-import { templates } from '@/mock/agents'
-import { sleep, cn } from '@/lib/utils'
+import { sleep } from '@/lib/utils'
 import type { Agent } from '@/mock/types'
-import { USE_MOCKS } from '@/lib/api/env'
-import { agentsApi, toAgent } from '@/lib/api/agents'
 
 export default function AgentsPage() {
   const { agents, duplicate, updateAgent, remove } = useData()
@@ -70,111 +66,4 @@ export default function AgentsPage() {
   )
 }
 
-export function TemplatesPage() {
-  const nav = useNavigate()
-  return (
-    <>
-      <PageHeader title="Template gallery" subtitle="Start from something that already works. You can change everything later." />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {templates.map((t) => (
-          <Card key={t.id} className="flex flex-col p-5 transition hover:shadow-pop">
-            <div className="text-accent"><Glyph e={t.emoji} size={34} /></div><h3 className="mt-3 font-semibold">{t.name}</h3><p className="mt-1 flex-1 text-soft">{t.blurb}</p>
-            <Button className="mt-4" onClick={() => nav('/agents/new?template=' + t.id)}>Use this template</Button>
-          </Card>
-        ))}
-      </div>
-    </>
-  )
-}
-
-const goals = [
-  { id: 'answer', template: 'receptionist', emoji: '📞', t: 'Answer calls', d: 'Greet callers and answer questions', name: 'Receptionist' },
-  { id: 'book', template: 'appointments', emoji: '📅', t: 'Book appointments', d: 'Fill your calendar automatically', name: 'Booker' },
-  { id: 'leads', template: 'leads', emoji: '🎯', t: 'Qualify leads', d: 'Find out who is ready to buy', name: 'Qualifier' },
-  { id: 'support', template: 'support', emoji: '🛟', t: 'Customer support', d: 'Solve problems, 24 hours a day', name: 'Support Hero' },
-  { id: 'orders', template: 'orders', emoji: '🛍️', t: 'Take orders', d: 'Collect orders over the phone', name: 'Order Taker' },
-  { id: 'survey', template: 'survey', emoji: '📋', t: 'Run surveys', d: 'Collect feedback quickly', name: 'Surveyor' },
-]
-
-export function NewAgentPage() {
-  const nav = useNavigate()
-  const { addAgent, upsertAgent } = useData()
-  const set = useUI((s) => s.set)
-  const [step, setStep] = React.useState(1)
-  const [goal, setGoal] = React.useState<(typeof goals)[number] | null>(null)
-  const [desc, setDesc] = React.useState('')
-  const [busy, setBusy] = React.useState(false)
-  const [agent, setAgent] = React.useState<Agent | null>(null)
-
-  const generate = async () => {
-    setBusy(true)
-    const g = goal ?? goals[0]
-    if (!USE_MOCKS) {
-      // Keep the friendly pause, but wait for the real result.
-      try {
-        const [created] = await Promise.all([
-          agentsApi.create({ name: `${g.name}`, template: g.template, business: desc.split('.')[0].slice(0, 60), what_you_do: desc, script: '' }),
-          sleep(2000),
-        ])
-        const a = toAgent(await agentsApi.get(created.id))
-        upsertAgent(a); setAgent(a); setBusy(false); setStep(3)
-      } catch (e) { setBusy(false); toast.error(e instanceof Error ? e.message : 'We could not create your agent. Please try again.') }
-      return
-    }
-    await sleep(2000)
-    const a: Agent = {
-      id: 'a' + Date.now(), name: `${['Asha', 'Neel', 'Tara', 'Kai'][Math.floor(Math.random() * 4)]} — ${g.name}`, emoji: g.emoji, color: '#6356f1', role: g.t, status: 'draft', callsToday: 0, successRate: 0,
-      spark: [0, 0, 0, 0, 0, 0, 0, 0], voiceId: 'v3', brain: 'balanced', tone: 'Friendly', business: desc.split('.')[0].slice(0, 40) || 'My business', whatYouDo: desc || 'Answer questions politely.',
-      prompt: `You are a warm, helpful phone assistant for {{business_name}}.\nYour job: ${g.t.toLowerCase()}.\nBackground: ${desc || 'a friendly local business'}\nGreet {{caller_name}}, keep answers short, and ask one question at a time.`, numbers: [],
-    }
-    addAgent(a); setAgent(a); setBusy(false); setStep(3)
-  }
-
-  return (
-    <div className="mx-auto max-w-3xl">
-      <PageHeader title="Create a new agent" subtitle="Three quick steps. No technical knowledge needed." />
-      <div className="mb-8 flex items-center gap-3" aria-label={`Step ${step} of 3`}>
-        {[1, 2, 3].map((n) => <div key={n} className="flex flex-1 items-center gap-3"><div className={cn('flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold', step >= n ? 'bg-accent text-accent-fg' : 'bg-muted text-soft')}>{n}</div><div className={cn('h-1 flex-1 rounded-full', step > n ? 'bg-accent' : 'bg-line', n === 3 && 'hidden')} /></div>)}
-      </div>
-      <AnimatePresence mode="wait">
-        <motion.div key={step} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.18 }}>
-          {step === 1 && (
-            <>
-              <h2 className="mb-4 text-lg font-semibold">What should your agent do?</h2>
-              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                {goals.map((g) => (
-                  <button key={g.id} onClick={() => { setGoal(g); setStep(2) }} className={cn('rounded-xl border bg-surface p-5 text-left shadow-card transition hover:-translate-y-0.5 hover:border-accent hover:shadow-pop', goal?.id === g.id && 'border-accent')}>
-                    <div className="text-accent"><Glyph e={g.emoji} size={34} /></div><div className="mt-3 font-semibold">{g.t}</div><div className="mt-0.5 text-[13px] text-soft">{g.d}</div>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          {step === 2 && (
-            <Card className="p-6">
-              <h2 className="text-lg font-semibold">Describe your business and what the agent should do</h2>
-              <p className="mt-1 text-soft">Write it like you’d explain it to a new employee.</p>
-              <Textarea className="mt-4 min-h-[140px]" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Example: We run a dental clinic in Pune. Answer questions about prices and book check-ups on weekdays." aria-label="Describe your business" />
-              <button className="mt-2 text-[13px] text-accent hover:underline" onClick={() => setDesc('We run a dental clinic in Pune. Answer questions about prices and opening hours, and book check-ups on weekdays between 10 AM and 6 PM.')}>Use an example</button>
-              <div className="mt-6 flex items-center justify-between">
-                <Button onClick={() => setStep(1)} disabled={busy}>Back</Button>
-                <Button variant="primary" size="lg" onClick={generate} disabled={busy}>{busy ? <><Wand2 size={18} className="animate-spin" />Building your agent…</> : <><Sparkles size={18} />Generate my agent</>}</Button>
-              </div>
-              {busy && <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-muted"><motion.div className="h-full bg-accent" initial={{ width: 0 }} animate={{ width: '100%' }} transition={{ duration: 2, ease: 'easeInOut' }} /></div>}
-            </Card>
-          )}
-          {step === 3 && agent && (
-            <Card className="p-8 text-center">
-              <motion.div initial={{ scale: 0.6 }} animate={{ scale: 1 }} transition={{ type: 'spring' }} className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-accent-soft text-5xl">{agent.emoji}</motion.div>
-              <h2 className="mt-4 text-xl font-semibold">Meet {agent.name.split(' — ')[0]}!</h2>
-              <p className="mx-auto mt-1 max-w-md text-soft">{agent.role}. Friendly voice, balanced brain. Ready to try.</p>
-              <div className="mt-3 flex justify-center gap-2"><Badge tone="accent">Friendly tone</Badge><Badge>Draft</Badge></div>
-              <Button variant="primary" size="lg" className="mt-6 h-14 px-8 text-base" onClick={() => set({ playground: agent.id })}><Mic size={20} />Talk to it now</Button>
-              <div className="mt-4"><Button variant="ghost" onClick={() => nav('/agents/' + agent.id + '?tab=publish')}>Continue to Go Live checklist →</Button></div>
-            </Card>
-          )}
-        </motion.div>
-      </AnimatePresence>
-    </div>
-  )
-}
+export { NewAgentPage, TemplatesPage } from './AgentCreate'

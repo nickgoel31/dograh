@@ -281,6 +281,8 @@ class FakeLLM:
             return self.verdict
         if "phone call transcript" in system:
             return self.insight
+        if "design phone agents" in system:
+            return getattr(self, "draft", None) or '```json\n{"name": "Asha Verma", "emoji": "🦷", "role": "book dental visits", "tone": "Weird", "business": "Bright Dental", "what_you_do": "A dental clinic in Pune.", "script": "1. Greet.\\n2. Book."}\n```'
         if "Rewrite the sentence" in system:
             if self.rewrite is None:
                 raise RuntimeError("no model")
