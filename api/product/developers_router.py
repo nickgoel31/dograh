@@ -222,6 +222,13 @@ async def ops_tick(x_ops_secret: str | None = Header(default=None), session=Depe
     from api.product import privacy
 
     out = await dev.tick(session, sender, gw)
+    from api.product import status_page
+
+    try:
+        out["status_checks"] = await status_page.record(session)
+    except Exception:  # noqa: BLE001 - the rest of the job still runs
+        await session.rollback()
+        out["status_checks"] = -1
     from api.product import alerts
 
     out["alerts"] = await alerts.scan(session, mailer, wallet)

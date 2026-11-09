@@ -185,6 +185,7 @@ function NewCampaign({ open, onClose, agents, onCreated }: { open: boolean; onCl
   const [check, setCheck] = React.useState<S['ContactsOut'] | null>(null); const [days, setDays] = React.useState([true, true, true, true, true, false, false])
   const [start, setStart] = React.useState('10:00'); const [end, setEnd] = React.useState('18:00'); const [tz, setTz] = React.useState('Asia/Kolkata')
   const [consent, setConsent] = React.useState(false); const [dnc, setDnc] = React.useState(false); const [busy, setBusy] = React.useState(false)
+  const [tries, setTries] = React.useState(2); const [wait, setWait] = React.useState(30); const [onBusy, setOnBusy] = React.useState(true); const [onNoAnswer, setOnNoAnswer] = React.useState(true); const [onVoicemail, setOnVoicemail] = React.useState(false)
   const pick = async (f: File | null) => {
     if (!f) return
     const text = await f.text(); setCsv(text); setCheck(null)
@@ -194,7 +195,7 @@ function NewCampaign({ open, onClose, agents, onCreated }: { open: boolean; onCl
   const create = async () => {
     setBusy(true)
     try {
-      await http('/campaigns', { method: 'POST', json: { name, agent_id: agent || agents[0].id, csv_text: csv, timezone: tz, slots: days.flatMap((on, i) => (on ? [{ day_of_week: i, start_time: start, end_time: end }] : [])), consent_confirmed: consent, dnc_checked: dnc } })
+      await http('/campaigns', { method: 'POST', json: { name, agent_id: agent || agents[0].id, csv_text: csv, timezone: tz, slots: days.flatMap((on, i) => (on ? [{ day_of_week: i, start_time: start, end_time: end }] : [])), consent_confirmed: consent, dnc_checked: dnc, max_retries: tries, retry_delay_minutes: wait, retry_on_busy: onBusy, retry_on_no_answer: onNoAnswer, retry_on_voicemail: onVoicemail } })
       toast.success('Campaign created. Press Start when you’re ready.'); onCreated(); onClose()
     } catch (e) { say(e) } finally { setBusy(false) }
   }
@@ -210,6 +211,14 @@ function NewCampaign({ open, onClose, agents, onCreated }: { open: boolean; onCl
           <div className="flex flex-wrap gap-2">{DAYS.map((d, i) => <button key={d} type="button" aria-pressed={days[i]} onClick={() => setDays(days.map((x, j) => (j === i ? !x : x)))} className={`rounded-md border px-2.5 py-1 text-sm ${days[i] ? 'border-accent bg-accent-soft text-accent' : 'text-soft'}`}>{d}</button>)}</div>
           <div className="mt-2 grid grid-cols-3 gap-2"><Input type="time" value={start} onChange={(e) => setStart(e.target.value)} aria-label="From" /><Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} aria-label="Until" />
             <Select value={tz} onChange={(e) => setTz(e.target.value)}>{['Asia/Kolkata', 'UTC', 'Europe/London', 'America/New_York', 'Asia/Dubai', 'Asia/Singapore'].map((z) => <option key={z}>{z}</option>)}</Select></div></div>
+        <div className="rounded-lg border p-3 text-sm"><div className="mb-2 text-[13px] font-medium">If a call does not connect</div>
+          <div className="grid grid-cols-2 gap-2"><Field label="Try again up to"><Select value={tries} onChange={(e) => setTries(Number(e.target.value))}>{[0, 1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n === 0 ? 'Do not retry' : n === 1 ? '1 more time' : `${n} more times`}</option>)}</Select></Field>
+            <Field label="Wait between tries"><Select value={wait} disabled={tries === 0} onChange={(e) => setWait(Number(e.target.value))}>{[[5, '5 minutes'], [15, '15 minutes'], [30, '30 minutes'], [60, '1 hour'], [120, '2 hours'], [240, '4 hours']].map(([m, l]) => <option key={m} value={m}>{l}</option>)}</Select></Field></div>
+          {tries > 0 && <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
+            <label className="flex items-center gap-2"><input type="checkbox" checked={onBusy} onChange={(e) => setOnBusy(e.target.checked)} />Line busy</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={onNoAnswer} onChange={(e) => setOnNoAnswer(e.target.checked)} />No answer</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={onVoicemail} onChange={(e) => setOnVoicemail(e.target.checked)} />Answering machine</label></div>}
+          <p className="mt-2 text-xs text-soft">Retries only happen inside your calling hours.</p></div>
         <div className="space-y-2 rounded-lg border p-3 text-sm">
           <label className="flex items-start gap-2"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1" />I confirm the people on this list agreed to be called.</label>
           <label className="flex items-start gap-2"><input type="checkbox" checked={dnc} onChange={(e) => setDnc(e.target.checked)} className="mt-1" />I’ve checked this list against the Do-Not-Call register. <span className="text-xs text-soft">(We keep a record of this.)</span></label></div>

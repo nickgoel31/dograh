@@ -137,6 +137,8 @@ def clean(raw: dict | None) -> dict:
             out[k] = round(float(v), 1)
         elif k == "call_compaction":
             out[k] = bool(v)
+        elif k == "voicemail_detect":
+            out[k] = bool(v)  # hang up when an answering machine picks up, so minutes are not spent talking to a recording
         elif k == "call_max_seconds":
             if not isinstance(v, int) or not 1 <= v <= 14400:
                 raise ValueError("Max call duration must be between 1 and 14400 seconds.")
@@ -233,4 +235,6 @@ def workflow_settings(style: dict | None) -> dict:
         out["context_compaction_enabled"] = s["call_compaction"]
     if "call_ambient" in s:
         out["ambient_noise_configuration"] = s["call_ambient"]
+    if "voicemail_detect" in s:
+        out["voicemail_detection"] = {"enabled": bool(s["voicemail_detect"]), "use_workflow_llm": True}
     return out

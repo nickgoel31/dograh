@@ -57,7 +57,7 @@ class CoreCampaigns:
         req = core.CreateCampaignRequest(
             name=name, workflow_id=workflow_id, source_type="csv", source_id=key,
             schedule_config=core.ScheduleConfigRequest(enabled=True, timezone=schedule["tz"], slots=[core.TimeSlotRequest(**s) for s in schedule["slots"]]),
-            retry_config=core.RetryConfigRequest(enabled=retry["max_retries"] > 0, max_retries=retry["max_retries"], retry_delay_seconds=retry["delay"]),
+            retry_config=core.RetryConfigRequest(enabled=retry["max_retries"] > 0, max_retries=retry["max_retries"], retry_delay_seconds=retry["delay"], retry_on_busy=retry.get("on_busy", True), retry_on_no_answer=retry.get("on_no_answer", True), retry_on_voicemail=retry.get("on_voicemail", False)),
         )
         c = await self._call(core.create_campaign(req, user=self._user(org_id, user_id)))
         return {"ref": c.id, "state": c.state, "total": c.total_rows or 0, "workflow_id": c.workflow_id, "created_at": c.created_at}
@@ -104,6 +104,9 @@ class CreateBody(ContactsBody):
     slots: list[SlotIn] = Field(min_length=1, max_length=14)
     max_retries: int = Field(default=2, ge=0, le=5)
     retry_delay_minutes: int = Field(default=30, ge=1, le=240)
+    retry_on_busy: bool = True
+    retry_on_no_answer: bool = True
+    retry_on_voicemail: bool = False  # an answering machine usually means try again later, at a better time
     consent_confirmed: bool = False
     dnc_checked: bool = False
 
@@ -192,7 +195,7 @@ async def create(body: CreateBody, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE)
     if not r["valid"]:
         raise product_error(400, "bad_contacts", "None of the phone numbers in this file could be used." if not removed else "Everyone in this file is on your do-not-call list.")
     made = await gw.create(ctx.org_id, ctx.user.id, body.name.strip(), agent.live_workflow_id, camp.to_csv(r["valid"]),
-                           {"tz": body.timezone, "slots": slots}, {"max_retries": body.max_retries, "delay": body.retry_delay_minutes * 60})
+                           {"tz": body.timezone, "slots": slots}, {"max_retries": body.max_retries, "delay": body.retry_delay_minutes * 60, "on_busy": body.retry_on_busy, "on_no_answer": body.retry_on_no_answer, "on_voicemail": body.retry_on_voicemail})
     ctx.session.add(ProductCampaignAuditModel(
         workspace_id=ctx.workspace.id, user_id=ctx.user.id, campaign_ref=made["ref"], action="created", at=datetime.now(UTC),
         detail={"contacts": len(r["valid"]), "invalid": len(r["invalid"]), "duplicates": r["duplicates"], "consent_confirmed": True,
@@ -223,6 +226,58 @@ async def _action(ctx: Ctx, gw: CampaignGateway, campaign_id: str, action: str) 
     ctx.session.add(ProductCampaignAuditModel(workspace_id=ctx.workspace.id, user_id=ctx.user.id, campaign_ref=ref, action=action, at=datetime.now(UTC), detail={}))
     await ctx.session.commit()
     return await _out(ctx, {**c, **res}, agents)
+
+
+class CallbackBody(BaseModel):
+    agent_id: str
+    phone: str = Field(min_length=5, max_length=24)
+    when: datetime  # the local time the caller asked for, in `timezone`
+    timezone: str = "Asia/Kolkata"
+    name: str | None = Field(default=None, max_length=80)
+
+
+@router.post("/callback", response_model=CampaignOut, status_code=201)
+async def schedule_callback(body: CallbackBody, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE)), gw: CampaignGateway = Depends(get_campaigns)):
+    """Call one person back at a time they asked for. It is a one-contact campaign with a one-hour window starting then, so it follows the same rules and retries."""
+    from datetime import timedelta
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+    from api.product import contacts as ct
+
+    if ctx.environment != "live":
+        raise product_error(400, "live_only", "Call-backs call real people, so they run in Live mode. Switch to Live to schedule one.")
+    try:
+        tz = ZoneInfo(body.timezone)
+    except (ZoneInfoNotFoundError, ValueError):
+        raise product_error(400, "bad_timezone", "We don't recognise that time zone.")
+    phone = ct.normalize(body.phone)
+    if phone is None:
+        raise product_error(400, "bad_phone", "That doesn't look like a phone number.")
+    at = body.when.replace(tzinfo=tz) if body.when.tzinfo is None else body.when.astimezone(tz)
+    now = datetime.now(UTC)
+    if at < now + timedelta(minutes=5):
+        raise product_error(400, "too_soon", "Pick a time at least five minutes from now.")
+    if at > now + timedelta(days=30):
+        raise product_error(400, "too_far", "Call-backs can be scheduled up to 30 days ahead.")
+    agent = await agent_svc.get_agent(ctx.session, ctx.workspace, body.agent_id)
+    if agent.live_workflow_id is None or agent.status != "live":
+        raise product_error(400, "agent_not_live", "Put this agent live first.")
+    if phone in await ct.blocked_set(ctx.session, ctx.workspace.id):
+        raise product_error(400, "do_not_call", "This number is on your do-not-call list.")
+    end = (at + timedelta(hours=1)).time() if (at + timedelta(hours=1)).date() == at.date() else None
+    slots = [{"day_of_week": at.weekday(), "start_time": at.strftime("%H:%M"), "end_time": end.strftime("%H:%M") if end else "23:59"}]
+    try:  # the caller asked to be called, so permission is given; the calling-hours rule still applies
+        camp.check_compliance(consent=True, dnc_checked=True, tz=body.timezone, slots=slots)
+    except ValueError as e:
+        raise product_error(400, "compliance_blocked", str(e))
+    csv_text = camp.to_csv([{"phone_number": phone, **({"name": body.name.strip()} if body.name else {})}])
+    made = await gw.create(ctx.org_id, ctx.user.id, f"Call-back {phone}", agent.live_workflow_id, csv_text, {"tz": body.timezone, "slots": slots},
+                           {"max_retries": 2, "delay": 1800, "on_busy": True, "on_no_answer": True, "on_voicemail": True})
+    made = {**made, **await gw.act(ctx.org_id, ctx.user.id, made["ref"], "start"), "name": f"Call-back {phone}"}
+    ctx.session.add(ProductCampaignAuditModel(workspace_id=ctx.workspace.id, user_id=ctx.user.id, campaign_ref=made["ref"], action="callback", at=datetime.now(UTC),
+                                              detail={"phone": phone, "at": at.isoformat(), "timezone": body.timezone, "consent": "asked_for_call_back"}))
+    await ctx.session.commit()
+    return await _out(ctx, made, {agent.live_workflow_id: agent})
 
 
 @router.post("/{campaign_id}/start", response_model=CampaignOut)

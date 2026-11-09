@@ -5,7 +5,8 @@ import { flexRender, getCoreRowModel, getPaginationRowModel, useReactTable, type
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts'
 import { Download, Search } from '@/components/icons'
 import { toast } from 'sonner'
-import { Badge, Button, Card, Chip, Input, Select } from '@/components/ui'
+import { Badge, Button, Card, Chip, Dialog, Input, Select } from '@/components/ui'
+import { http } from '@/lib/api/http'
 import { USE_MOCKS } from '@/lib/api/env'
 import { AdvancedOnly, EmptyState, PageHeader, SearchPill, StatusBadge, TableSkeleton, WaveformPlayer, sentimentEmoji, useAsync } from '@/components/shared'
 import { api } from '@/lib/api'
@@ -63,11 +64,43 @@ export default function ConversationsPage() {
       </div>
       <Card className="overflow-hidden">
         {loading ? <TableSkeleton /> : rows.length === 0 ? <div className="p-6"><EmptyState emoji="📭" title="No calls match" text="Try clearing a filter to see more calls." action={<Button variant="primary" size="lg" onClick={() => { setQ(''); setAgent(''); setOutcome(''); setSp({}) }}>Clear filters</Button>} /></div> : (
-          <div className="overflow-x-auto"><table className="w-full text-sm">
+          <><ul className="divide-y md:hidden" aria-label="Calls">{table.getRowModel().rows.map((r) => { const c = r.original; return (
+            <li key={r.id}><button onClick={() => nav('/conversations/' + c.id)} className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition active:bg-muted/60">
+              <div className="min-w-0 flex-1"><div className="truncate font-medium">{c.caller}</div><div className="truncate text-xs text-soft">{aName(c.agentId)} · {new Date(c.time).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div></div>
+              <div className="flex shrink-0 flex-col items-end gap-1"><StatusBadge status={c.outcome} /><span className="num text-xs text-soft">{fmtDur(c.duration)}</span></div></button></li>) })}</ul>
+          <div className="hidden overflow-x-auto md:block"><table className="w-full text-sm">
             <thead className="border-b bg-muted/50 text-left text-xs text-soft">{table.getHeaderGroups().map((g) => <tr key={g.id}>{g.headers.map((h) => <th key={h.id} className="px-4 py-3 font-medium">{flexRender(h.column.columnDef.header, h.getContext())}</th>)}</tr>)}</thead>
-            <tbody>{table.getRowModel().rows.map((r) => <tr key={r.id} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && nav('/conversations/' + r.original.id)} onClick={() => nav('/conversations/' + r.original.id)} className="cursor-pointer border-b last:border-0 hover:bg-muted/50">{r.getVisibleCells().map((c) => <td key={c.id} className="px-4 py-3">{flexRender(c.column.columnDef.cell, c.getContext())}</td>)}</tr>)}</tbody></table></div>)}
+            <tbody>{table.getRowModel().rows.map((r) => <tr key={r.id} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && nav('/conversations/' + r.original.id)} onClick={() => nav('/conversations/' + r.original.id)} className="cursor-pointer border-b last:border-0 hover:bg-muted/50">{r.getVisibleCells().map((c) => <td key={c.id} className="px-4 py-3">{flexRender(c.column.columnDef.cell, c.getContext())}</td>)}</tr>)}</tbody></table></div></>)}
         {!loading && rows.length > 0 && <div className="flex items-center justify-between border-t p-3 text-sm text-soft"><span>{rows.length} calls</span><div className="flex items-center gap-2"><Button size="sm" disabled={!table.getCanPreviousPage()} onClick={() => table.previousPage()}>Back</Button><span>Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}</span><Button size="sm" disabled={!table.getCanNextPage()} onClick={() => table.nextPage()}>Next</Button></div></div>}
       </Card>
+    </>
+  )
+}
+
+/** Schedule a call back to the caller at a time they asked for. */
+function CallbackButton({ agentId, phone, name }: { agentId: string; phone: string; name: string }) {
+  const [open, setOpen] = React.useState(false)
+  const [when, setWhen] = React.useState('')
+  const [tz, setTz] = React.useState('Asia/Kolkata')
+  const [busy, setBusy] = React.useState(false)
+  const go = async () => {
+    setBusy(true)
+    try {
+      await http('/campaigns/callback', { method: 'POST', json: { agent_id: agentId, phone, when, timezone: tz, name: name !== phone ? name : undefined } })
+      toast.success('Call-back scheduled. It follows your calling hours and retry rules.'); setOpen(false)
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'We could not schedule that.') } finally { setBusy(false) }
+  }
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Call back</Button>
+      <Dialog open={open} onOpenChange={setOpen} title="Call this person back" description={`${name !== phone ? name + ' · ' : ''}${phone}. The agent rings them at the time you pick.`}>
+        <div className="space-y-3">
+          <label className="block text-[13px] font-medium">When<Input type="datetime-local" className="mt-1.5" value={when} onChange={(e) => setWhen(e.target.value)} /></label>
+          <label className="block text-[13px] font-medium">Time zone<Select className="mt-1.5" value={tz} onChange={(e) => setTz(e.target.value)}>{['Asia/Kolkata', 'Asia/Dubai', 'Asia/Singapore', 'Europe/London', 'America/New_York', 'UTC'].map((z) => <option key={z}>{z}</option>)}</Select></label>
+          <p className="text-xs text-soft">The agent calls between that time and an hour later, only inside your allowed calling hours. If nobody answers it tries again a couple of times.</p>
+          <div className="flex justify-end"><Button variant="primary" disabled={!when || busy} onClick={go}>{busy ? 'Scheduling…' : 'Schedule call-back'}</Button></div>
+        </div>
+      </Dialog>
     </>
   )
 }
@@ -90,7 +123,7 @@ export function CallDetail() {
   const colors = ['#6356f1', '#0ea5e9', '#f59e0b', '#10b981']
   return (
     <>
-      <PageHeader title={call.caller} subtitle={`${call.phone} · ${new Date(call.time).toLocaleString('en-IN')}`} actions={<><StatusBadge status={call.outcome} /><Button onClick={() => toast.success('Replaying with the fixed prompt…')}>Replay with a fixed prompt</Button><Button onClick={() => toast('Thanks! We’ll look into that answer.')}>Report a bad answer</Button></>} />
+      <PageHeader title={call.caller} subtitle={`${call.phone} · ${new Date(call.time).toLocaleString('en-IN')}`} actions={<><StatusBadge status={call.outcome} />{!USE_MOCKS && !call.test && call.phone && call.agentId && <CallbackButton agentId={call.agentId} phone={call.phone} name={call.caller} />}<Button onClick={() => toast.success('Replaying with the fixed prompt…')}>Replay with a fixed prompt</Button><Button onClick={() => toast('Thanks! We’ll look into that answer.')}>Report a bad answer</Button></>} />
       {call.failReason && <Card className="mb-4 border-warn/40 bg-warn/10 p-4 text-warn"><span className="flex items-center gap-2"><Glyph e="⚠️" size={16} />{call.failReason}</span></Card>}
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">

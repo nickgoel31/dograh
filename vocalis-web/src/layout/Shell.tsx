@@ -5,7 +5,7 @@ import { Command } from 'cmdk'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   AlertCircle, AlertTriangle, CheckCircle2, Coins, Globe, Info, Key, Loader2, Mail, BarChart3, BookOpen, Bell, Bot, ChevronDown, ChevronRight, Code2, CreditCard, FlaskConical, HelpCircle, Home, Megaphone, Menu as MenuIcon,
-  MessageCircle, Mic2, Moon, Plus, Users, Wallet, PanelLeftClose, PanelLeftOpen, Phone, PhoneCall, Plug, Search, Settings, Sparkles, Sun, Check, ChevronsUpDown,
+  MessageCircle, Mic2, Moon, Plus, Users, Wallet, PanelLeftClose, PanelLeftOpen, Phone, PhoneCall, Plug, Search, Settings, Sparkles, Sun, Check, ChevronsUpDown, Zap,
 } from '@/components/icons'
 import { Toaster, toast } from 'sonner'
 import { Bubble } from '@typebot.io/react'
@@ -28,7 +28,7 @@ import { GetStarted } from '@/components/GetStarted'
 import { cn, money } from '@/lib/utils'
 
 const main = [
-  { to: '/', label: 'Home', icon: Home }, { to: '/agents', label: 'Agents', icon: Bot }, { to: '/conversations', label: 'Conversations', icon: PhoneCall }, { to: '/contacts', label: 'Contacts', icon: Users },
+  { to: '/', label: 'Home', icon: Home }, { to: '/agents', label: 'Agents', icon: Bot }, { to: '/conversations', label: 'Conversations', icon: PhoneCall }, { to: '/live', label: 'Live calls', icon: Zap }, { to: '/contacts', label: 'Contacts', icon: Users },
   { to: '/numbers', label: 'Phone Numbers', icon: Phone }, { to: '/campaigns', label: 'Campaigns', icon: Megaphone }, { to: '/knowledge', label: 'Knowledge', icon: BookOpen },
   { to: '/tools', label: 'Tools & Integrations', icon: Plug }, { to: '/voices', label: 'Voices', icon: Mic2 }, { to: '/testing', label: 'Testing Lab', icon: FlaskConical },
   { to: '/analytics', label: 'Analytics', icon: BarChart3 },
@@ -47,7 +47,7 @@ const GROUPS: Record<'voice' | 'chat' | 'api', Group[]> = {
   voice: [
     { items: pick('/') },
     { title: 'Build', items: pick('/agents', '/voices', '/knowledge', '/tools', '/testing') },
-    { title: 'Data', items: pick('/conversations', '/contacts', '/analytics') },
+    { title: 'Data', items: pick('/conversations', '/live', '/contacts', '/analytics') },
     { title: 'Reach', items: pick('/numbers', '/campaigns') },
     { title: 'Account', items: pick('/billing', '/developers') },
   ],
@@ -175,7 +175,7 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
   )
 }
 
-const crumbNames: Record<string, string> = { agents: 'Agents', conversations: 'Conversations', contacts: 'Contacts', numbers: 'Phone Numbers', campaigns: 'Campaigns', knowledge: 'Knowledge', tools: 'Tools & Integrations', voices: 'Voices', testing: 'Testing Lab', analytics: 'Analytics', developers: 'Developers', billing: 'Billing & Usage', 'swarvo-api': 'Swarvo API', chat: 'Chat Agents', inbox: 'Inbox', channels: 'Channels', docs: 'Documentation', models: 'Models', pricing: 'Pricing', settings: 'Team & Settings', help: 'Help', new: 'New', templates: 'Templates' }
+const crumbNames: Record<string, string> = { agents: 'Agents', conversations: 'Conversations', live: 'Live calls', contacts: 'Contacts', numbers: 'Phone Numbers', campaigns: 'Campaigns', knowledge: 'Knowledge', tools: 'Tools & Integrations', voices: 'Voices', testing: 'Testing Lab', analytics: 'Analytics', developers: 'Developers', billing: 'Billing & Usage', 'swarvo-api': 'Swarvo API', chat: 'Chat Agents', inbox: 'Inbox', channels: 'Channels', docs: 'Documentation', models: 'Models', pricing: 'Pricing', settings: 'Team & Settings', help: 'Help', new: 'New', templates: 'Templates' }
 function Breadcrumbs() {
   const { pathname } = useLocation()
   const agents = useData((s) => s.agents)

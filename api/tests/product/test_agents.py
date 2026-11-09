@@ -233,3 +233,15 @@ async def test_saving_languages_updates_a_hand_edited_prompt(client):
     assert r.status_code == 200, r.text
     p = r.json()["prompt"]
     assert p.startswith("Custom text.") and "English and Hindi" in p
+
+
+async def test_voicemail_detection_is_a_per_agent_setting(client):
+    from api.product import style as st
+
+    assert st.workflow_settings({"voicemail_detect": True})["voicemail_detection"] == {"enabled": True, "use_workflow_llm": True}
+    assert st.workflow_settings({"voicemail_detect": False})["voicemail_detection"]["enabled"] is False
+    assert "voicemail_detection" not in st.workflow_settings({})
+    _, tok = await signup(client, "a@x.com")
+    a = await new_agent(client, tok)
+    r = await client.patch(f"/product/agents/{a['id']}", json={"style": {"voicemail_detect": True}}, headers=bearer(tok))
+    assert r.status_code == 200 and r.json()["style"]["voicemail_detect"] is True

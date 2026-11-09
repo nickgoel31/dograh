@@ -423,6 +423,8 @@ class ProductSettingsModel(Base):
     brand_color = Column(String(9), nullable=True)
     logo_url = Column(String(500), nullable=True)
     sms_after_call = Column(String(300), nullable=True)  # text sent to the caller after each call; empty = off
+    whatsapp_after_call = Column(String(500), nullable=True)  # WhatsApp message sent to the caller after each call; empty = off
+    payment_link = Column(String(500), nullable=True)  # the workspace's own payment page, added to the WhatsApp follow-up as {payment_link}
     ip_allowlist = Column(JSON, nullable=True)  # networks allowed to sign in; empty = anywhere
     sso_domain = Column(String(120), nullable=True)  # company email domain that must use Google sign-in
     sso_required = Column(Boolean, nullable=False, default=False)
@@ -608,3 +610,17 @@ class ProductChatMessageModel(Base):
     text = Column(Text, nullable=False)
     ext_id = Column(String(80), nullable=True, index=True)  # the WhatsApp message id, so a retried delivery is not answered twice
     created_at = Column(DateTime(timezone=True), default=_now)
+
+
+class ProductStatusCheckModel(Base):
+    """One health check of one part of the platform, written every minute by the operator's scheduler. Feeds the public status page."""
+
+    __tablename__ = "product_status_checks"
+
+    id = Column(Integer, primary_key=True)
+    at = Column(DateTime(timezone=True), default=_now, nullable=False)
+    component = Column(String(40), nullable=False)
+    ok = Column(Boolean, nullable=False)
+    ms = Column(Integer, nullable=True)
+
+    __table_args__ = (Index("ix_product_status_checks_comp_at", "component", "at"),)

@@ -11,7 +11,7 @@ from sqlalchemy.pool import StaticPool
 
 from api.db import models, product_models
 from api.product import (agents_router, analytics_router, billing_router, calls_router, campaigns_router, config, conversations_router, deps, gateway,
-                         developers, developers_router, emailer, account_router, contacts_router, flowtry_router, google_auth, handoff_router, integrations_router, phonetest_router, help_router, home_router, import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, public_api, team_router, tools_router, voices_router, widget_router)
+                         developers, developers_router, emailer, public_info_router, live_router, account_router, contacts_router, flowtry_router, google_auth, handoff_router, integrations_router, phonetest_router, help_router, home_router, import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, public_api, team_router, tools_router, voices_router, widget_router)
 from api.product import assistant_router, chat_router, connectors_router, kyc_router, verify_router, admin_router, profile_router
 from api.product import router as product_router
 
@@ -22,6 +22,7 @@ TABLES = [
     product_models.ProductWorkspaceModel.__table__,
     product_models.ProductMembershipModel.__table__,
     product_models.ProductUserProfileModel.__table__,
+    product_models.ProductStatusCheckModel.__table__,
     product_models.ProductAgentModel.__table__,
     product_models.ProductVoiceFavoriteModel.__table__,
     models.ModelProfileModel.__table__,
@@ -169,7 +170,7 @@ class FakeTools:
     async def create_transfer(self, org_id, user_id, spec):
         n = next(self._n)
         t = {"id": n, "uuid": f"tool-{org_id}-{n}", "name": spec["name"], "description": spec["description"],
-             "definition": {"type": "transfer_call", "config": {"destination": spec["number"]}}}
+             "definition": {"type": "transfer_call", "config": {"destination": spec["number"], "customMessage": spec.get("message"), "timeout": spec.get("timeout")}}}
         self.items.setdefault(org_id, []).append(t)
         return t
 
@@ -183,7 +184,7 @@ class FakeCampaigns:
         self.csv: dict[int, str] = {}
 
     async def create(self, org_id, user_id, name, workflow_id, csv_text, schedule, retry):
-        c = {"ref": len(self.items) + 1, "name": name, "state": "created", "total": csv_text.count("\n") - 1, "workflow_id": workflow_id, "org": org_id}
+        c = {"ref": len(self.items) + 1, "name": name, "state": "created", "total": csv_text.count("\n") - 1, "workflow_id": workflow_id, "org": org_id, "retry": retry, "schedule": schedule}
         self.items.append(c)
         self.csv[c["ref"]] = csv_text
         return c
@@ -369,6 +370,8 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(kyc_router.router)
     app.include_router(verify_router.router)
     app.include_router(admin_router.router)
+    app.include_router(public_info_router.router)
+    app.include_router(live_router.router)
     app.include_router(profile_router.router)
     app.include_router(kyc_router.ops_router)
     app.include_router(kyc_router.hooks_router)

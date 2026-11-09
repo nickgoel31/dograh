@@ -205,7 +205,7 @@ export default function AgentDetail() {
         <TabPanel value="voice"><Q title="Pick a voice" hint="Press play to hear each one.">
           <VoicePick voices={voices} value={d.voiceId} onPick={(id) => up({ voiceId: id })} />
           {!USE_MOCKS && <HumanFeel agent={agent} studio={voice.brainLevels !== false && voice.provider !== 'Swarvo'} swarvo={voice.provider === 'Swarvo'} />}
-          {!USE_MOCKS && <CallSettings agent={agent} />}
+          {!USE_MOCKS && <CallSettings agent={agent} separate={voice.provider === 'Swarvo'} />}
           {USE_MOCKS && <>
           <div className="mt-6 grid gap-6 sm:grid-cols-3">
             <Field label="Language"><Select defaultValue={voice.lang}>{[...new Set(voices.map((v) => v.lang))].map((l) => <option key={l}>{l}</option>)}</Select></Field>

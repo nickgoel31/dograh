@@ -143,3 +143,53 @@ async def test_website_chat_and_white_label_branding(client):
     assert child["branding"]["name"] == "Acme Voice"  # sub-accounts show their agency's brand
     usage = (await client.get("/product/team/sub-accounts/usage", headers=h)).json()
     assert [a["name"] for a in usage["accounts"]] == ["Client One"] and usage["total_minutes"] == 0
+
+
+def test_whatsapp_follow_up_text_and_template_choice():
+    from api.product import whatsapp
+
+    assert whatsapp.render("Hi {name},\nthanks from {business}!  Pay: {payment_link}", name="Asha Rao", business="Sunrise", link="https://pay.example/x") == "Hi Asha, thanks from Sunrise! Pay: https://pay.example/x"
+    assert whatsapp.render("Hello {name}", name=None, business="X", link=None) == "Hello there"
+    assert whatsapp.params_for("Thanks!", None) == ("swarvo_followup", ["Thanks!"])
+    assert whatsapp.params_for("Thanks!", "https://pay.example/x") == ("swarvo_followup_pay", ["Thanks!", "https://pay.example/x"])
+    assert whatsapp.params_for("Pay at https://pay.example/x", "https://pay.example/x")[0] == "swarvo_followup"  # the link is already in the words
+
+
+async def test_whatsapp_follow_up_goes_to_new_callers_but_not_to_people_who_asked_to_stop(client, monkeypatch):
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    ws = await workspace(client)
+    r = await client.put("/product/team/settings", headers=h, json={"record_calls": True, "redact_pii": False, "whatsapp_after_call": "Thanks for calling {business}! Pay here: {payment_link}", "payment_link": "https://pay.example/shop"})
+    assert r.status_code == 200 and r.json()["payment_link"] == "https://pay.example/shop"
+    bad = await client.put("/product/team/settings", headers=h, json={"record_calls": True, "redact_pii": False, "payment_link": "http://insecure.example"})
+    assert bad.status_code == 400
+    await live_run(client, ws.live_org_id, 821, "+919800000011", said=["Hi"])
+    await live_run(client, ws.live_org_id, 821, "+919800000012", said=["Please do not call me again"])
+    sent = []
+
+    async def fake_wa(phone, text, link=None):
+        sent.append((phone, text, link))
+        return True
+
+    async with client.session_factory() as s:
+        out = await post_call.contacts_and_texts(s, wa_send=fake_wa)
+    assert out["whatsapp"] == 1 and sent[0][0] == "+919800000011" and "https://pay.example/shop" in sent[0][1]
+
+
+async def test_live_calls_lists_only_calls_in_progress_in_this_workspace(client):
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    ws = await workspace(client)
+    await live_run(client, ws.live_org_id, 831, "+919800000021")  # finished: not listed
+    async with client.session_factory() as s:
+        s.add(models.WorkflowRunModel(name="now", workflow_id=831, mode="twilio", state="running", is_completed=False, initial_context={"caller_number": "+919800000022", "caller_name": "Ravi"},
+                                      created_at=datetime.now(UTC) - timedelta(seconds=75)))
+        s.add(models.WorkflowRunModel(name="stuck", workflow_id=831, mode="twilio", state="running", is_completed=False, initial_context={"caller_number": "+919800000023"},
+                                      created_at=datetime.now(UTC) - timedelta(hours=9)))  # never reported an end: not still going
+        await s.commit()
+    r = (await client.get("/product/live", headers={**h, "X-Environment": "live"})).json()
+    assert [c["caller"] for c in r["calls"]] == ["Ravi"] and 60 <= r["calls"][0]["seconds"] < 120
+    assert (await client.get("/product/live", headers=h)).json()["calls"] == []  # Test mode is another organization
+    client.cookies.clear()
+    _, tok_b = await signup(client, "b@x.com")
+    assert (await client.get("/product/live", headers={**bearer(tok_b), "X-Environment": "live"})).json()["calls"] == []

@@ -35,6 +35,8 @@ import WidgetPage from '@/pages/Widget'
 import Onboarding from '@/pages/Onboarding'
 import Contacts from '@/pages/Contacts'
 import { ResetPage, VerifyPage } from '@/pages/AccountPages'
+import PublicSite, { publicPageFor } from '@/pages/PublicPages'
+import LivePage from '@/pages/Live'
 
 /** Real mode: show sign-in until a session exists; keep the active workspace valid. */
 function Gate({ children }: { children: React.ReactNode }) {
@@ -97,6 +99,8 @@ export default function App() {
     return <BrowserRouter basename={BASE}><Routes><Route path="chat-widget/:key" element={<ChatWidgetPage />} /></Routes></BrowserRouter>
   }
   const p = window.location.pathname
+  const pub = publicPageFor(p)
+  if (pub) return <QueryClientProvider client={queryClient}><PublicSite page={pub} /></QueryClientProvider>
   if (p === `${BASE}/reset` || p === `${BASE}/verify`) {
     return <QueryClientProvider client={queryClient}>{p.endsWith('/reset') ? <ResetPage /> : <VerifyPage />}</QueryClientProvider>
   }
@@ -116,6 +120,7 @@ export default function App() {
           <Route path="agents/:id" element={<AgentDetail />} />
           <Route path="conversations" element={<Conversations />} />
           <Route path="conversations/:id" element={<CallDetail />} />
+          <Route path="live" element={<LivePage />} />
           <Route path="numbers" element={<Numbers />} />
           <Route path="campaigns" element={<Campaigns />} />
           <Route path="campaigns/new" element={<NewCampaign />} />

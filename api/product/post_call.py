@@ -7,32 +7,41 @@ from sqlalchemy import select
 
 from api.db.models import TelephonyPhoneNumberModel, UserModel, WorkflowModel, WorkflowRunModel
 from api.db.product_models import ProductCallInsightModel, ProductWorkspaceModel
-from api.product import config, emailer, sms
+from api.product import config, emailer, sms, whatsapp
 from api.product import contacts as ct
 from api.product import conversations as conv
 from api.product.notifications import notify
 from api.product.privacy import get_settings
 
 
-async def contacts_and_texts(session, send=sms.send, limit: int = 30) -> dict:
+async def contacts_and_texts(session, send=sms.send, limit: int = 30, wa_send=whatsapp.send) -> dict:
     """Fold new calls into contacts; text each new caller if the workspace has an after-call message set up."""
-    texts = seen_total = 0
+    texts = seen_total = wa_total = 0
     auth_id, token = os.getenv("PRODUCT_PLIVO_AUTH_ID"), os.getenv("PRODUCT_PLIVO_AUTH_TOKEN")
     for ws in (await session.scalars(select(ProductWorkspaceModel))).all():
         seen = await ct.sync(session, ws)
         seen_total += len(seen)
-        text = (await get_settings(session, ws.id)).sms_after_call
-        if not (text and auth_id and token and seen):
+        settings = await get_settings(session, ws.id)
+        text = settings.sms_after_call
+        wa_text = settings.whatsapp_after_call if whatsapp.configured() or wa_send is not whatsapp.send else None
+        if not seen or not (text or wa_text):
             continue
-        src = await session.scalar(select(TelephonyPhoneNumberModel.address).where(TelephonyPhoneNumberModel.organization_id == ws.live_org_id, TelephonyPhoneNumberModel.is_active.is_(True)).limit(1))
         stop = await ct.blocked_set(session, ws.id)
-        done: set[str] = set()
-        for _, phone in seen:
-            if src and phone not in stop and phone not in done and texts < limit:
-                done.add(phone)
-                texts += bool(await send(auth_id, token, src, phone, text))
+        if text and auth_id and token:
+            src = await session.scalar(select(TelephonyPhoneNumberModel.address).where(TelephonyPhoneNumberModel.organization_id == ws.live_org_id, TelephonyPhoneNumberModel.is_active.is_(True)).limit(1))
+            done: set[str] = set()
+            for _, phone in seen:
+                if src and phone not in stop and phone not in done and texts < limit:
+                    done.add(phone)
+                    texts += bool(await send(auth_id, token, src, phone, text))
+        if wa_text:
+            sent_to: set[str] = set()
+            for _, phone in seen:
+                if phone not in stop and phone not in sent_to and wa_total < limit:
+                    sent_to.add(phone)
+                    wa_total += bool(await wa_send(phone, whatsapp.render(wa_text, name=None, business=ws.name, link=settings.payment_link), settings.payment_link))
     await session.commit()
-    return {"contacts": seen_total, "texts": texts}
+    return {"contacts": seen_total, "texts": texts, "whatsapp": wa_total}
 
 
 def _stats(runs: list, moods: dict[int, int | None]) -> dict:

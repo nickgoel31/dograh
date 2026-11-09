@@ -68,6 +68,8 @@ class SettingsBody(BaseModel):
     brand_color: str | None = Field(default=None, max_length=9)
     logo_url: str | None = Field(default=None, max_length=500)
     sms_after_call: str | None = Field(default=None, max_length=300)
+    whatsapp_after_call: str | None = Field(default=None, max_length=500)
+    payment_link: str | None = Field(default=None, max_length=500)
     ip_allowlist: list[str] | None = Field(default=None, max_length=30)  # None = leave as it is
     sso_domain: str | None = Field(default=None, max_length=120)
     sso_required: bool | None = None
@@ -212,7 +214,7 @@ def _settings_out(s) -> SettingsOut:
     if s.retention_days:
         notes.append("Older recordings and transcripts are cleared by the operator's daily job, or by the owner using Clear now.")
     return SettingsOut(record_calls=bool(s.record_calls), consent_announcement=s.consent_announcement, redact_pii=bool(s.redact_pii), retention_days=s.retention_days,
-                       widget_origins=list(s.widget_origins or []), summary_emails=list(s.summary_emails or []), brand_name=s.brand_name, brand_color=s.brand_color, logo_url=s.logo_url, sms_after_call=s.sms_after_call, ip_allowlist=list(s.ip_allowlist or []), sso_domain=s.sso_domain, sso_required=bool(s.sso_required), notes=notes)
+                       widget_origins=list(s.widget_origins or []), summary_emails=list(s.summary_emails or []), brand_name=s.brand_name, brand_color=s.brand_color, logo_url=s.logo_url, sms_after_call=s.sms_after_call, whatsapp_after_call=s.whatsapp_after_call, payment_link=s.payment_link, ip_allowlist=list(s.ip_allowlist or []), sso_domain=s.sso_domain, sso_required=bool(s.sso_required), notes=notes)
 
 
 @router.get("/settings", response_model=SettingsOut)
@@ -243,6 +245,9 @@ async def put_settings(body: SettingsBody, request: Request, ctx: Ctx = Depends(
         raise product_error(400, "bad_logo", "The logo address must start with https://")
     s.brand_name, s.brand_color = (body.brand_name or "").strip() or None, (body.brand_color or "").strip() or None
     s.logo_url, s.sms_after_call = (body.logo_url or "").strip() or None, (body.sms_after_call or "").strip() or None
+    if body.payment_link and not body.payment_link.strip().lower().startswith("https://"):
+        raise product_error(400, "bad_payment_link", "The payment link must start with https://")
+    s.whatsapp_after_call, s.payment_link = (body.whatsapp_after_call or "").strip() or None, (body.payment_link or "").strip() or None
     from api.product import security
 
     if body.ip_allowlist is not None:

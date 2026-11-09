@@ -11,9 +11,9 @@ import type { components } from '@/lib/api/schema'
 /** The platform's own call settings, set exactly as in the classic UI: concurrency, ambient noise, turn detection, context compaction and call limits. */
 type Style = {
   call_ambient?: { enabled: boolean; volume: number }; call_turn_strategy?: 'transcription' | 'turn_analyzer'; call_turn_secs?: number; call_compaction?: boolean
-  call_max_seconds?: number; call_idle_seconds?: number; call_concurrency?: number; max_minutes?: number; silence_seconds?: number
+  call_max_seconds?: number; call_idle_seconds?: number; call_concurrency?: number; voicemail_detect?: boolean; max_minutes?: number; silence_seconds?: number
 }
-type Form = { concurrency: string; ambient: { enabled: boolean; volume: number }; strategy: 'transcription' | 'turn_analyzer'; turnSecs: number; compaction: boolean; maxSecs: number; idleSecs: number }
+type Form = { concurrency: string; ambient: { enabled: boolean; volume: number }; strategy: 'transcription' | 'turn_analyzer'; turnSecs: number; compaction: boolean; maxSecs: number; idleSecs: number; voicemail: boolean }
 
 const fromStyle = (s: Style): Form => ({
   concurrency: s.call_concurrency ? String(s.call_concurrency) : '',
@@ -23,6 +23,7 @@ const fromStyle = (s: Style): Form => ({
   compaction: s.call_compaction ?? false,
   maxSecs: s.call_max_seconds ?? (s.max_minutes ?? 15) * 60,
   idleSecs: s.call_idle_seconds ?? s.silence_seconds ?? 10,
+  voicemail: s.voicemail_detect ?? false,
 })
 
 const H = ({ t, d }: { t: string; d: string }) => <div className="space-y-0.5"><h4 className="text-[13px] font-semibold">{t}</h4><p className="text-xs text-soft">{d}</p></div>
@@ -32,7 +33,7 @@ const Row = ({ title, desc, children }: { title: string; desc?: string; children
   <div className="flex items-center justify-between gap-4 rounded-xl border bg-surface px-4 py-3"><div className="min-w-0"><div className="text-[13px] font-semibold">{title}</div>{desc && <p className="text-xs text-soft">{desc}</p>}</div>{children}</div>
 )
 
-export function CallSettings({ agent }: { agent: Agent }) {
+export function CallSettings({ agent, separate = false }: { agent: Agent; separate?: boolean }) {
   const upsert = useData((s) => s.upsertAgent)
   const style = (agent.style as Style) ?? {}
   const [f, setF] = React.useState<Form>(fromStyle(style))
@@ -48,7 +49,7 @@ export function CallSettings({ agent }: { agent: Agent }) {
   const save = async () => {
     setBusy(true)
     try {
-      const body: Style = { call_ambient: { enabled: f.ambient.enabled, volume: f.ambient.volume }, call_turn_strategy: f.strategy, call_turn_secs: f.turnSecs, call_compaction: f.compaction, call_max_seconds: f.maxSecs, call_idle_seconds: f.idleSecs, call_concurrency: limit }
+      const body: Style = { call_ambient: { enabled: f.ambient.enabled, volume: f.ambient.volume }, call_turn_strategy: f.strategy, call_turn_secs: f.turnSecs, call_compaction: f.compaction, call_max_seconds: f.maxSecs, call_idle_seconds: f.idleSecs, voicemail_detect: f.voicemail, call_concurrency: limit }
       const out = await http<components['schemas']['AgentOut']>(`/agents/${agent.id}`, { method: 'PATCH', json: { style: body }, headers: { 'If-Match': String(agent.version ?? 0) } })
       upsert(toAgent(out, agent)); toast.success('Call settings saved. Go live again for real calls to use them.')
     } catch (e) { toast.error(e instanceof Error ? e.message : 'We could not save that.') } finally { setBusy(false) }
@@ -92,6 +93,12 @@ export function CallSettings({ agent }: { agent: Agent }) {
           <Input type="number" step="0.5" min={0.5} max={10} value={f.turnSecs} className="font-mono" onChange={(e) => num(e.target.value, parseFloat, (n) => n >= 0.5 && n <= 10, (n) => set({ turnSecs: n }))} />
           <Hint>Max silence duration before ending an incomplete turn. Default: 2 seconds</Hint>
         </div>
+      </div>
+
+      <div className="space-y-3 border-t pt-5">
+        <H t="Voicemail" d="When an answering machine picks up, hang up instead of talking to a recording, so you do not pay for it. Works well with campaigns: set them to retry on voicemail." />
+        <Row title="Hang up on answering machines" desc={separate ? undefined : 'This voice talks speech-to-speech, which cannot listen for answering machines. Pick a Swarvo voice to use this.'}>
+          <Switch label="Hang up on answering machines" checked={f.voicemail} onChange={(v) => set({ voicemail: v })} /></Row>
       </div>
 
       <div className="space-y-3 border-t pt-5">

@@ -54,4 +54,28 @@ ARTICLES = [
      "Turn on two-step sign-in in Settings. Scan the code with an authenticator app, enter the 6-digit code it shows, and from then on you'll need a code each time you sign in."),
     ("widget", "Adding a call button to your website", "Developers",
      "Add your website under Settings, then paste the snippet from Developers onto your page. Visitors can talk to a live agent from their browser. Calls use your Live balance."),
+    ("templates", "Starting from a template or describing your business", "Getting started",
+     "Open Agents, then New agent. Pick what the agent should do, describe your business in a few sentences, and the platform's AI writes the first version: a name, what it does, and a step-by-step call script. "
+     "You check and edit it before it is created. Prefer to start from a proven example? Browse templates by industry, such as clinics, salons, real estate, restaurants, schools and more."),
+    ("languages", "Languages and scripts", "Voices",
+     "On the agent's Voice tab choose up to two languages. Each language is always written in its own script, so Hindi is Devanagari and English is Latin letters. "
+     "Save, then press Go live again so real calls use the change."),
+    ("whatsapp-followup", "WhatsApp follow-up after a call", "Phone numbers",
+     "Under Settings, write a short message and, if you like, add your payment link. After each call we send it to the caller on WhatsApp. Use {name}, {business} and {payment_link} in the words. "
+     "Only turn it on if callers are told on the call that they will get a message. Anyone who asked not to be contacted is skipped. WhatsApp requires the operator to have approved message templates first."),
+    ("voicemail", "Voicemail and answering machines", "Campaigns",
+     "Turn on voicemail detection on the agent's Voice tab. When an answering machine picks up, the agent hangs up instead of talking to a recording, so you do not pay for it. "
+     "It works with voices that run as separate listen, think and speak steps (Swarvo voices), not with the live speech-to-speech voices."),
+    ("retries", "Retries and call-backs", "Campaigns",
+     "When you start a campaign, choose how many times to retry, how long to wait, and whether to retry on busy, no answer and voicemail. "
+     "To call one person back at a time they asked for, open their call and choose Call back. It follows the same calling-hours and do-not-call rules."),
+    ("live-calls", "Seeing calls as they happen", "Insights",
+     "Open Live calls to see which calls are happening right now, which agent is on each, who is calling and for how long. The list refreshes by itself. A call's transcript appears under Conversations when it ends."),
+    ("handover", "Passing a call to a person", "Knowledge and tools",
+     "On the agent's page, turn on handover and enter the number with its country code. Say when the agent should pass the call over, what the caller hears while it connects, and how long to ring before the agent comes back."),
+    ("api-reference", "API reference and client libraries", "Developers",
+     "Open Developers, then API reference, for every endpoint with examples you can copy in curl, Python and TypeScript. Download the one-file Python or TypeScript client. "
+     "Use a key that starts with sk_test_ to try things safely on your Test data."),
+    ("status", "Is something down? Status and changelog", "Account",
+     "The public status page shows whether the app, voice models and voices are working, with 30 days of history. The changelog lists what is new. Both open without signing in."),
 ]

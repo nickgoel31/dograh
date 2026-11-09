@@ -109,6 +109,9 @@ export function DevelopersReal() {
   return (
     <>
       <PageHeader title="Developers" subtitle={`Connect your own apps. You're looking at ${mode === 'test' ? 'Test' : 'Live'} data.`} />
+      <Card className="mb-6 flex flex-wrap items-center gap-3 p-5"><div className="min-w-0 flex-1"><h3 className="font-semibold">API reference and client libraries</h3><p className="text-[13px] text-soft">Every endpoint with copy-ready examples, webhook signing, and one-file Python and TypeScript clients. Use an <code>sk_test_</code> key to try things safely.</p></div>
+        <a href={`${BASE}/api-reference`} target="_blank" rel="noreferrer"><Button variant="primary">Open the API reference</Button></a>
+        <a href={`${API_URL}/public/sdk/python`} download="swarvo.py"><Button>Python client</Button></a><a href={`${API_URL}/public/sdk/typescript`} download="swarvo.ts"><Button>TypeScript client</Button></a></Card>
       <Card className="mb-6 p-6"><h3 className="font-semibold">Read your calls from your own software</h3>
         <p className="mt-1 text-[13px] text-soft">Available: <code>GET /public/me</code>, <code>/public/agents</code>, <code>/public/calls</code> and <code>/public/calls/&#123;id&#125;</code>. Starting calls from the API is not available yet.</p>
         <Tabs value={lang} onValueChange={setLang} className="mt-4"><TabsList>{[['curl', 'cURL'], ['node', 'Node'], ['python', 'Python']].map(([v, l]) => <Tab key={v} value={v}>{l}</Tab>)}</TabsList>
@@ -143,10 +146,10 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 function Privacy({ canEdit, isOwner }: { canEdit: boolean; isOwner: boolean }) {
   const qc = useQueryClient()
   const q = useQuery({ queryKey: ['privacy'], queryFn: P.settings })
-  const [f, setF] = React.useState<{ record_calls: boolean; redact_pii: boolean; retention_days: string; consent: string; origins: string; emails: string; sms: string; brandName: string; brandColor: string; logo: string } | null>(null)
-  React.useEffect(() => { if (q.data) setF({ sms: q.data.sms_after_call ?? '', brandName: q.data.brand_name ?? '', brandColor: q.data.brand_color ?? '', logo: q.data.logo_url ?? '', emails: q.data.summary_emails.join(String.fromCharCode(10)), record_calls: q.data.record_calls, redact_pii: q.data.redact_pii, retention_days: q.data.retention_days ? String(q.data.retention_days) : '', consent: q.data.consent_announcement ?? '', origins: q.data.widget_origins.join('\n') }) }, [q.data])
+  const [f, setF] = React.useState<{ record_calls: boolean; redact_pii: boolean; retention_days: string; consent: string; origins: string; emails: string; sms: string; wa: string; pay: string; brandName: string; brandColor: string; logo: string } | null>(null)
+  React.useEffect(() => { if (q.data) setF({ sms: q.data.sms_after_call ?? '', wa: q.data.whatsapp_after_call ?? '', pay: q.data.payment_link ?? '', brandName: q.data.brand_name ?? '', brandColor: q.data.brand_color ?? '', logo: q.data.logo_url ?? '', emails: q.data.summary_emails.join(String.fromCharCode(10)), record_calls: q.data.record_calls, redact_pii: q.data.redact_pii, retention_days: q.data.retention_days ? String(q.data.retention_days) : '', consent: q.data.consent_announcement ?? '', origins: q.data.widget_origins.join('\n') }) }, [q.data])
   const save = useMutation({
-    mutationFn: () => P.saveSettings({ sms_after_call: f!.sms || null, brand_name: f!.brandName || null, brand_color: f!.brandColor || null, logo_url: f!.logo || null, summary_emails: f!.emails.split(new RegExp("[,; " + String.fromCharCode(10) + "]+")).map((x) => x.trim()).filter(Boolean), record_calls: f!.record_calls, redact_pii: f!.redact_pii, retention_days: f!.retention_days ? Number(f!.retention_days) : null, consent_announcement: f!.consent || null, widget_origins: f!.origins.split('\n').map((x) => x.trim()).filter(Boolean) }),
+    mutationFn: () => P.saveSettings({ sms_after_call: f!.sms || null, whatsapp_after_call: f!.wa || null, payment_link: f!.pay || null, brand_name: f!.brandName || null, brand_color: f!.brandColor || null, logo_url: f!.logo || null, summary_emails: f!.emails.split(new RegExp("[,; " + String.fromCharCode(10) + "]+")).map((x) => x.trim()).filter(Boolean), record_calls: f!.record_calls, redact_pii: f!.redact_pii, retention_days: f!.retention_days ? Number(f!.retention_days) : null, consent_announcement: f!.consent || null, widget_origins: f!.origins.split('\n').map((x) => x.trim()).filter(Boolean) }),
     onSuccess: () => { toast.success('Saved'); qc.invalidateQueries({ queryKey: ['privacy'] }) }, onError: say,
   })
   const [purge, setPurge] = React.useState(false)
@@ -159,6 +162,9 @@ function Privacy({ canEdit, isOwner }: { canEdit: boolean; isOwner: boolean }) {
       <Field label="Keep recordings and transcripts for (days)" hint="Leave empty to keep them."><Input className="w-40" type="number" min={1} value={f.retention_days} onChange={(e) => set({ retention_days: e.target.value })} /></Field>
       <Field label="What callers hear first on Live calls" hint="Added to the greeting the next time each agent goes live."><Textarea value={f.consent} onChange={(e) => set({ consent: e.target.value })} placeholder="This call may be recorded to help us serve you better." /></Field>
       <Field label="Text callers after every call" hint="Sent from your number. In India the wording must be registered with your carrier (DLT). Leave empty to turn off."><Textarea value={f.sms} onChange={(e) => set({ sms: e.target.value })} placeholder="Thanks for calling! Reply here if you need anything." /></Field>
+      <div className="rounded-xl border p-4"><div className="text-sm font-semibold">WhatsApp after every call</div><p className="mb-3 text-xs text-soft">Sent from our WhatsApp number to each caller. Use {'{name}'}, {'{business}'} and {'{payment_link}'} in the words. Only turn this on if callers are told on the call that they will get a message. Leave empty to turn off.</p>
+        <Field label="Message"><Textarea value={f.wa} onChange={(e) => set({ wa: e.target.value })} placeholder="Thanks for calling {business}! You can pay here: {payment_link}" /></Field>
+        <div className="mt-3"><Field label="Your payment link" hint="A page you already have, like a Razorpay payment page. Must start with https://"><Input value={f.pay} onChange={(e) => set({ pay: e.target.value })} placeholder="https://rzp.io/l/your-shop" /></Field></div></div>
       <div className="rounded-xl border p-4"><div className="text-sm font-semibold">Your own brand</div><p className="mb-3 text-xs text-soft">Shown in the app for you, your team and any sub-accounts.</p>
         <div className="grid gap-3 sm:grid-cols-3"><Field label="Name"><Input value={f.brandName} onChange={(e) => set({ brandName: e.target.value })} placeholder="Acme Voice" /></Field>
           <Field label="Colour"><div className="flex items-center gap-2"><input type="color" aria-label="Brand colour" className="h-10 w-12 cursor-pointer rounded-lg border bg-surface p-1" value={f.brandColor || '#0b5c4c'} onChange={(e) => set({ brandColor: e.target.value })} /><Input value={f.brandColor} onChange={(e) => set({ brandColor: e.target.value })} placeholder="#0b5c4c" /></div></Field>
@@ -313,6 +319,7 @@ export function HelpReal() {
         <div className="mt-4 flex flex-wrap gap-2">{SUGGESTIONS.map((x) => <button key={x} onClick={() => { setQ(x); setSection(null) }} className="rounded-full bg-white/15 px-3 py-1 text-[13px] hover:bg-white/25">{x}</button>)}</div>
       </div>
 
+      <div className="-mt-4 mb-6 flex flex-wrap gap-2 text-[13px]">{[['status', 'Platform status'], ['changelog', 'What is new'], ['security', 'Security'], ['api-reference', 'API reference']].map(([k, l]) => <a key={k} href={`${BASE}/${k}`} target="_blank" rel="noreferrer" className="rounded-full border px-3 py-1.5 text-soft transition hover:bg-muted hover:text-ink">{l} ↗</a>)}</div>
       <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
         <div>
           {!searching && !section && (

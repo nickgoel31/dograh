@@ -14,10 +14,10 @@ const say = (e: unknown) => toast.error(e instanceof Error ? e.message : 'Someth
 export function AgentPhone({ agentId, live }: { agentId: string; live: boolean }) {
   const qc = useQueryClient()
   const nums = useQuery({ queryKey: ['numbers'], queryFn: () => http<Num[]>('/numbers') })
-  const ho = useQuery({ queryKey: ['handover', agentId], queryFn: () => http<{ enabled: boolean; number: string | null; when: string | null }>(`/tools/handover/${agentId}`) })
-  const [form, setForm] = React.useState({ number: '', when: 'The caller asks to speak to a person, or the agent cannot help.' })
+  const ho = useQuery({ queryKey: ['handover', agentId], queryFn: () => http<{ enabled: boolean; number: string | null; when: string | null; message?: string | null; timeout?: number | null }>(`/tools/handover/${agentId}`) })
+  const [form, setForm] = React.useState({ number: '', when: 'The caller asks to speak to a person, or the agent cannot help.', message: "One moment, I'll connect you now.", timeout: 30 })
   const [phone, setPhone] = React.useState('')
-  React.useEffect(() => { if (ho.data?.enabled) setForm({ number: ho.data.number ?? '', when: ho.data.when ?? form.when }) }, [ho.data?.enabled, ho.data?.number]) // eslint-disable-line react-hooks/exhaustive-deps
+  React.useEffect(() => { if (ho.data?.enabled) setForm({ number: ho.data.number ?? '', when: ho.data.when ?? form.when, message: ho.data.message ?? form.message, timeout: ho.data.timeout ?? form.timeout }) }, [ho.data?.enabled, ho.data?.number]) // eslint-disable-line react-hooks/exhaustive-deps
   const assign = useMutation({ mutationFn: (v: { id: string; to: string | null }) => http(`/numbers/${v.id}/assign`, { method: 'POST', json: { agent_id: v.to } }), onSuccess: () => qc.invalidateQueries({ queryKey: ['numbers'] }), onError: say })
   const saveHo = useMutation({ mutationFn: () => http(`/tools/handover/${agentId}`, { method: 'PUT', json: form }), onSuccess: () => { toast.success('Saved. Go live again to use it on real calls.'); qc.invalidateQueries({ queryKey: ['handover', agentId] }) }, onError: say })
   const offHo = useMutation({ mutationFn: () => http(`/tools/handover/${agentId}`, { method: 'DELETE' }), onSuccess: () => { toast.success('Turned off'); qc.invalidateQueries({ queryKey: ['handover', agentId] }) }, onError: say })
@@ -41,7 +41,9 @@ export function AgentPhone({ agentId, live }: { agentId: string; live: boolean }
           {ho.data?.enabled && <Badge tone="green">On</Badge>}</div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <Field label="Ring this number"><Input value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} placeholder="+919876543210" /></Field>
-          <Field label="When should it hand over?"><Textarea className="min-h-[44px]" value={form.when} onChange={(e) => setForm({ ...form, when: e.target.value })} /></Field></div>
+          <Field label="When should it hand over?"><Textarea className="min-h-[44px]" value={form.when} onChange={(e) => setForm({ ...form, when: e.target.value })} /></Field>
+          <Field label="What the caller hears while it connects"><Input value={form.message} maxLength={200} onChange={(e) => setForm({ ...form, message: e.target.value })} /></Field>
+          <Field label="Ring for" hint="If nobody answers, the agent carries on with the caller."><select className="h-10 w-full rounded-xl border bg-surface px-3 text-sm" value={form.timeout} onChange={(e) => setForm({ ...form, timeout: Number(e.target.value) })}>{[15, 20, 30, 45, 60].map((n) => <option key={n} value={n}>{n} seconds</option>)}</select></Field></div>
         <div className="mt-3 flex gap-2"><Button variant="primary" disabled={!form.number.trim() || saveHo.isPending} onClick={() => saveHo.mutate()}>{ho.data?.enabled ? 'Update' : 'Turn on'}</Button>
           {ho.data?.enabled && <Button onClick={() => offHo.mutate()}>Turn off</Button>}</div>
       </Card>

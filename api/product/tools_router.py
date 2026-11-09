@@ -60,7 +60,7 @@ class CoreTools:
         from api.services.tool_management import create_tool_for_user
 
         req = CreateToolRequest(name=spec["name"], description=spec["description"], category="transfer_call", definition={
-            "type": "transfer_call", "config": {"destination": spec["number"], "messageType": "custom", "customMessage": "One moment, I'll connect you now.", "timeout": 30}})
+            "type": "transfer_call", "config": {"destination": spec["number"], "messageType": "custom", "customMessage": spec.get("message") or "One moment, I'll connect you now.", "timeout": spec.get("timeout") or 30}})
         t = await self._call(create_tool_for_user(req, self._user(org_id, user_id), source="product"))
         return {"id": t.id, "uuid": t.tool_uuid, "name": t.name}
 
@@ -263,6 +263,8 @@ _E164 = re.compile(r"^\+[1-9]\d{6,14}$")
 class HandoverBody(BaseModel):
     number: str = Field(max_length=20)
     when: str = Field(default="The caller asks to speak to a person, or the agent cannot help.", min_length=5, max_length=400)
+    message: str = Field(default="One moment, I'll connect you now.", min_length=3, max_length=200)  # what the caller hears while the call is passed over
+    timeout: int = Field(default=30, ge=10, le=60)  # seconds to ring the person before giving up and coming back to the agent
 
 
 def _handover_name(agent) -> str:
@@ -287,7 +289,9 @@ async def handover_get(agent_id: str, ctx: Ctx = Depends(get_ctx), gw: ToolsGate
     agent, graph = await _agent_graph(ctx, pg, agent_id)
     mine = next((t for t in await _tools(ctx, gw) if t["name"] == _handover_name(agent)), None)
     on = mine is not None and any(mine["uuid"] in ((n.get("data") or {}).get("tool_uuids") or []) for n in graph.get("nodes", []))
-    return {"enabled": on, "number": _view(mine).number if on else None, "when": mine["description"] if on else None}
+    cfg = ((mine or {}).get("definition") or {}).get("config", {})
+    return {"enabled": on, "number": _view(mine).number if on else None, "when": mine["description"] if on else None,
+            "message": cfg.get("customMessage") if on else None, "timeout": cfg.get("timeout") if on else None}
 
 
 @router.put("/handover/{agent_id}")
@@ -299,7 +303,7 @@ async def handover_set(agent_id: str, body: HandoverBody, ctx: Ctx = Depends(req
     old = next((t for t in await _tools(ctx, gw) if t["name"] == name), None)
     if old:
         await gw.archive(ctx.workspace.test_org_id, ctx.user.id, old["uuid"])
-    spec = {"name": name, "description": body.when.strip(), "number": body.number.strip()}
+    spec = {"name": name, "description": body.when.strip(), "number": body.number.strip(), "message": body.message.strip(), "timeout": body.timeout}
     made = await gw.create_transfer(ctx.workspace.test_org_id, ctx.user.id, spec)
     try:  # the Live twin is matched by name when the agent goes live
         for t in await gw.list(ctx.workspace.live_org_id, ctx.user.id):

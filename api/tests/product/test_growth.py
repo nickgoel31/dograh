@@ -329,3 +329,60 @@ async def test_calendar_booking_through_calcom(client):
     assert (await client.get("/product/hooks/calendar/wrong-token/slots", params={"date": day})).status_code == 404
     assert (await client.delete("/product/integrations/calendar", headers=ha)).status_code == 204
     assert (await client.get("/product/tools", headers=ha)).json() == []
+
+
+async def _live_agent_with_number(client, ha):
+    aid = await agent(client, ha)
+    await client.post(f"/product/agents/{aid}/publish", headers=ha)
+    async with client.session_factory() as s:
+        ws = (await s.execute(select(product_models.ProductWorkspaceModel))).scalars().first()
+        cfg = models.TelephonyConfigurationModel(organization_id=ws.live_org_id, name="c", provider="twilio", credentials={})
+        s.add(cfg)
+        await s.flush()
+        s.add(models.TelephonyPhoneNumberModel(organization_id=ws.live_org_id, telephony_configuration_id=cfg.id, address="+919800000001", address_normalized="919800000001",
+                                               address_type="PSTN", country_code="IN", is_active=True))
+        await s.commit()
+    return aid
+
+
+async def test_retry_rules_reach_the_platform(client):
+    _, tok = await signup(client, "a@x.com")
+    ha = bearer(tok)
+    live = {**ha, "X-Environment": "live"}
+    aid = await _live_agent_with_number(client, ha)
+    body = {"name": "R", "agent_id": aid, "csv_text": CSV, "slots": [{"day_of_week": 1, "start_time": "10:00", "end_time": "17:00"}], "consent_confirmed": True, "dnc_checked": True,
+            "max_retries": 3, "retry_delay_minutes": 15, "retry_on_busy": False, "retry_on_voicemail": True}
+    assert (await client.post("/product/campaigns", json=body, headers=live)).status_code == 201
+    assert client.camps.items[0]["retry"] == {"max_retries": 3, "delay": 900, "on_busy": False, "on_no_answer": True, "on_voicemail": True}
+
+
+async def test_a_call_back_is_a_one_person_campaign_in_a_one_hour_window(client):
+    from datetime import timedelta
+
+    _, tok = await signup(client, "a@x.com")
+    ha = bearer(tok)
+    live = {**ha, "X-Environment": "live"}
+    aid = await _live_agent_with_number(client, ha)
+    when = (datetime.now() + timedelta(days=1)).replace(hour=15, minute=30, second=0, microsecond=0)
+    ok = {"agent_id": aid, "phone": "98765 43210 ".replace(" ", ""), "when": when.isoformat(), "timezone": "Asia/Kolkata", "name": "Asha"}
+    r = await client.post("/product/campaigns/callback", json={**ok, "phone": "+919876543210"}, headers=live)
+    assert r.status_code == 201, r.text
+    item = client.camps.items[0]
+    assert item["schedule"]["slots"][0]["start_time"] == "15:30" and item["schedule"]["slots"][0]["end_time"] == "16:30"
+    assert "+919876543210" in client.camps.csv[1] and item["state"] == "running"
+    for patch, code in (({"when": (datetime.now() - timedelta(hours=1)).isoformat()}, "too_soon"), ({"when": (datetime.now() + timedelta(days=60)).isoformat()}, "too_far"),
+                        ({"when": when.replace(hour=23).isoformat()}, "compliance_blocked"), ({"phone": "12345"}, "bad_phone"), ({"timezone": "Mars/Base"}, "bad_timezone")):
+        bad = await client.post("/product/campaigns/callback", json={**ok, "phone": "+919876543210", **patch}, headers=live)
+        assert bad.status_code == 400 and bad.json()["detail"]["code"] == code, (patch, bad.text)
+    assert (await client.post("/product/campaigns/callback", json={**ok, "phone": "+919876543210"}, headers=ha)).json()["detail"]["code"] == "live_only"
+
+
+async def test_handover_keeps_the_message_and_ring_time(client):
+    _, tok = await signup(client, "a@x.com")
+    ha = bearer(tok)
+    aid = await agent(client, ha)
+    r = await client.put(f"/product/tools/handover/{aid}", json={"number": "+919876543210", "message": "Please hold, connecting you to our doctor.", "timeout": 45}, headers=ha)
+    assert r.status_code == 200, r.text
+    g = (await client.get(f"/product/tools/handover/{aid}", headers=ha)).json()
+    assert g["message"] == "Please hold, connecting you to our doctor." and g["timeout"] == 45
+    assert (await client.put(f"/product/tools/handover/{aid}", json={"number": "+919876543210", "timeout": 5}, headers=ha)).status_code == 422
