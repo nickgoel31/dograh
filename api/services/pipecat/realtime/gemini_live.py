@@ -22,6 +22,8 @@ from typing import Any
 
 from loguru import logger
 
+from api.services.pipecat.realtime import gemini_cost
+
 # Monkeypatch LLMTokenUsage dynamically to support Gemini Live modality tokens.
 # This avoids editing the submodule's metrics.py which the user has no push rights to.
 from pipecat.metrics.metrics import LLMTokenUsage
@@ -47,6 +49,16 @@ from pipecat.processors.frame_processor import FrameDirection
 from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
 from pipecat.services.llm_service import FunctionCallFromLLM
 from pipecat.utils.tracing.service_decorators import traced_gemini_live
+
+
+class GeminiLiveTokenUsage(LLMTokenUsage):
+    """One turn's tokens with the audio/text split Google reports. (The attribute patch above does not add real fields to the pydantic
+    model, so the split is carried by this subclass instead; the metrics aggregator reads the four fields by name.)"""
+
+    text_input_tokens: int | None = None
+    audio_input_tokens: int | None = None
+    text_output_tokens: int | None = None
+    audio_output_tokens: int | None = None
 
 
 class DograhGeminiLiveLLMService(GeminiLiveLLMService):
@@ -211,3 +223,51 @@ class DograhGeminiLiveLLMService(GeminiLiveLLMService):
         # a handle (e.g. node transitions before any handle was issued) are
         # followed by a function-call-result LLMContextFrame which feeds the
         # updated-context branch in _handle_context.
+
+
+    # ------------------------------------------------------------------
+    # Cost: exact usage, and a bounded history
+    # ------------------------------------------------------------------
+
+    async def _handle_msg_usage_metadata(self, message):
+        """Report each turn's tokens split into audio and text. The upstream version reports one blended number, which the
+        cost calculator then has to price entirely at the audio rate (four times the text rate)."""
+        usage = message.usage_metadata
+        if not usage:
+            return
+        prompt = usage.prompt_token_count or 0
+        completion = usage.response_token_count or 0
+        split = gemini_cost.split_usage(usage)
+        logger.info(
+            f"{self}: gemini-live turn usage: prompt {prompt} (audio {split.get('audio_input_tokens', '?')}, text {split.get('text_input_tokens', '?')}), "
+            f"response {completion} (audio {split.get('audio_output_tokens', '?')}, text {split.get('text_output_tokens', '?')}), "
+            f"thoughts {usage.thoughts_token_count or 0}, cached {usage.cached_content_token_count or 0}"
+        )
+        tokens = GeminiLiveTokenUsage(
+            prompt_tokens=prompt,
+            completion_tokens=completion,
+            total_tokens=usage.total_token_count or (prompt + completion),
+            cache_read_input_tokens=usage.cached_content_token_count,
+            reasoning_tokens=usage.thoughts_token_count,
+            **split,
+        )
+        await self.start_llm_usage_metrics(tokens)
+
+    async def _connection_task_handler(self, config):
+        """Before the session opens, cap how much history is kept (relative to the size of the instructions), because every turn is billed on all of it."""
+        try:
+            cwc = getattr(config, "context_window_compression", None)
+            if cwc is not None:
+                from google.genai.types import SlidingWindow
+
+                instruction = getattr(config, "system_instruction", None)
+                text = instruction if isinstance(instruction, str) else " ".join(getattr(p, "text", "") or "" for p in getattr(instruction, "parts", None) or [])
+                tool_text = str(getattr(config, "tools", None) or "")
+                base = gemini_cost.estimate_tokens(text) + gemini_cost.estimate_tokens(tool_text) // 2
+                trigger, target = gemini_cost.compression_limits(base)
+                cwc.trigger_tokens = trigger
+                cwc.sliding_window = SlidingWindow(target_tokens=target)
+                logger.info(f"{self}: gemini-live history cap: instructions ~{base} tokens, trim at {trigger}, keep {target}")
+        except Exception as e:  # noqa: BLE001 - never stop a call from starting over a cost setting
+            logger.warning(f"{self}: could not set the history cap: {e}")
+        await super()._connection_task_handler(config)
