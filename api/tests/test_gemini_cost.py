@@ -30,7 +30,7 @@ def test_exact_split_costs_less_than_pricing_everything_as_audio():
 def test_history_cap_is_relative_to_the_instructions_and_can_be_tuned(monkeypatch):
     monkeypatch.delenv("GEMINI_LIVE_HISTORY_TRIGGER_TOKENS", raising=False)
     monkeypatch.delenv("GEMINI_LIVE_HISTORY_TARGET_TOKENS", raising=False)
-    assert gc.compression_limits(3000) == (8000, 5000)
+    assert gc.compression_limits(3000) == (6000, 4200)
     monkeypatch.setenv("GEMINI_LIVE_HISTORY_TRIGGER_TOKENS", "3000")
     monkeypatch.setenv("GEMINI_LIVE_HISTORY_TARGET_TOKENS", "100")  # too little memory: raised to the floor
     assert gc.compression_limits(1000) == (4000, 1800)
@@ -80,4 +80,4 @@ async def test_service_caps_the_history_before_connecting(monkeypatch):
     await service._connection_task_handler(cfg)
     c = seen["cfg"].context_window_compression
     base = gc.estimate_tokens("a" * 3600)
-    assert c.trigger_tokens == base + 5000 and c.sliding_window.target_tokens == base + 2000
+    assert c.trigger_tokens == base + 3000 and c.sliding_window.target_tokens == base + 1200

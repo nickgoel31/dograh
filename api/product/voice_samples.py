@@ -2,6 +2,7 @@
 
 import base64
 import hashlib
+import json
 import os
 from pathlib import Path
 
@@ -11,6 +12,15 @@ CACHE = Path(os.getenv("PRODUCT_SAMPLE_DIR", "/tmp/voice_samples"))
 TEXT = {
     "hi": "नमस्ते, कॉल करने के लिए धन्यवाद। बताइए, मैं आपकी कैसे मदद कर सकती हूँ?",
     "en": "Hello, thanks for calling. How can I help you today?",
+    "mr": "नमस्कार, कॉल केल्याबद्दल धन्यवाद. मी तुम्हाला कशी मदत करू शकते?",
+    "gu": "નમસ્તે, કૉલ કરવા બદલ આભાર. હું તમને કેવી રીતે મદદ કરી શકું?",
+    "ta": "வணக்கம், அழைத்ததற்கு நன்றி. நான் உங்களுக்கு எப்படி உதவ முடியும்?",
+    "te": "నమస్కారం, కాల్ చేసినందుకు ధన్యవాదాలు. నేను మీకు ఎలా సహాయం చేయగలను?",
+    "kn": "ನಮಸ್ಕಾರ, ಕರೆ ಮಾಡಿದ್ದಕ್ಕಾಗಿ ಧನ್ಯವಾದಗಳು. ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?",
+    "ml": "നമസ്കാരം, വിളിച്ചതിന് നന്ദി. ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കണം?",
+    "bn": "নমস্কার, ফোন করার জন্য ধন্যবাদ। আমি কীভাবে আপনাকে সাহায্য করতে পারি?",
+    "pa": "ਸਤ ਸ੍ਰੀ ਅਕਾਲ, ਕਾਲ ਕਰਨ ਲਈ ਧੰਨਵਾਦ। ਮੈਂ ਤੁਹਾਡੀ ਕਿਵੇਂ ਮਦਦ ਕਰ ਸਕਦੀ ਹਾਂ?",
+    "or": "ନମସ୍କାର, କଲ୍ କରିଥିବାରୁ ଧନ୍ୟବାଦ। ମୁଁ ଆପଣଙ୍କୁ କିପରି ସାହାଯ୍ୟ କରିପାରିବି?",
 }
 
 
@@ -60,4 +70,51 @@ async def make(api_key: str, voice: str, language_code: str, transport=None) -> 
             path.write_bytes(audio)
         except OSError:
             pass
+    return audio
+
+
+async def make_murf(api_key: str, region: str, voice: str, locale: str) -> bytes | None:
+    """WAV bytes of a Murf Falcon voice, kept on disk after the first time. Uses the same streaming socket as calls."""
+    import io
+    import wave
+
+    import aiohttp
+
+    from api.services.pipecat.murf_tts import stream_url
+
+    text = sample_text(locale)
+    path = CACHE / ("mu_" + hashlib.sha256(f"{voice}:{locale}:{text}".encode()).hexdigest()[:24] + ".wav")
+    if path.exists():
+        return path.read_bytes()
+    pcm = bytearray()
+    try:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=40)) as s, s.ws_connect(stream_url(region, 24000), headers={"api_key": api_key}, max_msg_size=0) as ws:
+            await ws.send_str(json.dumps({"voice_config": {"voice_id": voice, "locale": locale, "style": "Conversational"}, "context_id": "sample"}))
+            await ws.send_str(json.dumps({"text": text, "end": True, "context_id": "sample"}))
+            async for msg in ws:
+                if msg.type != aiohttp.WSMsgType.TEXT:
+                    break
+                d = json.loads(msg.data)
+                if d.get("audio"):
+                    pcm.extend(base64.b64decode(d["audio"]))
+                if d.get("error") and d.get("fatal"):
+                    return None
+                if d.get("final"):
+                    break
+    except Exception:  # noqa: BLE001
+        return None
+    if len(pcm) < 2000:
+        return None
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(24000)
+        w.writeframes(bytes(pcm[: len(pcm) // 2 * 2]))
+    audio = buf.getvalue()
+    try:
+        CACHE.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(audio)
+    except OSError:
+        pass
     return audio

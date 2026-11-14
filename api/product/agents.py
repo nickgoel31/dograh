@@ -198,9 +198,9 @@ async def duplicate_agent(
 
 async def _voice_ready_check(session: AsyncSession, agent: ProductAgentModel) -> list[Check]:
     v = voice_catalogue.find(agent.voice_id) if agent.voice_id else None
-    if v is not None and v.engine == "swarvo" and (agent.style or {}).get("stt_engine") == "deepgram" and not await models_config.listening_ready(session, "deepgram"):
+    if v is not None and v.engine in models_config.SEPARATE_ENGINES and (agent.style or {}).get("stt_engine") == "deepgram" and not await models_config.listening_ready(session, "deepgram"):
         return [Check("voice_ready", "Your chosen voice is available", "blocker", "Deepgram listening isn't set up yet. Pick AssemblyAI on the Voice tab, or ask support.")]
-    if v is None or v.engine not in ("inworld", "google", "swarvo") or await models_config.engine_ready(session, v.engine):
+    if v is None or v.engine not in ("inworld", "google", "swarvo", "murf") or await models_config.engine_ready(session, v.engine):
         return []
     return [Check("voice_ready", "Your chosen voice is available", "blocker", "This voice isn't available yet. Pick another voice on the Voice tab.")]
 

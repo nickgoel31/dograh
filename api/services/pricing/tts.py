@@ -26,5 +26,7 @@ TTS_PRICING: Dict[str, Dict[str, CharacterPricingModel]] = {
         # 6400 usd per 250*1e6 characters
         "default": CharacterPricingModel(Decimal("0.0256") / 1_000)
     },
+    # Murf Falcon 2.1: 1 cent per 1,000 characters
+    ServiceProviders.MURF_TTS: {"default": CharacterPricingModel(Decimal("0.010") / 1_000)},
     "default": {"default": CharacterPricingModel(Decimal("0.030") / 1_000)},
 }

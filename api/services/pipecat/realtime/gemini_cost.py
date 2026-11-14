@@ -7,16 +7,16 @@ call grows with how much history is kept and with how long the instructions are.
 * the usage Google reports is split by type (audio, text) so the cost shown is the real one. Audio costs four times what text does.
 
 Tunable without code changes, in the environment:
-    GEMINI_LIVE_HISTORY_TRIGGER_TOKENS  history kept before older turns are dropped   (default 5000)
-    GEMINI_LIVE_HISTORY_TARGET_TOKENS   history kept after dropping them              (default 2000)
+    GEMINI_LIVE_HISTORY_TRIGGER_TOKENS  history kept before older turns are dropped   (default 3000)
+    GEMINI_LIVE_HISTORY_TARGET_TOKENS   history kept after dropping them              (default 1200)
 """
 
 from __future__ import annotations
 
 import os
 
-DEFAULT_TRIGGER = 5000
-DEFAULT_TARGET = 2000
+DEFAULT_TRIGGER = 3000  # about 1 minute of two-way conversation
+DEFAULT_TARGET = 1200  # about 25 seconds, kept after trimming
 MIN_TARGET = 800  # below this the agent forgets what was said a few seconds ago
 
 

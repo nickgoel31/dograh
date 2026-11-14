@@ -11,7 +11,7 @@ from sqlalchemy.pool import StaticPool
 
 from api.db import models, product_models
 from api.product import (agents_router, analytics_router, billing_router, calls_router, campaigns_router, config, conversations_router, deps, gateway,
-                         developers, developers_router, emailer, public_info_router, live_router, account_router, contacts_router, flowtry_router, google_auth, handoff_router, integrations_router, phonetest_router, help_router, home_router, import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, public_api, team_router, tools_router, voices_router, widget_router)
+                         developers, developers_router, emailer, public_info_router, live_router, setup_router, account_router, contacts_router, flowtry_router, google_auth, handoff_router, integrations_router, phonetest_router, help_router, home_router, import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, public_api, team_router, tools_router, voices_router, widget_router)
 from api.product import assistant_router, chat_router, connectors_router, kyc_router, verify_router, admin_router, profile_router
 from api.product import router as product_router
 
@@ -282,6 +282,8 @@ class FakeLLM:
             return self.verdict
         if "phone call transcript" in system:
             return self.insight
+        if "short profile of the business" in system:
+            return getattr(self, "profile", None) or '{"business": "Sunrise Dental", "summary": "A family dental clinic in Pune.", "industry": "Healthcare", "services": ["Check-ups", "Braces"], "hours": "Mon-Sat 10-6", "location": "Pune", "phone": null, "email": "hi@sunrise.example", "languages": ["English", "Hindi", "Klingon"], "faqs": [{"q": "Do you take walk-ins?", "a": "Yes before noon."}, {"q": "", "a": "x"}], "suggested": [{"key": "dental", "why": "Patients book check-ups."}, {"key": "nope", "why": "x"}]}'
         if "design phone agents" in system:
             return getattr(self, "draft", None) or '```json\n{"name": "Asha Verma", "emoji": "🦷", "role": "book dental visits", "tone": "Weird", "business": "Bright Dental", "what_you_do": "A dental clinic in Pune.", "script": "1. Greet.\\n2. Book."}\n```'
         if "Rewrite the sentence" in system:
@@ -371,6 +373,7 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(verify_router.router)
     app.include_router(admin_router.router)
     app.include_router(public_info_router.router)
+    app.include_router(setup_router.router)
     app.include_router(live_router.router)
     app.include_router(profile_router.router)
     app.include_router(kyc_router.ops_router)

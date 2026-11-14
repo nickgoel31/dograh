@@ -675,6 +675,22 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
+    elif user_config.tts.provider == ServiceProviders.MURF_TTS.value:
+        from api.services.pipecat.murf_tts import MurfTTSService
+
+        return MurfTTSService(
+            api_key=user_config.tts.api_key,
+            region=getattr(user_config.tts, "region", None) or "in",
+            rate=getattr(user_config.tts, "rate", 0),
+            pitch=getattr(user_config.tts, "pitch", 0),
+            volume_offset=getattr(user_config.tts, "volume_offset", 0),
+            settings=MurfTTSService.Settings(
+                model=user_config.tts.model, voice=getattr(user_config.tts, "voice", None) or "Aarav", language=getattr(user_config.tts, "language", None) or "hi-IN"
+            ),
+            text_filters=[xml_function_tag_filter],
+            skip_aggregator_types=["recording_router", "recording"],
+            silence_time_s=1.0,
+        )
     elif user_config.tts.provider == ServiceProviders.SWARVO_TTS.value:
         from api.services.pipecat.swarvo_tts import SwarvoTTSService
 

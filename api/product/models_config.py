@@ -44,6 +44,22 @@ def inworld_model(brain: str) -> str:
     return (custom.get(brain) if isinstance(custom, dict) else None) or INWORLD_BRAINS.get(brain) or INWORLD_BRAINS["balanced"]
 
 
+# Voices that only speak: the agent listens (AssemblyAI or Deepgram) and thinks (Inworld router) as separate services.
+SEPARATE_ENGINES = ("swarvo", "murf")
+
+_LANG_LOCALE = {"Hindi": "hi-IN", "English": "en-IN", "Marathi": "mr-IN", "Gujarati": "gu-IN", "Tamil": "ta-IN", "Telugu": "te-IN", "Kannada": "kn-IN",
+                "Malayalam": "ml-IN", "Bengali": "bn-IN", "Punjabi": "pa-IN", "Odia": "or-IN"}
+
+
+def murf_locale(voice_locales, agent_languages) -> str:
+    """The locale a Murf voice speaks: the agent's first language that the voice supports, else the voice's own main language."""
+    for name in agent_languages or []:
+        loc = _LANG_LOCALE.get(name)
+        if loc and loc in voice_locales:
+            return loc
+    return voice_locales[0]
+
+
 async def engine_profile(session: AsyncSession, engine: str) -> ModelProfileModel | None:
     """The profile that serves a voice engine ('inworld' / 'google'), mapped in PRODUCT_PROFILES."""
     return await _by_slug(session, profile_slugs().get(engine) or engine)
@@ -52,7 +68,7 @@ async def engine_profile(session: AsyncSession, engine: str) -> ModelProfileMode
 async def engine_ready(session: AsyncSession, engine: str) -> bool:
     """True when that engine's profile exists and has an API key."""
     prof = await engine_profile(session, engine)
-    if engine == "swarvo":  # a normal listen > think > speak profile: needs the speech key, a thinking model and a listening model
+    if engine in SEPARATE_ENGINES:  # a normal listen > think > speak profile: needs the speech key, a thinking model and a listening model
         c = (prof.config or {}) if prof else {}
         return bool((c.get("tts") or {}).get("api_key") and c.get("llm") and c.get("stt"))
     rt = (prof.config or {}).get("realtime") if prof else None
@@ -112,19 +128,22 @@ async def build_overrides(session: AsyncSession, *, brain: str, voice_id: str | 
     overrides: dict = {}
 
     voice = voice_catalogue.find(voice_id) if voice_id else None
-    if voice is not None and voice.engine == "swarvo":
-        prof = await engine_profile(session, "swarvo")
+    if voice is not None and voice.engine in SEPARATE_ENGINES:
+        prof = await engine_profile(session, voice.engine)
         c = (prof.config or {}) if prof else {}
         if not (c.get("tts") and c.get("llm") and c.get("stt")):
             return None
         tts = deepcopy(c["tts"])
         tts["voice"] = voice.tts["voice"]
-        tts["language"] = voice.tts.get("lang", tts.get("language", "hi"))
-        tts.pop("speed", None)  # no speed is ever sent to swarvo-tts: any change from 1.0 is signal-processed by the service (echo and slower)
-        if (style or {}).get("tts_mode"):
-            tts["mode"] = style["tts_mode"]
-        if (style or {}).get("tts_chat_level"):
-            tts["chat_level"] = style["tts_chat_level"]  # only used in chat mode: read mode adds no fillers
+        if voice.engine == "murf":
+            tts["language"] = murf_locale(voice.tts["locales"], (style or {}).get("languages"))
+        else:
+            tts["language"] = voice.tts.get("lang", tts.get("language", "hi"))
+            tts.pop("speed", None)  # no speed is ever sent to swarvo-tts: any change from 1.0 is signal-processed by the service (echo and slower)
+            if (style or {}).get("tts_mode"):
+                tts["mode"] = style["tts_mode"]
+            if (style or {}).get("tts_chat_level"):
+                tts["chat_level"] = style["tts_chat_level"]  # only used in chat mode: read mode adds no fillers
         llm = deepcopy(c["llm"])
         if llm.get("provider") == "inworld_llm":  # the Brain level picks the Inworld model, as it does for the other Studio voices
             llm["model"] = (style or {}).get("model") or inworld_model(brain)

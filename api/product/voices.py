@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Protocol
 
 # Provider names are aliased so customers never see the real vendor.
-PROVIDER_ALIASES = {"sarvam": "Engine A", "inworld": "Studio", "google": "Gemini", "swarvo": "Swarvo"}
+PROVIDER_ALIASES = {"sarvam": "Engine A", "inworld": "Studio", "google": "Gemini", "swarvo": "Swarvo", "murf": "Falcon"}
 
 LANGUAGE_NAMES = {
     "hi": "Hindi", "en": "English", "bn": "Bengali", "gu": "Gujarati", "kn": "Kannada",
@@ -162,11 +162,55 @@ class SwarvoAdapter:
         return out
 
 
-ENGINES = {"inworld": InworldAdapter, "google": GoogleAdapter, "swarvo": SwarvoAdapter, "sarvam": SarvamAdapter}
+class MurfAdapter:
+    """Murf Falcon 2.1 voices for Indian languages. Like the Swarvo voices they only speak, so they run the listen > think > speak pipeline.
+
+    Each voice is listed once under its main language and can speak the others it supports (shown in its description). Gender comes only from
+    Murf's own list (set MURF_API_KEY to fill it in); it is never guessed from the name.
+    """
+
+    def list(self) -> list[Voice]:
+        from api.services.configuration.options.murf import MURF_INDIAN_VOICES, MURF_LOCALE_LANGUAGE
+
+        genders = murf_genders()
+        out = []
+        for name, locales in MURF_INDIAN_VOICES.items():
+            langs = [MURF_LOCALE_LANGUAGE[l] for l in locales if l in MURF_LOCALE_LANGUAGE]
+            desc = "Speaks " + ", ".join(langs[:-1]) + (" and " if len(langs) > 1 else "") + langs[-1] if langs else None
+            out.append(Voice(id=voice_id("murf", "falcon-2.1", name), name=name, language=langs[0] if langs else "Hindi", style="Falcon 2.1", provider=PROVIDER_ALIASES["murf"],
+                             gender=genders.get(name), tts={"engine": "murf", "voice": name, "locales": list(locales), "description": desc}))
+        return out
+
+
+_MURF_GENDERS: dict = {"at": 0.0, "map": {}}
+
+
+def murf_genders() -> dict[str, str]:
+    """{voice name: Female/Male} from Murf's own voice list. Only when MURF_API_KEY is set; cached for a day; empty on any problem."""
+    import time
+
+    key = os.getenv("MURF_API_KEY", "").strip()
+    if not key:
+        return {}
+    if time.time() - _MURF_GENDERS["at"] < 86400:
+        return _MURF_GENDERS["map"]
+    _MURF_GENDERS["at"] = time.time()  # also after a failure, so a broken call is not retried on every request
+    try:
+        import httpx
+
+        r = httpx.get("https://api.murf.ai/v1/speech/voices", params={"model": "falcon-2.1"}, headers={"api-key": key}, timeout=6)
+        r.raise_for_status()
+        _MURF_GENDERS["map"] = {v["voiceId"]: v["gender"] for v in r.json() if v.get("gender") in ("Male", "Female")}
+    except Exception:  # noqa: BLE001 - this only adds a nicety to the voice cards
+        _MURF_GENDERS["map"] = {}
+    return _MURF_GENDERS["map"]
+
+
+ENGINES = {"inworld": InworldAdapter, "google": GoogleAdapter, "swarvo": SwarvoAdapter, "murf": MurfAdapter, "sarvam": SarvamAdapter}
 
 
 def _adapters() -> list[VoiceAdapter]:
-    names = [n.strip() for n in os.getenv("PRODUCT_VOICE_ENGINES", "inworld,google,swarvo").split(",") if n.strip() in ENGINES]
+    names = [n.strip() for n in os.getenv("PRODUCT_VOICE_ENGINES", "inworld,google,swarvo,murf").split(",") if n.strip() in ENGINES]
     return [ENGINES[n]() for n in names]
 
 

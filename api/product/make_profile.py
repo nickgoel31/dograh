@@ -121,6 +121,39 @@ async def run(email: str) -> int:
             existing = True
     done["swarvo"] = bool(existing)
 
+    # Murf Falcon 2.1 voices (Indian languages): speech only, so the same listen > think > speak profile as swarvo-tts, with Murf speaking.
+    murf_key, murf_region = os.getenv("MURF_API_KEY", "").strip(), os.getenv("MURF_REGION", "").strip()
+    profiles = await db_client.list_model_profiles()
+    murf = next((p for p in profiles if p.slug == "murf"), None)
+    sw = next((p for p in profiles if p.slug == "swarvo"), None)
+    sw_cfg = (sw.config or {}) if sw else {}
+    if murf is None and not murf_key:
+        pass
+    elif not (sw_cfg.get("llm") and sw_cfg.get("stt")):
+        print("The Murf profile listens and thinks like the swarvo-tts one, so set that up first (it needs the Inworld and AssemblyAI keys).")
+    else:
+        old_tts = dict(((murf.config or {}).get("tts") or {})) if murf else {}
+        tts = {"provider": "murf_tts", "model": "falcon-2.1", "voice": "Aarav", "language": "hi-IN", "region": "in", **old_tts}
+        if murf_key:
+            tts["api_key"] = murf_key
+        if murf_region:
+            tts["region"] = murf_region
+        if not tts.get("api_key"):
+            print("The Murf profile needs the Murf API key.")
+        else:
+            cfg = {"is_realtime": False, "tts": tts, "llm": sw_cfg["llm"], "stt": sw_cfg["stt"]}
+            if sw_cfg.get("embeddings"):
+                cfg["embeddings"] = sw_cfg["embeddings"]
+            cfg = profile_service.normalize_config(cfg)
+            if murf is None:
+                await db_client.create_model_profile(slug="murf", display_name="Murf Falcon 2.1", description=None, tier=None, capabilities=[], config=cfg, allowed_org_ids=[], is_active=True)
+                print("Created profile 'murf' (Murf Falcon speech, the same listening and thinking as swarvo-tts).")
+            else:
+                await db_client.update_model_profile(murf.id, config=cfg)
+                print("Updated profile 'murf'.")
+            murf = True
+    done["murf"] = bool(murf)
+
     # Optional second listening choice for swarvo-tts voices: Deepgram Nova-3 (Hindi and the other Indian languages it supports, very fast).
     dg_key = os.getenv("DEEPGRAM_API_KEY", "").strip()
     dg = next((p for p in await db_client.list_model_profiles() if p.slug == "swarvo_deepgram"), None)

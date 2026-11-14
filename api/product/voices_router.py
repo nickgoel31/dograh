@@ -33,7 +33,7 @@ def _out(v: catalogue.Voice, favs: set[str], ready: dict[str, bool] | None = Non
     return VoiceOut(
         id=v.id, name=v.name, language=v.language, style=v.style, gender=v.gender,
         age=v.age, accent=v.accent, provider=v.provider, favorite=v.id in favs,
-        available=(ready or {}).get(v.engine, True), description=v.tts.get("description"), brain_levels=models_config.brain_applies(v.engine), has_sample=v.engine in ("inworld", "swarvo") and (ready or {}).get(v.engine, False),
+        available=(ready or {}).get(v.engine, True), description=v.tts.get("description"), brain_levels=models_config.brain_applies(v.engine), has_sample=v.engine in ("inworld", "swarvo", "murf") and (ready or {}).get(v.engine, False),
     )
 
 
@@ -51,7 +51,7 @@ async def list_voices(
     ctx: Ctx = Depends(get_ctx),
 ):
     favs = await _favs(ctx)
-    ready = {e: await models_config.engine_ready(ctx.session, e) for e in ("inworld", "google", "swarvo")}
+    ready = {e: await models_config.engine_ready(ctx.session, e) for e in ("inworld", "google", "swarvo", "murf")}
     out = []
     for v in catalogue.catalogue():
         if not catalogue.can_use(v, ctx.user.email):
@@ -85,6 +85,14 @@ async def sample(voice_id: str, ctx: Ctx = Depends(get_ctx)):
         prof = await models_config.engine_profile(ctx.session, "swarvo")
         t = ((prof.config or {}).get("tts") or {}) if prof else {}
         audio = await voice_samples.make_swarvo(t.get("base_url"), t.get("api_key"), v.tts["voice"]) if t.get("api_key") else None
+        if audio is None:
+            raise product_error(502, "sample_failed", "We couldn't make a sample right now. Please try again.")
+        return Response(audio, media_type="audio/wav", headers={"Cache-Control": "private, max-age=86400"})
+    if v is not None and v.engine == "murf":
+        prof = await models_config.engine_profile(ctx.session, "murf")
+        t = ((prof.config or {}).get("tts") or {}) if prof else {}
+        locale = v.tts["locales"][0]
+        audio = await voice_samples.make_murf(t.get("api_key"), t.get("region") or "in", v.tts["voice"], locale) if t.get("api_key") else None
         if audio is None:
             raise product_error(502, "sample_failed", "We couldn't make a sample right now. Please try again.")
         return Response(audio, media_type="audio/wav", headers={"Cache-Control": "private, max-age=86400"})

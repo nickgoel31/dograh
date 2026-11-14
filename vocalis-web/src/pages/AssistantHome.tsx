@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowUp, BarChart3, BookOpen, Bot, Check, History, Loader2, Megaphone, Phone, Search, SquarePen, Sparkles, Trash2, Wallet, X } from '@/components/icons'
+import { ArrowRight, ArrowUp, BarChart3, BookOpen, Bot, Check, FileText, History, Loader2, Megaphone, Mic, Phone, Search, SquarePen, Sparkles, Trash2, Wallet, X } from '@/components/icons'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui'
 import { AgentAvatar } from '@/components/AgentAvatar'
@@ -12,6 +12,7 @@ import { useMe } from '@/lib/useMe'
 import { useData } from '@/store/data'
 import { useUI } from '@/store/ui'
 import { loadSetup } from '@/components/GetStarted'
+import SetupFlow from '@/components/SetupFlow'
 import { cn } from '@/lib/utils'
 
 type Call = { id: string; tool: string; kind: 'read' | 'write' | 'ui'; args: Record<string, any> }
@@ -24,13 +25,15 @@ type Msg = { role: 'user' | 'assistant'; content: string }
 const PAGES = ['/', '/agents', '/conversations', '/contacts', '/numbers', '/campaigns', '/knowledge', '/tools', '/voices', '/analytics', '/billing', '/settings', '/developers', '/help']
 
 const SUGGESTIONS = [
-  { icon: Bot, title: 'Create an agent', text: 'Build a voice agent for my business', prompt: 'I want to create a new voice agent. Ask me what my business does and what the agent should handle.' },
   { icon: Phone, title: 'Review my numbers', text: 'See which agent answers each number', prompt: 'Show me my phone numbers and which agent answers each one.' },
   { icon: BarChart3, title: 'How are calls going?', text: 'Summarize my recent conversations', prompt: 'Summarize my recent calls and tell me what stands out.' },
   { icon: BookOpen, title: 'Teach my agent', text: 'Add answers to frequently asked questions', prompt: 'I want to add frequently asked questions and answers to my knowledge. Help me do that.' },
   { icon: Megaphone, title: 'My campaigns', text: 'Check progress of outbound calling', prompt: 'How are my campaigns doing?' },
   { icon: Wallet, title: 'Balance and minutes', text: 'See what is left in my wallet', prompt: 'How much balance and how many minutes do I have left?' },
+  { icon: FileText, title: 'Browse templates', text: 'Start from an industry template', prompt: '', go: '/agents/templates' },
 ]
+const GUIDE_STEPS = ['Your website', 'Knowledge', 'The agent', 'Voice', 'Phone number']
+const WANTS_AGENT = /\b(create|build|make|set ?up|start|need)\b.{0,24}\b(agent|assistant|bot|receptionist)\b/i
 
 const LABEL: Record<string, string> = {
   list_agents: 'Looking at your agents', list_templates: 'Looking at agent templates', list_numbers: 'Looking at your phone numbers', list_contacts: 'Looking at your contacts',
@@ -90,24 +93,6 @@ const ago = (t: number) => { const m = Math.max(1, Math.round((Date.now() - t) /
 
 const refreshAgents = async () => { try { useData.getState().setAgents((await agentsApi.list()).map((x) => toAgent(x))) } catch { /* the Agents page reloads on its own */ } }
 
-/** A small button to start the setup guide, or carry on where the person stopped. */
-function SetupPill({ userId }: { userId: string }) {
-  const set = useUI((s) => s.set)
-  const guide = useUI((s) => s.guide)
-  const agents = useData((s) => s.agents)
-  const [, tick] = React.useReducer((n: number) => n + 1, 0)
-  React.useEffect(() => { if (!guide) tick() }, [guide])
-  const saved = userId ? loadSetup(userId) : null
-  if (USE_MOCKS || !userId) return null
-  const started = !!saved && saved.step > 0 && !saved.finished
-  if (saved?.finished && agents.length > 0) return null
-  return (
-    <button onClick={() => set({ guide: true })} className="mb-6 inline-flex items-center gap-2 rounded-full border bg-surface px-3.5 py-1.5 text-[13px] text-soft transition hover:border-soft/50 hover:text-ink">
-      <Sparkles size={14} />{started ? `Continue setting up · step ${Math.min(saved!.step + 1, 5)} of 5` : agents.length === 0 ? 'Set up your first agent in 3 minutes' : 'Open the setup guide'}
-    </button>
-  )
-}
-
 export default function AssistantHome() {
   const nav = useNavigate()
   const qc = useQueryClient()
@@ -127,6 +112,7 @@ export default function AssistantHome() {
   const chatId = React.useRef(Math.random().toString(36).slice(2, 10))
   const [saved, setSaved] = React.useState<Saved[]>(() => readChats(ws))
   const [open, setOpen] = React.useState(false)
+  const [guided, setGuided] = React.useState(false)
   const [find, setFind] = React.useState('')
   const panel = React.useRef<HTMLDivElement>(null)
   React.useEffect(() => { setSaved(readChats(ws)) }, [ws])
@@ -198,6 +184,7 @@ export default function AssistantHome() {
   const send = async (t: string) => {
     const msg = t.trim()
     if (!msg || busy) return
+    if (!USE_MOCKS && !items.length && WANTS_AGENT.test(msg)) { setText(''); setGuided(true); return } // "create an agent" starts the step-by-step setup
     setText('')
     round.current = 0
     history.current.push({ role: 'user', content: msg.slice(0, 2000) })
@@ -232,7 +219,7 @@ export default function AssistantHome() {
         onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(text) } }}
         className="block max-h-40 w-full resize-none bg-transparent px-1.5 py-1 text-[15px] outline-none placeholder:text-soft/70" aria-label="Message" />
       <div className="mt-2 flex items-center justify-between">
-        <span className="px-1.5 text-xs text-soft">Changes always ask you first</span>
+        <span className="flex items-center gap-1.5 px-1.5 text-xs text-soft"><Check size={12} />Changes always ask you first</span>
         <button onClick={() => void send(text)} disabled={!text.trim() || busy} aria-label="Send"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-surface transition hover:scale-105 disabled:scale-100 disabled:opacity-30"><ArrowUp size={17} /></button>
       </div>
@@ -277,43 +264,67 @@ export default function AssistantHome() {
     </div>
   )
 
+  if (guided) return <div className="relative">{bar}<div className="pt-10"><SetupFlow onExit={() => setGuided(false)} /></div></div>
+
   if (!chatting) {
+    const live = agents.filter((a) => a.status === 'live').length
+    const started = !USE_MOCKS && me?.user.id ? loadSetup(me.user.id) : null
     return (
-      <div className="relative mx-auto flex min-h-[calc(100dvh-11rem)] max-w-3xl flex-col items-center justify-center py-6">
+      <div className="relative mx-auto flex min-h-[calc(100dvh-11rem)] max-w-3xl flex-col items-center py-8 sm:py-12">
         {bar}
-        <SetupPill userId={me?.user.id ?? ''} />
-        <MeshBadge className="h-14 w-14 rounded-2xl"><Sparkles size={24} /></MeshBadge>
-        <h1 className="mt-6 text-center text-[32px] font-semibold leading-tight tracking-[-0.03em] sm:text-[38px]">{name ? `Hi ${name}, what should we set up?` : 'What should we set up?'}</h1>
-        <p className="mt-2 text-center text-[15px] text-soft">I can build agents, manage numbers, contacts, calls, campaigns and knowledge for you.</p>
+        <div className="relative">
+          <div aria-hidden className="absolute -inset-5 rounded-full bg-[radial-gradient(circle,rgba(99,102,241,.22),transparent_70%)] blur-xl" />
+          <MeshBadge className="relative h-16 w-16 rounded-[22px]"><Sparkles size={26} /></MeshBadge>
+        </div>
+        <h1 className="mt-6 text-center text-[32px] font-semibold leading-[1.1] tracking-[-0.035em] sm:text-[42px]">{name ? <>Hi {name}, what should<br className="hidden sm:block" /> we set up?</> : 'What should we set up?'}</h1>
+        <p className="mt-3 max-w-md text-center text-[15px] leading-relaxed text-soft">I can build agents, manage numbers, contacts, calls, campaigns and knowledge for you.</p>
+        {agents.length > 0 && <div className="mt-4 flex items-center gap-2 text-xs text-soft"><span className="h-1.5 w-1.5 rounded-full bg-ok" />{agents.length} {agents.length === 1 ? 'agent' : 'agents'}{live > 0 ? `, ${live} live` : ', none live yet'}</div>}
         <div className="mt-8 w-full">{composer}</div>
+
+        {!USE_MOCKS && (
+          <button onClick={() => setGuided(true)} className="group relative mt-4 w-full overflow-hidden rounded-2xl border bg-surface p-5 text-left transition hover:border-accent/50 sm:p-6">
+            <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(34,211,238,.2),transparent_70%)] transition group-hover:scale-125" />
+            <div className="relative flex items-start gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"><Bot size={21} /></span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2"><span className="text-[15.5px] font-semibold">{started && started.step > 0 && !started.finished ? 'Set up an agent with me' : agents.length > 0 ? 'Add another agent' : 'Set up your first agent'}</span><span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent">Guided</span></div>
+                <p className="mt-1 text-[13.5px] leading-relaxed text-soft">{agents.length > 0 ? 'I already know your business. Pick what it should do and I will set up the rest.' : "Paste your website. I'll learn what you do, write the agent, pick a voice, add knowledge and connect a number."}</p>
+                <ol className="mt-3.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-soft">{GUIDE_STEPS.map((g, i) => <React.Fragment key={g}><li className="flex items-center gap-1.5"><span className="flex h-4 w-4 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-ink">{i + 1}</span>{g}</li>{i < GUIDE_STEPS.length - 1 && <ArrowRight size={11} className="text-soft/50" />}</React.Fragment>)}</ol>
+              </div>
+              <ArrowRight size={18} className="mt-3 hidden shrink-0 text-soft transition group-hover:translate-x-1 group-hover:text-ink sm:block" />
+            </div>
+          </button>
+        )}
+
         <div className="mt-4 grid w-full gap-3 sm:grid-cols-3">
           {SUGGESTIONS.map((s) => (
-            <button key={s.title} onClick={() => void send(s.prompt)} className="group rounded-xl border bg-surface p-4 text-left transition hover:bg-muted/60">
-              <s.icon size={17} strokeWidth={1.75} className="text-soft transition group-hover:text-ink" />
-              <div className="mt-3 text-[13.5px] font-semibold">{s.title}</div>
-              <div className="mt-0.5 text-xs leading-snug text-soft">{s.text}</div>
+            <button key={s.title} onClick={() => ('go' in s && s.go ? nav(s.go) : void send(s.prompt))} className="group flex items-start gap-3 rounded-2xl border bg-surface p-4 text-left transition hover:-translate-y-0.5 hover:border-soft/40 hover:shadow-[0_10px_30px_-16px_hsl(var(--shadow)/.4)]">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-soft transition group-hover:bg-accent-soft group-hover:text-accent"><s.icon size={17} strokeWidth={1.75} /></span>
+              <span className="min-w-0"><span className="block text-[13.5px] font-semibold">{s.title}</span><span className="mt-0.5 block text-xs leading-snug text-soft">{s.text}</span></span>
             </button>
           ))}
         </div>
+        {!USE_MOCKS && me?.user.id && !(started?.finished && agents.length > 0) && <button onClick={() => useUI.getState().set({ guide: true })} className="mt-5 inline-flex items-center gap-1.5 text-xs text-soft underline-offset-2 transition hover:text-ink hover:underline"><Mic size={12} />Prefer a quick 3-minute tour instead?</button>}
+
         {(saved.length > 0 || agents.length > 0) && (
           <div className="mt-10 w-full">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-[15px] font-semibold">Recents</h2>
-              <div className="flex h-9 w-56 items-center gap-2 rounded-full border bg-surface px-3 text-sm text-soft"><Search size={14} /><input value={rq} onChange={(e) => setRq(e.target.value)} placeholder="Search" aria-label="Search recents" className="w-full bg-transparent text-ink outline-none placeholder:text-soft/70" /></div>
+              <div className="flex h-9 w-52 items-center gap-2 rounded-full border bg-surface px-3 text-sm text-soft transition focus-within:border-soft/50"><Search size={14} /><input value={rq} onChange={(e) => setRq(e.target.value)} placeholder="Search" aria-label="Search recents" className="w-full bg-transparent text-ink outline-none placeholder:text-soft/70" /></div>
             </div>
-            <div className="mt-3 overflow-hidden rounded-xl border bg-surface">
-              <div className="grid grid-cols-[1fr_auto] border-b px-4 py-2.5 text-xs text-soft"><span>Name</span><span>Last activity</span></div>
+            <div className="mt-3 overflow-hidden rounded-2xl border bg-surface">
               {(() => {
                 const q = rq.toLowerCase()
                 const rows = [
-                  ...saved.map((c) => ({ key: 'c' + c.id, title: c.title, sub: 'Chat', when: ago(c.updated), icon: History, agent: undefined as (typeof agents)[number] | undefined, go: () => load(c), t: c.updated })),
-                  ...agents.map((a) => ({ key: 'a' + a.id, title: a.name, sub: a.role || 'Agent', when: a.status, icon: Bot, agent: a, go: () => nav(`/agents/${a.id}`), t: 0 })),
+                  ...saved.map((c) => ({ key: 'c' + c.id, title: c.title, sub: 'Chat', when: ago(c.updated), icon: History, agent: undefined as (typeof agents)[number] | undefined, go: () => load(c), t: c.updated, status: '' })),
+                  ...agents.map((a) => ({ key: 'a' + a.id, title: a.name, sub: a.role || 'Agent', when: '', icon: Bot, agent: a, go: () => nav(`/agents/${a.id}`), t: 0, status: a.status })),
                 ].filter((r) => r.title.toLowerCase().includes(q)).sort((x, y) => y.t - x.t).slice(0, 6)
                 if (!rows.length) return <p className="px-4 py-8 text-center text-sm text-soft">Nothing matches.</p>
                 return rows.map((r) => (
-                  <button key={r.key} onClick={r.go} className="grid w-full grid-cols-[1fr_auto] items-center gap-4 border-b px-4 py-3 text-left transition last:border-0 hover:bg-muted/60">
-                    <span className="flex min-w-0 items-center gap-3">{r.agent ? <AgentAvatar id={r.agent.id} emoji={r.agent.emoji} className="h-9 w-9" size={16} /> : <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-soft"><r.icon size={16} /></span>}<span className="min-w-0"><span className="block truncate text-[13.5px] font-medium">{r.title}</span><span className="block truncate text-xs text-soft">{r.sub}</span></span></span>
-                    <span className="text-xs capitalize text-soft">{r.when}</span>
+                  <button key={r.key} onClick={r.go} className="flex w-full items-center gap-3 border-b px-4 py-3 text-left transition last:border-0 hover:bg-muted/50">
+                    {r.agent ? <AgentAvatar id={r.agent.id} emoji={r.agent.emoji} className="h-9 w-9" size={16} /> : <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-soft"><r.icon size={15} /></span>}
+                    <span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-medium">{r.title}</span><span className="block truncate text-xs text-soft">{r.sub}</span></span>
+                    {r.status ? <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium capitalize', r.status === 'live' ? 'bg-ok/10 text-ok' : 'bg-muted text-soft')}>{r.status}</span> : <span className="text-xs text-soft">{r.when}</span>}
                   </button>
                 ))
               })()}

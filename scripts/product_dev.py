@@ -28,6 +28,7 @@ from api.db import models  # noqa: E402
 from api.product import (agents_router, analytics_router, billing_router, calls_router, campaigns_router, conversations_router, deps, developers_router, gateway, account_router, contacts_router, flowtry_router, google_auth, handoff_router, integrations_router, phonetest_router, help_router, home_router,  # noqa: E402
                          import_router, knowledge_router, labs_router, llm_gateway, notifications, numbers_router, payments, public_api, team_router, tools_router, voices_router, widget_router)
 from api.product import assistant_router, chat_router, connectors_router, kyc_router, verify_router, admin_router, profile_router  # noqa: E402
+from api.product import live_router, public_info_router, setup_router  # noqa: E402
 from api.product import router as product_router  # noqa: E402
 from api.tests.product.support import (PROFILES, TABLES, FakeCampaigns, FakeGateway, FakeKB, FakeLLM, FakeText, FakeTools, FakeWallet)  # noqa: E402
 
@@ -59,6 +60,8 @@ app.include_router(developers_router.ops_router, prefix="/api/v1")
 app.include_router(integrations_router.hooks, prefix="/api/v1")
 for r in (assistant_router, connectors_router, kyc_router, verify_router, admin_router, profile_router):
     app.include_router(r.router, prefix="/api/v1")
+for r in (setup_router, live_router, public_info_router):
+    app.include_router(r.router, prefix="/api/v1")
 app.include_router(connectors_router.hooks, prefix="/api/v1")
 app.include_router(kyc_router.ops_router, prefix="/api/v1")
 app.include_router(kyc_router.hooks_router, prefix="/api/v1")
@@ -66,7 +69,19 @@ for r in (chat_router.router, chat_router.public, chat_router.hooks, chat_router
     app.include_router(r, prefix="/api/v1")
 fake, wallet = FakeGateway(), FakeWallet()
 kb, tl, cp = FakeKB(), FakeTools(), FakeCampaigns()
+
+
+async def _dev_fetch(url, **_):
+    """Stands in for downloading a website, so the guided setup can be tried offline."""
+    from types import SimpleNamespace as NS
+
+    html = ("<html><head><title>Sunrise Dental | Pune</title><meta name='description' content='Family dental care in Pune.'></head><body><a href='/about'>About us</a>"
+            "<h1>Sunrise Dental</h1><p>Open Monday to Saturday, 10 AM to 6 PM. Check-ups, cleaning, braces and whitening.</p></body></html>")
+    return NS(final_url=url, content_type="text/html", body=html.encode())
+
+
 app.dependency_overrides.update({
+    setup_router.get_fetcher: lambda: _dev_fetch,
     deps.get_session: _session, gateway.get_gateway: lambda: fake, payments.get_wallet: lambda: wallet,
     llm_gateway.get_text: lambda: FakeText(), llm_gateway.get_llm: lambda: FakeLLM(), labs_router.get_session_factory: lambda: Session,
     knowledge_router.get_knowledge: lambda: kb, tools_router.get_tools: lambda: tl, campaigns_router.get_campaigns: lambda: cp,

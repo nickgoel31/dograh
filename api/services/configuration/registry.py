@@ -49,6 +49,10 @@ from api.services.configuration.options import (
     INWORLD_REALTIME_TTS_MODELS,
     INWORLD_TTS_MODELS,
     INWORLD_TTS_VOICES,
+    MURF_REGIONS,
+    MURF_TTS_LOCALES,
+    MURF_TTS_MODELS,
+    MURF_TTS_VOICES,
     SMALLEST_TTS_LANGUAGES,
     SMALLEST_TTS_MODELS,
     SMALLEST_TTS_PRO_VOICES,
@@ -100,6 +104,7 @@ class ServiceProviders(str, Enum):
     INWORLD_REALTIME = "inworld_realtime"
     INWORLD_TTS = "inworld_tts"
     SWARVO_TTS = "swarvo_tts"
+    MURF_TTS = "murf_tts"
     INWORLD_STT = "inworld_stt"
     INWORLD_LLM = "inworld_llm"
 
@@ -134,6 +139,7 @@ class BaseServiceConfiguration(BaseModel):
         ServiceProviders.INWORLD_REALTIME,
         ServiceProviders.INWORLD_TTS,
         ServiceProviders.SWARVO_TTS,
+        ServiceProviders.MURF_TTS,
         ServiceProviders.INWORLD_STT,
         ServiceProviders.INWORLD_LLM,
     ]
@@ -303,6 +309,11 @@ INWORLD_REALTIME_PROVIDER_MODEL_CONFIG = provider_model_config(
     provider_docs_url="https://docs.inworld.ai/realtime/overview",
 )
 SWARVO_TTS_PROVIDER_MODEL_CONFIG = provider_model_config("Swarvo")
+MURF_TTS_PROVIDER_MODEL_CONFIG = provider_model_config(
+    "Murf Falcon",
+    description="Murf Falcon 2.1 streaming text-to-speech with Indian-language voices.",
+    provider_docs_url="https://murf.ai/api/docs/text-to-speech-models/falcon-2-1",
+)
 INWORLD_TTS_PROVIDER_MODEL_CONFIG = provider_model_config(
     "Inworld TTS",
     description="Inworld TTS API.",
@@ -1415,6 +1426,19 @@ class SwarvoTTSConfiguration(BaseTTSConfiguration):
 
 
 @register_tts
+class MurfTTSConfiguration(BaseTTSConfiguration):
+    model_config = MURF_TTS_PROVIDER_MODEL_CONFIG
+    provider: Literal[ServiceProviders.MURF_TTS] = ServiceProviders.MURF_TTS
+    model: str = Field(default="falcon-2.1", description="Murf Falcon model.", json_schema_extra={"examples": MURF_TTS_MODELS})
+    voice: str = Field(default="Aarav", description="Murf voice id (a plain name, like Aarav or Priya).", json_schema_extra={"examples": MURF_TTS_VOICES, "allow_custom_input": True})
+    language: str = Field(default="hi-IN", description="Locale to speak, like hi-IN or en-IN. Write the text in that language's own script.", json_schema_extra={"examples": MURF_TTS_LOCALES, "allow_custom_input": True})
+    region: str = Field(default="in", description="Murf region. 'in' is nearest for India, 'global' picks the nearest. Murf allows only 2 voices speaking at once outside us-east (5): ask Murf to raise it.", json_schema_extra={"examples": MURF_REGIONS})
+    rate: int = Field(default=0, ge=-50, le=50, description="Speaking speed change (0 is normal).")
+    pitch: int = Field(default=0, ge=-50, le=50, description="Pitch change (0 is normal).")
+    volume_offset: int = Field(default=0, ge=-50, le=50, description="Volume change. Murf suggests +10 to +25 for phone calls.")
+
+
+@register_tts
 class AzureSpeechTTSConfiguration(BaseTTSConfiguration):
     model_config = AZURE_SPEECH_PROVIDER_MODEL_CONFIG
     provider: Literal[ServiceProviders.AZURE_SPEECH] = ServiceProviders.AZURE_SPEECH
@@ -1471,6 +1495,7 @@ TTSConfig = Annotated[
         InworldTTSConfiguration,
         AzureSpeechTTSConfiguration,
         SwarvoTTSConfiguration,
+        MurfTTSConfiguration,
     ],
     Field(discriminator="provider"),
 ]

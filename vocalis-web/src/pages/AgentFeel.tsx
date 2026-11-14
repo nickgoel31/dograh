@@ -19,7 +19,8 @@ const Choice = ({ label, hint, value, options, onChange, off }: { label: string;
 )
 
 /** How the agent sounds and behaves in a conversation: pace, patience, interruptions, fillers, call limits. */
-export function HumanFeel({ agent, studio, swarvo = false }: { agent: Agent; studio: boolean; swarvo?: boolean }) {
+export function HumanFeel({ agent, studio, swarvo = false, falcon = false }: { agent: Agent; studio: boolean; swarvo?: boolean; falcon?: boolean }) {
+  const separate = swarvo || falcon // voices that only speak: the agent listens and thinks with separate services
   const upsert = useData((s) => s.upsertAgent)
   const [s, setS] = React.useState<Style>((agent.style as Style) ?? {})
   const [busy, setBusy] = React.useState(false)
@@ -34,15 +35,15 @@ export function HumanFeel({ agent, studio, swarvo = false }: { agent: Agent; stu
   }
   void agentsApi
   const pace = s.pace ?? 1.25
-  const listen = useQuery({ queryKey: ['listening'], enabled: swarvo, queryFn: () => http<{ engines: { id: string; label: string; available: boolean; languages?: { id: string; label: string }[]; default_language?: string }[] }>('/voices/listening'), retry: false })
+  const listen = useQuery({ queryKey: ['listening'], enabled: separate, queryFn: () => http<{ engines: { id: string; label: string; available: boolean; languages?: { id: string; label: string }[]; default_language?: string }[] }>('/voices/listening'), retry: false })
   const engine = s.stt_engine ?? 'assemblyai'
   const dg = listen.data?.engines.find((e) => e.id === 'deepgram')
   return (
     <Card className="mt-6 p-6">
       <div className="flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent"><Sparkles size={17} /></span>
         <div><h3 className="font-semibold">Make it sound human</h3><p className="text-[13px] text-soft">Small choices that change how natural the conversation feels.</p></div></div>
-      {!studio && <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-xs text-soft">{swarvo ? 'With this voice, interruptions and call limits apply. Speaking pace, patience, delivery and steering are for Studio voices (this voice always speaks at its natural pace, which keeps it fast and clean).' : 'Pace, patience, delivery and steering apply to Studio voices. With this voice, only interruptions and call limits apply.'}</p>}
-      {swarvo && (
+      {!studio && <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-xs text-soft">{separate ? 'With this voice, interruptions and call limits apply. Speaking pace, patience, delivery and steering are for Studio voices (this voice always speaks at its natural pace, which keeps it fast and clean).' : 'Pace, patience, delivery and steering apply to Studio voices. With this voice, only interruptions and call limits apply.'}</p>}
+      {separate && (
         <>
         <div className="mt-5 rounded-xl border p-4">
           <div className="text-[13px] font-medium">Listening</div><div className="mb-2 text-xs text-soft">What turns the caller's voice into text for this agent. Deepgram is very fast and covers Hindi, Tamil, Telugu, Kannada, Marathi, Bengali, Gujarati, Punjabi and Urdu.</div>
@@ -52,23 +53,23 @@ export function HumanFeel({ agent, studio, swarvo = false }: { agent: Agent; stu
             <div className="mt-3 max-w-xs"><div className="mb-1.5 text-[13px] font-medium">Language the caller speaks</div>
               <Select value={s.stt_language ?? dg.default_language ?? 'hi'} onChange={(e) => set({ stt_language: e.target.value })}>{dg.languages.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}</Select></div>)}
         </div>
-        <div className="mt-3 rounded-xl border p-4">
+        {swarvo && <div className="mt-3 rounded-xl border p-4">
           <div className="text-[13px] font-medium">Voice mode</div><div className="mb-2 text-xs text-soft">Chat adds natural pauses and short fillers, like a person talking. Read says exactly the words, nothing added.</div>
           <div className="flex flex-wrap gap-2">{([['chat', 'Chat'], ['read', 'Read']] as const).map(([k, l]) => <Chip key={k} active={(s.tts_mode ?? 'chat') === k} onClick={() => set({ tts_mode: k })}>{l}</Chip>)}</div>
           {(s.tts_mode ?? 'chat') === 'chat' && (
             <div className="mt-3"><div className="mb-1.5 text-[13px] font-medium">How much to add</div>
               <div className="flex flex-wrap gap-2">{([['light', 'Light'], ['normal', 'Normal'], ['heavy', 'Heavy']] as const).map(([k, l]) => <Chip key={k} active={(s.tts_chat_level ?? 'normal') === k} onClick={() => set({ tts_chat_level: k })}>{l}</Chip>)}</div>
               <p className="mt-1.5 text-xs text-soft">Light adds only a few pauses and fillers. Heavy adds many.</p></div>)}
-        </div>
+        </div>}
         </>
       )}
-      <div className={`mt-5 grid gap-6 md:grid-cols-2 ${studio || swarvo ? '' : 'opacity-50'}`}>
-        <Field className={swarvo ? 'pointer-events-none opacity-50' : undefined} label="Speaking pace" hint={<span className="text-xs text-soft">{pace < 1.05 ? 'Slow and calm' : pace > 1.4 ? 'Quick' : 'Natural'}</span>}>
+      <div className={`mt-5 grid gap-6 md:grid-cols-2 ${studio || separate ? '' : 'opacity-50'}`}>
+        <Field className={separate ? 'pointer-events-none opacity-50' : undefined} label="Speaking pace" hint={<span className="text-xs text-soft">{pace < 1.05 ? 'Slow and calm' : pace > 1.4 ? 'Quick' : 'Natural'}</span>}>
           <Slider value={Math.round((pace - 0.75) * 100)} min={0} max={100} onChange={(v) => set({ pace: Math.round((0.75 + v / 100) * 20) / 20 })} label="Speaking pace" /></Field>
-        <Choice off={swarvo} label="How long it waits for you to finish" hint="Quick can cut people off. Patient suits people who pause to think." value={s.patience} onChange={(v) => set({ patience: v })} options={[['quick', 'Quick'], ['balanced', 'Balanced'], ['patient', 'Patient']]} />
-        <Choice off={swarvo} label="Delivery" hint="Steady is consistent. Balanced is in between. Expressive sounds livelier." value={s.steadiness} onChange={(v) => set({ steadiness: v })} options={[['steady', 'Steady'], ['balanced', 'Balanced'], ['expressive', 'Expressive']]} />
-        <Choice off={swarvo} label="Steering" hint="The voice changes its tone to fit the moment, like sounding gentle when a caller is upset. Low: only clear emotional moments. Medium: most replies. High: rich and frequent." value={s.steering ?? 'off'} onChange={(v) => set({ steering: v })} options={[['off', 'Off'], ['low', 'Low'], ['medium', 'Medium'], ['high', 'High']]} />
-        <Choice off={swarvo} label="Knowing when you've finished" hint="Smart listens to the meaning. Fast reacts to silence." value={s.turns} onChange={(v) => set({ turns: v })} options={[['smart', 'Smart'], ['fast', 'Fast']]} />
+        <Choice off={separate} label="How long it waits for you to finish" hint="Quick can cut people off. Patient suits people who pause to think." value={s.patience} onChange={(v) => set({ patience: v })} options={[['quick', 'Quick'], ['balanced', 'Balanced'], ['patient', 'Patient']]} />
+        <Choice off={separate} label="Delivery" hint="Steady is consistent. Balanced is in between. Expressive sounds livelier." value={s.steadiness} onChange={(v) => set({ steadiness: v })} options={[['steady', 'Steady'], ['balanced', 'Balanced'], ['expressive', 'Expressive']]} />
+        <Choice off={separate} label="Steering" hint="The voice changes its tone to fit the moment, like sounding gentle when a caller is upset. Low: only clear emotional moments. Medium: most replies. High: rich and frequent." value={s.steering ?? 'off'} onChange={(v) => set({ steering: v })} options={[['off', 'Off'], ['low', 'Low'], ['medium', 'Medium'], ['high', 'High']]} />
+        <Choice off={separate} label="Knowing when you've finished" hint="Smart listens to the meaning. Fast reacts to silence." value={s.turns} onChange={(v) => set({ turns: v })} options={[['smart', 'Smart'], ['fast', 'Fast']]} />
       </div>
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <div className="flex items-center justify-between rounded-lg border p-3"><div><div className="text-sm font-medium">Natural fillers</div><div className="text-xs text-soft">Short "mm-hm" and "okay" while thinking (Studio voices)</div></div><Switch checked={!!s.fillers} onChange={(v) => set({ fillers: v })} label="Natural fillers" /></div>

@@ -2,6 +2,12 @@
 
 # kind: new | improved | fixed
 CHANGELOG: list[dict] = [
+    {"date": "2026-11-14", "title": "Guided setup and Indian voices", "items": [
+        ("new", "Guided setup on the home page: paste your website and it learns your business, writes the agent, picks a voice, adds knowledge and connects a number, step by step."),
+        ("new", "Falcon voices: 37 natural voices for Hindi, Marathi, Bengali, Tamil, Telugu, Gujarati, Kannada, Malayalam, Punjabi and Indian English, built for fast phone conversations."),
+        ("improved", "A redesigned home page."),
+        ("improved", "If your website is already added, the assistant doesn't ask again. It suggests the next agent to build."),
+    ]},
     {"date": "2026-11-09", "title": "Status, security and changelog pages", "items": [
         ("new", "A public status page with 30-day uptime for each part of the platform."),
         ("new", "A security page that says plainly what we do to protect your data."),

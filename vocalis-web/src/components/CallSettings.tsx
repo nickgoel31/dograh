@@ -97,7 +97,7 @@ export function CallSettings({ agent, separate = false }: { agent: Agent; separa
 
       <div className="space-y-3 border-t pt-5">
         <H t="Voicemail" d="When an answering machine picks up, hang up instead of talking to a recording, so you do not pay for it. Works well with campaigns: set them to retry on voicemail." />
-        <Row title="Hang up on answering machines" desc={separate ? undefined : 'This voice talks speech-to-speech, which cannot listen for answering machines. Pick a Swarvo voice to use this.'}>
+        <Row title="Hang up on answering machines" desc={separate ? undefined : 'This voice talks speech-to-speech, which cannot listen for answering machines. Pick a Swarvo or Falcon voice to use this.'}>
           <Switch label="Hang up on answering machines" checked={f.voicemail} onChange={(v) => set({ voicemail: v })} /></Row>
       </div>
 
