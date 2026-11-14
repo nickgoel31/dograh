@@ -3,12 +3,12 @@ import { useQuery } from '@tanstack/react-query'
 import { Check, Copy, Download, Lock, ShieldCheck } from '@/components/icons'
 import { Badge, Button, Card } from '@/components/ui'
 import { BASE, API_URL } from '@/lib/api/env'
-import { BRAND, SECURITY_EMAIL } from '@/config/brand'
+import { BRAND, SECURITY_EMAIL, SUPPORT_EMAIL } from '@/config/brand'
 import { cn } from '@/lib/utils'
 
 /** Pages anyone can open without signing in: status, changelog, security and the API reference. */
-export type PublicPage = 'status' | 'changelog' | 'security' | 'api-reference'
-export const PUBLIC_PAGES: Record<PublicPage, string> = { status: 'Status', changelog: 'Changelog', security: 'Security', 'api-reference': 'API reference' }
+export type PublicPage = 'status' | 'changelog' | 'security' | 'api-reference' | 'privacy' | 'terms'
+export const PUBLIC_PAGES: Record<PublicPage, string> = { status: 'Status', changelog: 'Changelog', security: 'Security', 'api-reference': 'API reference', privacy: 'Privacy', terms: 'Terms' }
 export const publicPageFor = (path: string): PublicPage | null => (Object.keys(PUBLIC_PAGES) as PublicPage[]).find((k) => path === `${BASE}/${k}` || path === `${BASE}/${k}/`) ?? null
 
 const apiRoot = new URL(API_URL.replace(/\/product$/, ''), window.location.origin).href.replace(/\/$/, '')
@@ -38,6 +38,8 @@ export default function PublicSite({ page }: { page: PublicPage }) {
         {page === 'changelog' && <ChangelogView />}
         {page === 'security' && <SecurityView />}
         {page === 'api-reference' && <ApiReferenceView />}
+        {page === 'privacy' && <PrivacyView />}
+        {page === 'terms' && <TermsView />}
       </main>
       <footer className="border-t py-8 text-center text-xs text-soft">© {new Date().getFullYear()} {BRAND}</footer>
     </div>
@@ -240,5 +242,88 @@ function ApiReferenceView() {
         </div>
       )}
     </>
+  )
+}
+
+/* ------------------------------------------------------------------ privacy and terms */
+const Sec = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <section className="mb-7"><h2 className="mb-2 text-lg font-semibold tracking-tight">{title}</h2><div className="space-y-2 text-[15px] leading-relaxed text-soft">{children}</div></section>
+)
+const Mail = () => <a className="text-accent hover:underline" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+
+function PrivacyView() {
+  return (
+    <div>
+      <H1 sub="Last updated 15 November 2026. In plain words: what we collect, why, who helps us run the service, and what you can ask us to do.">Privacy policy</H1>
+      <Sec title="Who we are">
+        <p>{BRAND} is a platform for building AI voice agents that answer and make phone calls. Questions about this policy: <Mail />.</p>
+      </Sec>
+      <Sec title="What we collect">
+        <p><b>Your account:</b> name, email, the phone number you verify, workspace and team details, and the settings you choose.</p>
+        <p><b>Your agents and knowledge:</b> instructions, call scripts, websites, files and notes you add so agents can answer questions.</p>
+        <p><b>Calls:</b> the people who call or are called (phone number, name if known), call audio if recording is on, transcripts, summaries, details agents pick up during the call, outcomes, length and cost.</p>
+        <p><b>Billing:</b> your balance, top-ups and invoices. Card details are handled by our payment provider and never stored by us.</p>
+        <p><b>Technical data:</b> logs of requests, IP address and device information, used for security and to fix problems.</p>
+      </Sec>
+      <Sec title="Why we use it">
+        <p>To run your agents and calls, show you conversations and analytics, bill you, keep the service secure, prevent misuse, and help you when you contact us. We do not sell your data and we do not use your calls to train our own or anyone else's AI models.</p>
+      </Sec>
+      <Sec title="Who helps us run the service">
+        <p>We use trusted providers to deliver the service, and share only what each one needs: cloud hosting (Oracle Cloud), phone carriers, speech and language AI providers (such as Google, OpenAI, Deepgram, AssemblyAI, Murf and Inworld), WhatsApp and email delivery, and payments. They process data for us under their own security and privacy terms.</p>
+      </Sec>
+      <Sec title="Calling people">
+        <p>You are responsible for having the right to call or message the people on your lists, for telling callers they are speaking to an AI and, where the law or your settings require it, that the call is recorded. {BRAND} provides do-not-call lists and consent checks for campaigns to help you.</p>
+      </Sec>
+      <Sec title="AI assistants (MCP)">
+        <p>If you connect an AI assistant such as Claude or ChatGPT to your account, it can read and, if you allow it, change what you can. It acts with your role and limits. You choose read-only or full access when you connect, you can see connected apps under Developers, and you can disconnect them at any time. What the assistant does with information it reads is governed by that assistant's own terms and privacy policy.</p>
+      </Sec>
+      <Sec title="How long we keep it">
+        <p>You choose how long calls, recordings and transcripts are kept in your workspace settings, and they are deleted after that. Account and billing records are kept as long as the law requires. When you delete an agent, its data is removed. You can ask us to delete your account and data at any time.</p>
+      </Sec>
+      <Sec title="Security">
+        <p>Data is encrypted in transit, access is limited to people who need it, and actions in your workspace are written to an audit log. Read more on the <a className="text-accent hover:underline" href={`${BASE}/security`}>security page</a>. If you find a problem, please tell us at <a className="text-accent hover:underline" href={`mailto:${SECURITY_EMAIL}`}>{SECURITY_EMAIL}</a>.</p>
+      </Sec>
+      <Sec title="Your choices">
+        <p>You can ask to see, correct, export or delete your data, to stop certain uses of it, or to complain about how we handle it. Email <Mail /> and we will reply within 30 days. Callers can ask the business that called them, and us, to remove their details.</p>
+      </Sec>
+      <Sec title="Changes">
+        <p>If we change this policy in a way that matters, we will tell you in the app or by email before it takes effect.</p>
+      </Sec>
+    </div>
+  )
+}
+
+function TermsView() {
+  return (
+    <div>
+      <H1 sub="Last updated 15 November 2026. The agreement between you and us when you use the service.">Terms of service</H1>
+      <Sec title="Using the service">
+        <p>By creating an account or using {BRAND} you agree to these terms. You must be able to enter a binding contract and use the service for lawful business purposes. You are responsible for everything done under your account, including by team members and by AI assistants you connect.</p>
+      </Sec>
+      <Sec title="Your content and your callers">
+        <p>You own your agents, scripts, knowledge and call data. You give us permission to process them only to provide the service to you. You are responsible for having the right to call or message the people you contact, for following telecom, consent, do-not-call and recording laws where you and they are, and for telling callers they are speaking to an AI.</p>
+      </Sec>
+      <Sec title="Not allowed">
+        <p>Do not use {BRAND} to deceive, harass or threaten people, to send spam or unlawful marketing, to impersonate a person or organisation without permission, to collect payment details or one-time codes by pretending to be someone else, or to break the law. We may pause or close accounts that do, and may stop a campaign that puts people or the network at risk.</p>
+      </Sec>
+      <Sec title="Prices and payment">
+        <p>Calls and numbers are charged per minute and per month from your prepaid balance at the prices shown in the app when you use them. Price changes apply from when we announce them and never change what a call already cost. Top-ups are non-refundable once used, and unused balance can be refunded on request unless the law says otherwise.</p>
+      </Sec>
+      <Sec title="AI limits">
+        <p>AI agents can make mistakes. Check agents with practice calls before they go live, and do not rely on them alone for medical, legal, financial or emergency decisions. You are responsible for what your agents say and do on your behalf.</p>
+      </Sec>
+      <Sec title="Availability">
+        <p>We work hard to keep {BRAND} running and publish live status on the <a className="text-accent hover:underline" href={`${BASE}/status`}>status page</a>, but we do not promise it will be uninterrupted or error-free. Phone networks and AI providers outside our control can fail.</p>
+      </Sec>
+      <Sec title="Liability">
+        <p>To the fullest extent the law allows, {BRAND} is provided as is, and our total liability for any claim is limited to what you paid us in the three months before it. We are not liable for indirect or consequential losses, or for how you or your callers use the service.</p>
+      </Sec>
+      <Sec title="Ending">
+        <p>You can stop using {BRAND} and delete your account at any time. We can end or pause access if you break these terms. After closing, we delete your data as set out in the privacy policy.</p>
+      </Sec>
+      <Sec title="Contact">
+        <p>Questions about these terms: <Mail />.</p>
+      </Sec>
+    </div>
   )
 }

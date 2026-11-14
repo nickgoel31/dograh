@@ -6,3 +6,6 @@ export const CURRENCY = '₹'
 
 /** Where security reports go. Change this to a mailbox you read. */
 export const SECURITY_EMAIL = 'security@swarvoai.com'
+
+/** Where customers get help. Change this to a mailbox you read. */
+export const SUPPORT_EMAIL = 'support@swarvoai.com'
