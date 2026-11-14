@@ -212,4 +212,4 @@ async def test_a_connector_can_talk_to_the_mounted_server_with_the_token_in_the_
                 out = parse(r)["result"]
                 assert not out.get("isError") and "Mira" in json.dumps(out), (url, out)
             bad = await http.post("/api/v1/swarvo-mcp/", json=call, headers=hdr)
-            assert "token" in json.dumps(parse(bad)).lower()  # no token: a clear message, not a crash
+            assert bad.status_code == 401 and "resource_metadata" in bad.headers["www-authenticate"]  # no token: told to sign in, which starts the Connect flow

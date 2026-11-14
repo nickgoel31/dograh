@@ -43,6 +43,8 @@ TABLES = [
     product_models.ProductAbTestModel.__table__,
     product_models.ProductInsightModel.__table__,
     product_models.ProductApiKeyModel.__table__,
+    product_models.ProductOAuthClientModel.__table__,
+    product_models.ProductOAuthTokenModel.__table__,
     product_models.ProductApiLogModel.__table__,
     product_models.ProductWebhookModel.__table__,
     product_models.ProductDeliveryModel.__table__,
@@ -375,6 +377,9 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(admin_router.router)
     app.include_router(public_info_router.router)
     app.include_router(setup_router.router)
+    from api.product import oauth_router
+
+    app.include_router(oauth_router.router)
     app.include_router(live_router.router)
     app.include_router(profile_router.router)
     app.include_router(kyc_router.ops_router)

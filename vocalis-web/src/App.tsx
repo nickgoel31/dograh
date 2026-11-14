@@ -37,6 +37,7 @@ import Contacts from '@/pages/Contacts'
 import { ResetPage, VerifyPage } from '@/pages/AccountPages'
 import PublicSite, { publicPageFor } from '@/pages/PublicPages'
 import LivePage from '@/pages/Live'
+import ConnectPage from '@/pages/Connect'
 
 /** Real mode: show sign-in until a session exists; keep the active workspace valid. */
 function Gate({ children }: { children: React.ReactNode }) {
@@ -110,6 +111,7 @@ export default function App() {
     <Gate>
     <BrowserRouter basename={BASE}>
       <Routes>
+        <Route path="connect/authorize" element={<ConnectPage />} />
         <Route element={<Shell />}>
           <Route index element={<Home />} />
           <Route path="welcome" element={USE_MOCKS ? <Onboarding /> : <Navigate to="/" replace />} />

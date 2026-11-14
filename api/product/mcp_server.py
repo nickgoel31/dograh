@@ -9,6 +9,7 @@ through MCP: signing in or out, passwords, two-step sign-in, the owner's admin a
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -81,6 +82,26 @@ class Principal:
     readonly: bool
 
 
+def _expired(key: ProductApiKeyModel) -> bool:
+    e = key.expires_at
+    if e is None:
+        return False
+    return (e.replace(tzinfo=UTC) if e.tzinfo is None else e) < datetime.now(UTC)
+
+
+async def token_state(raw: str | None) -> str:
+    """ok | missing | invalid | expired. Used to answer a connection with 401 (so the app can sign in or refresh) before any tool runs."""
+    if not raw:
+        return "missing"
+    if not TOKEN_RE.match(raw):
+        return "invalid"
+    async with session_factory()() as s:
+        key = await s.scalar(select(ProductApiKeyModel).where(ProductApiKeyModel.key_hash == dev.hash_key(raw), ProductApiKeyModel.environment == "mcp", ProductApiKeyModel.revoked_at.is_(None)))
+    if key is None:
+        return "invalid"
+    return "expired" if _expired(key) else "ok"
+
+
 async def authenticate(raw: str | None) -> Principal:
     if not raw or not TOKEN_RE.match(raw):
         raise ToolError("Missing or invalid MCP token. Create one under Developers > MCP access and connect with it.")
@@ -88,6 +109,8 @@ async def authenticate(raw: str | None) -> Principal:
         key = await s.scalar(select(ProductApiKeyModel).where(ProductApiKeyModel.key_hash == dev.hash_key(raw), ProductApiKeyModel.environment == "mcp", ProductApiKeyModel.revoked_at.is_(None)))
         if key is None:
             raise ToolError("That MCP token isn't valid any more. It may have been revoked.")
+        if _expired(key):
+            raise ToolError("This sign-in has expired. Reconnect Swarvo AI.")
         ws = await s.get(ProductWorkspaceModel, key.workspace_id)
         user = await s.get(UserModel, key.created_by) if key.created_by else None
         if ws is None or user is None:
@@ -662,7 +685,34 @@ class TokenInPath:
         await self.app(scope, receive, send)
 
 
+class RequireSignIn:
+    """Answers a connection that has no valid token with 401 and a pointer to the sign-in details, which is what tells Claude and ChatGPT to start the
+    "Connect" flow (or to refresh an expired token) instead of failing."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
+        raw = headers.get("x-api-key")
+        if not raw and headers.get("authorization", "").lower().startswith("bearer "):
+            raw = headers["authorization"].split(" ", 1)[1].strip()
+        state = await token_state(raw)
+        if state == "ok":
+            return await self.app(scope, receive, send)
+        host = headers.get("x-forwarded-host") or headers.get("host") or "localhost"
+        proto = "http" if host.split(":")[0] in ("localhost", "127.0.0.1", "test") else "https"
+        meta = f"{proto}://{host}{API_PREFIX}/product/oauth/.well-known/oauth-protected-resource"
+        error = '' if state == "missing" else ', error="invalid_token"'
+        body = json.dumps({"error": "invalid_token" if state != "missing" else "unauthorized", "error_description": "Sign in to Swarvo AI to use this connection."}).encode()
+        await send({"type": "http.response.start", "status": 401, "headers": [(b"content-type", b"application/json"), (b"content-length", str(len(body)).encode()),
+                                                                              (b"www-authenticate", f'Bearer resource_metadata="{meta}"{error}'.encode())]})
+        await send({"type": "http.response.body", "body": body})
+
+
 def http_app():
     """The ASGI app to mount (at /api/v1/swarvo-mcp), and the underlying app whose lifespan must run with the main one."""
     inner = mcp.http_app(path="/", stateless_http=True)
-    return TokenInPath(inner), inner
+    return TokenInPath(RequireSignIn(inner)), inner

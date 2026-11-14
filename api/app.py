@@ -145,3 +145,19 @@ app.include_router(api_router, prefix=API_PREFIX)
 # without any extra configuration.
 app.mount(f"{API_PREFIX}/mcp", mcp_app)
 app.mount(f"{API_PREFIX}/swarvo-mcp", swarvo_mcp_app)
+
+
+class _McpNoSlash:
+    """Serve /swarvo-mcp the same as /swarvo-mcp/. Starlette would redirect, and behind the proxy that redirect
+    points at http://, which AI assistants refuse to follow."""
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"] == f"{API_PREFIX}/swarvo-mcp":
+            scope = {**scope, "path": scope["path"] + "/", "raw_path": scope.get("raw_path", b"") + b"/"}
+        await self.inner(scope, receive, send)
+
+
+app.add_middleware(_McpNoSlash)

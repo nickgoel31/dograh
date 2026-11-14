@@ -118,7 +118,7 @@ def _mcp_out(k: ProductApiKeyModel, raw: str | None = None) -> McpTokenOut:
 @router.get("/mcp-tokens", response_model=list[McpTokenOut])
 async def list_mcp_tokens(ctx: Ctx = Depends(require(Perm.API_KEYS_MANAGE))):
     rows = (await ctx.session.scalars(select(ProductApiKeyModel).where(
-        ProductApiKeyModel.workspace_id == ctx.workspace.id, ProductApiKeyModel.environment == "mcp", ProductApiKeyModel.revoked_at.is_(None)).order_by(ProductApiKeyModel.id.desc()))).all()
+        ProductApiKeyModel.workspace_id == ctx.workspace.id, ProductApiKeyModel.environment == "mcp", ProductApiKeyModel.revoked_at.is_(None), ProductApiKeyModel.grant_id.is_(None)).order_by(ProductApiKeyModel.id.desc()))).all()
     return [_mcp_out(k) for k in rows]
 
 

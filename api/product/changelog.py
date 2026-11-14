@@ -2,6 +2,10 @@
 
 # kind: new | improved | fixed
 CHANGELOG: list[dict] = [
+    {"date": "2026-11-15", "title": "Connect Claude with one click", "items": [
+        ("new", "Connect Claude or ChatGPT to your account with one click: add the address, press Connect, sign in and allow. No token to copy."),
+        ("new", "See the apps connected to your account under Developers, and disconnect any of them at once."),
+    ]},
     {"date": "2026-11-14", "title": "Guided setup and Indian voices", "items": [
         ("new", "Guided setup on the home page: paste your website and it learns your business, writes the agent, picks a voice, adds knowledge and connects a number, step by step."),
         ("new", "Falcon voices: 37 natural voices for Hindi, Marathi, Bengali, Tamil, Telugu, Gujarati, Kannada, Malayalam, Punjabi and Indian English, built for fast phone conversations."),

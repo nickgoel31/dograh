@@ -317,9 +317,45 @@ class ProductApiKeyModel(Base):
     created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     last_used_at = Column(DateTime(timezone=True), nullable=True)
     revoked_at = Column(DateTime(timezone=True), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True)  # set on keys made by signing in with OAuth
+    grant_id = Column(String(32), nullable=True, index=True)  # the OAuth connection that made it
     created_at = Column(DateTime(timezone=True), default=_now)
 
     __table_args__ = (Index("ix_product_api_keys_ws", "workspace_id", "environment"),)
+
+
+class ProductOAuthClientModel(Base):
+    """An app (Claude, ChatGPT, ...) that registered itself to sign people in."""
+
+    __tablename__ = "product_oauth_clients"
+
+    id = Column(Integer, primary_key=True)
+    client_id = Column(String(48), unique=True, nullable=False)
+    name = Column(String(120), nullable=False)
+    redirect_uris = Column(JSON, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+
+class ProductOAuthTokenModel(Base):
+    """A one-time sign-in code (kind=code) or a long-lived connection (kind=refresh). Only hashes are stored."""
+
+    __tablename__ = "product_oauth_tokens"
+
+    id = Column(Integer, primary_key=True)
+    public_id = Column(String(32), unique=True, nullable=False)
+    kind = Column(String(8), nullable=False)  # code | refresh
+    token_hash = Column(String(64), unique=True, nullable=False, index=True)
+    client_id = Column(String(48), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    access = Column(String(4), nullable=False)  # read | full
+    redirect_uri = Column(String(500), nullable=True)
+    code_challenge = Column(String(128), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    used_at = Column(DateTime(timezone=True), nullable=True)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_now)
 
 
 class ProductApiLogModel(Base):

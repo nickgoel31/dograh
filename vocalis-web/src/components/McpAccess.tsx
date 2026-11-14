@@ -8,6 +8,7 @@ import { http } from '@/lib/api/http'
 import { API_URL } from '@/lib/api/env'
 
 type Token = { id: string; name: string; access: 'read' | 'full'; hint: string; created: string; last_used: string | null; token?: string | null; url?: string | null }
+type Conn = { id: string; app: string; access: 'read' | 'full'; connected: string; last_used: string | null }
 const say = (e: unknown) => toast.error(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
 const root = () => new URL(API_URL.replace(/\/product$/, ''), window.location.origin).href.replace(/\/$/, '')
 const urlFor = (t: string) => `${root()}/swarvo-mcp/t/${t}/`
@@ -17,6 +18,8 @@ const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'ne
 export function McpAccess() {
   const qc = useQueryClient()
   const list = useQuery({ queryKey: ['mcp-tokens'], queryFn: () => http<Token[]>('/developers/mcp-tokens'), retry: false })
+  const conns = useQuery({ queryKey: ['mcp-connections'], queryFn: () => http<Conn[]>('/oauth/connections'), retry: false })
+  const [dropConn, setDropConn] = React.useState<Conn | null>(null)
   const [open, setOpen] = React.useState(false)
   const [name, setName] = React.useState('')
   const [access, setAccess] = React.useState<'full' | 'read'>('full')
@@ -47,7 +50,26 @@ export function McpAccess() {
               <Button size="sm" variant="ghost" className="hover:text-bad" aria-label={`Revoke ${t.name}`} onClick={() => setDrop(t)}><Trash2 size={14} /></Button>
             </div>))}
         </div>)}
-      {list.data?.length === 0 && <p className="mt-4 text-[13px] text-soft">No tokens yet.</p>}
+      {list.data?.length === 0 && !conns.data?.length && <p className="mt-4 text-[13px] text-soft">Nothing connected yet.</p>}
+
+      <div className="mt-5 rounded-xl bg-muted/50 p-4 text-[13px]">
+        <div className="font-semibold">Easiest: connect with one click</div>
+        <p className="mt-1 text-soft">In Claude, open Settings, then Connectors, then Add custom connector, and paste this address. Press Connect, sign in here and choose Allow. No token needed.</p>
+        <div className="mt-2 flex items-center gap-2"><div className="min-w-0 flex-1 overflow-x-auto rounded-lg border bg-surface px-3 py-2 font-mono text-xs">{`${root()}/swarvo-mcp`}</div><CopyButton text={`${root()}/swarvo-mcp`} /></div>
+      </div>
+
+      {conns.data && conns.data.length > 0 && (
+        <div className="mt-4">
+          <div className="mb-2 text-[13px] font-medium">Connected apps</div>
+          <div className="divide-y rounded-xl border">
+            {conns.data.map((c) => (
+              <div key={c.id} className="flex flex-wrap items-center gap-3 px-4 py-3 text-sm">
+                <div className="min-w-0 flex-1"><div className="font-medium">{c.app}</div><div className="text-xs text-soft">connected {when(c.connected)} · last used {when(c.last_used)}</div></div>
+                <Badge tone={c.access === 'full' ? 'accent' : 'gray'}>{c.access === 'full' ? 'Full access' : 'Read-only'}</Badge>
+                <Button size="sm" variant="ghost" className="hover:text-bad" aria-label={`Disconnect ${c.app}`} onClick={() => setDropConn(c)}><Trash2 size={14} /></Button>
+              </div>))}
+          </div>
+        </div>)}
 
       <Dialog open={open} onOpenChange={setOpen} title="New MCP token" description="Name it after the assistant that will use it.">
         <div className="space-y-4">
@@ -77,6 +99,8 @@ export function McpAccess() {
 
       <ConfirmDialog open={!!drop} onOpenChange={(o) => !o && setDrop(null)} danger confirm="Revoke" title={`Revoke ${drop?.name ?? 'this token'}?`} text="The assistant using it loses access straight away. You can make a new token any time."
         onConfirm={() => { const d = drop; if (d) http(`/developers/mcp-tokens/${d.id}`, { method: 'DELETE' }).then(() => { toast.success('Revoked'); qc.invalidateQueries({ queryKey: ['mcp-tokens'] }) }).catch(say) }} />
+      <ConfirmDialog open={!!dropConn} onOpenChange={(o) => !o && setDropConn(null)} danger confirm="Disconnect" title={`Disconnect ${dropConn?.app ?? 'this app'}?`} text="It loses access straight away. It can ask to connect again, and you will be asked to allow it."
+        onConfirm={() => { const d = dropConn; if (d) http(`/oauth/connections/${d.id}`, { method: 'DELETE' }).then(() => { toast.success('Disconnected'); qc.invalidateQueries({ queryKey: ['mcp-connections'] }) }).catch(say) }} />
     </Card>
   )
 }
