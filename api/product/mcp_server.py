@@ -10,6 +10,7 @@ through MCP: signing in or out, passwords, two-step sign-in, the owner's admin a
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -19,7 +20,7 @@ import httpx
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.server.dependencies import get_http_headers
-from mcp.types import ToolAnnotations
+from mcp.types import Icon, ToolAnnotations
 from sqlalchemy import select
 
 from api.db.models import UserModel
@@ -44,7 +45,9 @@ How things work:
 - If a tool does not exist for something, use api_request (use search_api first to find the right path).
 Be careful with anything that calls real people (campaigns, call-backs), releases a phone number, or deletes an agent or knowledge. Say what you are about to do and confirm when the request was not explicit."""
 
-mcp = FastMCP("swarvo", instructions=INSTRUCTIONS)
+_SITE = os.getenv("PRODUCT_PUBLIC_URL", "https://app.swarvoai.com").rstrip("/")
+mcp = FastMCP("swarvo", instructions=INSTRUCTIONS, website_url=_SITE,
+              icons=[Icon(src=f"{_SITE}/logo-icon.ico", mimeType="image/x-icon", sizes=["any"])])
 _READ = ToolAnnotations(readOnlyHint=True, idempotentHint=True, destructiveHint=False, openWorldHint=False)
 _WRITE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
 _DESTROY = ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=False)
