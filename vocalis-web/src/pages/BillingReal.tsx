@@ -1,6 +1,6 @@
 import * as React from 'react'
 import type { LucideIcon } from '@/components/icons'
-import { AlertTriangle, ArrowUpRight, Building2, Check, CheckCircle2, Clock, Download, Gauge, Lock, Phone, ReceiptText, ShieldCheck, Sparkles, TrendingDown, Wallet, Zap } from '@/components/icons'
+import { AlertTriangle, ArrowUpRight, Building2, Check, CheckCircle2, Clock, Download, Gauge, Lock, Mic, Phone, ReceiptText, ShieldCheck, Sparkles, TrendingDown, Wallet, Zap } from '@/components/icons'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip as RTooltip, XAxis, YAxis } from 'recharts'
@@ -194,6 +194,14 @@ export default function RealBilling() {
           <AlertTriangle size={17} className="shrink-0" />
           <span className="font-medium">{s.limit_state === 'limit' ? "You've reached your monthly spending limit, so new calls are paused. Raise the limit to carry on." : "You've used over 80% of your monthly spending limit."}</span>
         </div>)}
+
+      {((s as unknown as { voice_discounts?: { id: string; label: string; percent: number; available: boolean }[] }).voice_discounts ?? []).map((d) => (
+        <div key={d.id} className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border bg-surface p-4">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"><Mic size={17} /></span>
+          <div className="min-w-0 flex-1"><div className="text-[14px] font-semibold">{d.percent}% off every minute with {d.label}</div>
+            <p className="text-[13px] text-soft">{d.available ? `Calls spoken with these voices are charged ${d.percent}% less than the price shown here.` : 'These voices are coming soon. When they open up, every minute spoken with them costs less.'}</p></div>
+          {d.available ? <Badge tone="green">On for you</Badge> : <Badge tone="accent">Coming soon</Badge>}
+        </div>))}
 
       <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
         {/* ---------- balance ---------- */}

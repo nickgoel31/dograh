@@ -49,10 +49,15 @@ API_PREFIX = "/api/v1"
 
 mcp_app = mcp.http_app(path="/", stateless_http=True)
 
+# The customer-facing MCP server (Claude, ChatGPT and other assistants running a Swarvo account). The platform's own authoring MCP above is unchanged.
+from api.product import mcp_server as swarvo_mcp  # noqa: E402
+
+swarvo_mcp_app, _swarvo_mcp_inner = swarvo_mcp.http_app()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with mcp_app.lifespan(app):
+    async with mcp_app.lifespan(app), _swarvo_mcp_inner.lifespan(app):
         # warmup arq pool
         await get_arq_redis()
 
@@ -139,3 +144,4 @@ app.include_router(api_router, prefix=API_PREFIX)
 # Mounted under /api/v1 so existing reverse-proxy rules (nginx etc.) route it
 # without any extra configuration.
 app.mount(f"{API_PREFIX}/mcp", mcp_app)
+app.mount(f"{API_PREFIX}/swarvo-mcp", swarvo_mcp_app)

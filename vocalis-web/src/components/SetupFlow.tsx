@@ -19,8 +19,9 @@ type State = { website: string | null; website_docs: { id: string; url: string |
 type Voice = { id: string; name: string; language: string; engine?: string; reason?: string; alternatives?: { id: string; name: string; language: string }[] }
 type Plan = { agent: { name: string; emoji: string; role: string; tone: string; business: string; what_you_do: string; script: string; generated: boolean }; languages: string[]; voice: Voice | null; tools: { key: string; why: string; connected: boolean }[]; knowledge: { website: string | null; faqs: number; has_profile: boolean } }
 type Num = { id: string; number: string; agent_id: string | null; agent_name: string | null }
+type Built = { agent: { id: string; name: string; role: string; status: string; voice: string | null; languages: string[]; number: string | null }; steps: { id: string; label: string; status: string; note: string | null }[]; tools: { key: string; why: string; connected: boolean }[] }
 type Task = { id: string; label: string; status: 'wait' | 'run' | 'ok' | 'fail' | 'skip'; note?: string }
-type Step = 'boot' | 'website' | 'describe' | 'reading' | 'profile' | 'usecase' | 'language' | 'planning' | 'plan' | 'running' | 'done'
+type Step = 'boot' | 'express' | 'building' | 'built' | 'website' | 'describe' | 'reading' | 'profile' | 'usecase' | 'language' | 'planning' | 'plan' | 'running' | 'done'
 
 const LANGS = ['English', 'Hindi', 'Marathi', 'Gujarati', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 'Bengali', 'Punjabi']
 const COMMON: Suggest[] = [
@@ -79,6 +80,9 @@ export default function SetupFlow({ onExit }: { onExit: () => void }) {
   const [pct, setPct] = React.useState(0)
   const [busy, setBusy] = React.useState(false)
   const [heard, setHeard] = React.useState<string | null>(null)
+  const [fast, setFast] = React.useState('')
+  const [custom, setCustom] = React.useState(false) // the person chose to go step by step
+  const [built, setBuilt] = React.useState<Built | null>(null)
   const audio = React.useRef<HTMLAudioElement | null>(null)
   const end = React.useRef<HTMLDivElement>(null)
   React.useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [log, step, tasks])
@@ -97,17 +101,33 @@ export default function SetupFlow({ onExit }: { onExit: () => void }) {
         setSt(s)
         if (s.website) {
           setRes(loadProfile(ws))
-          ai(<>I already know your business from <b>{host(s.website)}</b>, so I won't ask again.{s.agents.length > 0 && <> You have {s.agents.length === 1 ? 'one agent' : `${s.agents.length} agents`} so far.</>} Want another agent? Here is what I would add next. Or tell me something else.</>)
+          ai(<>I already know your business from <b>{host(s.website)}</b>, so I won't ask again.{s.agents.length > 0 && <> You have {s.agents.length === 1 ? 'one agent' : `${s.agents.length} agents`} so far.</>} Want another agent? Pick one and I'll set it all up, or tell me something else.</>)
           setStep('usecase')
         } else {
-          ai(<>Let's get an agent live for your business, step by step. <b>What's your website?</b> I'll read it, and learn what you do, so you don't have to type it all out.</>)
-          setStep('website')
+          ai(<>Tell me about your business in a sentence or two, or just paste your website, and say what the agent should do. <b>I'll do the rest</b>: read your site, write the agent, add what it needs to know, pick a voice, put it live and connect a free number.</>)
+          setStep('express')
         }
       } catch (e) { if (live) { ai(say(e)); setStep('website') } }
     })()
     return () => { live = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ---- the fast way: one message, everything done for you
+  const build = async (text: string, key = '', shown?: string) => {
+    me(shown ?? text)
+    setStep('building'); setPct(6); setBusy(true)
+    const tick = setInterval(() => setPct((p) => Math.min(94, p + 3)), 1500)
+    try {
+      const r = await http<Built>('/assistant/setup/auto', { method: 'POST', json: { text, usecase: key }, timeoutMs: 240000 })
+      clearInterval(tick); setPct(100); setBuilt(r)
+      try { useData.getState().upsertAgent(toAgent(await agentsApi.get(r.agent.id))) } catch { /* the Agents page reloads on its own */ }
+      void qc.invalidateQueries()
+      try { setSt(await http<State>('/assistant/setup/state')) } catch { /* the next round asks again */ }
+      ai(<><b>{r.agent.name}</b> is ready.{r.agent.status === 'live' ? ' It is live' : ' It is saved as a draft'}{r.agent.number ? <> on <b>{r.agent.number}</b></> : ''}. Here is what I did.</>)
+      setStep('built')
+    } catch (e) { clearInterval(tick); ai(<>{say(e)} Add a little more about your business and try again.</>); setStep('express') } finally { setBusy(false) }
+  }
 
   // ---- 2. read the website
   const research = async (u: string, n: string) => {
@@ -127,8 +147,8 @@ export default function SetupFlow({ onExit }: { onExit: () => void }) {
   }
 
   // ---- 3. choose the job and languages, then prepare the plan
-  const chooseJob = (s: Suggest) => { setJob(s); me(title(s)); askLanguage() }
-  const chooseOwn = () => { const t = own.trim(); if (t.length < 4) return; const s = { key: 'custom', title: t, why: '' }; setJob(s); me(t); askLanguage() }
+  const chooseJob = (s: Suggest) => { if (!custom) { void build('', s.key, title(s)); return } setJob(s); me(title(s)); askLanguage() }
+  const chooseOwn = () => { const t = own.trim(); if (t.length < 4) return; if (!custom) { void build(t); return } const s = { key: 'custom', title: t, why: '' }; setJob(s); me(t); askLanguage() }
   const askLanguage = () => {
     const have = (res?.profile.languages ?? []).slice(0, 2)
     setLangs(have.length ? have : ['English'])
@@ -231,6 +251,43 @@ export default function SetupFlow({ onExit }: { onExit: () => void }) {
 
         {step === 'boot' && <div className="ml-10 flex items-center gap-2 text-sm text-soft"><Loader2 size={14} className="animate-spin" />Looking at what you already have…</div>}
 
+        {step === 'express' && (
+          <Panel>
+            <Textarea autoFocus className="min-h-[120px]" value={fast} onChange={(e) => setFast(e.target.value)} aria-label="About your business"
+              onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && fast.trim().length >= 8) void build(fast.trim()) }}
+              placeholder="e.g. We run Sunrise Dental in Pune (sunrisedental.in). I want an agent that answers calls in Hindi and English and books check-ups." />
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <Button variant="primary" size="lg" disabled={fast.trim().length < 8 || busy} onClick={() => void build(fast.trim())}><Sparkles size={16} />Create my agent</Button>
+              <button onClick={() => { setCustom(true); ai(<>Okay, we'll go step by step. <b>What's your website?</b></>); setStep('website') }} className="text-[13px] text-soft underline underline-offset-2 hover:text-ink">I'd rather choose each step</button>
+            </div>
+            <p className="mt-3 text-xs text-soft">It will put the agent live and connect a free phone number if you have one. You can pause it any time.</p>
+          </Panel>
+        )}
+
+        {step === 'building' && (
+          <Panel>
+            <div className="flex items-center gap-2 text-[13.5px] font-medium"><Loader2 size={15} className="animate-spin text-accent" />{pct < 30 ? 'Reading about your business…' : pct < 55 ? 'Writing your agent and picking its voice…' : pct < 80 ? 'Adding what it needs to know…' : 'Putting it live…'}</div>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-accent transition-[width] duration-700" style={{ width: `${pct}%` }} /></div>
+            <p className="mt-2 text-xs text-soft">This usually takes up to a minute.</p>
+          </Panel>
+        )}
+
+        {step === 'built' && built && (
+          <Panel>
+            <ul className="space-y-2.5">{built.steps.map((t) => (
+              <li key={t.id} className="flex items-start gap-2.5 text-[13.5px]">
+                <span className={cn('mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full', t.status === 'ok' ? 'bg-ok/15 text-ok' : t.status === 'fail' ? 'bg-bad/15 text-bad' : 'bg-muted text-soft')}>{t.status === 'ok' ? <Check size={12} /> : t.status === 'fail' ? <X size={12} /> : <span className="h-1.5 w-1.5 rounded-full bg-soft" />}</span>
+                <span className={cn(t.status !== 'ok' && 'text-soft')}>{t.label}{t.note && <span className="block text-xs">{t.note}</span>}</span>
+              </li>))}</ul>
+            {built.tools.some((t) => !t.connected) && <p className="mt-3 text-xs text-soft">It will work even better with {built.tools.filter((t) => !t.connected).slice(0, 2).map((t) => t.key.replace(/_/g, ' ')).join(' or ')}. Those need your own account, so connect them on the <button className="text-accent underline underline-offset-2" onClick={() => nav('/tools')}>Tools page</button>.</p>}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button variant="primary" onClick={() => setUI({ playground: built.agent.id })}><Mic size={15} />Talk to {built.agent.name}</Button>
+              <Button variant="ghost" onClick={() => nav(`/agents/${built.agent.id}`)}>Fine-tune it</Button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-4 text-[13px]"><button onClick={() => { setBuilt(null); setFast(''); ai(<>Sure. Tell me what the next agent should do.</>); setStep('usecase') }} className="text-accent underline underline-offset-2">Make another agent</button><button onClick={onExit} className="text-soft underline underline-offset-2">Back to chat</button></div>
+          </Panel>
+        )}
+
         {step === 'website' && (
           <Panel>
             <label className="text-[13px] font-medium" htmlFor="site">Your website</label>
@@ -281,6 +338,7 @@ export default function SetupFlow({ onExit }: { onExit: () => void }) {
                 </button>
               ))}
             </div>
+            {!custom && <button onClick={() => { setCustom(true); ai(<>Okay, I'll ask a couple of things first.</>) }} className="mt-3 text-xs text-soft underline underline-offset-2 hover:text-ink">I'd rather choose the languages and details first</button>}
             <div className="mt-3 flex gap-2"><Input value={own} onChange={(e) => setOwn(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') chooseOwn() }} placeholder="Or describe what it should do…" aria-label="What the agent should do" />
               <Button disabled={own.trim().length < 4} onClick={chooseOwn}>Use this</Button></div>
           </Panel>

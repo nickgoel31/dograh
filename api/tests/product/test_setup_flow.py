@@ -163,3 +163,79 @@ async def test_the_plan_has_an_agent_a_voice_tools_and_knowledge(client, monkeyp
     assert [t["key"] for t in d["tools"]] == ["google_calendar", "calendly"] and all(t["connected"] is False for t in d["tools"])
     assert d["voice"] is None  # no voice engine has a profile in this test workspace, so nothing is offered rather than something that would not work
     assert voice_catalogue.catalogue()  # (the catalogue itself is not empty)
+
+
+# ---------- autopilot: one message builds everything ----------
+from api.product import setup_auto  # noqa: E402
+
+
+def test_one_message_is_split_into_a_website_and_what_the_person_wants():
+    url, rest = setup_auto.split_input("We are Sunrise Dental, sunrise.example. Book check-ups in Hindi.")
+    assert url == "sunrise.example" and "Book check-ups in Hindi" in rest and "sunrise" not in rest
+    assert setup_auto.split_input("https://www.shop.example.in/store, sell shoes")[0] == "https://www.shop.example.in/store"
+    assert setup_auto.split_input("just a description of my business")[0] == ""
+
+
+def test_the_job_comes_from_their_words_then_from_the_website_then_a_receptionist():
+    profile = {"suggested": [{"key": "dental"}]}
+    assert setup_auto.pick_usecase("I want it to take orders for delivery", profile) == ("orders", "")
+    assert setup_auto.pick_usecase("book appointments for my dentist", profile)[0] == "dental"
+    assert setup_auto.pick_usecase("www.sunrise.example", profile) == ("dental", "")  # only a website: what the site suggests
+    assert setup_auto.pick_usecase("", {}) == ("receptionist", "")
+    assert setup_auto.pick_usecase("greet visitors and sell tickets to our museum", {}) == ("custom", "greet visitors and sell tickets to our museum")
+    assert setup_auto.languages_in("answer in tamil and english please", ["Hindi"]) == ["Tamil", "English"]  # in the order they were said
+    assert setup_auto.languages_in("no language mentioned", ["Hindi", "English"]) == ["Hindi", "English"]
+
+
+async def _number(client, org_id, address="+919800000001"):
+    from api.db import models
+
+    async with client.session_factory() as s:
+        cfg = models.TelephonyConfigurationModel(organization_id=org_id, name="c", provider="twilio", credentials={})
+        s.add(cfg)
+        await s.flush()
+        s.add(models.TelephonyPhoneNumberModel(organization_id=org_id, telephony_configuration_id=cfg.id, address=address, address_normalized=address.lstrip("+"), address_type="PSTN", country_code="IN", is_active=True))
+        await s.commit()
+
+
+@pytest.mark.asyncio
+async def test_autopilot_builds_and_publishes_an_agent_and_connects_the_free_number(client):
+    from sqlalchemy import select
+
+    from api.db import models, product_models
+
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    async with client.session_factory() as s:
+        ws = (await s.execute(select(product_models.ProductWorkspaceModel))).scalars().first()
+    await _number(client, ws.live_org_id)
+    r = await client.post("/product/assistant/setup/auto", json={"text": "We are Sunrise Dental, sunrise.example. Book appointments in Hindi and English."}, headers=h)
+    assert r.status_code == 200, r.text
+    d = r.json()
+    steps = {x["id"]: x for x in d["steps"]}
+    assert all(steps[k]["status"] == "ok" for k in ("read", "kb_site", "kb_text", "agent", "voice", "attach", "live", "number")), d["steps"]
+    assert d["agent"]["status"] == "live" and d["agent"]["number"] == "+919800000001" and d["agent"]["languages"] == ["Hindi", "English"] and d["business"] == "Sunrise Dental"
+    a = (await client.get(f"/product/agents/{d['agent']['id']}", headers=h)).json()
+    assert a["status"] == "live" and a["style"]["languages"] == ["Hindi", "English"] and a["script"]
+    kinds = sorted(x["kind"] for x in (await client.get("/product/knowledge", headers=h)).json())
+    assert kinds == ["Q&A", "Text", "Website"]
+    assert len((await client.get(f"/product/knowledge/agent/{d['agent']['id']}", headers=h)).json()) == 3
+    async with client.session_factory() as s:
+        row = (await s.execute(select(models.TelephonyPhoneNumberModel))).scalars().first()
+        agent = (await s.execute(select(product_models.ProductAgentModel))).scalar_one()
+        assert row.inbound_workflow_id == agent.live_workflow_id
+
+
+@pytest.mark.asyncio
+async def test_autopilot_still_makes_the_agent_when_there_is_no_site_number_or_ai(client):
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    client.llm.profile = "not json"
+    client.llm.draft = "not json"
+    r = await client.post("/product/assistant/setup/auto", json={"text": "We run a small tailoring shop in Pune and want to answer calls about orders."}, headers=h)
+    assert r.status_code == 200, r.text
+    d = r.json()
+    ids = {x["id"]: x["status"] for x in d["steps"]}
+    assert ids["agent"] == "ok" and ids["number"] == "skip" and d["generated"] is False  # no number to connect: said so, nothing else stopped
+    assert (await client.post("/product/assistant/setup/auto", json={"text": "hi"}, headers=h)).json()["detail"]["code"] == "need_something"
+    assert (await client.post("/product/assistant/setup/auto", json={"text": "a" * 20, "usecase": "survey"}, headers=h)).status_code == 200  # a picked suggestion

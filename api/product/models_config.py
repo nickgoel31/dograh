@@ -120,7 +120,7 @@ async def ensure_org_profiles(session: AsyncSession, *org_ids: int) -> bool:
     return ok
 
 
-async def build_overrides(session: AsyncSession, *, brain: str, voice_id: str | None, style: dict | None = None) -> dict | None:
+async def build_overrides(session: AsyncSession, *, brain: str, voice_id: str | None, style: dict | None = None, swarvo_ok: bool = True) -> dict | None:
     """Self-contained per-agent overrides, or None when the default profile already fits."""
     base = await default_profile(session)
     if base is None:
@@ -128,6 +128,8 @@ async def build_overrides(session: AsyncSession, *, brain: str, voice_id: str | 
     overrides: dict = {}
 
     voice = voice_catalogue.find(voice_id) if voice_id else None
+    if voice is not None and voice.engine == "swarvo" and not swarvo_ok:
+        return None  # swarvo-tts is switched off for this workspace: the agent keeps the default voice
     if voice is not None and voice.engine in SEPARATE_ENGINES:
         prof = await engine_profile(session, voice.engine)
         c = (prof.config or {}) if prof else {}

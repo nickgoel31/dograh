@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.db.product_models import ProductAgentModel, ProductWorkspaceModel
 from api.product import definition as defn
+from api.product import swarvo_access
 from api.product import flows
 from api.product import models_config
 from api.product import style as style_mod
@@ -129,6 +130,8 @@ async def update_agent(
         changes.setdefault("role", None)  # recompile the instructions below so the language line is included
     if changes.get("voice_id") and ((v := voice_catalogue.find(changes["voice_id"])) is None or (email is not None and not voice_catalogue.can_use(v, email))):
         raise product_error(400, "unknown_voice", "That voice isn't available. Pick one from the voice list.")
+    if changes.get("voice_id") and v.engine == "swarvo" and not await swarvo_access.allowed(session, ws, email):
+        raise product_error(400, "voice_coming_soon", "swarvo-tts voices are coming soon. Pick another voice for now.")
     for field in ("name", "emoji", "color", "role", "tone", "business", "what_you_do", "script", "voice_id"):
         if field in changes and changes[field] is not None:
             setattr(agent, field, changes[field].strip() if isinstance(changes[field], str) else changes[field])
@@ -160,7 +163,7 @@ async def update_agent(
     if touches_models:
         await gw.set_model_overrides(
             ws.test_org_id, agent.test_workflow_id,
-            await models_config.build_overrides(session, brain=agent.brain, voice_id=agent.voice_id, style=agent.style),
+            await models_config.build_overrides(session, brain=agent.brain, voice_id=agent.voice_id, style=agent.style, swarvo_ok=await swarvo_access.allowed(session, ws)),
             style_mod.workflow_settings(agent.style),
         )
     if new_style is not None and "call_concurrency" in style_mod.clean(new_style):
@@ -196,8 +199,10 @@ async def duplicate_agent(
     return copy
 
 
-async def _voice_ready_check(session: AsyncSession, agent: ProductAgentModel) -> list[Check]:
+async def _voice_ready_check(session: AsyncSession, agent: ProductAgentModel, ws: ProductWorkspaceModel | None = None) -> list[Check]:
     v = voice_catalogue.find(agent.voice_id) if agent.voice_id else None
+    if v is not None and v.engine == "swarvo" and ws is not None and not await swarvo_access.allowed(session, ws):
+        return [Check("voice_ready", "Your chosen voice is available", "blocker", "swarvo-tts voices are coming soon. Pick another voice on the Voice tab.")]
     if v is not None and v.engine in models_config.SEPARATE_ENGINES and (agent.style or {}).get("stt_engine") == "deepgram" and not await models_config.listening_ready(session, "deepgram"):
         return [Check("voice_ready", "Your chosen voice is available", "blocker", "Deepgram listening isn't set up yet. Pick AssemblyAI on the Voice tab, or ask support.")]
     if v is None or v.engine not in ("inworld", "google", "swarvo", "murf") or await models_config.engine_ready(session, v.engine):
@@ -227,7 +232,7 @@ async def readiness(
             "ok" if agent.business.strip() else "warn",
             None if agent.business.strip() else "Callers will hear a generic greeting.",
         ),
-        *await _voice_ready_check(session, agent),
+        *await _voice_ready_check(session, agent, ws),
         Check(
             "voice", "A voice is chosen",
             "ok" if agent.voice_id else "warn",
@@ -264,7 +269,7 @@ async def go_live(
         await gw.save_draft(ws.live_org_id, agent.live_workflow_id, agent.name, graph)
     await gw.set_model_overrides(
         ws.live_org_id, agent.live_workflow_id,
-        await models_config.build_overrides(session, brain=agent.brain, voice_id=agent.voice_id, style=agent.style),
+        await models_config.build_overrides(session, brain=agent.brain, voice_id=agent.voice_id, style=agent.style, swarvo_ok=await swarvo_access.allowed(session, ws)),
         style_mod.workflow_settings(agent.style),
     )
     await gw.publish(ws.live_org_id, agent.live_workflow_id)

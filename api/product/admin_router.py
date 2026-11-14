@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 
 from api.db.models import UserModel, WorkflowModel, WorkflowRunModel
-from api.product import audit, config, phone_verify
+from api.product import audit, config, phone_verify, swarvo_access
 from api.product import billing as bl
 from api.product.deps import get_user_only
 from api.product.errors import product_error
@@ -137,7 +137,46 @@ async def workspace_detail(public_id: str, base=Depends(require_admin), wallet: 
         "phone_verified": s.phone_verified_at is not None, "verified_phone": phone_verify.mask(s.verified_phone), "bonus_given": s.signup_bonus_at is not None,
         "members": [{"email": e, "role": r} for e, r in members],
         "agents": [{"id": a.public_id, "name": a.name, "status": a.status, "voice": a.voice_id} for a in agents],
+        "swarvo_tts": ws.public_id in await swarvo_access.workspace_ids_with_access(session),
     }
+
+
+class SwarvoIn(BaseModel):
+    everyone: bool | None = None
+    enabled: bool | None = None  # for one workspace
+
+
+@router.get("/swarvo-tts")
+async def swarvo_status(base=Depends(require_admin)):
+    """Who can use the swarvo-tts 2.5 voices. They are 'coming soon' for everyone else."""
+    session, _ = base
+    cur = await swarvo_access.get_setting(session)
+    names = {}
+    if cur["workspaces"]:
+        rows = (await session.execute(select(ProductWorkspaceModel.public_id, ProductWorkspaceModel.name).where(ProductWorkspaceModel.public_id.in_(cur["workspaces"])))).all()
+        names = dict(rows)
+    return {"everyone": cur["everyone"], "workspaces": [{"id": i, "name": names.get(i, i)} for i in cur["workspaces"]], "discount_percent": swarvo_access.discount_percent()}
+
+
+@router.put("/swarvo-tts")
+async def swarvo_everyone(body: SwarvoIn, base=Depends(require_admin)):
+    session, _ = base
+    if body.everyone is None:
+        raise product_error(400, "need_value", "Say whether everyone should have it.")
+    cur = await swarvo_access.put_setting(session, everyone=body.everyone)
+    await session.commit()
+    return {"everyone": cur["everyone"]}
+
+
+@router.put("/workspaces/{public_id}/swarvo-tts")
+async def swarvo_workspace(public_id: str, body: SwarvoIn, base=Depends(require_admin)):
+    session, _ = base
+    ws = await _workspace(session, public_id)
+    if body.enabled is None:
+        raise product_error(400, "need_value", "Say whether to turn it on or off.")
+    await swarvo_access.set_workspace(session, ws.public_id, body.enabled)
+    await session.commit()
+    return {"id": ws.public_id, "swarvo_tts": body.enabled}
 
 
 class BalanceIn(BaseModel):

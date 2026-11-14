@@ -34,6 +34,7 @@ from api.db.models import (
     WorkflowModel,
     WorkflowRunModel,
 )
+from api.services.billing import voice_discount
 from api.services.billing.periods import (
     billed_seconds_for,
     period_for,
@@ -309,8 +310,9 @@ async def record_usage(
     duration_seconds: float,
     *,
     now: datetime | None = None,
+    rate_multiplier: float = 1.0,
 ) -> UsageResult:
-    """Bill one finished call. Safe to call any number of times per run."""
+    """Bill one finished call. Safe to call any number of times per run. ``rate_multiplier`` lowers the price of this call (a discount)"""
     now = now or _now()
     async with _session() as session:
         org = await _prepare(session, organization_id, now)
@@ -334,7 +336,7 @@ async def record_usage(
         pulse = org.billing_pulse or 60
         billed = billed_seconds_for(duration_seconds, pulse)
         minutes = billed / 60.0
-        rate = float(org.billing_rate or 0.0)
+        rate = float(org.billing_rate or 0.0) * rate_multiplier
 
         taken: list[dict] = []
         from_buckets = overage = charge = 0.0
@@ -793,6 +795,7 @@ async def bill_workflow_run(workflow_run_id: int) -> UsageResult | None:
         workflow.organization_id,
         workflow_run_id,
         _duration_from_run(run.cost_info, run.usage_info),
+        rate_multiplier=voice_discount.multiplier_for_usage(run.usage_info),
     )
 
 

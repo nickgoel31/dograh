@@ -15,10 +15,12 @@ import { loadSetup } from '@/components/GetStarted'
 import SetupFlow from '@/components/SetupFlow'
 import { cn } from '@/lib/utils'
 
-type Call = { id: string; tool: string; kind: 'read' | 'write' | 'ui'; args: Record<string, any> }
+type Call = { id: string; tool: string; kind: 'read' | 'write' | 'ui' | 'auto'; args: Record<string, any> }
+type Built = { agent: { id: string; name: string; role: string; status: string; voice: string | null; languages: string[]; number: string | null }; steps: { id: string; label: string; status: string; note: string | null }[]; tools: { key: string; why: string; connected: boolean }[] }
 type Item =
   | { k: 'user'; text: string }
   | { k: 'ai'; text: string }
+  | { k: 'built'; data: Built }
   | { k: 'plan'; call: Call; status: 'pending' | 'running' | 'done' | 'skipped' | 'failed'; note?: string; link?: string }
 type Msg = { role: 'user' | 'assistant'; content: string }
 
@@ -38,14 +40,14 @@ const WANTS_AGENT = /\b(create|build|make|set ?up|start|need)\b.{0,24}\b(agent|a
 const LABEL: Record<string, string> = {
   list_agents: 'Looking at your agents', list_templates: 'Looking at agent templates', list_numbers: 'Looking at your phone numbers', list_contacts: 'Looking at your contacts',
   list_conversations: 'Looking at your recent calls', list_campaigns: 'Looking at your campaigns', list_knowledge: 'Looking at your knowledge', list_integrations: 'Looking at your integrations',
-  get_wallet: 'Checking your wallet', go_to: 'Opening a page', create_agent: 'Create an agent', update_agent: 'Change an agent', publish_agent: 'Publish an agent live',
+  setup_agent: 'Setting up your agent', get_wallet: 'Checking your wallet', go_to: 'Opening a page', create_agent: 'Create an agent', update_agent: 'Change an agent', publish_agent: 'Publish an agent live',
   assign_number: 'Assign a phone number', block_numbers: 'Add to the do-not-call list', add_knowledge_text: 'Add a note to knowledge', add_knowledge_qa: 'Add questions and answers',
 }
 
 const short = (v: unknown) => { const t = typeof v === 'string' ? v : JSON.stringify(v); return t.length > 140 ? t.slice(0, 140) + '…' : t }
 const clip = (v: unknown) => { const t = JSON.stringify(v ?? null); return t.length > 3500 ? t.slice(0, 3500) + '…(cut)' : t }
 
-async function execute(c: Call, nav: (to: string) => void): Promise<{ result: unknown; link?: string }> {
+async function execute(c: Call, nav: (to: string) => void): Promise<{ result: unknown; link?: string; built?: Built }> {
   const a = c.args
   const id = (x: unknown) => encodeURIComponent(String(x ?? ''))
   switch (c.tool) {
@@ -62,6 +64,10 @@ async function execute(c: Call, nav: (to: string) => void): Promise<{ result: un
       const p = String(a.path ?? '')
       if (!PAGES.includes(p) && !/^\/agents\/[\w-]+$/.test(p)) throw new Error('That page does not exist.')
       nav(p); return { result: { opened: p } }
+    }
+    case 'setup_agent': {
+      const r = await http<Built>('/assistant/setup/auto', { method: 'POST', json: { text: String(a.text ?? '').slice(0, 4000) }, timeoutMs: 180000 })
+      return { result: { agent: r.agent, steps: r.steps.map((x) => `${x.status}: ${x.label}`) }, link: `/agents/${r.agent.id}`, built: r }
     }
     case 'create_agent': {
       const made = await http<any>('/agents', { method: 'POST', json: { name: a.name, template: a.template ?? null, business: a.business ?? '', what_you_do: a.what_you_do ?? '', script: a.script ?? '', tone: a.tone ?? null } })
@@ -92,6 +98,32 @@ const bucket = (t: number) => { const d = (Date.now() - t) / 864e5; return d < 1
 const ago = (t: number) => { const m = Math.max(1, Math.round((Date.now() - t) / 6e4)); return m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago` }
 
 const refreshAgents = async () => { try { useData.getState().setAgents((await agentsApi.list()).map((x) => toAgent(x))) } catch { /* the Agents page reloads on its own */ } }
+
+/** What autopilot did, step by step, with the next things to do. */
+function BuiltCard({ data, nav }: { data: Built; nav: (to: string) => void }) {
+  const set = useUI((u) => u.set)
+  const a = data.agent
+  const todo = data.tools.filter((t) => !t.connected)
+  return (
+    <div className="ml-10 rounded-2xl border bg-surface p-4 animate-fade-in sm:p-5">
+      <div className="flex items-center gap-3">
+        <AgentAvatar id={a.id} className="h-11 w-11"><Bot size={19} /></AgentAvatar>
+        <div className="min-w-0 flex-1"><div className="truncate text-[15px] font-semibold">{a.name}</div><div className="truncate text-[13px] text-soft">{a.role}</div></div>
+        <span className={cn('rounded-full px-2.5 py-0.5 text-[11px] font-semibold', a.status === 'live' ? 'bg-ok/10 text-ok' : 'bg-muted text-soft')}>{a.status === 'live' ? 'Live' : 'Draft'}</span>
+      </div>
+      <ul className="mt-4 space-y-2">{data.steps.map((x) => (
+        <li key={x.id} className="flex items-start gap-2.5 text-[13.5px]">
+          <span className={cn('mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full', x.status === 'ok' ? 'bg-ok/15 text-ok' : x.status === 'fail' ? 'bg-bad/15 text-bad' : 'bg-muted text-soft')}>{x.status === 'ok' ? <Check size={12} /> : x.status === 'fail' ? <X size={12} /> : <span className="h-1.5 w-1.5 rounded-full bg-soft" />}</span>
+          <span className={cn(x.status !== 'ok' && 'text-soft')}>{x.label}{x.note && <span className="block text-xs">{x.note}</span>}</span>
+        </li>))}</ul>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button variant="primary" size="sm" onClick={() => set({ playground: a.id })}><Mic size={14} />Talk to {a.name}</Button>
+        <Button size="sm" onClick={() => nav(`/agents/${a.id}`)}>Open it</Button>
+        {todo.length > 0 && <Button size="sm" variant="ghost" onClick={() => nav('/tools')}>Connect {todo.slice(0, 2).map((t) => t.key.replace(/_/g, ' ')).join(' or ')}</Button>}
+      </div>
+    </div>
+  )
+}
 
 export default function AssistantHome() {
   const nav = useNavigate()
@@ -165,10 +197,10 @@ export default function AssistantHome() {
       }
       for (const c of calls.filter((x) => x.kind !== 'write')) {
         setItems((xs) => [...xs, { k: 'plan', call: c, status: 'running' }])
-        try { const r = await execute(c, nav); patch(c.id, { status: 'done' }); batch.current.results.push(`${c.tool}: ${clip(r.result)}`) }
+        try { const r = await execute(c, nav); patch(c.id, { status: 'done' }); batch.current.results.push(`${c.tool}: ${clip(r.result)}`); if (r.built) { setItems((xs) => [...xs, { k: 'built', data: r.built! }]); void refreshAgents() } }
         catch (e) { patch(c.id, { status: 'failed', note: e instanceof Error ? e.message : 'Failed' }); batch.current.results.push(`${c.tool}: failed, ${e instanceof Error ? e.message : 'error'}`) }
       }
-      if (batch.current.waiting.size === 0 && batch.current.results.length && calls.some((c) => c.kind === 'read') && round.current < 5) { await feed() }
+      if (batch.current.waiting.size === 0 && batch.current.results.length && calls.some((c) => c.kind === 'read' || c.kind === 'auto') && round.current < 5) { await feed() }
     } catch (e) {
       setItems((xs) => [...xs, { k: 'ai', text: e instanceof Error ? e.message : 'Something went wrong. Please try again.' }])
     } finally { setBusy(false) }
@@ -346,6 +378,8 @@ export default function AssistantHome() {
             <MeshBadge className="mt-0.5 h-7 w-7 rounded-lg"><Sparkles size={13} /></MeshBadge>
             <div className="min-w-0 flex-1 whitespace-pre-wrap pt-0.5 text-[14.5px] leading-relaxed"><Rich text={it.text} go={nav} /></div>
           </div>
+        ) : it.k === 'built' ? (
+          <BuiltCard key={i} data={it.data} nav={nav} />
         ) : it.call.kind === 'write' ? (
           <div key={i} className="ml-10 rounded-xl border bg-surface p-4">
             <div className="text-[13.5px] font-semibold">{LABEL[it.call.tool] ?? it.call.tool}</div>

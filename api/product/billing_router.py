@@ -49,6 +49,7 @@ class SummaryOut(BaseModel):
     next_rate: float | None = None
     next_rate_balance: float | None = None  # wallet balance needed to reach that slab
     contact_sales_above: int = 100000
+    voice_discounts: list[dict] = []
 
 
 class SettingsBody(BaseModel):
@@ -122,6 +123,16 @@ class PriceOut(BaseModel):
     number_monthly_toll_free: float
     signup_bonus: float
     bonus_left: int
+    voice_discounts: list[dict] = []  # [{id, label, percent, available}]
+
+
+async def _voice_discounts(ctx: Ctx) -> list[dict]:
+    from api.product import swarvo_access
+
+    pct = swarvo_access.discount_percent()
+    if pct <= 0:
+        return []
+    return [{"id": "swarvo", "label": "swarvo-tts 2.5 voices", "percent": round(pct), "available": await swarvo_access.allowed(ctx.session, ctx.workspace, ctx.user.email)}]
 
 
 @router.get("/pricing", response_model=PriceOut)
@@ -133,7 +144,7 @@ async def price_list(ctx: Ctx = Depends(get_ctx)):
     return PriceOut(
         currency=config.CURRENCY, slabs=[{"up_to": a, "rate": b} for a, b in pricing.slabs()], contact_sales_above=pricing.slabs()[-1][0],
         number_monthly_local=_monthly("local"), number_monthly_toll_free=_monthly("toll_free"),
-        signup_bonus=bl.signup_bonus(), bonus_left=await bl.bonus_left(ctx.session),
+        signup_bonus=bl.signup_bonus(), bonus_left=await bl.bonus_left(ctx.session), voice_discounts=await _voice_discounts(ctx),
     )
 
 
@@ -183,7 +194,7 @@ async def summary(ctx: Ctx = Depends(require(Perm.BILLING_MANAGE)), wallet: Wall
         month_usage_value=value, month_minutes=round(sum(e["minutes"] for e in entries), 2), spend_limit=s.spend_limit,
         limit_state=bl.limit_state(s.spend_limit, value), low_balance=bool(w.get("low_balance")),
         settings=_settings_out(s), payments_enabled=get_payments() is not None,
-        slabs=[{"up_to": a, "rate": b} for a, b in pricing.slabs()], next_rate_at=(nxt[2] if nxt else None), next_rate=(nxt[1] if nxt else None), next_rate_balance=(nxt[0] if nxt else None), contact_sales_above=pricing.contact_sales_above(),
+        slabs=[{"up_to": a, "rate": b} for a, b in pricing.slabs()], next_rate_at=(nxt[2] if nxt else None), next_rate=(nxt[1] if nxt else None), next_rate_balance=(nxt[0] if nxt else None), contact_sales_above=pricing.contact_sales_above(), voice_discounts=await _voice_discounts(ctx),
     )
 
 

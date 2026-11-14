@@ -140,7 +140,10 @@ def test_the_catalogue_lists_every_indian_voice_with_its_languages():
     by = {v.name: v for v in got}
     assert by["Aarav"].language == "Hindi" and by["Aarav"].engine == "murf" and by["Aarav"].tts["locales"][0] == "hi-IN"
     assert by["Debarati"].language == "Bengali" and by["Nimisha"].language == "English (India)"
-    assert by["Anisha"].gender is None  # gender is only filled from Murf's own list
+    assert by["Anisha"].gender == "Female" and by["Aarav"].gender == "Male" and by["Priya"].gender == "Female"
+    assert by["Harman"].gender is None and by["Harpreet"].gender is None  # used by everyone: left empty, not guessed
+    assert sum(1 for v in got if v.gender) == 35
+    assert all(v.tts["description"].startswith("Natural, conversational voice for phone calls. Speaks ") for v in got)
     assert "Hindi" in (by["Priya"].tts["description"] or "") and "English" in by["Priya"].tts["description"]
     assert len({v.id for v in got}) == len(got)
 

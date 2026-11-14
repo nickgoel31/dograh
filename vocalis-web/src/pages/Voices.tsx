@@ -3,6 +3,7 @@ import { Heart, Lock, Play, Plus, Search, Square, Columns3 } from '@/components/
 import { AgentAvatar } from '@/components/AgentAvatar'
 import { Badge, Button, Card, Chip, Dialog, Input, Select, Textarea } from '@/components/ui'
 import { AdvancedOnly, Bars, CardSkeletons, PageHeader, speak, stopSpeaking, useAsync } from '@/components/shared'
+import { ProviderTabs, providerRank } from '@/components/ProviderTabs'
 import { api, USE_MOCKS } from '@/lib/api'
 import { voicesApi } from '@/lib/api/voices'
 import { API_URL } from '@/lib/api/env'
@@ -16,6 +17,7 @@ export default function VoicesPage() {
   const { favorites, toggleFav, setFavorites } = useData()
   // Real mode: favourites live on the server.
   React.useEffect(() => { if (!USE_MOCKS) voicesApi.list().then((vs) => setFavorites(vs.filter((v) => v.favorite).map((v) => v.id))).catch(() => {}) }, [setFavorites])
+  const [prov, setProv] = React.useState('')
   const [f, setF] = React.useState({ lang: '', gender: '', age: '', accent: '', style: '' })
   const [playing, setPlaying] = React.useState<string | null>(null)
   const [favOnly, setFavOnly] = React.useState(false)
@@ -25,7 +27,8 @@ export default function VoicesPage() {
   const [open, setOpen] = React.useState(false)
   const [sentence, setSentence] = React.useState('Hi there! Thanks for calling. How can I help you today?')
 
-  const list = (data ?? []).filter((v) => (!f.lang || v.lang === f.lang) && (!f.gender || v.gender === f.gender) && (!f.age || v.age === f.age) && (!f.accent || v.accent === f.accent) && (!f.style || v.style === f.style) && (!favOnly || favorites.includes(v.id)) && (!q || `${v.name} ${v.style} ${v.description ?? ''}`.toLowerCase().includes(q.toLowerCase())))
+  const list = (data ?? []).filter((v) => (!prov || v.provider === prov) && (!f.lang || v.lang === f.lang) && (!f.gender || v.gender === f.gender) && (!f.age || v.age === f.age) && (!f.accent || v.accent === f.accent) && (!f.style || v.style === f.style) && (!favOnly || favorites.includes(v.id)) && (!q || `${v.name} ${v.style} ${v.description ?? ''}`.toLowerCase().includes(q.toLowerCase())))
+  list.sort((a, b) => providerRank(a.provider) - providerRank(b.provider)) // grouped by provider; the order inside each stays as it was
   const opts = (k: keyof Voice) => [...new Set((data ?? []).map((v) => v[k]))].filter(Boolean) as string[]
   const audio = React.useRef<HTMLAudioElement | null>(null)
   const play = (v: Voice, text = 'Hello! I can be the voice of your business.') => {
@@ -56,6 +59,7 @@ export default function VoicesPage() {
         <div className="flex h-10 w-52 items-center gap-2 rounded-full border bg-surface px-3.5 text-sm text-soft transition focus-within:border-soft/50"><Search size={15} /><input className="w-full bg-transparent text-ink outline-none placeholder:text-soft/70" placeholder="Search voices" aria-label="Search voices" value={q} onChange={(e) => { setQ(e.target.value); setShown(30) }} /></div><Sel k="lang" label="Language" /><Sel k="gender" label="Gender" /><Sel k="age" label="Age" /><Sel k="accent" label="Accent" /><Sel k="style" label="Style" />
         <Chip active={favOnly} onClick={() => setFavOnly(!favOnly)}>Favorites</Chip>
       </div>
+      {!USE_MOCKS && <ProviderTabs className="mb-5" voices={data ?? []} value={prov} onChange={(p) => { setProv(p); setShown(30) }} />}
       <AdvancedOnly><p className="mb-5 rounded-xl border bg-muted/50 px-4 py-3 text-sm text-soft">Voices come from our voice engines. Voices marked Coming soon aren't switched on yet.</p></AdvancedOnly>
       {loading ? <CardSkeletons n={9} h="h-32" /> : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

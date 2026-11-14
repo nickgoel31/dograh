@@ -5,6 +5,7 @@ from sqlalchemy import delete, select
 from api.db.product_models import ProductVoiceFavoriteModel
 from api.product import models_config, voice_samples
 from api.product import voices as catalogue
+from api.product import swarvo_access
 from api.product.deps import Ctx, get_ctx
 from api.product.errors import product_error
 
@@ -52,6 +53,8 @@ async def list_voices(
 ):
     favs = await _favs(ctx)
     ready = {e: await models_config.engine_ready(ctx.session, e) for e in ("inworld", "google", "swarvo", "murf")}
+    if ready.get("swarvo") and not await swarvo_access.allowed(ctx.session, ctx.workspace, ctx.user.email):
+        ready["swarvo"] = False  # "coming soon": the owner has not switched swarvo-tts on for this workspace
     out = []
     for v in catalogue.catalogue():
         if not catalogue.can_use(v, ctx.user.email):
@@ -81,7 +84,7 @@ async def listening(ctx: Ctx = Depends(get_ctx)):
 @router.get("/{voice_id}/sample")
 async def sample(voice_id: str, ctx: Ctx = Depends(get_ctx)):
     v = catalogue.find(voice_id)
-    if v is not None and v.engine == "swarvo" and catalogue.can_use(v, ctx.user.email):
+    if v is not None and v.engine == "swarvo" and catalogue.can_use(v, ctx.user.email) and await swarvo_access.allowed(ctx.session, ctx.workspace, ctx.user.email):
         prof = await models_config.engine_profile(ctx.session, "swarvo")
         t = ((prof.config or {}).get("tts") or {}) if prof else {}
         audio = await voice_samples.make_swarvo(t.get("base_url"), t.get("api_key"), v.tts["voice"]) if t.get("api_key") else None

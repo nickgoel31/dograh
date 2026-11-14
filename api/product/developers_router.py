@@ -94,6 +94,57 @@ async def create_key(body: KeyBody, ctx: Ctx = Depends(require(Perm.API_KEYS_MAN
     return _key_out(k, raw)
 
 
+class McpBody(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    access: str = Field(default="full", pattern="^(read|full)$")
+
+
+class McpTokenOut(BaseModel):
+    id: str
+    name: str
+    access: str  # read | full
+    hint: str
+    created: str
+    last_used: str | None
+    token: str | None = None  # only in the response that creates it
+    url: str | None = None
+
+
+def _mcp_out(k: ProductApiKeyModel, raw: str | None = None) -> McpTokenOut:
+    return McpTokenOut(id=k.public_id, name=k.name, access="read" if k.hint.startswith("swm_r_") else "full", hint=k.hint, created=k.created_at.isoformat() if k.created_at else "",
+                       last_used=k.last_used_at.isoformat() if k.last_used_at else None, token=raw, url=f"/swarvo-mcp/t/{raw}/" if raw else None)
+
+
+@router.get("/mcp-tokens", response_model=list[McpTokenOut])
+async def list_mcp_tokens(ctx: Ctx = Depends(require(Perm.API_KEYS_MANAGE))):
+    rows = (await ctx.session.scalars(select(ProductApiKeyModel).where(
+        ProductApiKeyModel.workspace_id == ctx.workspace.id, ProductApiKeyModel.environment == "mcp", ProductApiKeyModel.revoked_at.is_(None)).order_by(ProductApiKeyModel.id.desc()))).all()
+    return [_mcp_out(k) for k in rows]
+
+
+@router.post("/mcp-tokens", response_model=McpTokenOut, status_code=201)
+async def create_mcp_token(body: McpBody, ctx: Ctx = Depends(require(Perm.API_KEYS_MANAGE))):
+    """A token that lets an AI assistant (Claude, ChatGPT and others) run this workspace through MCP, with the same powers as you. Shown once."""
+    raw = ("swm_r_" if body.access == "read" else "swm_f_") + secrets.token_urlsafe(32)
+    k = ProductApiKeyModel(workspace_id=ctx.workspace.id, public_id=new_public_id("mcp"), name=body.name.strip(), environment="mcp", hint=f"{raw[:6]}{raw[6:10]}…{raw[-4:]}",
+                           key_hash=dev.hash_key(raw), created_by=ctx.user.id, created_at=datetime.now(UTC))
+    ctx.session.add(k)
+    await audit.record(ctx.session, ctx.workspace.id, ctx.user.id, "mcp_token.created", k.public_id, {"access": body.access})
+    await ctx.session.commit()
+    return _mcp_out(k, raw)
+
+
+@router.delete("/mcp-tokens/{token_id}")
+async def revoke_mcp_token(token_id: str, ctx: Ctx = Depends(require(Perm.API_KEYS_MANAGE))):
+    k = await ctx.session.scalar(select(ProductApiKeyModel).where(ProductApiKeyModel.public_id == token_id, ProductApiKeyModel.workspace_id == ctx.workspace.id, ProductApiKeyModel.environment == "mcp"))
+    if k is None:
+        raise product_error(404, "key_not_found", "We couldn't find that token.")
+    k.revoked_at = k.revoked_at or datetime.now(UTC)
+    await audit.record(ctx.session, ctx.workspace.id, ctx.user.id, "mcp_token.revoked", k.public_id)
+    await ctx.session.commit()
+    return {"ok": True}
+
+
 @router.delete("/keys/{key_id}")
 async def revoke_key(key_id: str, ctx: Ctx = Depends(require(Perm.API_KEYS_MANAGE))):
     k = await ctx.session.scalar(select(ProductApiKeyModel).where(ProductApiKeyModel.public_id == key_id, ProductApiKeyModel.workspace_id == ctx.workspace.id))

@@ -78,4 +78,13 @@ ARTICLES = [
      "Use a key that starts with sk_test_ to try things safely on your Test data."),
     ("status", "Is something down? Status and changelog", "Account",
      "The public status page shows whether the app, voice models and voices are working, with 30 days of history. The changelog lists what is new. Both open without signing in."),
+    ("mcp", "Connecting Claude, ChatGPT or another AI assistant (MCP)", "Developers",
+     "Under Developers, press New token in the MCP box. Choose Full access (it can change anything you can) or Read-only. Copy the connector address once and paste it into Claude (Settings, Connectors, Add custom connector) or ChatGPT (Settings, Connectors, developer mode). "
+     "The assistant can then build and publish agents, change voices, read conversations, manage numbers, knowledge, campaigns and API keys, acting as you. Revoke the token any time."),
+    ("import-export", "Exporting and importing an agent as a file", "Getting started",
+     "Open an agent and press Export to download it as one JSON file with its settings, personality, voice choice and call flow. On the Agents page press Import and choose a file to get it back as a new draft, in this workspace or another. "
+     "Plain call-flow JSON works too. Tools, documents and keys are never included in a file."),
+    ("falcon", "Falcon voices for Indian languages", "Voices",
+     "Falcon voices speak Hindi, English, Marathi, Gujarati, Tamil, Telugu, Kannada, Malayalam, Bengali, Punjabi and more, and are built for fast phone conversations. Pick one on the agent's Voice tab. "
+     "The voice speaks the first language you chose for the agent that it supports."),
 ]

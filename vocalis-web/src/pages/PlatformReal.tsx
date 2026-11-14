@@ -1,5 +1,6 @@
 /** Real Developers, Team & Settings and Help. Demo versions stay in Developers.tsx and SettingsHelp.tsx for mock mode. */
 import { AccountSettings } from '@/pages/Account'
+import { McpAccess } from '@/components/McpAccess'
 import { NetworkSecurity } from '@/components/NetworkSecurity'
 import * as React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -109,6 +110,7 @@ export function DevelopersReal() {
   return (
     <>
       <PageHeader title="Developers" subtitle={`Connect your own apps. You're looking at ${mode === 'test' ? 'Test' : 'Live'} data.`} />
+      <McpAccess />
       <Card className="mb-6 flex flex-wrap items-center gap-3 p-5"><div className="min-w-0 flex-1"><h3 className="font-semibold">API reference and client libraries</h3><p className="text-[13px] text-soft">Every endpoint with copy-ready examples, webhook signing, and one-file Python and TypeScript clients. Use an <code>sk_test_</code> key to try things safely.</p></div>
         <a href={`${BASE}/api-reference`} target="_blank" rel="noreferrer"><Button variant="primary">Open the API reference</Button></a>
         <a href={`${API_URL}/public/sdk/python`} download="swarvo.py"><Button>Python client</Button></a><a href={`${API_URL}/public/sdk/typescript`} download="swarvo.ts"><Button>TypeScript client</Button></a></Card>

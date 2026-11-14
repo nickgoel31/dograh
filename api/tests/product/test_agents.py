@@ -4,6 +4,8 @@
     python -m pytest api/tests/product --noconftest
 """
 
+import json
+
 import pytest_asyncio
 from sqlalchemy import select
 
@@ -245,3 +247,65 @@ async def test_voicemail_detection_is_a_per_agent_setting(client):
     a = await new_agent(client, tok)
     r = await client.patch(f"/product/agents/{a['id']}", json={"style": {"voicemail_detect": True}}, headers=bearer(tok))
     assert r.status_code == 200 and r.json()["style"]["voicemail_detect"] is True
+
+
+# ---------- agent files: export and import ----------
+FLOW = {"nodes": [
+    {"id": "1", "type": "startCall", "position": {"x": 0, "y": 0}, "data": {"name": "Hello", "prompt": "You are Mira at Acme. Be brief.", "greeting": "Hi, Acme here!", "greeting_type": "text", "tool_uuids": ["TOOL-OF-ANOTHER-ACCOUNT"], "document_uuids": ["DOC-OF-ANOTHER-ACCOUNT"]}},
+    {"id": "2", "type": "endCall", "position": {"x": 0, "y": 200}, "data": {"name": "Bye", "prompt": "Say goodbye."}},
+], "edges": [{"id": "e", "source": "1", "target": "2", "data": {"label": "Done", "condition": "The caller is finished"}}]}
+
+
+async def test_an_agent_exports_and_imports_into_another_workspace_as_a_new_draft(client):
+    import json
+
+    _, tok_a = await signup(client, "a@x.com")
+    a = await new_agent(client, tok_a, business="Sunrise Dental", script="1. Greet.")
+    await client.patch(f"/product/agents/{a['id']}", json={"style": {"languages": ["Hindi", "English"], "voicemail_detect": True}, "tone": "Playful"}, headers=bearer(tok_a))
+    r = await client.get(f"/product/agents/{a['id']}/export", headers=bearer(tok_a))
+    assert r.status_code == 200 and ".swarvo.json" in r.headers["content-disposition"]
+    doc = r.json()
+    assert doc["format"] == "swarvo-agent" and doc["agent"]["name"] == "Priya" and doc["agent"]["style"]["languages"] == ["Hindi", "English"] and doc["flow"]["nodes"]
+    assert "sk_" not in json.dumps(doc) and "api_key" not in json.dumps(doc) and "token" not in json.dumps(doc).lower()  # nothing secret travels in the file
+
+    client.cookies.clear()
+    _, tok_b = await signup(client, "b@x.com")
+    hb = bearer(tok_b)
+    got = await client.post("/product/agents/import", json={"document": doc}, headers=hb)
+    assert got.status_code == 201, got.text
+    b = got.json()["agent"]
+    assert b["id"] != a["id"] and b["name"] == "Priya" and b["status"] == "draft" and b["business"] == "Sunrise Dental" and b["tone"] == "Playful"
+    assert b["style"]["languages"] == ["Hindi", "English"] and b["style"]["voicemail_detect"] is True
+    assert [x["id"] for x in (await client.get("/product/agents", headers=hb)).json()] == [b["id"]]  # in the new workspace only
+    renamed = await client.post("/product/agents/import", json={"document": doc, "name": "Copy"}, headers=hb)
+    assert renamed.json()["agent"]["name"] == "Copy"
+
+
+async def test_importing_a_plain_call_flow_keeps_its_words_and_strips_other_accounts_things(client):
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    r = await client.post("/product/agents/import", json={"document": {"name": "From my editor", "workflow_definition": FLOW}}, headers=h)
+    assert r.status_code == 201, r.text
+    ag = r.json()["agent"]
+    assert ag["name"] == "From my editor" and ag["prompt_mode"] == "custom" and ag["prompt"] == "You are Mira at Acme. Be brief."  # its own instructions are kept as written
+    flow = (await client.get(f"/product/agents/{ag['id']}/flow", headers=h)).json()["definition"]
+    start = next(n for n in flow["nodes"] if n["type"] == "startCall")
+    assert "TOOL-OF-ANOTHER-ACCOUNT" not in json.dumps(flow) and "DOC-OF-ANOTHER-ACCOUNT" not in json.dumps(flow)
+    assert start["data"]["greeting"] == "Hi, Acme here!"
+
+
+async def test_bad_files_are_refused_in_plain_words(client):
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    for doc, code in (({}, "bad_file"), ({"format": "swarvo-agent", "version": 9, "agent": {}, "flow": FLOW}, "newer_file"), ({"nodes": [{"id": "1", "type": "startCall"}], "edges": []}, "flow_invalid"),
+                      ({"nodes": [], "edges": [], "x": "y" * 1_100_000}, "file_too_big")):
+        r = await client.post("/product/agents/import", json={"document": doc}, headers=h)
+        assert r.status_code == 400 and r.json()["detail"]["code"] == code, (code, r.text[:200])
+    assert (await client.get("/product/agents", headers=h)).json() == []  # nothing half-made
+
+
+async def test_an_imported_voice_that_is_not_available_is_noted_not_fatal(client):
+    _, tok = await signup(client, "a@x.com")
+    doc = {"format": "swarvo-agent", "version": 1, "agent": {"name": "V", "voice": {"name": "NoSuchVoice", "engine": "inworld"}, "style": {"pace": 99}}, "flow": FLOW}
+    r = await client.post("/product/agents/import", json={"document": doc}, headers=bearer(tok))
+    assert r.status_code == 201 and any("NoSuchVoice" in n for n in r.json()["notes"]) and any("not valid" in n for n in r.json()["notes"])

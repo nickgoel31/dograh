@@ -51,6 +51,17 @@ MURF_INDIAN_VOICES: dict[str, tuple[str, ...]] = {
     "Vaibhav": ("hi-IN", "mr-IN"),
 }
 MURF_TTS_VOICES = list(MURF_INDIAN_VOICES)
+
+# Murf's docs do not publish a voice's gender; its voice list API does (the app uses that when MURF_API_KEY is set, and it wins over this table).
+# Priya and Shweta are confirmed on murf.ai's own voice pages (both Female). The rest are the usual gender of each Indian first name. Harman and
+# Harpreet are used by everyone, so they are left empty rather than guessed.
+MURF_GENDER = {
+    "Priya": "Female", "Shweta": "Female",
+    "Abirami": "Female", "Alia": "Female", "Anisha": "Female", "Anusha": "Female", "Arohi": "Female", "Ayushi": "Female", "Debarati": "Female", "Diya": "Female",
+    "Harshitha": "Female", "Isha": "Female", "Ishani": "Female", "Khyati": "Female", "Namrita": "Female", "Nimisha": "Female", "Pooja": "Female", "Prajakta": "Female", "Sunaina": "Female",
+    "Aarav": "Male", "Abhik": "Male", "Abhinav": "Male", "Aman": "Male", "Arnab": "Male", "Eashwar": "Male", "Hardik": "Male", "Karan": "Male", "Karthikeyan": "Male",
+    "Madhavan": "Male", "Nikhil": "Male", "Prathamesh": "Male", "Samar": "Male", "Sarvesh": "Male", "Subhankar": "Male", "Vaibhav": "Male",
+}
 MURF_TTS_LOCALES = ["hi-IN", "en-IN", "bn-IN", "gu-IN", "kn-IN", "ml-IN", "mr-IN", "pa-IN", "ta-IN", "te-IN", "or-IN", "as-IN", "hi-LATN"]
 
 # Locale -> the language name the product shows.

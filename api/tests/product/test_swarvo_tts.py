@@ -7,7 +7,7 @@ import pytest
 import pytest_asyncio
 from aiohttp import web
 
-from api.db import models
+from api.db import models, product_models
 from api.product import voices
 from api.services.pipecat.swarvo_tts import SwarvoTTSService, stream_url
 from api.tests.product.support import bearer, make_client, signup
@@ -29,6 +29,7 @@ async def client(monkeypatch):
         monkeypatch.setenv("PRODUCT_PROFILES", json.dumps({"default": "inworld", "inworld": "inworld"}))  # no mapping for swarvo: its profile is found by name
         async with c.session_factory() as s:
             s.add(models.ModelProfileModel(slug="inworld", display_name="Inworld", config=INWORLD, is_active=True))
+            s.add(product_models.ProductPlatformSettingModel(key="swarvo_tts", value={"everyone": True, "workspaces": []}))  # the owner has switched swarvo-tts on
             await s.commit()
         yield c
 
@@ -476,3 +477,72 @@ async def test_chat_level_is_only_sent_in_chat_mode_and_when_not_the_default(mod
         assert seen["first"]["mode"] == mode and seen["first"].get("chat_level") == sent
     finally:
         await runner.cleanup()
+
+
+# ---------- swarvo-tts is "coming soon" until the owner switches it on ----------
+async def _switch(client, **setting):
+    from sqlalchemy import delete
+
+    async with client.session_factory() as s:
+        await s.execute(delete(product_models.ProductPlatformSettingModel))
+        s.add(product_models.ProductPlatformSettingModel(key="swarvo_tts", value={"everyone": False, "workspaces": [], **setting}))
+        await s.commit()
+
+
+async def test_swarvo_voices_are_coming_soon_until_the_owner_turns_them_on(client):
+    await add_swarvo(client)
+    await _switch(client)
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    rows = [v for v in (await client.get("/product/voices", headers=h)).json() if v["provider"] == "Swarvo"]
+    assert len(rows) == 20 and all(v["available"] is False and v["has_sample"] is False for v in rows)  # listed, greyed out, "coming soon"
+    aid = (await client.post("/product/agents", json={"name": "P", "template": "receptionist"}, headers=h)).json()["id"]
+    r = await client.patch(f"/product/agents/{aid}", json={"voice_id": rows[0]["id"]}, headers=h)
+    assert r.status_code == 400 and r.json()["detail"]["code"] == "voice_coming_soon"
+    assert (await client.get(f"/product/voices/{rows[0]['id']}/sample", headers=h)).status_code in (404, 502)
+    pricing = (await client.get("/product/billing/pricing", headers=h)).json()
+    assert pricing["voice_discounts"] == [{"id": "swarvo", "label": "swarvo-tts 2.5 voices", "percent": 20, "available": False}]
+
+
+async def test_the_owner_can_switch_swarvo_on_for_one_workspace_or_everyone(client, monkeypatch):
+    from sqlalchemy import select
+
+    from api.db.models import UserModel
+
+    await add_swarvo(client)
+    await _switch(client)
+    cust = bearer((await signup(client, "cust@x.com"))[1])
+    owner = bearer((await signup(client, "boss@twjlabs.com"))[1])
+    monkeypatch.setenv("PRODUCT_ADMIN_EMAILS", "boss@twjlabs.com")
+    async with client.session_factory() as s:
+        u = (await s.execute(select(UserModel).where(UserModel.email == "boss@twjlabs.com"))).scalar_one()
+        u.is_superuser = True
+        await s.commit()
+    assert (await client.put("/product/admin/swarvo-tts", headers=cust, json={"everyone": True})).status_code == 403
+    wid = (await client.get("/product/admin/workspaces?q=cust@x.com", headers=owner)).json()["workspaces"][0]["id"]
+    assert (await client.get(f"/product/admin/workspaces/{wid}", headers=owner)).json()["swarvo_tts"] is False
+
+    assert (await client.put(f"/product/admin/workspaces/{wid}/swarvo-tts", headers=owner, json={"enabled": True})).json()["swarvo_tts"] is True
+    mine = [v for v in (await client.get("/product/voices", headers=cust)).json() if v["provider"] == "Swarvo"]
+    assert all(v["available"] for v in mine)
+    other = bearer((await signup(client, "other@x.com"))[1])
+    assert not any(v["available"] for v in (await client.get("/product/voices", headers=other)).json() if v["provider"] == "Swarvo")  # only the chosen workspace
+    st = (await client.get("/product/admin/swarvo-tts", headers=owner)).json()
+    assert st["everyone"] is False and [w["id"] for w in st["workspaces"]] == [wid] and st["discount_percent"] == 20
+
+    await client.put(f"/product/admin/workspaces/{wid}/swarvo-tts", headers=owner, json={"enabled": False})
+    assert not any(v["available"] for v in (await client.get("/product/voices", headers=cust)).json() if v["provider"] == "Swarvo")
+    await client.put("/product/admin/swarvo-tts", headers=owner, json={"everyone": True})
+    assert all(v["available"] for v in (await client.get("/product/voices", headers=other)).json() if v["provider"] == "Swarvo")
+
+
+def test_calls_spoken_with_swarvo_tts_cost_twenty_percent_less(monkeypatch):
+    from api.services.billing import voice_discount as vd
+
+    swarvo = {"tts": {"SwarvoTTSService#0|||swarvo-tts-2.5": {"characters": 100}}}
+    assert vd.multiplier_for_usage(swarvo) == 0.8
+    assert vd.multiplier_for_usage({"tts": {"MurfTTSService#0|||falcon-2.1": 100}}) == 1.0 and vd.multiplier_for_usage({}) == 1.0 and vd.multiplier_for_usage(None) == 1.0
+    monkeypatch.setenv("SWARVO_TTS_DISCOUNT_PERCENT", "35")
+    assert vd.multiplier_for_usage(swarvo) == 0.65
+    monkeypatch.setenv("SWARVO_TTS_DISCOUNT_PERCENT", "0")
+    assert vd.multiplier_for_usage(swarvo) == 1.0

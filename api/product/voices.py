@@ -170,15 +170,16 @@ class MurfAdapter:
     """
 
     def list(self) -> list[Voice]:
-        from api.services.configuration.options.murf import MURF_INDIAN_VOICES, MURF_LOCALE_LANGUAGE
+        from api.services.configuration.options.murf import MURF_GENDER, MURF_INDIAN_VOICES, MURF_LOCALE_LANGUAGE
 
         genders = murf_genders()
         out = []
         for name, locales in MURF_INDIAN_VOICES.items():
             langs = [MURF_LOCALE_LANGUAGE[l] for l in locales if l in MURF_LOCALE_LANGUAGE]
-            desc = "Speaks " + ", ".join(langs[:-1]) + (" and " if len(langs) > 1 else "") + langs[-1] if langs else None
+            speaks = ("Speaks " + ", ".join(langs[:-1]) + (" and " if len(langs) > 1 else "") + langs[-1] + ".") if langs else ""
+            desc = f"Natural, conversational voice for phone calls. {speaks}".strip()
             out.append(Voice(id=voice_id("murf", "falcon-2.1", name), name=name, language=langs[0] if langs else "Hindi", style="Falcon 2.1", provider=PROVIDER_ALIASES["murf"],
-                             gender=genders.get(name), tts={"engine": "murf", "voice": name, "locales": list(locales), "description": desc}))
+                             gender=genders.get(name) or MURF_GENDER.get(name), tts={"engine": "murf", "voice": name, "locales": list(locales), "description": desc}))
         return out
 
 

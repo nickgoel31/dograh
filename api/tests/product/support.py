@@ -23,6 +23,7 @@ TABLES = [
     product_models.ProductMembershipModel.__table__,
     product_models.ProductUserProfileModel.__table__,
     product_models.ProductStatusCheckModel.__table__,
+    product_models.ProductPlatformSettingModel.__table__,
     product_models.ProductAgentModel.__table__,
     product_models.ProductVoiceFavoriteModel.__table__,
     models.ModelProfileModel.__table__,

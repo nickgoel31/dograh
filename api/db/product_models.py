@@ -624,3 +624,12 @@ class ProductStatusCheckModel(Base):
     ms = Column(Integer, nullable=True)
 
     __table_args__ = (Index("ix_product_status_checks_comp_at", "component", "at"),)
+
+
+class ProductPlatformSettingModel(Base):
+    """A switch the platform owner controls from the Admin page (one row per setting)."""
+
+    __tablename__ = "product_platform_settings"
+
+    key = Column(String(60), primary_key=True)
+    value = Column(JSON, nullable=False, default=dict)

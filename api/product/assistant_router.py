@@ -93,6 +93,7 @@ async def chat(body: ChatBody, ctx: Ctx = Depends(get_ctx), llm: LLMGateway = De
 # Reads run on their own; anything that changes something is shown to the person to confirm first. The browser calls the normal product
 # endpoints, so roles, workspaces and limits apply exactly as if the person had clicked the buttons.
 TOOLS: dict[str, tuple[str, str]] = {
+    "setup_agent": ("auto", "{text: string}  -> builds a whole agent in one go (reads their website, writes the agent, adds knowledge, picks the voice, puts it live, connects a free number). Pass everything the person said: the website address and/or what they do and want"),
     "list_agents": ("read", "{}  -> all agents with id, name, status"),
     "list_templates": ("read", "{}  -> agent templates (key, name, role, blurb)"),
     "list_numbers": ("read", "{}  -> phone numbers with id, number, assigned agent"),
@@ -140,7 +141,9 @@ def _plan_system(state: str) -> str:
         "- Results of tools you called come back as a message starting with TOOL RESULTS. Use them to finish the job, then answer with an empty calls list.\n"
         "- Only call write tools when the person asked for that change. Ask a short question first if something important is missing (for example what a new agent should do). Never invent ids, phone numbers or prices.\n"
         "- The person confirms every write before it happens, so describe plainly what it will do. Do not ask for passwords, API keys or card details; money, buying numbers and billing are done by the person on the Billing and Phone Numbers pages, so point there with go_to.\n"
-        "- When creating an agent, write a useful script (numbered steps of what the agent should do on a call) from what the person told you.\n"
+        "- When the person wants a new agent, call setup_agent right away with everything they have said so far (their website and/or what the business does and what the agent should do). It does everything by itself and needs no confirmation. "
+        "If they have given neither a website nor any detail about the business, ask ONE short question for it, then call setup_agent. Never ask about voices, languages, tone, tools or phone numbers: it chooses well. Do not use create_agent for this.\n"
+        "- When creating an agent by hand with create_agent, write a useful script (numbered steps of what the agent should do on a call) from what the person told you.\n"
         "- Be brief and plain. Short sentences. Use **bold** sparingly and markdown links like [Billing & Usage](/billing) with paths from the page list.\n\n"
         f"Pages:\n{pages}\n\nTools:\n{tools}\n\nFacts:\n{FACTS}\n\nTheir account right now: {state}"
     )

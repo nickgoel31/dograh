@@ -7,7 +7,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from api.db.product_models import ProductAgentModel, ProductIntegrationModel
-from api.product import agent_writer, setup_flow, site_reader
+from api.product import agent_writer, setup_auto, setup_flow, site_reader
+from api.product.deps import require
+from api.product.gateway import PlatformGateway, get_gateway
+from api.product.roles import Perm
+from api.product.tools_router import get_tools
 from api.product.deps import Ctx, get_ctx
 from api.product.errors import product_error
 from api.product.knowledge_router import KnowledgeGateway, get_knowledge, kind_of, status_of
@@ -36,6 +40,22 @@ class PlanBody(BaseModel):
     profile: dict = Field(default_factory=dict)
     website: str | None = Field(default=None, max_length=300)
     wishes: str = Field(default="", max_length=1500)  # anything extra the person said about what the agent should do
+
+
+class AutoBody(BaseModel):
+    text: str = Field(default="", max_length=4000)  # everything the person said: a website and/or what they do and want
+    url: str = Field(default="", max_length=300)
+    usecase: str = Field(default="", max_length=40)  # a template key, when the person picked one of the suggestions
+    publish: bool = True
+
+
+@router.post("/auto")
+async def auto(body: AutoBody, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE)), kb: KnowledgeGateway = Depends(get_knowledge), gw: PlatformGateway = Depends(get_gateway),
+               llm: LLMGateway = Depends(get_llm), fetch=Depends(get_fetcher), tools=Depends(get_tools)):
+    """Build a whole agent from one message, with no further questions: read the site, write the agent, add knowledge, pick the voice, go live, connect a free number."""
+    await rate_limit.enforce(f"pauto:{ctx.user.id}", 8, 600, "You're going quickly. Give it a minute and try again.")
+    url, rest = (body.url, body.text) if body.url.strip() else setup_auto.split_input(body.text)
+    return await setup_auto.run(ctx, kb=kb, gw=gw, llm=llm, fetch=fetch, tools=tools, url=url, text=rest, publish=body.publish, usecase=body.usecase)
 
 
 @router.get("/state")

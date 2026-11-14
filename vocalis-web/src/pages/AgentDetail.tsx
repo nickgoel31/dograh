@@ -8,13 +8,15 @@ import { AdvancedOnly, EmptyState, Friendly, PageHeader, SearchPill, SimpleAdvan
 import { AgentAvatar } from '@/components/AgentAvatar'
 import { VoicePlayground } from '@/components/Playground'
 import { useData } from '@/store/data'
-import { USE_MOCKS } from '@/lib/api/env'
+import { API_URL, USE_MOCKS } from '@/lib/api/env'
+import { download } from '@/lib/utils'
 import { agentsApi, toAgent } from '@/lib/api/agents'
 import { fromWorkflowDefinition, toWorkflowDefinition } from '@/lib/flowConvert'
 import { AttachPicker } from '@/components/AttachPicker'
 import { AgentPhone } from '@/pages/AgentPhone'
 import { HumanFeel } from '@/pages/AgentFeel'
 import { CallSettings } from '@/components/CallSettings'
+import { ProviderTabs, providerRank } from '@/components/ProviderTabs'
 import { QAEditor } from '@/components/QAEditor'
 import { TryAgent } from '@/components/TryAgent'
 import { BrainModel } from '@/pages/BrainModel'
@@ -43,13 +45,16 @@ export function VoicePick({ voices, value, onPick }: { voices: import('@/mock/ty
   const [q, setQ] = React.useState('')
   const [lang, setLang] = React.useState('')
   const [gender, setGender] = React.useState('')
+  const [prov, setProv] = React.useState('')
   const [shown, setShown] = React.useState(24)
   const langs = [...new Set(voices.map((v) => v.lang))].sort()
-  const list = voices.filter((v) => (!lang || v.lang === lang) && (!gender || v.gender === gender) && (!q || `${v.name} ${v.style} ${v.description ?? ''}`.toLowerCase().includes(q.toLowerCase())))
+  const list = voices.filter((v) => (!prov || v.provider === prov) && (!lang || v.lang === lang) && (!gender || v.gender === gender) && (!q || `${v.name} ${v.style} ${v.description ?? ''}`.toLowerCase().includes(q.toLowerCase())))
+  list.sort((a, b) => providerRank(a.provider) - providerRank(b.provider))
   const reset = () => setShown(24)
   const pill = (on: boolean) => cn('shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] transition', on ? 'border-ink bg-ink text-surface' : 'bg-surface text-soft hover:border-soft/50 hover:text-ink')
   return (
     <div>
+      <ProviderTabs className="mb-4" voices={voices} value={prov} onChange={(p) => { setProv(p); reset() }} />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <SearchPill value={q} onChange={(v) => { setQ(v); reset() }} placeholder="Search voices" className="sm:max-w-xs" />
         <div className="flex gap-2">{['', 'Female', 'Male'].map((g) => <button key={g || 'any'} onClick={() => { setGender(g); reset() }} className={pill(gender === g)}>{g || 'Any'}</button>)}</div>
@@ -133,6 +138,14 @@ export default function AgentDetail() {
   const up = (p: Partial<Draft>) => setD((x) => (x ? { ...x, ...p } : x))
   const voice = voices.find((v) => v.id === d.voiceId) ?? voices[0] ?? { id: '', name: 'Default', lang: '', gender: '', age: '', accent: '', style: '', provider: '' }
   const tab = sp.get('tab') ?? 'flow'
+  /** Download the whole agent as one JSON file. */
+  const exportFile = async () => {
+    try {
+      const r = await fetch(`${API_URL}/agents/${agent.id}/export`, { credentials: 'include' })
+      if (!r.ok) throw new Error('export failed')
+      download(`${(agent.name || 'agent').replace(/[^\w-]+/g, '-')}.swarvo.json`, await r.text())
+    } catch { toast.error('We could not export that agent.') }
+  }
   const save = async () => {
     if (!USE_MOCKS && JSON.stringify(d.flow) !== JSON.stringify(saved.flow)) {
       try {
@@ -178,6 +191,7 @@ export default function AgentDetail() {
         <div className="min-w-0"><div className="flex items-center gap-2.5"><h1 className="truncate text-2xl font-bold tracking-tight">{d.name}</h1><StatusBadge status={agent.status} /></div>{d.whatYouDo && <p className="mt-1 max-w-2xl truncate text-[13.5px] text-soft">{d.whatYouDo}</p>}</div>
         <div className="flex flex-wrap items-center gap-2">
           <Button disabled={!dirty} onClick={save}>Save</Button>
+          {!USE_MOCKS && <Button variant="ghost" onClick={() => void exportFile()}>Export</Button>}
           <Button onClick={() => setUI({ playground: agent.id })}><Mic size={15} />Preview</Button>
           <Button variant="primary" onClick={() => setSp({ tab: 'publish' })}><Rocket size={15} />Publish</Button>
         </div>
@@ -233,6 +247,7 @@ export default function AgentDetail() {
         </div>
         <div className="ml-auto flex items-center gap-1.5">
           <Button size="sm" disabled={!dirty} onClick={save}>Save</Button>
+          {!USE_MOCKS && <Button size="sm" variant="ghost" onClick={() => void exportFile()}>Export</Button>}
           <Button size="sm" onClick={() => setUI({ playground: agent.id })}><Mic size={14} />Preview</Button>
           <Button size="sm" variant="primary" onClick={() => setSp({ tab: 'publish' })}><Rocket size={14} />Publish</Button>
         </div>
