@@ -239,3 +239,30 @@ async def test_autopilot_still_makes_the_agent_when_there_is_no_site_number_or_a
     assert ids["agent"] == "ok" and ids["number"] == "skip" and d["generated"] is False  # no number to connect: said so, nothing else stopped
     assert (await client.post("/product/assistant/setup/auto", json={"text": "hi"}, headers=h)).json()["detail"]["code"] == "need_something"
     assert (await client.post("/product/assistant/setup/auto", json={"text": "a" * 20, "usecase": "survey"}, headers=h)).status_code == 200  # a picked suggestion
+
+
+def test_the_language_follows_how_the_person_writes():
+    assert setup_auto.languages_in("mera salon hai, customers ke calls lena chahiye", ["English"]) == ["Hindi", "English"]  # Hinglish
+    assert setup_auto.languages_in("मेरी दुकान है और ग्राहकों के फोन उठाने हैं", ["English"]) == ["Hindi", "English"]  # Devanagari
+    assert setup_auto.languages_in("I run a dental clinic in Pune", ["English"]) == ["English"]
+    assert setup_auto.languages_in("dentist", ["Hindi", "English"]) == ["Hindi", "English"]  # one word: keep what the website said
+
+
+@pytest.mark.asyncio
+async def test_a_few_words_are_enough_to_build_an_agent(client):
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    for words in ("dentist", "mera salon hai", "pizza shop"):
+        r = await client.post("/product/assistant/setup/auto", json={"text": words, "publish": False}, headers=h)
+        assert r.status_code == 200, (words, r.text)
+        assert any(s["id"] == "agent" and s["status"] == "ok" for s in r.json()["steps"])
+    for nothing in ("", "  ", "hi", "Hello!"):
+        assert (await client.post("/product/assistant/setup/auto", json={"text": nothing}, headers=h)).status_code == 400
+
+
+def test_the_compiled_prompt_asks_for_a_human_voice_and_real_facts():
+    from api.product import prompt
+
+    p = prompt.compile_prompt(business="Sunrise Dental", what_you_do="Dental clinic in Pune, open 9 to 7.", role="book appointments", tone="Friendly", script="1. Greet.")
+    for needle in ("real person", "acknowledgement", "digit by digit", "Never invent", "Sunrise Dental", "Dental clinic in Pune", "Let me check with the team"):
+        assert needle in p, needle

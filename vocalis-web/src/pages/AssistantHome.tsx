@@ -21,6 +21,7 @@ type Item =
   | { k: 'user'; text: string }
   | { k: 'ai'; text: string }
   | { k: 'built'; data: Built }
+  | { k: 'building'; text: string }
   | { k: 'plan'; call: Call; status: 'pending' | 'running' | 'done' | 'skipped' | 'failed'; note?: string; link?: string }
 type Msg = { role: 'user' | 'assistant'; content: string }
 
@@ -36,6 +37,20 @@ const SUGGESTIONS = [
 ]
 const GUIDE_STEPS = ['Your website', 'Knowledge', 'The agent', 'Voice', 'Phone number']
 const WANTS_AGENT = /\b(create|build|make|set ?up|start|need)\b.{0,24}\b(agent|assistant|bot|receptionist)\b/i
+// A message that is clearly about a business (or a website) builds the agent straight away, with no planning round trip and no questions.
+const URLISH = /(https?:\/\/|www\.)\S+|\b[a-z0-9-]+\.(com|in|co|net|org|io|ai|store|shop)\b/i
+const BUSINESS = /\b(dental|dentist|clinic|doctor|hospital|salon|spa|parlou?r|restaurant|cafe|caf\u00e9|hotel|resort|real estate|property|properties|coaching|classes|tuition|institute|school|college|gym|fitness|shop|store|boutique|pharmacy|agency|studio|garage|showroom|we (sell|run|offer|are|make)|i (sell|run|own|have|make)|my (business|shop|store|clinic|salon|company|restaurant|hotel)|mera|meri|mere|hamari|humara|hamara)\b/i
+const QUESTION = /\b(balance|wallet|campaigns?|conversations?|calls? (are|going|today)|numbers?|invoice|billing|how (many|much|are|do|can)|show me|what (is|are)|why)\b/i
+const STARTERS = [
+  { emoji: '\u{1F9B7}', label: 'Dental clinic', prompt: 'I run a dental clinic. Answer calls, answer questions about treatments and book appointments.' },
+  { emoji: '\u{1F487}', label: 'Salon & spa', prompt: 'I run a salon and spa. Answer calls, share services and book appointments.' },
+  { emoji: '\u{1F37D}\uFE0F', label: 'Restaurant', prompt: 'I run a restaurant. Answer calls, take table bookings and answer questions about the menu and timings.' },
+  { emoji: '\u{1F3E0}', label: 'Real estate', prompt: 'I sell properties as a real estate agent. Qualify enquiries and book site visits.' },
+  { emoji: '\u{1F393}', label: 'Coaching institute', prompt: 'I run a coaching institute. Answer enquiries about courses and fees and book demo classes.' },
+  { emoji: '\u{1F6CD}\uFE0F', label: 'Online store', prompt: 'I run an online store. Answer customer calls about orders, delivery and returns.' },
+]
+const STAGES: [number, string][] = [[0, 'Reading about your business'], [7, 'Writing how your agent talks'], [16, 'Choosing the best voice'], [23, 'Adding what it should know'], [30, 'Putting it live']]
+const SpeechRec = typeof window !== 'undefined' ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) : undefined
 
 const LABEL: Record<string, string> = {
   list_agents: 'Looking at your agents', list_templates: 'Looking at agent templates', list_numbers: 'Looking at your phone numbers', list_contacts: 'Looking at your contacts',
@@ -98,6 +113,23 @@ const bucket = (t: number) => { const d = (Date.now() - t) / 864e5; return d < 1
 const ago = (t: number) => { const m = Math.max(1, Math.round((Date.now() - t) / 6e4)); return m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago` }
 
 const refreshAgents = async () => { try { useData.getState().setAgents((await agentsApi.list()).map((x) => toAgent(x))) } catch { /* the Agents page reloads on its own */ } }
+
+/** Shown while the agent is being built: honest stages on a timer, so it never looks stuck. */
+function Building() {
+  const [sec, setSec] = React.useState(0)
+  React.useEffect(() => { const t = setInterval(() => setSec((s) => s + 1), 1000); return () => clearInterval(t) }, [])
+  const at = STAGES.reduce((n, [from], i) => (sec >= from ? i : n), 0)
+  return (
+    <div className="ml-10 rounded-2xl border bg-surface p-4 animate-fade-in sm:p-5" role="status" aria-live="polite">
+      <div className="flex items-center gap-3"><Loader2 size={18} className="animate-spin text-accent" /><div className="text-[14.5px] font-semibold">Building your agent…</div><span className="ml-auto text-xs text-soft">about a minute</span></div>
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-accent transition-all duration-1000" style={{ width: `${Math.min(94, 8 + sec * 2.6)}%` }} /></div>
+      <ul className="mt-3 space-y-1.5">{STAGES.map(([, label], i) => (
+        <li key={label} className={cn('flex items-center gap-2 text-[13px]', i > at && 'text-soft/60')}>
+          {i < at ? <Check size={13} className="text-ok" /> : i === at ? <Loader2 size={13} className="animate-spin" /> : <span className="h-1.5 w-1.5 rounded-full bg-soft/40" />}{label}
+        </li>))}</ul>
+    </div>
+  )
+}
 
 /** What autopilot did, step by step, with the next things to do. */
 function BuiltCard({ data, nav }: { data: Built; nav: (to: string) => void }) {
@@ -197,7 +229,7 @@ export default function AssistantHome() {
       }
       for (const c of calls.filter((x) => x.kind !== 'write')) {
         setItems((xs) => [...xs, { k: 'plan', call: c, status: 'running' }])
-        try { const r = await execute(c, nav); patch(c.id, { status: 'done' }); batch.current.results.push(`${c.tool}: ${clip(r.result)}`); if (r.built) { setItems((xs) => [...xs, { k: 'built', data: r.built! }]); void refreshAgents() } }
+        try { const r = await execute(c, nav); patch(c.id, { status: 'done', link: r.link }); batch.current.results.push(`${c.tool}: ${clip(r.result)}`); if (r.built) { setItems((xs) => [...xs, { k: 'built', data: r.built! }]) } if (c.kind === 'auto') { void qc.invalidateQueries(); void refreshAgents() } }
         catch (e) { patch(c.id, { status: 'failed', note: e instanceof Error ? e.message : 'Failed' }); batch.current.results.push(`${c.tool}: failed, ${e instanceof Error ? e.message : 'error'}`) }
       }
       if (batch.current.waiting.size === 0 && batch.current.results.length && calls.some((c) => c.kind === 'read' || c.kind === 'auto') && round.current < 5) { await feed() }
@@ -213,10 +245,41 @@ export default function AssistantHome() {
     await think()
   }
 
+  const build = async (msg: string) => {
+    round.current = 0
+    history.current.push({ role: 'user', content: msg.slice(0, 2000) })
+    setItems((xs) => [...xs, { k: 'user', text: msg }, { k: 'building', text: msg }])
+    setBusy(true)
+    try {
+      const r = await http<Built>('/assistant/setup/auto', { method: 'POST', json: { text: msg.slice(0, 4000) }, timeoutMs: 180000 })
+      const live = r.agent.status === 'live'
+      const ai = `${r.agent.name} is ready${live ? ' and live' : ''}. Press **Talk to ${r.agent.name}** to hear it. Want me to connect your calendar or WhatsApp next?`
+      setItems((xs) => [...xs.filter((x) => x.k !== 'building'), { k: 'built', data: r }, { k: 'ai', text: ai }])
+      history.current.push({ role: 'assistant', content: `[I built the agent ${r.agent.name} (id ${r.agent.id}) and it is ${live ? 'live' : 'a draft'}.]` })
+      void qc.invalidateQueries(); void refreshAgents()
+    } catch (e) {
+      setItems((xs) => [...xs.filter((x) => x.k !== 'building'), { k: 'ai', text: (e instanceof Error ? e.message : 'Something went wrong.') + ' Try again, or tell me a bit more about your business.' }])
+    } finally { setBusy(false) }
+  }
+
+  const [listening, setListening] = React.useState(false)
+  const [vlang, setVlang] = React.useState<'en-IN' | 'hi-IN'>('en-IN')
+  const rec = React.useRef<any>(null)
+  const listen = () => {
+    if (listening) { rec.current?.stop(); return }
+    const r = new SpeechRec()
+    r.lang = vlang; r.interimResults = true; r.continuous = false
+    const base = text.trim()
+    r.onresult = (e: any) => { setText((base + ' ' + Array.from(e.results).map((x: any) => x[0].transcript).join(' ')).trim()) }
+    r.onend = () => setListening(false); r.onerror = () => setListening(false)
+    rec.current = r; setListening(true)
+    try { r.start() } catch { setListening(false) }
+  }
+
   const send = async (t: string) => {
     const msg = t.trim()
     if (!msg || busy) return
-    if (!USE_MOCKS && !items.length && WANTS_AGENT.test(msg)) { setText(''); setGuided(true); return } // "create an agent" starts the step-by-step setup
+    if (!USE_MOCKS && !items.length && (WANTS_AGENT.test(msg) || URLISH.test(msg) || (BUSINESS.test(msg) && !QUESTION.test(msg)))) { setText(''); await build(msg); return } // a business or a website builds the agent at once
     setText('')
     round.current = 0
     history.current.push({ role: 'user', content: msg.slice(0, 2000) })
@@ -247,11 +310,17 @@ export default function AssistantHome() {
           </div>
         </div>
       </div>
-      <textarea value={text} rows={chatting ? 1 : 2} onChange={(e) => setText(e.target.value)} placeholder="Ask me to build an agent, check your calls, add knowledge…"
+      <textarea value={text} rows={chatting ? 1 : 2} onChange={(e) => setText(e.target.value)} placeholder={chatting ? 'Message…' : 'Paste your website, or tell me what your business does…'}
         onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(text) } }}
         className="block max-h-40 w-full resize-none bg-transparent px-1.5 py-1 text-[15px] outline-none placeholder:text-soft/70" aria-label="Message" />
       <div className="mt-2 flex items-center justify-between">
-        <span className="flex items-center gap-1.5 px-1.5 text-xs text-soft"><Check size={12} />Changes always ask you first</span>
+        <span className="flex items-center gap-1.5 px-1.5 text-xs text-soft">
+          {SpeechRec && <>
+            <button type="button" onClick={listen} aria-label={listening ? 'Stop listening' : 'Speak instead of typing'} className={cn('flex h-8 w-8 items-center justify-center rounded-full border transition', listening ? 'animate-pulse border-bad/40 bg-bad/10 text-bad' : 'bg-surface text-soft hover:bg-muted hover:text-ink')}><Mic size={15} /></button>
+            <button type="button" onClick={() => setVlang((l) => (l === 'en-IN' ? 'hi-IN' : 'en-IN'))} aria-label="Speaking language" className="rounded-full border bg-surface px-2 py-1 text-[11px] font-medium hover:bg-muted">{vlang === 'en-IN' ? 'English' : '\u0939\u093F\u0902\u0926\u0940'}</button>
+          </>}
+          {listening ? 'Listening…' : <><Check size={12} />Builds instantly, no questions</>}
+        </span>
         <button onClick={() => void send(text)} disabled={!text.trim() || busy} aria-label="Send"
           className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-surface transition hover:scale-105 disabled:scale-100 disabled:opacity-30"><ArrowUp size={17} /></button>
       </div>
@@ -309,9 +378,14 @@ export default function AssistantHome() {
           <MeshBadge className="relative h-16 w-16 rounded-[22px]"><Sparkles size={26} /></MeshBadge>
         </div>
         <h1 className="mt-6 text-center text-[32px] font-semibold leading-[1.1] tracking-[-0.035em] sm:text-[42px]">{name ? <>Hi {name}, what should<br className="hidden sm:block" /> we set up?</> : 'What should we set up?'}</h1>
-        <p className="mt-3 max-w-md text-center text-[15px] leading-relaxed text-soft">I can build agents, manage numbers, contacts, calls, campaigns and knowledge for you.</p>
+        <p className="mt-3 max-w-md text-center text-[15px] leading-relaxed text-soft">Paste your website or tell me what you do, even in a few words. Your agent will be ready in about a minute.</p>
         {agents.length > 0 && <div className="mt-4 flex items-center gap-2 text-xs text-soft"><span className="h-1.5 w-1.5 rounded-full bg-ok" />{agents.length} {agents.length === 1 ? 'agent' : 'agents'}{live > 0 ? `, ${live} live` : ', none live yet'}</div>}
         <div className="mt-8 w-full">{composer}</div>
+        {!USE_MOCKS && (
+          <div className="mt-3 flex w-full flex-wrap items-center justify-center gap-2" aria-label="Quick start">
+            <span className="text-xs text-soft">Or tap one:</span>
+            {STARTERS.map((s) => <button key={s.label} disabled={busy} onClick={() => void send(s.prompt)} className="rounded-full border bg-surface px-3.5 py-1.5 text-[13px] transition hover:border-accent/50 hover:bg-accent-soft/40 disabled:opacity-50"><span className="mr-1.5">{s.emoji}</span>{s.label}</button>)}
+          </div>)}
 
         {!USE_MOCKS && (
           <button onClick={() => setGuided(true)} className="group relative mt-4 w-full overflow-hidden rounded-2xl border bg-surface p-5 text-left transition hover:border-accent/50 sm:p-6">
@@ -378,6 +452,8 @@ export default function AssistantHome() {
             <MeshBadge className="mt-0.5 h-7 w-7 rounded-lg"><Sparkles size={13} /></MeshBadge>
             <div className="min-w-0 flex-1 whitespace-pre-wrap pt-0.5 text-[14.5px] leading-relaxed"><Rich text={it.text} go={nav} /></div>
           </div>
+        ) : it.k === 'building' ? (
+          <Building key={i} />
         ) : it.k === 'built' ? (
           <BuiltCard key={i} data={it.data} nav={nav} />
         ) : it.call.kind === 'write' ? (
@@ -396,6 +472,7 @@ export default function AssistantHome() {
           <div key={i} className="ml-10 flex items-center gap-2 text-xs text-soft">
             {it.status === 'running' ? <Loader2 size={12} className="animate-spin" /> : it.status === 'failed' ? <X size={12} className="text-bad" /> : <Check size={12} />}
             {LABEL[it.call.tool] ?? it.call.tool}{it.status === 'failed' && it.note ? `: ${it.note}` : ''}
+            {it.status === 'done' && it.link && <button className="font-semibold text-accent underline underline-offset-2" onClick={() => nav(it.link!)}>Open</button>}
           </div>
         ))}
         {busy && <div className="ml-10 flex gap-1" aria-label="Thinking">{[0, 1, 2].map((d) => <span key={d} className={cn('h-1.5 w-1.5 animate-pulse rounded-full bg-soft/60')} style={{ animationDelay: `${d * 150}ms` }} />)}</div>}

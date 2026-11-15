@@ -104,13 +104,13 @@ TOOLS: dict[str, tuple[str, str]] = {
     "list_integrations": ("read", "{}  -> connected services (calendar, CRM, WhatsApp...)"),
     "get_wallet": ("read", "{}  -> balance and minutes left"),
     "go_to": ("ui", "{path: string}  -> open a page. Use only paths from the page list"),
-    "create_agent": ("write", "{name: string, template?: string, business?: string, what_you_do?: string, script?: string, tone?: string}  -> new agent (private test copy)"),
-    "update_agent": ("write", "{agent_id: string, name?, business?, what_you_do?, script?, tone?}  -> change an agent"),
-    "publish_agent": ("write", "{agent_id: string}  -> send the latest changes live"),
+    "create_agent": ("auto", "{name: string, template?: string, business?: string, what_you_do?: string, script?: string, tone?: string}  -> new agent (private test copy)"),
+    "update_agent": ("auto", "{agent_id: string, name?, business?, what_you_do?, script?, tone?}  -> change an agent"),
+    "publish_agent": ("auto", "{agent_id: string}  -> send the latest changes live"),
     "assign_number": ("write", "{number_id: string, agent_id: string | null}  -> point a number at an agent (null removes it)"),
     "block_numbers": ("write", "{numbers: string}  -> add to the do-not-call list"),
-    "add_knowledge_text": ("write", "{title: string, text: string}  -> add a note to knowledge"),
-    "add_knowledge_qa": ("write", "{title: string, pairs: [{q: string, a: string}]}  -> add fixed question/answers"),
+    "add_knowledge_text": ("auto", "{title: string, text: string}  -> add a note to knowledge"),
+    "add_knowledge_qa": ("auto", "{title: string, pairs: [{q: string, a: string}]}  -> add fixed question/answers"),
 }
 
 
@@ -139,10 +139,13 @@ def _plan_system(state: str) -> str:
         'Reply with ONLY a JSON object: {"reply": "short message to the person", "calls": [{"tool": "name", "args": {...}}]}. No text outside the JSON.\n'
         "Rules:\n- Use tools instead of guessing. To find ids, call a list_ tool first, then use the ids it returns.\n"
         "- Results of tools you called come back as a message starting with TOOL RESULTS. Use them to finish the job, then answer with an empty calls list.\n"
-        "- Only call write tools when the person asked for that change. Ask a short question first if something important is missing (for example what a new agent should do). Never invent ids, phone numbers or prices.\n"
-        "- The person confirms every write before it happens, so describe plainly what it will do. Do not ask for passwords, API keys or card details; money, buying numbers and billing are done by the person on the Billing and Phone Numbers pages, so point there with go_to.\n"
-        "- When the person wants a new agent, call setup_agent right away with everything they have said so far (their website and/or what the business does and what the agent should do). It does everything by itself and needs no confirmation. "
-        "If they have given neither a website nor any detail about the business, ask ONE short question for it, then call setup_agent. Never ask about voices, languages, tone, tools or phone numbers: it chooses well. Do not use create_agent for this.\n"
+        "- Do what the person asks straight away. Never ask \"shall I go ahead?\" or ask them to confirm; creating, changing and publishing agents and adding knowledge run immediately. Only assign_number and block_numbers are shown to the person to approve. Never invent ids, phone numbers or prices.\n"
+        "- Do not ask for passwords, API keys or card details; money, buying numbers and billing are done by the person on the Billing and Phone Numbers pages, so point there with go_to.\n"
+        "- People write in every way: one word, bad spelling, Hindi in English letters, a pasted website, a long story. Understand all of it. "
+        "When the person wants a new agent, or just names a business or a website (\"dentist\", \"mera salon hai\", \"we sell sarees, sareeghar.in\"), call setup_agent right away with everything they have said so far. It does everything by itself. "
+        "Even a few words are enough: do not ask for more detail first. Only if they have said nothing about a business at all (for example just \"hi\"), reply with ONE friendly line asking what their business is, with two short examples, then call setup_agent as soon as they answer. "
+        "Never ask about voices, languages, tone, tools or phone numbers: it chooses well and the person can change them later. Do not use create_agent for this.\n"
+        "- After setup_agent returns, reply in two short sentences: say the agent is ready and live, and tell them to press Talk to try it. Then suggest the single most useful next thing (for example adding their calendar), and do it for them if they say yes.\n"
         "- When creating an agent by hand with create_agent, write a useful script (numbered steps of what the agent should do on a call) from what the person told you.\n"
         "- Be brief and plain. Short sentences. Use **bold** sparingly and markdown links like [Billing & Usage](/billing) with paths from the page list.\n\n"
         f"Pages:\n{pages}\n\nTools:\n{tools}\n\nFacts:\n{FACTS}\n\nTheir account right now: {state}"

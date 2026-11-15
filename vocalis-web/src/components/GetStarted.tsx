@@ -47,6 +47,9 @@ const INDUSTRIES: { k: string; what: string }[] = [
 const TONES = ['Friendly', 'Professional', 'Playful']
 const short = (v: number, n: number) => `${v + 1} of ${n}`
 
+/** The home page builds an agent from one message, so the longer tour no longer pops up by itself. It is still one tap away on Home. */
+const AUTO_OPEN = false
+
 /** Shown to a new account once, and any time from the Home page or the search bar. */
 export function GetStarted() {
   const me = useMe().data
@@ -84,7 +87,7 @@ export function GetStarted() {
     const s = loadSetup(userId)
     let oldSeen = false
     try { oldSeen = localStorage.getItem(OLD_SEEN(userId)) === '1' } catch { oldSeen = true }
-    if (!s?.autoShown && !s?.finished && !oldSeen && agents.length === 0) {
+    if (AUTO_OPEN && !s?.autoShown && !s?.finished && !oldSeen && agents.length === 0) {
       saveSetup(userId, { ...(s ?? { step: 0, form: EMPTY }), autoShown: true })
       setOpen(true)
     }

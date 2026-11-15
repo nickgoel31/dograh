@@ -47,9 +47,25 @@ def _only_site(t: str) -> bool:
     return not re.sub(r"https?://\S+|\bwww\.\S+|\b\S+\.(com|in|co|net|org|io|ai)\b\S*", "", t).strip(" ,.;:-")
 
 
+GREETINGS = {"hi", "hii", "hello", "hey", "hlo", "test", "ok", "okay", "yes", "no", "help", "namaste", "hola"}
+# Hindi written in English letters (Hinglish): enough of these words in one message and the person almost certainly wants Hindi.
+HINGLISH = {"hai", "hain", "mera", "meri", "mere", "hum", "humara", "humari", "chahiye", "karna", "karni", "karo", "kya", "kaise", "bata", "batao", "wala", "wali", "aur", "nahi", "bhi", "apna", "apni",
+            "dukaan", "dukan", "clinic", "mein", "ke", "ka", "ki", "se", "ko", "liye", "chalata", "chalati", "karte", "karti", "lena", "dena", "bolna", "baat", "grahak", "customer"}
+_SCRIPTS = {"Hindi": ("ऀ", "ॿ"), "Bengali": ("ঀ", "৿"), "Tamil": ("஀", "௿"), "Telugu": ("ఀ", "౿"), "Gujarati": ("઀", "૿"), "Kannada": ("ಀ", "೿"), "Malayalam": ("ഀ", "ൿ"), "Punjabi": ("਀", "੿")}
+
+
 def languages_in(text: str, fallback: list[str]) -> list[str]:
+    """The languages the person asked for by name, else the one they wrote in (its own script, or Hinglish), else what the website suggests."""
     hits = sorted((m.start(), n) for n in LANGUAGES for m in [re.search(rf"\b{n}\b", text or "", re.I)] if m)  # in the order they were said
-    return ([n for _, n in hits] or fallback or ["English"])[:2]
+    if hits:
+        return [n for _, n in hits][:2]
+    for lang, (lo, hi) in _SCRIPTS.items():
+        if lang in LANGUAGES and sum(1 for c in text or "" if lo <= c <= hi) >= 4:
+            return [lang, "English"] if lang == "Hindi" else [lang]
+    words = re.findall(r"[a-z]+", (text or "").lower())
+    if len(words) >= 3 and sum(1 for w in words if w in HINGLISH) >= max(2, len(words) // 6):
+        return ["Hindi", "English"]
+    return (fallback or ["English"])[:2]
 
 
 def split_input(text: str) -> tuple[str, str]:
@@ -88,8 +104,8 @@ async def run(ctx, *, kb, gw, llm, fetch, tools, url: str, text: str, publish: b
             steps.add("read", f"Read {len(pages)} {'page' if len(pages) == 1 else 'pages'} of {_norm(pages[0].url)}")
         except ValueError as e:
             steps.add("read", "Read your website", "fail", str(e))
-    if not pages and len((text or "").strip()) < 15:
-        raise product_error(400, "need_something", "Tell me your website, or a few words about your business and what the agent should do.")
+    if not pages and (len((text or "").strip()) < 4 or (text or "").strip().lower().strip("!. ") in GREETINGS):
+        raise product_error(400, "need_something", "Tell me your website, or just what your business is, even in a few words like \"dental clinic in Pune\".")
     profile, by_ai = await setup_flow.build_profile(llm, org, uid, pages, text)
     if not profile["business"]:
         profile["business"] = ctx.workspace.name

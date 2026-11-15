@@ -104,7 +104,7 @@ async def test_home_assistant_plans_tool_calls_and_ignores_unknown_ones(client):
         return (await client.post("/product/assistant/plan", json={"messages": [{"role": "user", "content": "hi"}], "page": "/"}, headers=h)).json()
 
     out = await said('```json\n{"reply": "Let me look.", "calls": [{"tool": "list_agents", "args": {}}, {"tool": "delete_everything", "args": {}}, {"tool": "create_agent", "args": {"name": "Bot"}}]}\n```')
-    assert out["reply"] == "Let me look." and [(c["tool"], c["kind"]) for c in out["calls"]] == [("list_agents", "read"), ("create_agent", "write")]
+    assert out["reply"] == "Let me look." and [(c["tool"], c["kind"]) for c in out["calls"]] == [("list_agents", "read"), ("create_agent", "auto")]
     plain = await said("Just text, no JSON.")
     assert plain["reply"] == "Just text, no JSON." and plain["calls"] == []
 

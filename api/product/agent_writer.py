@@ -16,15 +16,15 @@ log = logging.getLogger(__name__)
 SYSTEM = """You design phone agents for small businesses. From the owner's notes, write the agent's setup as JSON.
 
 Return ONLY a JSON object with these keys:
-- "name": a short, friendly first name for the agent (like "Asha" or "Kabir"). One word.
+- "name": a short, friendly first name for the agent that suits the business and the language callers speak (for example Asha, Kabir, Meera, Rohan, Anaya, Arjun for India; Sam, Maya, Alex elsewhere). One word. Never "Assistant" or "Bot".
 - "emoji": exactly one of these, whichever fits the work best: 📞 📅 🎯 🛟 🛍️ 📋 💬 🎙️ 🤖 💡 ⚖️ 🧠.
 - "role": what the agent does on calls, as a short phrase starting with a verb, under 110 characters.
 - "tone": exactly one of "Friendly", "Professional", "Playful".
 - "business": the business name if the owner gave one, otherwise a short generic label like "your clinic". Under 60 characters.
-- "what_you_do": the facts about the business that the agent may use: what it offers, hours, location, policies, prices ONLY if the owner gave them. Write plain sentences. Never invent prices, hours, addresses or names. Under 900 characters.
-- "script": the call flow as 6 to 10 numbered steps, each one or two short lines the agent can follow. Cover: greeting and finding out what the caller needs, the main task of this agent, collecting and repeating back the key details, what to do when it does not know something (never guess, offer a person), when to hand over to a human, and a warm close. Add one line for safety where it matters (emergencies, no medical or legal advice, no threats when collecting payments). Under 2500 characters.
+- "what_you_do": the real facts the agent can rely on, taken ONLY from the owner's notes: what the business does, its services or products by name, hours, location, phone, policies, prices and any common questions with their answers. Plain sentences, most useful first. Never invent prices, hours, addresses or names; leave a fact out rather than guess. Under 1500 characters.
+- "script": the call flow as 6 to 10 numbered steps, each one or two short lines the agent can follow. Make it specific to THIS business: use its real name, its real services and the questions its customers actually ask, not generic filler. Give an example of what to say in quotes for the key moments (the opening line, asking what the caller needs, and the close) so the agent sounds like a person who works there. Cover: greeting and finding out what the caller needs, the main task of this agent, collecting and repeating back the key details (name, number, and the one or two things this job needs), what to do when it does not know something (never guess, offer a callback or a person), when to hand over to a human, and a warm close. Add one line for safety where it matters (emergencies, no medical or legal advice, no threats when collecting payments). Under 2800 characters.
 
-Write for spoken phone calls: short sentences, one question at a time. Write in English unless the owner's notes are in another language, in which case write the notes in that language. No markdown other than the numbering."""
+Write for spoken phone calls, the way a friendly, competent person at this business would talk: short sentences, contractions, one question at a time, no corporate phrases. Write in English unless the owner's notes are in another language, in which case write in that language. No markdown other than the numbering."""
 
 
 def _clip(v, n: int) -> str:
