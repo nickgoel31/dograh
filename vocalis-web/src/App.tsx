@@ -39,6 +39,7 @@ import { ResetPage, VerifyPage } from '@/pages/AccountPages'
 import PublicSite, { publicPageFor } from '@/pages/PublicPages'
 import LivePage from '@/pages/Live'
 import ConnectPage from '@/pages/Connect'
+import { ChatLock } from '@/components/ChatLock'
 
 /** Real mode: show sign-in until a session exists; keep the active workspace valid. */
 function Gate({ children }: { children: React.ReactNode }) {
@@ -133,12 +134,12 @@ export default function App() {
           <Route path="voices" element={<Voices />} />
           <Route path="testing" element={<Testing />} />
           <Route path="analytics" element={<Analytics />} />
-          <Route path="chat" element={CHAT_LIVE ? <ChatOverviewPage /> : <ChatAgentsPage />} />
-          <Route path="chat/agents" element={CHAT_LIVE ? <ChatAgentsListPage /> : <ChatAgentsPage />} />
-          <Route path="chat/agents/:id" element={CHAT_LIVE ? <ChatAgentEditorPage /> : <ChatAgentsPage />} />
-          <Route path="chat/pricing" element={CHAT_LIVE ? <ChatPricingPage /> : <ChatAgentsPage />} />
-          <Route path="chat/inbox" element={CHAT_LIVE ? <ChatInboxPage /> : <ChatAgentsPage />} />
-          <Route path="chat/channels" element={CHAT_LIVE ? <ChatChannelsPage /> : <ChatAgentsPage />} />
+          <Route path="chat" element={CHAT_LIVE ? <ChatLock><ChatOverviewPage /></ChatLock> : <ChatAgentsPage />} />
+          <Route path="chat/agents" element={CHAT_LIVE ? <ChatLock><ChatAgentsListPage /></ChatLock> : <ChatAgentsPage />} />
+          <Route path="chat/agents/:id" element={CHAT_LIVE ? <ChatLock><ChatAgentEditorPage /></ChatLock> : <ChatAgentsPage />} />
+          <Route path="chat/pricing" element={CHAT_LIVE ? <ChatLock><ChatPricingPage /></ChatLock> : <ChatAgentsPage />} />
+          <Route path="chat/inbox" element={CHAT_LIVE ? <ChatLock><ChatInboxPage /></ChatLock> : <ChatAgentsPage />} />
+          <Route path="chat/channels" element={CHAT_LIVE ? <ChatLock><ChatChannelsPage /></ChatLock> : <ChatAgentsPage />} />
           <Route path="swarvo-api" element={<ApiOverviewPage />} />
           <Route path="swarvo-api/docs" element={<ApiDocsPage />} />
           <Route path="swarvo-api/models" element={<ApiModelsPage />} />
