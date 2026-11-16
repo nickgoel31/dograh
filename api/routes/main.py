@@ -97,6 +97,7 @@ from api.product.team_router import router as product_team_router  # noqa: E402
 from api.product.widget_router import router as product_widget_router  # noqa: E402
 from api.product.google_auth import router as product_google_router  # noqa: E402
 from api.product.mobile_google import router as product_mobile_google_router  # noqa: E402
+from api.product.fcm import router as product_fcm_router  # noqa: E402
 from api.product.contacts_router import router as product_contacts_router  # noqa: E402
 from api.product.flowtry_router import router as product_flowtry_router  # noqa: E402
 from api.product.mynumber_router import mobile as product_mobile_router, router as product_mynumber_router  # noqa: E402
@@ -116,7 +117,7 @@ from api.product.live_router import router as product_live_router  # noqa: E402
 from api.product.setup_router import router as product_setup_router  # noqa: E402
 from api.product.oauth_router import router as product_oauth_router  # noqa: E402
 
-for _r in (product_oauth_router, product_setup_router, product_live_router, product_public_info_router, product_developers_router, product_ops_router, product_help_router, product_public_router, product_team_router, product_widget_router, product_google_router, product_account_router, product_phonetest_router, product_integrations_router, product_calendar_hooks_router, product_connectors_router, product_connector_hooks_router, product_assistant_router, product_verify_router, product_admin_router, product_profile_router, product_kyc_router, product_kyc_ops_router, product_kyc_hooks_router, product_chat_agents_router, product_chat_router, product_chat_js_router, product_chat_public_router, product_chat_hooks_router, product_contacts_router, product_flowtry_router, product_mobile_router, product_mobile_google_router, product_mynumber_router,
+for _r in (product_oauth_router, product_setup_router, product_live_router, product_public_info_router, product_developers_router, product_ops_router, product_help_router, product_public_router, product_team_router, product_widget_router, product_google_router, product_account_router, product_phonetest_router, product_integrations_router, product_calendar_hooks_router, product_connectors_router, product_connector_hooks_router, product_assistant_router, product_verify_router, product_admin_router, product_profile_router, product_kyc_router, product_kyc_ops_router, product_kyc_hooks_router, product_chat_agents_router, product_chat_router, product_chat_js_router, product_chat_public_router, product_chat_hooks_router, product_contacts_router, product_flowtry_router, product_mobile_router, product_mobile_google_router, product_fcm_router, product_mynumber_router,
            product_analytics_router, product_lab_router, product_handoff_router, product_import_router, product_campaigns_router, product_home_router, product_knowledge_router, product_notifications_router, product_tools_router):
     router.include_router(_r)
 

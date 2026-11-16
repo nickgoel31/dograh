@@ -320,6 +320,9 @@ async def handle(session, ws, s, a: ProductChatAgentModel, sess, text: str, *, l
         sess.status = "bot"
     if sess.status == "human":
         sess.unread = (sess.unread or 0) + 1
+        from api.product.notifications import notify
+
+        await notify(session, ws.id, "chat", f"New message from {sess.name or sess.contact}", text[:140], "/chat/inbox", f"chatmsg:{sess.id}:{int(_now().timestamp() // 600)}")  # at most one per ten minutes per chat
         return out
     flow = chat_flow.clean_flow(a.flow)
     state = dict(sess.flow_state or {})

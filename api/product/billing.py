@@ -211,6 +211,9 @@ async def issue_missing_invoices(session: AsyncSession, ws: ProductWorkspaceMode
                 session.add(inv)
                 await session.flush()
                 inv.number = f"INV-{period.replace('-', '')}-{inv.id:06d}"
+                from api.product.notifications import notify
+
+                await notify(session, ws.id, "invoice", f"Your {period} invoice is ready", f"{inv.number}: {config.CURRENCY} {inv.total:,.2f}", "/billing", f"inv:{period}")
         y, m = (y + 1, 1) if m == 12 else (y, m + 1)
 
 

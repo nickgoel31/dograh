@@ -30,6 +30,7 @@ TABLES = [
     models.WorkflowModel.__table__,
     models.WorkflowRunModel.__table__,
     models.TelephonyConfigurationModel.__table__,
+    models.CampaignModel.__table__,
     models.TelephonyPhoneNumberModel.__table__,
     models.WalletLedgerModel.__table__,
     product_models.ProductBillingSettingsModel.__table__,
@@ -61,6 +62,7 @@ TABLES = [
     product_models.ProductPushModel.__table__,
     product_models.ProductKycModel.__table__,
     product_models.ProductChatSettingsModel.__table__,
+    product_models.ProductDeviceModel.__table__,
     product_models.ProductChatAgentModel.__table__,
     product_models.ProductChatSessionModel.__table__,
     product_models.ProductChatMessageModel.__table__,
@@ -395,9 +397,10 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(profile_router.router)
     app.include_router(kyc_router.ops_router)
     app.include_router(kyc_router.hooks_router)
-    from api.product import chat_agents_router, mobile_google
+    from api.product import chat_agents_router, fcm, mobile_google
 
     app.include_router(mobile_google.router)
+    app.include_router(fcm.router)
 
     for r in (chat_agents_router.router, chat_router.router, chat_router.public, chat_router.hooks, chat_router.chat_js):
         app.include_router(r)

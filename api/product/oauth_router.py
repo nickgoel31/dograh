@@ -175,6 +175,9 @@ async def approve(body: ApproveBody, ctx: Ctx = Depends(require(Perm.API_KEYS_MA
     code = secrets.token_urlsafe(32)
     ctx.session.add(ProductOAuthTokenModel(public_id=new_public_id("oauth"), kind="code", token_hash=_h(code), client_id=c.client_id, user_id=ctx.user.id, workspace_id=ctx.workspace.id,
                                            access=body.access, redirect_uri=body.redirect_uri, code_challenge=body.code_challenge, expires_at=_now() + timedelta(seconds=CODE_SECONDS), created_at=_now()))
+    from api.product.notifications import notify
+
+    await notify(ctx.session, ctx.workspace.id, "security", f"{c.name} was connected to your account", f"{'Full' if body.access == 'full' else 'Read-only'} access, approved by {(ctx.user.email or 'a teammate').split('@')[0]}.", "/developers", f"conn:{c.client_id}:{ctx.user.id}:{_now():%Y%m%d%H}", actor_id=ctx.user.id)
     await audit.record(ctx.session, ctx.workspace.id, ctx.user.id, "mcp_connection.approved", c.client_id, {"app": c.name, "access": body.access})
     await ctx.session.commit()
     return {"redirect_url": _back(body.redirect_uri, code=code, state=body.state)}

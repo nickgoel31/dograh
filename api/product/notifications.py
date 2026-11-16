@@ -14,12 +14,12 @@ from api.product.ids import decode_id, encode_id
 router = APIRouter(prefix="/product/notifications", tags=["notifications"])
 
 
-async def notify(session, workspace_id: int, kind: str, title: str, body: str = "", link: str | None = None, dedupe_key: str | None = None) -> bool:
-    """Create an alert once. Returns True if it was new. Caller commits."""
+async def notify(session, workspace_id: int, kind: str, title: str, body: str = "", link: str | None = None, dedupe_key: str | None = None, push_only: bool = False, actor_id: int | None = None) -> bool:
+    """Create an alert once (it also reaches the team's phones, see fcm.py). Returns True if it was new. Caller commits."""
     if dedupe_key and await session.scalar(select(ProductNotificationModel.id).where(
             ProductNotificationModel.workspace_id == workspace_id, ProductNotificationModel.dedupe_key == dedupe_key)):
         return False
-    session.add(ProductNotificationModel(workspace_id=workspace_id, kind=kind, title=title[:160], body=body[:400], link=link, dedupe_key=dedupe_key))
+    session.add(ProductNotificationModel(workspace_id=workspace_id, kind=kind, title=title[:160], body=body[:400], link=link, dedupe_key=dedupe_key, push_only=push_only, actor_id=actor_id))
     await session.flush()
     return True
 
@@ -41,7 +41,7 @@ class NotificationsOut(BaseModel):
 
 @router.get("", response_model=NotificationsOut)
 async def list_notifications(ctx: Ctx = Depends(get_ctx)):
-    q = select(ProductNotificationModel).where(ProductNotificationModel.workspace_id == ctx.workspace.id)
+    q = select(ProductNotificationModel).where(ProductNotificationModel.workspace_id == ctx.workspace.id, ProductNotificationModel.push_only.is_(False))
     unread = await ctx.session.scalar(select(func.count()).select_from(q.where(ProductNotificationModel.read_at.is_(None)).subquery())) or 0
     rows = (await ctx.session.scalars(q.order_by(ProductNotificationModel.id.desc()).limit(20))).all()
     return NotificationsOut(unread=unread, items=[

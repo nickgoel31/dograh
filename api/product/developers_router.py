@@ -9,7 +9,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from api.db.product_models import ProductApiKeyModel, ProductApiLogModel, ProductDeliveryModel, ProductWebhookModel
-from api.product import audit, emailer
+from api.product import audit, emailer, fcm
+from api.product.notifications import notify
 from api.product.payments import get_wallet
 from api.product.llm_gateway import get_llm
 from api.product import developers as dev
@@ -89,6 +90,7 @@ async def create_key(body: KeyBody, ctx: Ctx = Depends(require(Perm.API_KEYS_MAN
     k = ProductApiKeyModel(workspace_id=ctx.workspace.id, public_id=new_public_id("key"), name=body.name.strip(), environment=ctx.environment,
                            hint=hint, key_hash=digest, created_by=ctx.user.id, created_at=datetime.now(UTC))
     ctx.session.add(k)
+    await notify(ctx.session, ctx.workspace.id, "security", "A new API key was created", f"{k.name} ({ctx.environment}) by {(ctx.user.email or 'a teammate').split('@')[0]}.", "/developers", f"key:{k.public_id}", actor_id=ctx.user.id)
     await audit.record(ctx.session, ctx.workspace.id, ctx.user.id, "api_key.created", k.public_id, {"environment": ctx.environment})
     await ctx.session.commit()
     return _key_out(k, raw)
@@ -262,7 +264,7 @@ async def send_now(ctx: Ctx = Depends(require(Perm.WEBHOOKS_MANAGE)), sender: de
 
 @ops_router.post("/tick")
 async def ops_tick(x_ops_secret: str | None = Header(default=None), session=Depends(get_session), sender: dev.Sender = Depends(dev.get_sender), gw: CampaignGateway = Depends(get_campaigns),
-                   mailer: emailer.Mailer = Depends(emailer.get_mailer), wallet=Depends(get_wallet), llm=Depends(get_llm)):
+                   mailer: emailer.Mailer = Depends(emailer.get_mailer), wallet=Depends(get_wallet), llm=Depends(get_llm), fcm_sender=Depends(fcm.get_sender)):
     """For the operator's scheduler (cron, every minute): send webhook events and apply data-retention for every workspace."""
     secret = os.getenv("PRODUCT_OPS_SECRET")
     if not secret:
@@ -283,6 +285,11 @@ async def ops_tick(x_ops_secret: str | None = Header(default=None), session=Depe
     from api.product import alerts
 
     out["alerts"] = await alerts.scan(session, mailer, wallet)
+    try:
+        out["pushed"] = await fcm.deliver_pending(session, fcm_sender)
+    except Exception:  # noqa: BLE001 - the rest of the job still runs
+        await session.rollback()
+        out["pushed"] = -1
     out["summaries"] = await alerts.email_summaries(session, mailer, llm)
     from api.product import post_call
 

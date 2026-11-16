@@ -120,6 +120,7 @@ async def converse(session, ws, s, agent, sess, text: str, gateway: AgentTextGat
         sess.status = "bot"
     if sess.status == "human":  # a person has the chat: tell them, the agent stays quiet
         sess.unread = (sess.unread or 0) + 1
+        await notify(session, ws.id, "chat", f"New message from {sess.name or sess.contact}", text[:140], "/chat/inbox", f"chatmsg:{sess.id}:{int(now().timestamp() // 600)}")  # at most one per ten minutes per chat
         return out
     if await billing.limit_reached(session, ws.live_org_id) or agent is None or not await models_config.ensure_org_profiles(session, ws.live_org_id):
         out.append(await add_message(session, sess, "agent", BUSY_REPLY))

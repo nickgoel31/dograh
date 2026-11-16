@@ -115,6 +115,7 @@ class ProductUserProfileModel(Base):
     totp_enabled = Column(Boolean, nullable=False, default=False)
     email_verified_at = Column(DateTime(timezone=True), nullable=True)
     # The person's own WhatsApp number, proved with a code (same flow as the sign-up bonus check). One number belongs to one person.
+    push_prefs = Column(JSON, nullable=True)  # {"enabled": bool, "categories": {key: bool}} for the phone app's alerts
     verified_phone = Column(String(20), nullable=True, unique=True)
     phone_verified_at = Column(DateTime(timezone=True), nullable=True)
     otp_phone = Column(String(20), nullable=True)
@@ -202,6 +203,9 @@ class ProductNotificationModel(Base):
     dedupe_key = Column(String(80), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_now)
     read_at = Column(DateTime(timezone=True), nullable=True)
+    pushed_at = Column(DateTime(timezone=True), nullable=True)  # when it was sent to the team's phones (blank: still waiting)
+    actor_id = Column(Integer, nullable=True)  # the person who caused it; they are not pushed about their own action
+    push_only = Column(Boolean, nullable=False, default=False)  # a phone note that does not belong in the bell (like "every finished call")
 
     __table_args__ = (
         Index("ix_product_notifications_ws", "workspace_id", "id"),

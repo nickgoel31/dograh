@@ -12,6 +12,7 @@ from api.product import definition as defn
 from api.product import versions as vdiff
 from api.product.deps import Ctx, get_ctx, require
 from api.product.errors import product_error
+from api.product.notifications import notify
 from api.product.gateway import PlatformGateway, get_gateway
 from api.product.knowledge_router import get_knowledge
 from api.product.tools_router import get_tools
@@ -263,6 +264,10 @@ async def delete(agent_id: str, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE))):
     return Response(status_code=204)
 
 
+def _who(ctx) -> str:
+    return (ctx.user.email or "A teammate").split("@")[0]
+
+
 @router.post("/{agent_id}/pause", response_model=AgentOut)
 async def pause(agent_id: str, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE))):
     agent = await svc.get_agent(ctx.session, ctx.workspace, agent_id)
@@ -270,6 +275,7 @@ async def pause(agent_id: str, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE))):
         raise product_error(400, "not_live", "Only a live agent can be paused.")
     agent.status = "paused"
     agent.version += 1
+    await notify(ctx.session, ctx.workspace.id, "agent", f"{agent.name} was paused", f"{_who(ctx)} paused it. Callers get the after-hours message.", "/agents", f"agent-pause:{agent.public_id}:{agent.version}", actor_id=ctx.user.id)
     await ctx.session.commit()
     return _out(agent)
 
@@ -281,6 +287,7 @@ async def resume(agent_id: str, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE))):
         raise product_error(400, "not_paused", "This agent isn't paused.")
     agent.status = "live"
     agent.version += 1
+    await notify(ctx.session, ctx.workspace.id, "agent", f"{agent.name} is live again", f"{_who(ctx)} resumed it.", "/agents", f"agent-resume:{agent.public_id}:{agent.version}", actor_id=ctx.user.id)
     await ctx.session.commit()
     return _out(agent)
 
@@ -303,6 +310,7 @@ async def publish(
 ):
     agent = await svc.get_agent(ctx.session, ctx.workspace, agent_id)
     await svc.go_live(ctx.session, gw, ctx.workspace, ctx.user.id, agent, kb, tools)
+    await notify(ctx.session, ctx.workspace.id, "agent", f"{agent.name} is live", f"{_who(ctx)} published a new version.", "/agents", f"agent-live:{agent.public_id}:{agent.version}", actor_id=ctx.user.id)
     await ctx.session.commit()
     return _out(agent)
 

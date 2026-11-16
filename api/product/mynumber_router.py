@@ -137,22 +137,14 @@ async def register_push(body: PushBody, ctx: Ctx = Depends(get_ctx)):
 async def send_push(session: AsyncSession, user_id: int, title: str, body: str, link: str | None = None) -> int:
     """Send to every device the user registered. FCM HTTP v1 for both platforms when `PRODUCT_FCM_PROJECT` and a bearer
     (`PRODUCT_FCM_ACCESS_TOKEN`, refreshed by deployment) are set; otherwise a no-op that logs. Returns devices attempted."""
-    devices = (await session.scalars(select(ProductDeviceModel).where(ProductDeviceModel.user_id == user_id))).all()
-    project, access = os.getenv("PRODUCT_FCM_PROJECT"), os.getenv("PRODUCT_FCM_ACCESS_TOKEN")
-    if not devices or not project or not access:
-        log.info("push skipped (devices=%s, configured=%s): %s", len(devices), bool(project and access), title)
-        return 0
-    import httpx
+    from api.product import fcm
 
-    async with httpx.AsyncClient(timeout=10) as c:
-        for d in devices:
-            msg = {"message": {"token": d.token, "notification": {"title": title, "body": body},
-                               "data": {"link": link or ""}, "android": {"priority": "HIGH", "notification": {"channel_id": "calls"}}}}
-            r = await c.post(f"https://fcm.googleapis.com/v1/projects/{project}/messages:send", json=msg, headers={"Authorization": f"Bearer {access}"})
-            if r.status_code in (404, 400):  # token no longer valid
-                await session.delete(d)
+    if not fcm.configured():
+        log.info("push skipped (Firebase is not set up): %s", title)
+        return 0
+    n = await fcm.push_to_user(session, fcm.get_sender(), user_id, title, body, {"link": link or ""}, "calls")
     await session.commit()
-    return len(devices)
+    return n
 
 
 # ----------------------------------------------------------------- My Number ----

@@ -273,6 +273,7 @@ async def _settle(session, wallet: WalletGateway, pay: ProductPaymentModel, paym
     pay.status, pay.payment_id = "paid", payment_id
     ws = await session.get(ProductWorkspaceModel, pay.workspace_id)
     await wallet.credit(ws.live_org_id, pay.amount, "Wallet top-up", f"pay:{pay.order_id}")  # same key => safe to repeat
+    await notify(session, ws.id, "topup", "Money added", f"{config.CURRENCY} {pay.amount:,.0f} was added to your wallet.", "/billing", f"topup:{pay.order_id}")
     await session.commit()
     await rates.sync_org_rate(session, ws)  # a bigger wallet can unlock a cheaper slab straight away
     await session.commit()

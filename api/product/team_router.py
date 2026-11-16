@@ -163,6 +163,9 @@ async def accept(body: AcceptBody, base=Depends(get_user_only)):
     inv.accepted_at = now
     await audit.record(session, inv.workspace_id, user.id, "invite.accepted", inv.email, {"role": inv.role})
     ws = await session.get(ProductWorkspaceModel, inv.workspace_id)
+    from api.product.notifications import notify
+
+    await notify(session, inv.workspace_id, "team", f"{(user.email or 'Someone').split('@')[0]} joined {ws.name}", f"They joined as {inv.role}.", "/more/team", f"join:{inv.id}", actor_id=user.id)
     await session.commit()
     return {"workspace": ws.public_id, "name": ws.name, "role": inv.role}
 

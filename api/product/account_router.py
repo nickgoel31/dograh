@@ -86,6 +86,13 @@ async def reset(body: ResetBody, session: AsyncSession = Depends(get_session)):
         raise product_error(400, "link_expired", "That link has expired or was already used. Ask for a new one.")
     user = await session.get(UserModel, row.user_id)
     user.password_hash = hash_password(body.password)
+    from sqlalchemy import select as _select
+
+    from api.db.product_models import ProductMembershipModel
+    from api.product.notifications import notify
+
+    for wid in (await session.scalars(_select(ProductMembershipModel.workspace_id).where(ProductMembershipModel.user_id == user.id))).all():
+        await notify(session, wid, "security", "A password was changed", f"{(user.email or 'A teammate').split('@')[0]} reset their password.", "/settings", f"pw:{user.id}:{datetime.now(UTC):%Y%m%d%H}", actor_id=user.id)
     await session.commit()
     return {"ok": True}
 
