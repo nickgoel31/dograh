@@ -2,6 +2,14 @@
 
 # kind: new | improved | fixed
 CHANGELOG: list[dict] = [
+    {"date": "2026-11-16", "title": "Chat agents", "items": [
+        ("new", "Chat agents: make as many as you need, one for each job (support, sales, bookings, FAQs, orders), each with its own website chat."),
+        ("new", "Change a chat agent by telling it what to change, in your own words. Every change can be undone."),
+        ("new", "A simple flow anyone can edit: messages, questions, buttons, the AI, and a hand-over to a person. No code."),
+        ("new", "Pick the AI model and how creative it is, and see what it will cost before you go live."),
+        ("new", "Take over any chat from the inbox, with saved replies, private notes and suggested replies written by the AI."),
+        ("new", "Pay per AI reply from the first rupee, with volume discounts. Scripted messages, buttons and your own replies are free."),
+    ]},
     {"date": "2026-11-15", "title": "Connect Claude with one click", "items": [
         ("new", "Connect Claude or ChatGPT to your account with one click: add the address, press Connect, sign in and allow. No token to copy."),
         ("new", "See the apps connected to your account under Developers, and disconnect any of them at once."),

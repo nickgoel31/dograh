@@ -27,7 +27,7 @@ class AgentTextGateway(Protocol):
 
 
 class LLMGateway(Protocol):
-    async def complete(self, org_id: int, user_id: int, system: str, messages: list[dict], platform: bool = False) -> str: ...
+    async def complete(self, org_id: int, user_id: int, system: str, messages: list[dict], platform: bool = False, model: str | None = None, temperature: float | None = None) -> str: ...
 
 
 def _user(org_id: int, user_id: int):
@@ -63,21 +63,26 @@ class CoreText:
 
 
 class CoreLLM:
-    async def complete(self, org_id, user_id, system, messages, platform=False):
+    async def complete(self, org_id, user_id, system, messages, platform=False, model=None, temperature=None):
         from api.db import db_client
         from api.services.pipecat.service_factory import create_llm_service_from_provider
         from api.services.workflow.qa.analysis import _run_llm_inference
 
         key = os.getenv("PRODUCT_ASSISTANT_OPENAI_KEY", "").strip()
         if platform and key:  # the app's own helper runs on the platform's key, so it works for every workspace
-            cfg = {"provider": "openai", "api_key": key, "model": os.getenv("PRODUCT_ASSISTANT_MODEL", "").strip() or "gpt-4.1-mini"}
+            cfg = {"provider": "openai", "api_key": key, "model": model or os.getenv("PRODUCT_ASSISTANT_MODEL", "").strip() or "gpt-4.1-mini"}
         else:
             cfg = (await db_client.get_user_configurations(user_id, organization_id=org_id)).model_dump(exclude_none=True).get("llm") or {}
         if not cfg.get("provider") or not cfg.get("api_key"):
             raise product_error(503, "ai_unavailable", "This feature isn't switched on for your workspace yet. Please contact support.")
         extra = {k: cfg[k] for k in ("base_url", "endpoint") if cfg.get(k)}
         try:
-            llm = create_llm_service_from_provider(cfg["provider"], cfg.get("model"), cfg["api_key"], **extra)
+            if temperature is not None and cfg["provider"] == "openai" and "gpt-5" not in str(cfg.get("model")):
+                from api.services.pipecat import service_factory as sf
+
+                llm = sf.OpenAILLMService(api_key=cfg["api_key"], settings=sf.OpenAILLMSettings(model=cfg["model"], temperature=float(temperature)))
+            else:
+                llm = create_llm_service_from_provider(cfg["provider"], cfg.get("model"), cfg["api_key"], **extra)
             return (await _run_llm_inference(llm, messages, system)) or ""
         except Exception as e:  # noqa: BLE001 - provider errors are not for customers, but we keep the real reason in the server log
             logging.getLogger(__name__).warning("assistant model call failed (%s, model %s): %s", cfg.get("provider"), cfg.get("model"), e, exc_info=True)

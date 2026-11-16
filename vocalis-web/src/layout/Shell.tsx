@@ -36,7 +36,7 @@ const main = [
 const build = [{ to: '/developers', label: 'Developers', icon: Code2 }, { to: '/billing', label: 'Billing & Usage', icon: CreditCard }]
 const all = Object.fromEntries([...main, ...build].map((n) => [n.to, n])) as Record<string, (typeof main)[number]>
 const extra = [
-  { to: '/chat', label: 'Overview', icon: MessageCircle }, { to: '/chat/inbox', label: 'Inbox', icon: Mail }, { to: '/chat/channels', label: 'Channels', icon: Globe }, { to: '/swarvo-api', label: 'Overview', icon: Code2 },
+  { to: '/chat', label: 'Overview', icon: MessageCircle }, { to: '/chat/agents', label: 'Agents', icon: Bot }, { to: '/chat/inbox', label: 'Inbox', icon: Mail }, { to: '/chat/channels', label: 'Channels', icon: Globe }, { to: '/chat/pricing', label: 'Pricing', icon: Coins }, { to: '/swarvo-api', label: 'Overview', icon: Code2 },
   { to: '/swarvo-api/docs', label: 'Documentation', icon: BookOpen }, { to: '/swarvo-api/models', label: 'Models', icon: Sparkles }, { to: '/swarvo-api/pricing', label: 'Pricing', icon: Coins },
   { to: '/developers', label: 'API keys & webhooks', icon: Key },
 ]
@@ -51,7 +51,7 @@ const GROUPS: Record<'voice' | 'chat' | 'api', Group[]> = {
     { title: 'Reach', items: pick('/numbers', '/campaigns') },
     { title: 'Account', items: pick('/billing', '/developers') },
   ],
-  chat: CHAT_LIVE ? [{ items: pick('/chat') }, { title: 'Conversations', items: pick('/chat/inbox') }, { title: 'Set up', items: pick('/chat/channels') }] : [{ items: [{ to: '/chat', label: 'Chat Agents', icon: MessageCircle }] }],
+  chat: CHAT_LIVE ? [{ items: pick('/chat') }, { title: 'Build', items: pick('/chat/agents', '/knowledge') }, { title: 'Conversations', items: pick('/chat/inbox') }, { title: 'Set up', items: pick('/chat/channels') }, { title: 'Account', items: pick('/chat/pricing', '/billing') }] : [{ items: [{ to: '/chat', label: 'Chat Agents', icon: MessageCircle }] }],
   api: [
     { items: pick('/swarvo-api') },
     { title: 'Build', items: [{ to: '/developers', label: 'API keys & webhooks', icon: Key }, ...pick('/swarvo-api/docs')] },

@@ -15,6 +15,7 @@ import Home from '@/pages/Home'
 import { ApiDocsPage, ApiModelsPage, ApiOverviewPage, ApiPricingPage, ChatAgentsPage } from '@/pages/Platforms'
 import { CHAT_LIVE } from '@/config/features'
 import { ChatChannelsPage, ChatInboxPage, ChatOverviewPage } from '@/pages/Chat'
+import { ChatAgentEditorPage, ChatAgentsListPage, ChatPricingPage } from '@/pages/ChatAgents'
 import ChatWidgetPage from '@/pages/ChatWidget'
 import Agents, { NewAgentPage, TemplatesPage } from '@/pages/Agents'
 import AgentDetail from '@/pages/AgentDetail'
@@ -133,6 +134,9 @@ export default function App() {
           <Route path="testing" element={<Testing />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="chat" element={CHAT_LIVE ? <ChatOverviewPage /> : <ChatAgentsPage />} />
+          <Route path="chat/agents" element={CHAT_LIVE ? <ChatAgentsListPage /> : <ChatAgentsPage />} />
+          <Route path="chat/agents/:id" element={CHAT_LIVE ? <ChatAgentEditorPage /> : <ChatAgentsPage />} />
+          <Route path="chat/pricing" element={CHAT_LIVE ? <ChatPricingPage /> : <ChatAgentsPage />} />
           <Route path="chat/inbox" element={CHAT_LIVE ? <ChatInboxPage /> : <ChatAgentsPage />} />
           <Route path="chat/channels" element={CHAT_LIVE ? <ChatChannelsPage /> : <ChatAgentsPage />} />
           <Route path="swarvo-api" element={<ApiOverviewPage />} />

@@ -4,7 +4,7 @@ import { API_URL } from '@/lib/api/env'
 
 /** The chat window that appears inside other people's websites. Public, no sign-in, no app chrome. */
 type Cfg = { enabled: boolean; title: string; greeting: string; color: string; position: string; prompts: string[]; collect_lead: boolean; powered_by: boolean }
-type Msg = { id: number; role: 'visitor' | 'agent' | 'human'; text: string }
+type Msg = { id: number; role: 'visitor' | 'agent' | 'human'; text: string; options?: string[] }
 
 const BASE = API_URL.replace(/\/product$/, '') + '/public/chat'
 const post = async <T,>(path: string, body: unknown): Promise<T> => {
@@ -106,14 +106,15 @@ export default function ChatWidgetPage() {
       ) : (
         <>
           <div className="flex-1 space-y-2.5 overflow-y-auto px-4 py-4" aria-live="polite">
-            {cfg.greeting && <div className="flex"><div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-md bg-gray-100 px-3.5 py-2.5 leading-relaxed">{cfg.greeting}</div></div>}
-            {!msgs.some((m) => m.role === 'visitor') && cfg.prompts.length > 0 && <div className="flex flex-wrap gap-2 pt-1">{cfg.prompts.map((p) => <button key={p} onClick={() => void send(p)} className="rounded-full border px-3.5 py-1.5 text-[13px] transition hover:bg-gray-50" style={{ borderColor: color, color }}>{p}</button>)}</div>}
+            {cfg.greeting && msgs.length === 0 && <div className="flex"><div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-md bg-gray-100 px-3.5 py-2.5 leading-relaxed">{cfg.greeting}</div></div>}
+            {!msgs.some((m) => m.role === 'visitor') && !msgs.some((m) => m.options?.length) && cfg.prompts.length > 0 && <div className="flex flex-wrap gap-2 pt-1">{cfg.prompts.map((p) => <button key={p} onClick={() => void send(p)} className="rounded-full border px-3.5 py-1.5 text-[13px] transition hover:bg-gray-50" style={{ borderColor: color, color }}>{p}</button>)}</div>}
             {msgs.map((m) => (
               <div key={m.id} className={m.role === 'visitor' ? 'flex justify-end' : 'flex'}>
                 <div className={`max-w-[85%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2.5 leading-relaxed ${m.role === 'visitor' ? 'rounded-br-md text-white' : 'rounded-bl-md bg-gray-100'}`} style={m.role === 'visitor' ? { background: color } : undefined}>
                   {m.role === 'human' && <div className="mb-0.5 text-[11px] font-medium text-gray-500">Team</div>}{link(m.text)}
                 </div>
               </div>))}
+            {!busy && status !== 'human' && (msgs[msgs.length - 1]?.options?.length ?? 0) > 0 && <div className="flex flex-wrap gap-2 pt-1">{msgs[msgs.length - 1].options!.map((o) => <button key={o} onClick={() => void send(o)} className="rounded-full border px-3.5 py-1.5 text-[13px] transition hover:bg-gray-50" style={{ borderColor: color, color }}>{o}</button>)}</div>}
             {busy && <div className="flex"><div className="flex gap-1 rounded-2xl rounded-bl-md bg-gray-100 px-4 py-3.5" aria-label="Typing">{[0, 1, 2].map((i) => <span key={i} className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-400" style={{ animationDelay: `${i * 150}ms` }} />)}</div></div>}
             {!rated && agentTurns >= 2 && !busy && (
               <div className="flex items-center justify-center gap-2 pt-2 text-xs text-gray-500">Was this helpful?

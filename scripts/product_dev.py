@@ -65,7 +65,9 @@ for r in (setup_router, live_router, public_info_router):
 app.include_router(connectors_router.hooks, prefix="/api/v1")
 app.include_router(kyc_router.ops_router, prefix="/api/v1")
 app.include_router(kyc_router.hooks_router, prefix="/api/v1")
-for r in (chat_router.router, chat_router.public, chat_router.hooks, chat_router.chat_js):
+from api.product import chat_agents_router  # noqa: E402
+
+for r in (chat_agents_router.router, chat_router.router, chat_router.public, chat_router.hooks, chat_router.chat_js):
     app.include_router(r, prefix="/api/v1")
 fake, wallet = FakeGateway(), FakeWallet()
 kb, tl, cp = FakeKB(), FakeTools(), FakeCampaigns()

@@ -613,6 +613,8 @@ class ProductChatSettingsModel(Base):
     whatsapp = Column(JSON, nullable=True)  # {phone_number_id, token, app_secret, verify_token}
     wa_phone_id = Column(String(40), nullable=True, index=True)  # the WhatsApp number id, so an incoming message finds its workspace
     notify_email = Column(String(160), nullable=True)
+    whatsapp_agent_id = Column(Integer, nullable=True)  # the chat agent that answers on WhatsApp (blank: the voice agent chosen above)
+    canned = Column(JSON, nullable=True)  # saved replies the team can send with one click
 
 
 class ProductChatSessionModel(Base):
@@ -633,8 +635,42 @@ class ProductChatSessionModel(Base):
     created_at = Column(DateTime(timezone=True), default=_now)
     last_at = Column(DateTime(timezone=True), default=_now)
     handoff_at = Column(DateTime(timezone=True), nullable=True)
+    chat_agent_id = Column(Integer, nullable=True, index=True)  # set when a chat agent (not a voice agent) answers this chat
+    flow_state = Column(JSON, nullable=True)  # {"step": id, "vars": {...}} where the visitor is in the agent's flow
+    assigned_to = Column(Integer, nullable=True)  # the team member who took it over
 
     __table_args__ = (Index("ix_product_chat_sessions_ws_last", "workspace_id", "last_at"),)
+
+
+class ProductChatAgentModel(Base):
+    """A chat agent: its own instructions, model, simple flow, hand-over rules and website chat widget. A workspace can have many (one per use case)."""
+
+    __tablename__ = "product_chat_agents"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    public_id = Column(String(32), unique=True, nullable=False)
+    key = Column(String(40), unique=True, nullable=False, index=True)  # the public key in this agent's one-line widget snippet
+    name = Column(String(60), nullable=False)
+    emoji = Column(String(8), nullable=True)
+    use_case = Column(String(20), nullable=False, default="support")
+    status = Column(String(8), nullable=False, default="draft")  # draft | live | paused
+    prompt = Column(Text, nullable=False, default="")
+    model = Column(String(40), nullable=False, default="gpt-4.1-mini")
+    temperature = Column(Float, nullable=False, default=0.4)
+    reply_length = Column(String(8), nullable=False, default="short")  # short | medium | long
+    tone = Column(String(16), nullable=False, default="Friendly")
+    language = Column(String(20), nullable=False, default="auto")
+    use_knowledge = Column(Boolean, nullable=False, default=True)
+    memory = Column(Integer, nullable=False, default=16)  # how many earlier messages the model sees
+    flow = Column(JSON, nullable=True)
+    handover = Column(JSON, nullable=True)
+    widget = Column(JSON, nullable=True)
+    origins = Column(JSON, nullable=True)
+    history = Column(JSON, nullable=True)  # earlier versions, newest first, so a change can be undone
+    version = Column(Integer, nullable=False, default=1)
+    created_at = Column(DateTime(timezone=True), default=_now)
+    updated_at = Column(DateTime(timezone=True), default=_now)
 
 
 class ProductChatMessageModel(Base):
@@ -645,6 +681,10 @@ class ProductChatMessageModel(Base):
     role = Column(String(8), nullable=False)  # visitor | agent | human
     text = Column(Text, nullable=False)
     ext_id = Column(String(80), nullable=True, index=True)  # the WhatsApp message id, so a retried delivery is not answered twice
+    meta = Column(JSON, nullable=True)  # {"options": [...]} for a message that offers buttons
+    charge = Column(Float, nullable=True)  # what an AI reply cost, in the wallet's currency (scripted and human messages are free)
+    model = Column(String(40), nullable=True)
+    settled = Column(Boolean, nullable=False, default=True)  # false while a charge still has to be taken from the wallet
     created_at = Column(DateTime(timezone=True), default=_now)
 
 

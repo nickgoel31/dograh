@@ -25,7 +25,7 @@ DEFAULT_CONFIG = {
     "title": "Chat with us", "greeting": "Hi! How can I help you today?", "color": "#6366f1", "position": "right",
     "prompts": [], "collect_lead": False, "powered_by": True, "offline_message": "",
 }
-HUMAN_WORDS = re.compile(r"\b(human|real person|live agent|live person|talk to (a|an|someone|somebody)|speak (to|with) (a|an|someone|somebody)|customer (care|support|service) (agent|executive|team)|representative)\b", re.I)
+HUMAN_WORDS = re.compile(r"\b(human|real person|live agent|live person|talk to (a|an|someone|somebody)|speak (to|with) (a|an|someone|somebody)|customer (care|support|service) (agent|executive|team)|representative|(want|need|get|connect|transfer|put) (me )?(to |through to |with )?(a |an |the )?(person|someone|somebody|manager))\b", re.I)
 HANDOFF_TOOLS = re.compile(r"transfer|handoff|hand_off|human|escalat", re.I)
 HANDOFF_REPLY = "I've asked a teammate to join this chat. They'll reply here as soon as they can."
 FALLBACK_REPLY = "Sorry, I couldn't answer just now. Please try again in a moment."
@@ -143,7 +143,13 @@ async def converse(session, ws, s, agent, sess, text: str, gateway: AgentTextGat
 
 
 def present(m: ProductChatMessageModel) -> dict:
-    return {"id": m.id, "role": m.role, "text": m.text, "at": m.created_at.isoformat() if m.created_at else None}
+    return {"id": m.id, "role": m.role, "text": m.text, "at": m.created_at.isoformat() if m.created_at else None, "options": (m.meta or {}).get("options") or []}
+
+
+def wa_text(m: ProductChatMessageModel) -> str:
+    """A message as plain WhatsApp text: buttons become a numbered list the person can answer with a number."""
+    opts = (m.meta or {}).get("options") or []
+    return m.text + ("\n\n" + "\n".join(f"{i}. {o}" for i, o in enumerate(opts, 1)) if opts else "")
 
 
 # ---- WhatsApp (Meta Cloud API) ----

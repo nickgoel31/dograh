@@ -61,6 +61,7 @@ TABLES = [
     product_models.ProductPushModel.__table__,
     product_models.ProductKycModel.__table__,
     product_models.ProductChatSettingsModel.__table__,
+    product_models.ProductChatAgentModel.__table__,
     product_models.ProductChatSessionModel.__table__,
     product_models.ProductChatMessageModel.__table__,
 ]
@@ -277,8 +278,18 @@ class FakeLLM:
         self.insight = '{"summary": "Caller booked a table for two.", "sentiment": 4}'
         self.calls: list[str] = []
 
-    async def complete(self, org_id, user_id, system, messages, **_):
+    async def complete(self, org_id, user_id, system, messages, **kw):
         self.calls.append(system[:30])
+        self.last_kw = kw
+        if "small text window" in system:
+            self.chat_systems = getattr(self, "chat_systems", []) + [system]
+            if getattr(self, "chat_fail", False):
+                raise RuntimeError("model down")
+            return getattr(self, "chat_reply", "Happy to help with that.")
+        if "You change the setup of a website chat agent" in system:
+            return getattr(self, "chat_edit", '{"summary": "Made the agent more formal.", "tone": "Professional", "greeting": "Good day. How may I assist you?"}')
+        if "You set up website chat agents" in system:
+            return getattr(self, "chat_setup", '{"name": "Meera Rao", "prompt": "You are Meera, the assistant for Sunrise Dental in Pune.", "greeting": "Hi, I am Meera!", "quick_prompts": ["Book a check-up", "Opening hours"], "tone": "Friendly"}')
         if "Score the AGENT" in system:
             return self.judge
         if "strict, fair checker" in system:
@@ -384,7 +395,9 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(profile_router.router)
     app.include_router(kyc_router.ops_router)
     app.include_router(kyc_router.hooks_router)
-    for r in (chat_router.router, chat_router.public, chat_router.hooks, chat_router.chat_js):
+    from api.product import chat_agents_router
+
+    for r in (chat_agents_router.router, chat_router.router, chat_router.public, chat_router.hooks, chat_router.chat_js):
         app.include_router(r)
     for r in (analytics_router, labs_router, handoff_router, import_router, campaigns_router, home_router, knowledge_router, notifications, tools_router,
               developers_router, help_router, public_api, team_router, widget_router, google_auth, account_router, phonetest_router, integrations_router, contacts_router, flowtry_router):

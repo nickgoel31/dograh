@@ -10,11 +10,13 @@ from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 
-from api.db.product_models import ProductAgentModel, ProductChatMessageModel, ProductChatSessionModel, ProductChatSettingsModel
-from api.product import chat, emailer
+from api.db.product_models import ProductAgentModel, ProductChatAgentModel, ProductChatMessageModel, ProductChatSessionModel, ProductChatSettingsModel
+from api.product import chat, chat_catalog, chat_engine, emailer
 from api.product.deps import Ctx, get_ctx, get_session, require
+from api.product.knowledge_router import KnowledgeGateway, get_knowledge
 from api.product.errors import product_error
-from api.product.llm_gateway import AgentTextGateway, get_text
+from api.product.llm_gateway import AgentTextGateway, LLMGateway, get_llm, get_text
+from api.product.payments import WalletGateway, get_wallet
 from api.product.roles import Perm
 from api.utils import rate_limit
 
@@ -40,6 +42,7 @@ class SettingsIn(BaseModel):
     origins: list[str] = Field(default_factory=list, max_length=20)
     notify_email: str | None = Field(default=None, max_length=160)
     whatsapp: WhatsAppIn | None = None
+    whatsapp_agent_id: str | None = None
 
 
 def _wa_view(s: ProductChatSettingsModel) -> dict:
@@ -54,8 +57,10 @@ async def _agent_public_id(session, s) -> str | None:
 
 async def _settings_out(ctx: Ctx, s: ProductChatSettingsModel) -> dict:
     live = await chat.chat_agent(ctx.session, ctx.workspace, s)
+    wa_agent = await ctx.session.scalar(select(ProductChatAgentModel.public_id).where(ProductChatAgentModel.id == s.whatsapp_agent_id)) if s.whatsapp_agent_id else None
+    live_chat = await ctx.session.scalar(select(func.count()).select_from(ProductChatAgentModel).where(ProductChatAgentModel.workspace_id == ctx.workspace.id, ProductChatAgentModel.status == "live")) or 0
     return {"key": s.key, "agent_id": await _agent_public_id(ctx.session, s), "enabled": s.enabled, "config": chat.clean_config(s.config), "origins": s.origins or [],
-            "notify_email": s.notify_email, "whatsapp": _wa_view(s), "answering_agent": live.name if live else None, "ready": live is not None}
+            "notify_email": s.notify_email, "whatsapp": _wa_view(s), "whatsapp_agent_id": wa_agent, "answering_agent": live.name if live else None, "ready": live is not None or live_chat > 0, "live_chat_agents": live_chat}
 
 
 @router.get("/settings")
@@ -81,6 +86,12 @@ async def save_settings(body: SettingsIn, ctx: Ctx = Depends(require(Perm.AGENTS
         if u.scheme not in ("http", "https") or not u.netloc:
             raise product_error(400, "bad_website", f"“{o}” isn't a website address. Use the full address, like https://www.example.com.")
         origins.append(f"{u.scheme}://{u.netloc}")
+    s.whatsapp_agent_id = None
+    if body.whatsapp_agent_id:
+        ca = await ctx.session.scalar(select(ProductChatAgentModel).where(ProductChatAgentModel.public_id == body.whatsapp_agent_id, ProductChatAgentModel.workspace_id == ctx.workspace.id))
+        if ca is None:
+            raise product_error(404, "chat_agent_not_found", "We couldn't find that chat agent.")
+        s.whatsapp_agent_id = ca.id
     s.enabled, s.config, s.origins, s.notify_email = body.enabled, chat.clean_config(body.config), sorted(set(origins)), (body.notify_email or "").strip() or None
     if body.whatsapp is not None:
         w = dict(s.whatsapp or {})
@@ -113,7 +124,7 @@ async def _mine(ctx: Ctx, sid: str) -> ProductChatSessionModel:
 
 @router.get("/sessions")
 async def sessions(status: str | None = Query(default=None, pattern="^(bot|human|closed|open)$"), q: str | None = Query(default=None, max_length=60), page: int = Query(default=1, ge=1), limit: int = Query(default=30, ge=1, le=100), ctx: Ctx = Depends(get_ctx)):
-    stmt = select(ProductChatSessionModel).where(ProductChatSessionModel.workspace_id == ctx.workspace.id, ProductChatSessionModel.last_text.is_not(None))  # chats nobody wrote in are not shown
+    stmt = select(ProductChatSessionModel).where(ProductChatSessionModel.workspace_id == ctx.workspace.id, ProductChatSessionModel.last_text.is_not(None), ProductChatSessionModel.channel != "test")  # chats nobody wrote in, and editor tests, are not shown
     if status == "open":
         stmt = stmt.where(ProductChatSessionModel.status != "closed")
     elif status:
@@ -123,8 +134,9 @@ async def sessions(status: str | None = Query(default=None, pattern="^(bot|human
         stmt = stmt.where(or_(ProductChatSessionModel.name.ilike(like), ProductChatSessionModel.contact.ilike(like), ProductChatSessionModel.email.ilike(like), ProductChatSessionModel.last_text.ilike(like)))
     total = await ctx.session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     rows = (await ctx.session.scalars(stmt.order_by(ProductChatSessionModel.last_at.desc(), ProductChatSessionModel.id.desc()).offset((page - 1) * limit).limit(limit))).all()
-    needs = await ctx.session.scalar(select(func.count()).select_from(ProductChatSessionModel).where(ProductChatSessionModel.workspace_id == ctx.workspace.id, ProductChatSessionModel.status == "human")) or 0
-    return {"sessions": [_view(r) for r in rows], "total": total, "needs_you": needs}
+    needs = await ctx.session.scalar(select(func.count()).select_from(ProductChatSessionModel).where(ProductChatSessionModel.workspace_id == ctx.workspace.id, ProductChatSessionModel.status == "human", ProductChatSessionModel.channel != "test")) or 0
+    names = {a.id: a.name for a in (await ctx.session.scalars(select(ProductChatAgentModel).where(ProductChatAgentModel.workspace_id == ctx.workspace.id))).all()}
+    return {"sessions": [{**_view(r), "agent": names.get(r.chat_agent_id)} for r in rows], "total": total, "needs_you": needs}
 
 
 @router.get("/sessions/{sid}")
@@ -134,7 +146,9 @@ async def one(sid: str, ctx: Ctx = Depends(get_ctx)):
     if sess.unread:
         sess.unread = 0
         await ctx.session.commit()
-    return {**_view(sess), "messages": [chat.present(m) for m in msgs]}
+    ca = await ctx.session.get(ProductChatAgentModel, sess.chat_agent_id) if sess.chat_agent_id else None
+    known = {k: v for k, v in ((sess.flow_state or {}).get("vars") or {}).items() if not k.startswith("_") and v}
+    return {**_view(sess), "agent": ca.name if ca else None, "details": known, "assigned_to": sess.assigned_to, "messages": [chat.present(m) for m in msgs]}
 
 
 class ReplyIn(BaseModel):
@@ -144,7 +158,7 @@ class ReplyIn(BaseModel):
 @router.post("/sessions/{sid}/reply")
 async def reply(sid: str, body: ReplyIn, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE)), sender: chat.WhatsAppSender = Depends(chat.get_wa_sender)):
     sess = await _mine(ctx, sid)
-    sess.status, sess.unread = "human", 0  # answering as a person means the agent steps back
+    sess.status, sess.unread, sess.assigned_to = "human", 0, ctx.user.id  # answering as a person means the agent steps back
     m = await chat.add_message(ctx.session, sess, "human", body.text.strip())
     sent = True
     if sess.channel == "whatsapp":
@@ -176,9 +190,9 @@ async def set_status(sid: str, body: StatusIn, ctx: Ctx = Depends(require(Perm.A
 @router.get("/stats")
 async def stats(days: int = Query(default=30, ge=1, le=365), ctx: Ctx = Depends(get_ctx)):
     since = datetime.now(UTC) - timedelta(days=days)
-    rows = (await ctx.session.scalars(select(ProductChatSessionModel).where(ProductChatSessionModel.workspace_id == ctx.workspace.id, ProductChatSessionModel.created_at >= since, ProductChatSessionModel.last_text.is_not(None)).limit(20000))).all()
+    rows = (await ctx.session.scalars(select(ProductChatSessionModel).where(ProductChatSessionModel.workspace_id == ctx.workspace.id, ProductChatSessionModel.created_at >= since, ProductChatSessionModel.last_text.is_not(None), ProductChatSessionModel.channel != "test").limit(20000))).all()
     messages = await ctx.session.scalar(select(func.count()).select_from(ProductChatMessageModel).join(ProductChatSessionModel, ProductChatSessionModel.id == ProductChatMessageModel.session_id).where(
-        ProductChatSessionModel.workspace_id == ctx.workspace.id, ProductChatMessageModel.created_at >= since)) or 0
+        ProductChatSessionModel.workspace_id == ctx.workspace.id, ProductChatSessionModel.channel != "test", ProductChatMessageModel.created_at >= since, ProductChatMessageModel.role != "note")) or 0
     rated = [r.rating for r in rows if r.rating]
     by_day: dict[str, int] = {}
     for r in rows:
@@ -239,7 +253,7 @@ def _norm(o: str | None) -> str:
     return (o or "").strip().rstrip("/")
 
 
-def _origin_ok(s: ProductChatSettingsModel, embedder: str | None, request: Request) -> bool:
+def _origin_ok(s, embedder: str | None, request: Request) -> bool:
     if not embedder:
         return False
     host = request.headers.get("x-forwarded-host") or request.headers.get("host")
@@ -249,15 +263,39 @@ def _origin_ok(s: ProductChatSettingsModel, embedder: str | None, request: Reque
     return not allowed or _norm(embedder) in allowed
 
 
-def _public_config(s) -> dict:
+def _public_config(s, agent: ProductChatAgentModel | None = None) -> dict:
+    if agent is not None:
+        return {"enabled": bool(s.enabled) and agent.status == "live", **chat_engine.clean_widget(agent.widget), "name": agent.name}
     return {"enabled": bool(s.enabled), **chat.clean_config(s.config)}
+
+
+async def _resolve(session, key: str):
+    """A widget key belongs to one chat agent (cw_...) or to the workspace's older, voice-agent chat. Returns (settings, chat agent or None)."""
+    if key.startswith("cw_"):
+        a = await session.scalar(select(ProductChatAgentModel).where(ProductChatAgentModel.key == key))
+        if a is None:
+            return None, None
+        return await session.get(ProductChatSettingsModel, a.workspace_id) or await _make_settings(session, a.workspace_id), a
+    return await chat.by_key(session, key), None
+
+
+async def _make_settings(session, ws_id: int):
+    from api.db.product_models import ProductWorkspaceModel
+
+    return await chat.get_settings(session, await session.get(ProductWorkspaceModel, ws_id))
 
 
 @public.get("/config")
 async def public_config(key: str = Query(max_length=40), session=Depends(get_session)):
-    s = await chat.by_key(session, key)
-    body = {"enabled": False} if s is None else _public_config(s)
+    s, a = await _resolve(session, key)
+    body = {"enabled": False} if s is None else _public_config(s, a)
     return Response(json.dumps(body), media_type="application/json", headers=CORS)
+
+
+@public.get("/pricing")
+async def public_pricing():
+    """What a chat reply costs, for the public pricing page."""
+    return Response(json.dumps(chat_catalog.pricing()), media_type="application/json", headers=CORS)
 
 
 class OpenIn(BaseModel):
@@ -270,29 +308,33 @@ class OpenIn(BaseModel):
 
 
 async def _target(session, key: str, embedder: str, request: Request):
-    s = await chat.by_key(session, key)
-    if s is None or not s.enabled:
+    s, a = await _resolve(session, key)
+    if s is None or not s.enabled or (a is not None and a.status != "live"):
         raise product_error(404, "chat_unavailable", "This chat isn't available right now.")
-    if not _origin_ok(s, embedder, request):
+    if not _origin_ok(a if a is not None else s, embedder, request):
         raise product_error(403, "website_not_allowed", "This website isn't allowed to show this chat.")
     from api.db.product_models import ProductWorkspaceModel
 
-    return s, await session.get(ProductWorkspaceModel, s.workspace_id)
+    return s, await session.get(ProductWorkspaceModel, s.workspace_id), a
 
 
 @public.post("/session")
 async def open_chat(body: OpenIn, request: Request, session=Depends(get_session)):
     await rate_limit.enforce(f"pchatopen:{request.client.host if request.client else 'x'}", 30, 600, "Too many chats started. Please wait a little.")
-    s, ws = await _target(session, body.key, body.embedder, request)
+    s, ws, ca = await _target(session, body.key, body.embedder, request)
     sess = await chat.session_by_token(session, body.token or "", ws.id)
-    if sess is None or sess.channel != "web":
-        agent = await chat.chat_agent(session, ws, s)
+    fresh = False
+    if sess is None or sess.channel != "web" or (ca is not None and sess.chat_agent_id != ca.id):
+        agent = await chat.chat_agent(session, ws, s) if ca is None else None
         sess = await chat.open_session(session, ws, s, agent, "web", body.visitor or secrets.token_hex(6), body.name, body.email)
+        fresh = True
     elif (body.name or body.email) and not (sess.name or sess.email):
         sess.name, sess.email = (body.name or sess.name), (body.email or sess.email)
-    msgs = (await session.scalars(select(ProductChatMessageModel).where(ProductChatMessageModel.session_id == sess.id).order_by(ProductChatMessageModel.id))).all()
+    if fresh and ca is not None:
+        await chat_engine.begin(session, sess, ca, "web")
+    msgs = (await session.scalars(select(ProductChatMessageModel).where(ProductChatMessageModel.session_id == sess.id, ProductChatMessageModel.role != "note").order_by(ProductChatMessageModel.id))).all()
     await session.commit()
-    return {"token": chat.token_for(sess), "status": sess.status, "config": _public_config(s), "messages": [chat.present(m) for m in msgs]}
+    return {"token": chat.token_for(sess), "status": sess.status, "config": _public_config(s, ca), "messages": [chat.present(m) for m in msgs]}
 
 
 class SayIn(BaseModel):
@@ -308,7 +350,8 @@ async def _open_session(session, token: str):
 
 
 @public.post("/message")
-async def say(body: SayIn, session=Depends(get_session), text: AgentTextGateway = Depends(get_text), mailer: emailer.Mailer = Depends(emailer.get_mailer)):
+async def say(body: SayIn, session=Depends(get_session), text: AgentTextGateway = Depends(get_text), mailer: emailer.Mailer = Depends(emailer.get_mailer), llm: LLMGateway = Depends(get_llm),
+              kb: KnowledgeGateway = Depends(get_knowledge), wallet: WalletGateway = Depends(get_wallet)):
     await rate_limit.enforce(f"pchatsay:{body.token}", 40, 600, "You're sending messages very quickly. Please slow down.")
     sess = await _open_session(session, body.token)
     s = await session.get(ProductChatSettingsModel, sess.workspace_id)
@@ -317,8 +360,14 @@ async def say(body: SayIn, session=Depends(get_session), text: AgentTextGateway 
     from api.db.product_models import ProductWorkspaceModel
 
     ws = await session.get(ProductWorkspaceModel, sess.workspace_id)
-    agent = await chat.chat_agent(session, ws, s)
-    new = await chat.converse(session, ws, s, agent, sess, body.text, text, mailer)
+    ca = await session.get(ProductChatAgentModel, sess.chat_agent_id) if sess.chat_agent_id else None
+    if ca is not None:
+        if ca.status != "live":
+            raise product_error(404, "chat_unavailable", "This chat isn't available right now.")
+        new = await chat_engine.handle(session, ws, s, ca, sess, body.text, llm=llm, kb=kb, wallet=wallet, mailer=mailer)
+    else:
+        agent = await chat.chat_agent(session, ws, s)
+        new = await chat.converse(session, ws, s, agent, sess, body.text, text, mailer)
     await session.commit()
     return {"status": sess.status, "messages": [chat.present(m) for m in new]}
 
@@ -326,7 +375,7 @@ async def say(body: SayIn, session=Depends(get_session), text: AgentTextGateway 
 @public.get("/poll")
 async def poll(token: str = Query(max_length=80), after: int = Query(default=0, ge=0), session=Depends(get_session)):
     sess = await _open_session(session, token)
-    msgs = (await session.scalars(select(ProductChatMessageModel).where(ProductChatMessageModel.session_id == sess.id, ProductChatMessageModel.id > after, ProductChatMessageModel.role != "visitor").order_by(ProductChatMessageModel.id))).all()
+    msgs = (await session.scalars(select(ProductChatMessageModel).where(ProductChatMessageModel.session_id == sess.id, ProductChatMessageModel.id > after, ProductChatMessageModel.role.not_in(("visitor", "note"))).order_by(ProductChatMessageModel.id))).all()
     return {"status": sess.status, "messages": [chat.present(m) for m in msgs]}
 
 
@@ -357,7 +406,8 @@ async def whatsapp_verify(request: Request, session=Depends(get_session)):
 
 
 @hooks.post("/whatsapp")
-async def whatsapp_inbound(request: Request, session=Depends(get_session), text: AgentTextGateway = Depends(get_text), mailer: emailer.Mailer = Depends(emailer.get_mailer), sender: chat.WhatsAppSender = Depends(chat.get_wa_sender)):
+async def whatsapp_inbound(request: Request, session=Depends(get_session), text: AgentTextGateway = Depends(get_text), mailer: emailer.Mailer = Depends(emailer.get_mailer), sender: chat.WhatsAppSender = Depends(chat.get_wa_sender),
+                           llm: LLMGateway = Depends(get_llm), kb: KnowledgeGateway = Depends(get_knowledge), wallet: WalletGateway = Depends(get_wallet)):
     raw = await request.body()
     try:
         data = json.loads(raw or b"{}")
@@ -380,17 +430,26 @@ async def whatsapp_inbound(request: Request, session=Depends(get_session), text:
                 if not who or (wamid and await session.scalar(select(ProductChatMessageModel.id).where(ProductChatMessageModel.ext_id == wamid))):
                     continue  # a retried delivery
                 sess = await session.scalar(select(ProductChatSessionModel).where(ProductChatSessionModel.workspace_id == ws.id, ProductChatSessionModel.channel == "whatsapp", ProductChatSessionModel.contact == who).order_by(ProductChatSessionModel.id.desc()))
+                ca = await session.get(ProductChatAgentModel, s.whatsapp_agent_id) if s.whatsapp_agent_id else None
+                if ca is not None and ca.status != "live":
+                    ca = None
                 agent = await chat.chat_agent(session, ws, s)
+                reply_texts: list[str] = []
                 if sess is None:
                     sess = await chat.open_session(session, ws, s, agent, "whatsapp", who, names.get(who))
+                    if ca is not None:
+                        reply_texts += [chat.wa_text(m) for m in await chat_engine.begin(session, sess, ca, "whatsapp") if m.role == "agent"]
                 body = ((msg.get("text") or {}).get("body") or "").strip() if msg.get("type") == "text" else ""
-                reply_texts: list[str] = []
                 if not body:
                     await chat.add_message(session, sess, "visitor", f"[{msg.get('type', 'message')}]", wamid or None)
                     reply_texts.append("I can only read text messages for now. Please type your question.")
+                elif ca is not None and sess.chat_agent_id in (None, ca.id):
+                    sess.chat_agent_id = ca.id
+                    new = await chat_engine.handle(session, ws, s, ca, sess, body, llm=llm, kb=kb, wallet=wallet, mailer=mailer, ext_id=wamid or None)
+                    reply_texts += [chat.wa_text(m) for m in new if m.role == "agent"]
                 else:
                     new = await chat.converse(session, ws, s, agent, sess, body, text, mailer, wamid or None)
-                    reply_texts = [m.text for m in new if m.role == "agent"]
+                    reply_texts += [m.text for m in new if m.role == "agent"]
                 await session.commit()
                 for t in reply_texts:
                     try:

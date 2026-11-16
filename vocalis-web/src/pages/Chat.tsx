@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowUp, Check, CheckCircle2, Circle, MessageCircle, Phone, Globe } from '@/components/icons'
+import { ArrowUp, Bot, Check, CheckCircle2, Circle, Hand, Loader2, MessageCircle, Phone, Globe, Sparkles } from '@/components/icons'
 import { AgentAvatar } from '@/components/AgentAvatar'
 import { Badge, Button, Card, Chip, Field, Input, Switch, Tab, TabPanel, Tabs, TabsList, Textarea } from '@/components/ui'
 import { CodeBlock, PageHeader, SearchPill } from '@/components/shared'
@@ -14,9 +14,11 @@ type Cfg = { title: string; greeting: string; color: string; position: 'left' | 
 type Settings = {
   key: string; agent_id: string | null; enabled: boolean; config: Cfg; origins: string[]; notify_email: string | null; answering_agent: string | null; ready: boolean
   whatsapp: { phone_number_id: string; has_token: boolean; has_secret: boolean; verify_token: string; connected: boolean }
+  whatsapp_agent_id?: string | null; live_chat_agents?: number
 }
-type Row = { id: string; name: string | null; contact: string; email: string | null; channel: 'web' | 'whatsapp'; status: 'bot' | 'human' | 'closed'; unread: number; last_text: string | null; last_at: string | null; rating: number | null; handoff: boolean }
-type Msg = { id: number; role: 'visitor' | 'agent' | 'human'; text: string; at: string | null }
+type Row = { agent?: string | null; id: string; name: string | null; contact: string; email: string | null; channel: 'web' | 'whatsapp'; status: 'bot' | 'human' | 'closed'; unread: number; last_text: string | null; last_at: string | null; rating: number | null; handoff: boolean }
+type Msg = { id: number; role: 'visitor' | 'agent' | 'human' | 'note'; text: string; at: string | null; options?: string[] }
+type Canned = { title: string; text: string }
 type Stats = { sessions: number; messages: number; handed_over: number; handled_by_agent: number; open: number; needs_you: number; avg_rating: number | null; rated: number; by_day: { day: string; sessions: number }[] }
 
 const say = (e: unknown) => toast.error(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
@@ -37,14 +39,14 @@ export function ChatOverviewPage() {
     ['Average rating', d?.avg_rating ? `${d.avg_rating} / 5` : '—', d?.rated ? `${d.rated} rated` : 'No ratings yet'],
   ]
   const steps = [
-    { done: !!s.data?.ready, t: 'Publish an agent', d: 'Chats are answered by a live agent. Build one and press Publish.', to: '/agents' },
-    { done: !!s.data?.enabled && !!s.data?.ready, t: 'Add the chat to your website', d: 'Copy one line of code from Channels and paste it into your site.', to: '/chat/channels' },
+    { done: !!s.data?.ready, t: 'Create a chat agent', d: 'Pick a job, describe your business, and the AI writes the agent. Then press Go live.', to: '/chat/agents' },
+    { done: !!s.data?.enabled && !!s.data?.ready, t: 'Add the chat to your website', d: 'Open the agent, then Install. Copy one line of code and paste it into your site.', to: '/chat/agents' },
     { done: !!s.data?.whatsapp.connected, t: 'Connect WhatsApp', d: 'Let customers message your WhatsApp number and get the same answers.', to: '/chat/channels?tab=whatsapp' },
     { done: !!s.data?.notify_email, t: 'Get told when a person is needed', d: 'Add an email address so you hear about chats the agent hands over.', to: '/chat/channels' },
   ]
   return (
     <>
-      <PageHeader title="Chat Agents" subtitle="Your agents, answering in text on your website and on WhatsApp." actions={<Link to="/chat/inbox"><Button variant="primary"><MessageCircle size={15} />Open inbox{d && d.needs_you > 0 ? ` (${d.needs_you})` : ''}</Button></Link>} />
+      <PageHeader title="Chat Agents" subtitle="Your agents, answering in text on your website and on WhatsApp." actions={<><Link to="/chat/agents"><Button><Bot size={15} />Agents</Button></Link><Link to="/chat/inbox"><Button variant="primary"><MessageCircle size={15} />Open inbox{d && d.needs_you > 0 ? ` (${d.needs_you})` : ''}</Button></Link></>} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map(([l, v, h]) => <Card key={l} className="p-5"><div className="text-[13px] text-soft">{l}</div><div className="num mt-2 text-[28px] font-semibold leading-none tracking-tight">{v}</div><div className="mt-2 text-xs text-soft">{h}</div></Card>)}
       </div>
@@ -83,12 +85,17 @@ export function ChatInboxPage() {
   const [text, setText] = React.useState('')
   const end = React.useRef<HTMLDivElement>(null)
   const list = useQuery({ queryKey: ['chat', 'sessions', filter, q], queryFn: () => http<{ sessions: Row[]; needs_you: number }>(`/chat/sessions?status=${filter}${q ? `&q=${encodeURIComponent(q)}` : ''}`), refetchInterval: 5000 })
-  const thread = useQuery({ queryKey: ['chat', 'thread', sel], queryFn: () => http<Row & { messages: Msg[] }>(`/chat/sessions/${sel}`), enabled: !!sel, refetchInterval: 3000 })
+  const thread = useQuery({ queryKey: ['chat', 'thread', sel], queryFn: () => http<Row & { messages: Msg[]; details?: Record<string, string>; agent?: string | null }>(`/chat/sessions/${sel}`), enabled: !!sel, refetchInterval: 3000 })
+  const canned = useQuery({ queryKey: ['chat', 'canned'], queryFn: () => http<Canned[]>('/chat/canned') })
+  const [asNote, setAsNote] = React.useState(false)
+  const [cannedOpen, setCannedOpen] = React.useState(false)
   const rows = list.data?.sessions ?? []
   React.useEffect(() => { if (!sel && rows.length) setSel(rows[0].id) }, [rows, sel])
   React.useEffect(() => { end.current?.scrollIntoView({ block: 'end' }) }, [thread.data?.messages.length, sel])
   const refresh = () => { void qc.invalidateQueries({ queryKey: ['chat'] }) }
-  const send = useMutation({ mutationFn: () => http<{ delivered: boolean }>(`/chat/sessions/${sel}/reply`, { method: 'POST', json: { text } }), onSuccess: (r) => { setText(''); refresh(); if (!r.delivered) toast.error('Saved, but WhatsApp did not accept it. Check your WhatsApp settings.') }, onError: say })
+  const send = useMutation({ mutationFn: () => asNote ? http<{ delivered?: boolean }>(`/chat/sessions/${sel}/note`, { method: 'POST', json: { text } }) : http<{ delivered: boolean }>(`/chat/sessions/${sel}/reply`, { method: 'POST', json: { text } }), onSuccess: (r) => { setText(''); setAsNote(false); refresh(); if (r.delivered === false) toast.error('Saved, but WhatsApp did not accept it. Check your WhatsApp settings.') }, onError: say })
+  const take = useMutation({ mutationFn: () => http(`/chat/sessions/${sel}/take`, { method: 'POST' }), onSuccess: () => { refresh(); toast.success('You have this chat. The agent has stopped answering.') }, onError: say })
+  const suggest = useMutation({ mutationFn: () => http<{ text: string }>(`/chat/sessions/${sel}/suggest`, { method: 'POST' }), onSuccess: (r) => { setAsNote(false); setText(r.text) }, onError: say })
   const mark = useMutation({ mutationFn: (status: string) => http(`/chat/sessions/${sel}/status`, { method: 'POST', json: { status } }), onSuccess: refresh, onError: say })
   const t = thread.data
   return (
@@ -107,6 +114,7 @@ export function ChatInboxPage() {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5"><span className="truncate text-[13.5px] font-medium">{who(r)}</span>{r.channel === 'whatsapp' && <Phone size={11} className="shrink-0 text-ok" />}</span>
                   <span className="block truncate text-xs text-soft">{r.last_text}</span>
+                  {r.agent && <span className="block truncate text-[10.5px] text-soft/70">{r.agent}</span>}
                 </span>
                 <span className="flex flex-col items-end gap-1"><span className="text-[11px] text-soft">{ago(r.last_at)}</span>{r.status === 'human' ? <span className="h-2 w-2 rounded-full bg-warn" title="Needs you" /> : r.unread > 0 ? <span className="h-2 w-2 rounded-full bg-accent" /> : null}</span>
               </button>))}
@@ -116,9 +124,10 @@ export function ChatInboxPage() {
           {!t ? <div className="flex flex-1 items-center justify-center text-sm text-soft">Pick a chat to read it.</div> : (
             <>
               <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
-                <div className="min-w-0"><div className="truncate text-[14px] font-semibold">{who(t)}</div><div className="truncate text-xs text-soft">{[t.email, t.channel === 'whatsapp' ? 'WhatsApp' : 'Website'].filter(Boolean).join(' · ')}</div></div>
+                <div className="min-w-0"><div className="truncate text-[14px] font-semibold">{who(t)}</div><div className="truncate text-xs text-soft">{[t.email, t.channel === 'whatsapp' ? 'WhatsApp' : 'Website', t.agent].filter(Boolean).join(' · ')}</div>{t.details && Object.keys(t.details).length > 0 && <div className="mt-1 flex flex-wrap gap-1.5">{Object.entries(t.details).map(([k, v]) => <span key={k} className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-soft"><b className="font-medium capitalize text-ink">{k.replace(/_/g, ' ')}:</b> {v}</span>)}</div>}</div>
                 <div className="flex items-center gap-2">
                   <Badge tone={t.status === 'human' ? 'orange' : t.status === 'closed' ? 'gray' : 'green'}>{t.status === 'human' ? 'A person has it' : t.status === 'closed' ? 'Closed' : 'Agent answering'}</Badge>
+                  {t.status === 'bot' && <Button size="sm" variant="primary" disabled={take.isPending} onClick={() => take.mutate()}><Hand size={13} />Take over</Button>}
                   {t.status !== 'bot' && t.status !== 'closed' && <Button size="sm" onClick={() => mark.mutate('bot')}>Hand back to agent</Button>}
                   {t.status !== 'closed' ? <Button size="sm" onClick={() => mark.mutate('closed')}><Check size={13} />Close</Button> : <Button size="sm" onClick={() => mark.mutate('bot')}>Reopen</Button>}
                 </div>
@@ -127,15 +136,23 @@ export function ChatInboxPage() {
                 {t.messages.map((m) => (
                   <div key={m.id} className={cn('flex', m.role === 'visitor' ? 'justify-start' : 'justify-end')}>
                     <div className="max-w-[78%]">
-                      <div className={cn('whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-[13.5px] leading-relaxed', m.role === 'visitor' ? 'bg-muted' : m.role === 'human' ? 'bg-ink text-surface' : 'border bg-surface')}>{m.text}</div>
-                      <div className={cn('mt-0.5 px-1 text-[10.5px] text-soft', m.role !== 'visitor' && 'text-right')}>{m.role === 'agent' ? 'Agent' : m.role === 'human' ? 'You' : ''} {ago(m.at)}</div>
+                      <div className={cn('whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-[13.5px] leading-relaxed', m.role === 'visitor' ? 'bg-muted' : m.role === 'human' ? 'bg-ink text-surface' : m.role === 'note' ? 'border border-dashed border-warn/50 bg-warn/10' : 'border bg-surface')}>{m.text}{m.options && m.options.length > 0 && <div className="mt-1.5 flex flex-wrap gap-1.5">{m.options.map((o) => <span key={o} className="rounded-full border px-2 py-0.5 text-[11px] text-soft">{o}</span>)}</div>}</div>
+                      <div className={cn('mt-0.5 px-1 text-[10.5px] text-soft', m.role !== 'visitor' && 'text-right')}>{m.role === 'agent' ? 'Agent' : m.role === 'human' ? 'You' : m.role === 'note' ? 'Note, only your team sees this' : ''} {ago(m.at)}</div>
                     </div>
                   </div>))}
                 <div ref={end} />
               </div>
-              <form className="flex items-end gap-2 border-t p-3" onSubmit={(e) => { e.preventDefault(); if (text.trim()) send.mutate() }}>
+              <div className="flex flex-wrap items-center gap-2 border-t px-3 pt-2.5">
+                <Button size="sm" variant="ghost" type="button" disabled={suggest.isPending} onClick={() => suggest.mutate()}>{suggest.isPending ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}Suggest a reply</Button>
+                <div className="relative">
+                  <Button size="sm" variant="ghost" type="button" onClick={() => setCannedOpen((o) => !o)}>Saved replies</Button>
+                  {cannedOpen && <div className="absolute bottom-full left-0 z-10 mb-1 w-72 overflow-hidden rounded-xl border bg-surface shadow-lg">{!canned.data?.length ? <p className="p-3 text-xs text-soft">No saved replies yet. Add some under Channels.</p> : canned.data.map((c) => <button key={c.title} type="button" onClick={() => { setText(c.text); setAsNote(false); setCannedOpen(false) }} className="block w-full border-b px-3 py-2 text-left text-[13px] last:border-0 hover:bg-muted"><b className="font-medium">{c.title}</b><span className="block truncate text-xs text-soft">{c.text}</span></button>)}</div>}
+                </div>
+                <label className="ml-auto flex items-center gap-1.5 text-xs text-soft"><input type="checkbox" checked={asNote} onChange={(e) => setAsNote(e.target.checked)} />Note to my team</label>
+              </div>
+              <form className="flex items-end gap-2 p-3 pt-2" onSubmit={(e) => { e.preventDefault(); if (text.trim()) send.mutate() }}>
                 <Textarea rows={1} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (text.trim()) send.mutate() } }}
-                  placeholder={t.status === 'bot' ? 'Replying will pause the agent in this chat…' : 'Write a reply…'} className="min-h-[40px] resize-none rounded-2xl py-2" aria-label="Reply" />
+                  placeholder={asNote ? 'A private note for your team…' : t.status === 'bot' ? 'Replying will pause the agent in this chat…' : 'Write a reply…'} className="min-h-[40px] resize-none rounded-2xl py-2" aria-label="Reply" />
                 <Button variant="primary" size="icon" className="shrink-0 rounded-full" disabled={!text.trim() || send.isPending} aria-label="Send"><ArrowUp size={16} /></Button>
               </form>
             </>)}
@@ -156,11 +173,15 @@ export function ChatChannelsPage() {
   const [origins, setOrigins] = React.useState('')
   const [prompts, setPrompts] = React.useState('')
   const [wa, setWa] = React.useState({ phone_number_id: '', token: '', app_secret: '' })
+  const chatAgents = useQuery({ queryKey: ['chat', 'agents'], queryFn: () => http<{ id: string; name: string; status: string }[]>('/chat/agents') })
+  const cannedQ = useQuery({ queryKey: ['chat', 'canned'], queryFn: () => http<Canned[]>('/chat/canned') })
+  const [cannedText, setCannedText] = React.useState('')
+  React.useEffect(() => { if (cannedQ.data) setCannedText(cannedQ.data.map((c) => `${c.title} | ${c.text}`).join('\n')) }, [cannedQ.data])
   const tab = new URLSearchParams(window.location.search).get('tab') === 'whatsapp' ? 'whatsapp' : 'web'
   React.useEffect(() => { if (s.data) { setF(s.data); setOrigins(s.data.origins.join('\n')); setPrompts(s.data.config.prompts.join('\n')); setWa({ phone_number_id: s.data.whatsapp.phone_number_id, token: '', app_secret: '' }) } }, [s.data])
   const save = useMutation({
-    mutationFn: () => http<Settings>('/chat/settings', { method: 'PUT', json: { agent_id: f!.agent_id, enabled: f!.enabled, notify_email: f!.notify_email, origins: origins.split('\n').map((x) => x.trim()).filter(Boolean), config: { ...f!.config, prompts: prompts.split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 4) }, whatsapp: { phone_number_id: wa.phone_number_id, token: wa.token || null, app_secret: wa.app_secret || null } } }),
-    onSuccess: (r) => { toast.success('Saved'); qc.setQueryData(['chat', 'settings'], r); void qc.invalidateQueries({ queryKey: ['chat', 'settings'] }) }, onError: say,
+    mutationFn: () => http<Settings>('/chat/settings', { method: 'PUT', json: { agent_id: f!.agent_id, enabled: f!.enabled, notify_email: f!.notify_email, origins: origins.split('\n').map((x) => x.trim()).filter(Boolean), config: { ...f!.config, prompts: prompts.split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 4) }, whatsapp: { phone_number_id: wa.phone_number_id, token: wa.token || null, app_secret: wa.app_secret || null }, whatsapp_agent_id: f!.whatsapp_agent_id ?? null } }),
+    onSuccess: (r) => { void http('/chat/canned', { method: 'PUT', json: { replies: cannedText.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const [a, ...b] = l.split('|'); return b.length ? { title: a.trim(), text: b.join('|').trim() } : { title: '', text: a.trim() } }) } }).then(() => qc.invalidateQueries({ queryKey: ['chat', 'canned'] })).catch(() => {}); toast.success('Saved'); qc.setQueryData(['chat', 'settings'], r); void qc.invalidateQueries({ queryKey: ['chat', 'settings'] }) }, onError: say,
   })
   if (!f) return <><PageHeader title="Channels" subtitle="Where your chat agent talks to people." /><Card className="p-8 text-sm text-soft">Loading…</Card></>
   const set = (p: Partial<Cfg>) => setF({ ...f, config: { ...f.config, ...p } })
@@ -213,6 +234,7 @@ export function ChatChannelsPage() {
               </Card>
             </div>
             <div className="xl:sticky xl:top-4 xl:self-start">
+              <Card className="mb-4 p-4"><h3 className="text-[14px] font-semibold">Saved replies for your team</h3><p className="mt-1 text-xs text-soft">One per line, as <code className="rounded bg-muted px-1">Title | The reply</code>. Pick them in the inbox with one click.</p><Textarea className="mt-2" rows={4} value={cannedText} onChange={(e) => setCannedText(e.target.value)} placeholder={'Hours | We are open Mon to Sat, 10 to 6.'} aria-label="Saved replies" /></Card>
               <div className="mb-2 text-[13px] font-medium text-soft">Live preview</div>
               {f.ready ? <iframe title="Chat preview" key={s.dataUpdatedAt} src={`/chat-widget/${f.key}?embedder=${encodeURIComponent(origin())}`} className="h-[560px] w-full rounded-2xl border bg-white" />
                 : <Card className="flex h-[300px] items-center justify-center p-6 text-center text-sm text-soft">Publish an agent to try the chat here.</Card>}
@@ -225,6 +247,7 @@ export function ChatChannelsPage() {
           <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
             <Card className="space-y-4 p-5 sm:p-6">
               <div className="flex items-center justify-between"><div><h3 className="text-[15px] font-semibold">WhatsApp Business</h3><p className="mt-0.5 text-[13px] text-soft">Customers message your WhatsApp number. The same agent answers, and you can step in from the inbox.</p></div>{f.whatsapp.connected ? <Badge tone="green">Connected</Badge> : <Badge>Not connected</Badge>}</div>
+              <Field label="Which chat agent answers on WhatsApp"><select className="h-10 w-full rounded-xl border border-line bg-surface px-3.5 text-sm" value={f.whatsapp_agent_id ?? ''} onChange={(e) => setF({ ...f, whatsapp_agent_id: e.target.value || null })}><option value="">My voice agent (older setup)</option>{(chatAgents.data ?? []).filter((a) => a.status === 'live').map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>
               <Field label="Phone number ID"><Input value={wa.phone_number_id} inputMode="numeric" onChange={(e) => setWa({ ...wa, phone_number_id: e.target.value.replace(/\D/g, '') })} placeholder="From Meta: WhatsApp → API setup" /></Field>
               <Field label="Access token" hint={f.whatsapp.has_token ? <span className="text-xs text-ok">Saved. Paste a new one to replace it.</span> : undefined}><Input type="password" autoComplete="off" value={wa.token} onChange={(e) => setWa({ ...wa, token: e.target.value })} placeholder={f.whatsapp.has_token ? '••••••••••••' : 'A permanent token from Meta'} /></Field>
               <Field label="App secret" hint={f.whatsapp.has_secret ? <span className="text-xs text-ok">Saved. Paste a new one to replace it.</span> : undefined}><Input type="password" autoComplete="off" value={wa.app_secret} onChange={(e) => setWa({ ...wa, app_secret: e.target.value })} placeholder={f.whatsapp.has_secret ? '••••••••••••' : 'Meta app → Settings → Basic'} /></Field>
