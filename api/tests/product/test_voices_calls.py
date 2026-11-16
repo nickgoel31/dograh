@@ -21,8 +21,9 @@ async def client(monkeypatch):
 class FakeWS:
     """Just enough of a WebSocket for the authorisation + hand-off logic."""
 
-    def __init__(self, origin="http://app.test", host="app.test", token=None):
+    def __init__(self, origin="http://app.test", host="app.test", token=None, query_token=None):
         self.headers = {k: v for k, v in {"origin": origin, "host": host}.items() if v}
+        self.query_params = {"token": query_token} if query_token else {}  # the phone app passes its bearer token here
         self.cookies = {config.SESSION_COOKIE_NAME: token} if token else {}
         self.closed: tuple[int, str] | None = None
         self.accepted = False
@@ -163,6 +164,17 @@ async def test_call_rejections_carry_a_reason(client):
     await _run(client, other, aid, workspace=me_a["current_workspace"]["id"])
     assert other.closed == (1008, "workspace_not_found")
     assert client.fake.runs == [] and client.fake.served == []
+
+
+async def test_the_phone_app_starts_a_call_with_its_token_in_the_address_and_no_browser_origin(client):
+    me, tok = await signup(client, "a@x.com")
+    aid = await agent_for(client, tok, **{config.WORKSPACE_HEADER: me["current_workspace"]["id"]})
+    ws = FakeWS(origin=None, host="app.test", token=None, query_token=tok)  # a phone sends no Origin and no cookie
+    await _run(client, ws, aid)
+    assert ws.accepted and ws.closed == (1000, "")
+    bad = FakeWS(origin=None, token=None, query_token="garbage")
+    await _run(client, bad, aid)
+    assert bad.closed == (1008, "session_expired")
 
 
 async def test_viewer_cannot_start_a_call(client):

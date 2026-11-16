@@ -395,7 +395,9 @@ async def make_client(monkeypatch, seed_profiles=True):
     app.include_router(profile_router.router)
     app.include_router(kyc_router.ops_router)
     app.include_router(kyc_router.hooks_router)
-    from api.product import chat_agents_router
+    from api.product import chat_agents_router, mobile_google
+
+    app.include_router(mobile_google.router)
 
     for r in (chat_agents_router.router, chat_router.router, chat_router.public, chat_router.hooks, chat_router.chat_js):
         app.include_router(r)

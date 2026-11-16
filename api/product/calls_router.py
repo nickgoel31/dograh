@@ -70,9 +70,12 @@ async def _authorize(
     ws: WebSocket, session: AsyncSession, agent_id: str, workspace_id: str | None, wallet: WalletGateway | None = None
 ) -> tuple[UserModel, object, ProductAgentModel] | str:
     """Returns (user, workspace, agent) or a short reason code for closing the socket."""
-    if not origin_allowed(ws.headers.get("origin"), ws.headers.get("host"), allowed_origins()):
+    # Mobile app: the bearer token is passed as ?token= (there are no cookies). A bearer token is an explicit
+    # credential, not an ambient one, so the browser Origin check (which stops cross-site cookie abuse) does not apply.
+    qtoken = ws.query_params.get("token")
+    if not qtoken and not origin_allowed(ws.headers.get("origin"), ws.headers.get("host"), allowed_origins()):
         return "origin_not_allowed"
-    token = ws.cookies.get(config.SESSION_COOKIE_NAME)
+    token = qtoken or ws.cookies.get(config.SESSION_COOKIE_NAME)
     if not token:
         return "not_signed_in"
     try:

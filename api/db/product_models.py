@@ -709,3 +709,75 @@ class ProductPlatformSettingModel(Base):
 
     key = Column(String(60), primary_key=True)
     value = Column(JSON, nullable=False, default=dict)
+
+
+class ProductLinkedNumberModel(Base):
+    """A user's personal mobile number whose missed/declined/scheduled calls are forwarded to a Swarvo agent ("My Number").
+
+    We never take the SIM and never spoof caller ID: the operator forwards inbound calls to ``forward_target``.
+    """
+
+    __tablename__ = "product_linked_numbers"
+
+    id = Column(Integer, primary_key=True)
+    public_id = Column(String(32), unique=True, nullable=False, index=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    e164 = Column(String(20), nullable=False, index=True)
+    operator = Column(String(24), nullable=True)
+    otp_hash = Column(String(64), nullable=True)
+    otp_expires_at = Column(DateTime(timezone=True), nullable=True)
+    otp_tries = Column(Integer, nullable=False, default=0)
+    verified_at = Column(DateTime(timezone=True), nullable=True)
+    # {text_version, accepted_at, app_version, ip}
+    consent = Column(JSON, nullable=True)
+    default_agent_id = Column(String(32), nullable=True)  # ProductAgentModel.public_id
+    mode = Column(String(16), nullable=False, default="schedule")  # schedule | always | decline_only
+    schedule = Column(JSON, nullable=True)  # {"windows":[{"days":[0..6],"start":"18:00","end":"06:00"}],"timezone":"Asia/Kolkata"}
+    vip_count = Column(Integer, nullable=False, default=0)  # the VIP numbers themselves never leave the phone
+    forwarding_status = Column(JSON, nullable=True)  # {"busy":"active","noAnswer":"active",...}
+    routing = Column(String(16), nullable=False, default="shared_pool")  # dedicated | shared_pool
+    dedicated_number_id = Column(Integer, nullable=True)  # TelephonyPhoneNumberModel.id when routing == dedicated
+    forward_target = Column(String(24), nullable=True)  # the Swarvo number the operator forwards to
+    enabled = Column(Boolean, nullable=False, default=False)
+    paused_until = Column(DateTime(timezone=True), nullable=True)
+    status = Column(String(14), nullable=False, default="pending")  # pending | active | disconnected
+    created_at = Column(DateTime(timezone=True), default=_now)
+    updated_at = Column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    __table_args__ = (Index("ix_linked_numbers_workspace", "workspace_id"),)
+
+
+class ProductLinkedTestCallModel(Base):
+    """One "call me and let the AI answer" check from onboarding."""
+
+    __tablename__ = "product_linked_test_calls"
+
+    id = Column(String(32), primary_key=True)
+    linked_number_id = Column(Integer, ForeignKey("product_linked_numbers.id", ondelete="CASCADE"), nullable=False)
+    state = Column(String(16), nullable=False, default="ringing")  # ringing | reached_agent | failed
+    reason = Column(String(200), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+
+class ProductDeviceModel(Base):
+    """A phone that should get push notifications (FCM token on Android, APNs token on iOS)."""
+
+    __tablename__ = "product_devices"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token = Column(String(512), nullable=False, unique=True)
+    platform = Column(String(10), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+
+class ProductFunnelEventModel(Base):
+    """Onboarding funnel steps, for drop-off analytics."""
+
+    __tablename__ = "product_funnel_events"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    step = Column(String(40), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_now)

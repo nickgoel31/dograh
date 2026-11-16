@@ -1,5 +1,5 @@
 """Sign in with Google. The browser gets a signed ID token from Google; we check it with Google, then sign the person in
-(creating a new account and workspace the first time). Needs GOOGLE_CLIENT_ID."""
+(creating a new account and workspace the first time). Needs GOOGLE_CLIENT_ID. The phone app's version is in mobile_google.py."""
 
 import os
 import uuid
@@ -41,7 +41,8 @@ async def verify_google_token(credential: str) -> dict | None:
         claims = r.json() if r.status_code == 200 else None
     except Exception:  # noqa: BLE001
         return None
-    if not claims or claims.get("aud") != client_id or str(claims.get("email_verified")).lower() != "true" or not claims.get("email"):
+    audiences = {client_id, *[x.strip() for x in os.getenv("GOOGLE_MOBILE_CLIENT_IDS", "").split(",") if x.strip()]}  # the website's client, plus the phone app's own if it has any
+    if not claims or claims.get("aud") not in audiences or str(claims.get("email_verified")).lower() != "true" or not claims.get("email"):
         return None
     return claims
 
@@ -51,16 +52,14 @@ async def auth_config():
     return {"google_client_id": os.getenv("GOOGLE_CLIENT_ID") or None}
 
 
-@router.post("/google")
-async def google_login(body: GoogleBody, request: Request, response: Response, session: AsyncSession = Depends(get_session)):
-    await rate_limit.enforce(f"pgoogle:ip:{_client_ip(request)}", 30, 300, "Too many attempts. Try again in a few minutes.")
-    claims = await verify_google_token(body.credential)
-    if claims is None:
-        raise product_error(401, "google_failed", "We couldn't sign you in with Google. Please try again.")
+async def user_from_claims(session: AsyncSession, claims: dict) -> tuple[UserModel, bool]:
+    """The account for a verified Google identity: created (with its workspace) the first time. Returns (user, created)."""
     email = claims["email"].lower()
     user = await session.scalar(select(UserModel).where(UserModel.email == email))
     company = await security.sso_workspace(session, email)
+    created = False
     if user is None:
+        created = True
         user = UserModel(provider_id=f"usr_{uuid.uuid4().hex}", email=email, password_hash=None, role="admin")
         session.add(user)
         await session.flush()
@@ -83,6 +82,16 @@ async def google_login(body: GoogleBody, request: Request, response: Response, s
     if prof.email_verified_at is None:
         prof.email_verified_at = datetime.now(UTC)
         await session.commit()
+    return user, created
+
+
+@router.post("/google")
+async def google_login(body: GoogleBody, request: Request, response: Response, session: AsyncSession = Depends(get_session)):
+    await rate_limit.enforce(f"pgoogle:ip:{_client_ip(request)}", 30, 300, "Too many attempts. Try again in a few minutes.")
+    claims = await verify_google_token(body.credential)
+    if claims is None:
+        raise product_error(401, "google_failed", "We couldn't sign you in with Google. Please try again.")
+    user, _ = await user_from_claims(session, claims)
     _set_session(response, user)
     if not await list_workspaces(session, user.id):
         return SetupOut(user=UserOut(id=user_public_id(user.provider_id), email=user.email, name=await get_display_name(session, user.id)))
