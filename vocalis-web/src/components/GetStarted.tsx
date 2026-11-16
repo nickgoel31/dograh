@@ -47,8 +47,8 @@ const INDUSTRIES: { k: string; what: string }[] = [
 const TONES = ['Friendly', 'Professional', 'Playful']
 const short = (v: number, n: number) => `${v + 1} of ${n}`
 
-/** The home page builds an agent from one message, so the longer tour no longer pops up by itself. It is still one tap away on Home. */
-const AUTO_OPEN = false
+/** Opens by itself for a new account with no agents (once). Set to false to leave it one tap away on Home instead. */
+const AUTO_OPEN = true
 
 /** Shown to a new account once, and any time from the Home page or the search bar. */
 export function GetStarted() {
