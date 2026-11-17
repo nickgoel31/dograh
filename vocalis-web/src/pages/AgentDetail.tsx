@@ -1,7 +1,7 @@
 import * as React from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { CallFlowEditor, defaultFlow, type FlowData } from '@/components/CallFlow'
-import { AlertTriangle, Check, History, Mic, Play, Rocket } from '@/components/icons'
+import { AlertTriangle, Check, History, Mic, Play, Rocket, Square } from '@/components/icons'
 import { toast } from 'sonner'
 import { Badge, Button, Card, Chip, Field, Input, Select, Slider, Switch, Tab, TabPanel, Tabs, TabsList, Textarea } from '@/components/ui'
 import { AdvancedOnly, EmptyState, Friendly, PageHeader, SearchPill, SimpleAdvanced, StatusBadge, UnsavedBar, speak } from '@/components/shared'
@@ -47,6 +47,17 @@ export function VoicePick({ voices, value, onPick }: { voices: import('@/mock/ty
   const [gender, setGender] = React.useState('')
   const [prov, setProv] = React.useState('')
   const [shown, setShown] = React.useState(24)
+  const [playing, setPlaying] = React.useState<string | null>(null)
+  const audio = React.useRef<HTMLAudioElement | null>(null)
+  React.useEffect(() => () => { audio.current?.pause() }, [])
+  const play = (v: import('@/mock/types').Voice) => {
+    audio.current?.pause()
+    if (playing === v.id) { setPlaying(null); return }
+    if (USE_MOCKS) { setPlaying(v.id); speak('Hello! I can be the voice of your business.', { female: v.gender === 'Female', onEnd: () => setPlaying((p) => (p === v.id ? null : p)) }); return }
+    const a = new Audio(`${API_URL}/voices/${v.id}/sample`); audio.current = a; setPlaying(v.id)
+    a.onended = () => setPlaying((p) => (p === v.id ? null : p))
+    a.play().catch(() => { setPlaying(null); toast.error('We could not play that sample right now.') })
+  }
   const langs = [...new Set(voices.map((v) => v.lang))].sort()
   const list = voices.filter((v) => (!prov || v.provider === prov) && (!lang || v.lang === lang) && (!gender || v.gender === gender) && (!q || `${v.name} ${v.style} ${v.description ?? ''}`.toLowerCase().includes(q.toLowerCase())))
   list.sort((a, b) => providerRank(a.provider) - providerRank(b.provider))
@@ -69,20 +80,23 @@ export function VoicePick({ voices, value, onPick }: { voices: import('@/mock/ty
         const on = value === v.id
         const off = v.available === false
         return (
-          <button key={v.id} disabled={off} onClick={() => onPick(v.id)} title={v.description} aria-pressed={on}
-            className={cn('flex min-h-[64px] items-center gap-3 rounded-2xl border bg-surface p-3 text-left transition', on ? 'border-ink ring-1 ring-ink' : 'hover:border-soft/50', off && 'cursor-not-allowed opacity-50')}>
-            <AgentAvatar id={v.id} className="h-10 w-10" />
+          <div key={v.id} role="button" tabIndex={off ? -1 : 0} aria-disabled={off} onClick={() => !off && onPick(v.id)} onKeyDown={(e) => { if (!off && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onPick(v.id) } }} title={v.description} aria-pressed={on}
+            className={cn('flex min-h-[64px] cursor-pointer items-center gap-3 rounded-2xl border bg-surface p-3 text-left transition', on ? 'border-ink ring-1 ring-ink' : 'hover:border-soft/50', off && 'cursor-not-allowed opacity-50')}>
+            <button type="button" aria-label={`${playing === v.id ? 'Stop' : 'Play'} ${v.name}`} disabled={!USE_MOCKS && !v.hasSample} onClick={(e) => { e.stopPropagation(); play(v) }} className="shrink-0 rounded-full transition hover:scale-105 disabled:opacity-40 disabled:hover:scale-100">
+              <AgentAvatar id={v.id} className="h-10 w-10">{playing === v.id ? <Square size={13} /> : <Play size={14} className="ml-0.5" />}</AgentAvatar>
+            </button>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[14px] font-medium">{v.name}</span>
               <span className="block truncate text-xs text-soft">{[v.lang, v.gender].filter(Boolean).join(' · ')}</span>
               {v.style && <span className="mt-1 block truncate text-xs text-soft/80">{v.style}</span>}
             </span>
             {off ? <Badge tone="accent">Soon</Badge> : on && <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink text-surface"><Check size={13} /></span>}
-          </button>)
+          </div>)
       })}
         {list.length === 0 && <p className="col-span-full py-6 text-center text-sm text-soft">No voices match. Try other words.</p>}
       </div>
       {list.length > shown && <Button variant="ghost" className="mt-3 w-full sm:w-auto" onClick={() => setShown(shown + 24)}>Show more ({list.length - shown} left)</Button>}
+      <p className="mt-3 text-[13px] text-soft">Want to compare voices side by side or save favourites? <Link to="/voices" className="font-medium text-accent hover:underline">Open the Voices page</Link>.</p>
     </div>
   )
 }

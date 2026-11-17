@@ -19,7 +19,8 @@ PAGE_BYTES = 1_500_000
 PAGE_TIMEOUT = 10.0
 
 # Pages worth reading, best first. A link matches when its address or its words contain the keyword.
-KEYWORDS = ("about", "service", "treatment", "product", "menu", "price", "pricing", "fee", "course", "faq", "contact", "location", "hours", "appointment", "team", "offer", "plan")
+KEYWORDS = ("pricing", "price", "plan", "fee", "cost", "rate", "package", "about", "service", "treatment", "product", "menu", "course", "faq", "contact", "location", "hours", "appointment", "team", "offer")
+GUESSES = ("/pricing", "/price", "/prices", "/plans", "/fees", "/packages", "/rates")  # tried when nothing on the home page links to a price page
 SKIP_EXT = (".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".zip", ".mp4", ".mp3", ".doc", ".docx", ".xls", ".xlsx", ".css", ".js")
 HIDDEN = {"script", "style", "noscript", "svg", "template", "iframe"}
 
@@ -146,6 +147,9 @@ async def read_site(url: str, fetch: Fetcher | None = None, max_pages: int = MAX
     if home is None or not (home.text or home.description):
         raise ValueError("We couldn't read that website. Check the address, or tell me about your business instead.")
     wanted = pick_links(home.url, home.links, max_pages - 1)
+    if not any(re.search(r"pric|plan|fee|cost|rate|package", urlsplit(u).path.lower()) for u in wanted):
+        wanted = [urljoin(home.url, g) for g in GUESSES[:3]] + wanted  # many sites keep prices on /pricing without a visible link
+        wanted = wanted[: max_pages + 1]
     gate = asyncio.Semaphore(3)
 
     async def limited(u: str):

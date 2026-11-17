@@ -161,6 +161,13 @@ async def _ingest_local_file(
             )
 
     if not embeddings_api_key:
+        # Swarvo workspaces have no embeddings of their own: use the platform's key so knowledge always works.
+        fallback = (os.getenv("PRODUCT_EMBEDDINGS_API_KEY") or os.getenv("PRODUCT_ASSISTANT_OPENAI_KEY") or "").strip()
+        if fallback:
+            embeddings_provider, embeddings_api_key = ServiceProviders.OPENAI.value, fallback
+            embeddings_model = embeddings_model or "text-embedding-3-small"
+
+    if not embeddings_api_key:
         error_message = (
             "API key not configured. Please set your API key in "
             "Model Configurations > Embedding to process documents."

@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { ArrowRight, ArrowUp, BarChart3, BookOpen, Bot, Check, FileText, History, Loader2, Megaphone, Mic, Phone, Search, SquarePen, Sparkles, Trash2, Wallet, X } from '@/components/icons'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui'
@@ -39,6 +40,8 @@ const SUGGESTIONS = [
 const GUIDE_STEPS = ['Your website', 'Knowledge', 'The agent', 'Voice', 'Phone number']
 const WANTS_AGENT = /\b(create|build|make|set ?up|start|need)\b.{0,24}\b(agent|assistant|bot|receptionist)\b/i
 // A message that is clearly about a business (or a website) builds the agent straight away, with no planning round trip and no questions.
+// A website with a question about it (prices, services, hours, "read my site") is answered, not turned into an agent.
+const ASKS_ABOUT_SITE = /\b(pric\w*|rates?|fees?|cost|charges?|timings?|hours|services?|read|check|extract|summar\w*|nikal\w*|padh\w*|dekh\w*|bata\w*|batao|kya|kitn\w*)\b/i
 const URLISH = /(https?:\/\/|www\.)\S+|\b[a-z0-9-]+\.(com|in|co|net|org|io|ai|store|shop)\b/i
 const BUSINESS = /\b(dental|dentist|clinic|doctor|hospital|salon|spa|parlou?r|restaurant|cafe|caf\u00e9|hotel|resort|real estate|property|properties|coaching|classes|tuition|institute|school|college|gym|fitness|shop|store|boutique|pharmacy|agency|studio|garage|showroom|we (sell|run|offer|are|make)|i (sell|run|own|have|make)|my (business|shop|store|clinic|salon|company|restaurant|hotel)|mera|meri|mere|hamari|humara|hamara)\b/i
 const QUESTION = /\b(balance|wallet|campaigns?|conversations?|calls? (are|going|today)|numbers?|invoice|billing|how (many|much|are|do|can)|show me|what (is|are)|why)\b/i
@@ -77,6 +80,7 @@ async function execute(c: Call, nav: (to: string) => void): Promise<{ result: un
     case 'list_conversations': return { result: await http('/conversations') }
     case 'list_campaigns': return { result: await http('/campaigns') }
     case 'list_knowledge': return { result: await http('/knowledge') }
+    case 'read_website': return { result: await http('/assistant/site', { method: 'POST', json: { url: String(a.url ?? '') }, timeoutMs: 60000 }) }
     case 'list_integrations': return { result: await http('/connectors') }
     case 'get_wallet': return { result: await http('/billing/wallet') }
     case 'go_to': {
@@ -283,21 +287,39 @@ export default function AssistantHome() {
   const [listening, setListening] = React.useState(false)
   const [vlang, setVlang] = React.useState<'en-IN' | 'hi-IN'>('en-IN')
   const rec = React.useRef<any>(null)
+  const wantMic = React.useRef(false)
   const listen = () => {
-    if (listening) { rec.current?.stop(); return }
-    const r = new SpeechRec()
-    r.lang = vlang; r.interimResults = true; r.continuous = false
-    const base = text.trim()
-    r.onresult = (e: any) => { setText((base + ' ' + Array.from(e.results).map((x: any) => x[0].transcript).join(' ')).trim()) }
-    r.onend = () => setListening(false); r.onerror = () => setListening(false)
-    rec.current = r; setListening(true)
-    try { r.start() } catch { setListening(false) }
+    if (listening) { wantMic.current = false; rec.current?.stop(); setListening(false); return }
+    if (!SpeechRec) { toast.error('Voice typing is not supported in this browser. Try Chrome.'); return }
+    wantMic.current = true
+    let base = text.trim()
+    let latest = base
+    // The browser ends a recording after a short silence: start a new one at once, until the person taps the mic again.
+    const begin = () => {
+      const r = new SpeechRec()
+      r.lang = vlang; r.interimResults = true; r.continuous = true
+      r.onresult = (e: any) => { latest = (base + ' ' + Array.from(e.results).map((x: any) => x[0].transcript).join(' ')).trim(); setText(latest) }
+      r.onend = () => {
+        if (!wantMic.current) { setListening(false); return }
+        base = latest
+        setTimeout(() => { try { begin() } catch { wantMic.current = false; setListening(false) } }, 120)
+      }
+      r.onerror = (e: any) => {
+        if (e?.error === 'no-speech' || e?.error === 'aborted') return // onend restarts it
+        wantMic.current = false; setListening(false)
+        if (e?.error === 'not-allowed') toast.error('Allow the microphone in your browser to speak.')
+      }
+      rec.current = r
+      r.start()
+    }
+    setListening(true)
+    try { begin() } catch { wantMic.current = false; setListening(false) }
   }
 
   const send = async (t: string) => {
     const msg = t.trim()
     if (!msg || busy) return
-    if (!USE_MOCKS && !items.length && (WANTS_AGENT.test(msg) || URLISH.test(msg) || (BUSINESS.test(msg) && !QUESTION.test(msg)))) { setText(''); await startBuild(msg); return } // a business or a website builds the agent (after one question: the language)
+    if (!USE_MOCKS && !items.length && (WANTS_AGENT.test(msg) || (URLISH.test(msg) && (!ASKS_ABOUT_SITE.test(msg) || /\b(agent|bot|assistant)\b/i.test(msg))) || (BUSINESS.test(msg) && !QUESTION.test(msg)))) { setText(''); await startBuild(msg); return } // a business or a website builds the agent (after one question: the language)
     setText('')
     round.current = 0
     history.current.push({ role: 'user', content: msg.slice(0, 2000) })

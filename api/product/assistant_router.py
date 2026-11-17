@@ -9,6 +9,8 @@ from sqlalchemy import func, select
 from api.db.models import TelephonyPhoneNumberModel
 from api.db.product_models import ProductAgentModel
 from api.product import config, help_content
+from api.product import site_reader
+from api.product.setup_router import get_fetcher
 from api.product.deps import Ctx, get_ctx
 from api.product.llm_gateway import LLMGateway, get_llm
 from api.utils import rate_limit
@@ -94,6 +96,7 @@ async def chat(body: ChatBody, ctx: Ctx = Depends(get_ctx), llm: LLMGateway = De
 # endpoints, so roles, workspaces and limits apply exactly as if the person had clicked the buttons.
 TOOLS: dict[str, tuple[str, str]] = {
     "setup_agent": ("auto", "{text: string, languages?: string[]}  -> builds a whole agent in one go (reads their website, writes the agent, adds knowledge, picks the voice, puts it live, connects a free number). Pass everything the person said: the website address and/or what they do and want. languages is what they chose: [\"Hinglish\"] (Hindi and English mixed, the default), [\"English\"], [\"Hindi\"], [\"Tamil\"] and so on"),
+    "read_website": ("read", "{url: string}  -> the text of a website's home page and its other pages (prices, services, about). Use it when the person asks about their website: its prices, services, hours or anything on it. Then answer from what it returns, and offer to save it to knowledge with add_knowledge_text. If it fails, say plainly the site could not be read (some sites block readers or load their content with scripts) and ask them to paste the prices here"),
     "list_agents": ("read", "{}  -> all agents with id, name, status"),
     "list_templates": ("read", "{}  -> agent templates (key, name, role, blurb)"),
     "list_numbers": ("read", "{}  -> phone numbers with id, number, assigned agent"),
@@ -112,6 +115,21 @@ TOOLS: dict[str, tuple[str, str]] = {
     "add_knowledge_text": ("auto", "{title: string, text: string}  -> add a note to knowledge"),
     "add_knowledge_qa": ("auto", "{title: string, pairs: [{q: string, a: string}]}  -> add fixed question/answers"),
 }
+
+
+class SiteBody(BaseModel):
+    url: str = Field(min_length=3, max_length=2048)
+
+
+@router.post("/site")
+async def read_website(body: SiteBody, ctx: Ctx = Depends(get_ctx), fetch=Depends(get_fetcher)):
+    """Read a website for the chat assistant: the plain text of the home page and its best pages (prices first)."""
+    await rate_limit.enforce(f"psite:{ctx.user.id}", 20, 600, "You're going quickly. Give it a minute and try again.")
+    try:
+        pages = await site_reader.read_site(body.url, fetch)
+    except ValueError as e:
+        return {"ok": False, "problem": str(e), "pages": []}
+    return {"ok": True, "pages": [{"url": p.url, "title": p.title, "text": p.text[:5000]} for p in pages]}
 
 
 class PlanBody(BaseModel):
@@ -145,6 +163,7 @@ def _plan_system(state: str) -> str:
         "When the person wants a new agent, or just names a business or a website (\"dentist\", \"mera salon hai\", \"we sell sarees, sareeghar.in\"), call setup_agent right away with everything they have said so far. It does everything by itself. "
         "Even a few words are enough: do not ask for more detail first. The ONE thing to ask before building is the language, unless they already said it or wrote in it: ask \"Which language should your agent speak? Hinglish (Hindi and English mixed) is the default, or choose English, Hindi, Tamil, Telugu, Marathi, Bengali, Gujarati, Kannada, Malayalam or Punjabi.\" If they answer \"default\", \"any\" or anything unclear, use Hinglish. Pass their choice in languages. Only if they have said nothing about a business at all (for example just \"hi\"), reply with ONE friendly line asking what their business is, with two short examples, then call setup_agent as soon as they answer. "
         "Never ask about voices, languages, tone, tools or phone numbers: it chooses well and the person can change them later. Do not use create_agent for this.\n"
+        "- If the person gives a website and asks something about it (prices, services, timings, \"read my site\", \"pricing nikal lo\"), call read_website, never setup_agent. Only call setup_agent when they want an agent built.\n"
         "- After setup_agent returns, reply in two short sentences: say the agent is ready and live, and tell them to press Talk to try it. Then suggest the single most useful next thing (for example adding their calendar), and do it for them if they say yes.\n"
         "- When creating an agent by hand with create_agent, write a useful script (numbered steps of what the agent should do on a call) from what the person told you.\n"
         "- Be brief and plain. Short sentences. Use **bold** sparingly and markdown links like [Billing & Usage](/billing) with paths from the page list.\n\n"
