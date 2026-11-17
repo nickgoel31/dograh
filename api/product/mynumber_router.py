@@ -412,8 +412,12 @@ _DIVERSION = re.compile(r"<(?:sip|tel):(\+?[\d]+)", re.I)
 
 
 def forwarded_from(headers: dict[str, str]) -> str | None:
-    """The number a call was forwarded from, from SIP `Diversion` (RFC 5806) or the first `History-Info` entry (RFC 7044)."""
+    """The number a call was forwarded from: Plivo's `ForwardedFrom` field, or SIP `Diversion` (RFC 5806) / the first `History-Info` entry (RFC 7044)."""
     lower = {k.lower(): v for k, v in headers.items()}
+    # Plivo hands this over as a plain field on its webhook (ForwardedFrom=918826605360, with ForwardedReason and ForwardedCause).
+    plain = "".join(ch for ch in str(lower.get("forwardedfrom", "")) if ch.isdigit())
+    if len(plain) >= 8:
+        return "+" + plain
     for h in ("diversion", "history-info", "p-asserted-identity-diverted"):
         # Providers prefix passed-through SIP headers (for example `sip-h-diversion` or `x-ph-diversion`), so match on the ending too.
         for key, value in lower.items():

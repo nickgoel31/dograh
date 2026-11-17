@@ -29,3 +29,8 @@ def test_default_pool_number(monkeypatch):
     assert forward_pool_number() == "+918065493136"
     monkeypatch.setenv("PRODUCT_MYNUMBER_POOL_NUMBER", "+910000000000")
     assert forward_pool_number() == "+910000000000"
+
+
+def test_plivo_forwarded_from_field():
+    assert forwarded_from({"ForwardedFrom": "918826605360", "ForwardedReason": "UserBusy", "ForwardedCause": "302"}) == "+918826605360"
+    assert forwarded_from({"ForwardedFrom": ""}) is None

@@ -685,6 +685,21 @@ async def _handle_telephony_websocket(
         )
 
 
+def _is_my_number_call_end(normalized_data, webhook_data: dict) -> bool:
+    """A call-ended notification (not a new call) on the shared My Number number. Plivo sends those to the same address."""
+    try:
+        from api.product.mynumber_router import forward_pool_number
+
+        def tail(n: str | None) -> str:
+            return "".join(ch for ch in (n or "") if ch.isdigit())[-10:]
+
+        pool = forward_pool_number()
+        ended = any(k in (webhook_data or {}) for k in ("HangupCause", "HangupCauseCode", "EndTime"))
+        return bool(pool and ended and tail(normalized_data.to_number) == tail(pool))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 async def _resolve_my_number(normalized_data, webhook_data: dict, headers: dict):
     """Returns (workflow_id, call context, agent status) when this call was forwarded from a My Number customer, else (None, None, None).
 
@@ -718,6 +733,10 @@ async def _resolve_my_number(normalized_data, webhook_data: dict, headers: dict)
             agent = await s.scalar(select(ProductAgentModel).where(ProductAgentModel.public_id == routed.agent_public_id))
             wf = (agent.live_workflow_id if agent else None) or None
             if not wf:
+                logger.warning(
+                    f"/inbound/run my-number: agent {routed.agent_public_id} for {routed.context.get('forwarded_from')} "
+                    f"is not live yet, so the call cannot be answered. Put the agent live."
+                )
                 return None, None, None
             return wf, routed.context, agent.status
     except Exception as e:  # noqa: BLE001 - never block a call because routing failed
@@ -762,6 +781,9 @@ async def handle_inbound_run(request: Request):
             logger.warning(
                 f"Non-inbound call on /inbound/run: {normalized_data.direction}"
             )
+            return generic_hangup_response()
+
+        if _is_my_number_call_end(normalized_data, webhook_data):
             return generic_hangup_response()
 
         # 1. Resolve (config, phone_number) in a single SQL roundtrip that
