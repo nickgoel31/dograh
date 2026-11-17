@@ -918,7 +918,8 @@ async def handle_inbound_run(request: Request):
             normalized_data,
             telephony_configuration_id=telephony_configuration_id,
             from_phone_number_id=phone_row.id,
-            extra_context=routed_context,
+            # Which organisation owns the phone provider settings: the one behind the shared number, not the customer's.
+            extra_context=({**routed_context, "telephony_organization_id": config.organization_id} if routed_context else None),
         )
 
         # Store slot mapping so it's released on completion

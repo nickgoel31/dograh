@@ -34,3 +34,15 @@ def test_default_pool_number(monkeypatch):
 def test_plivo_forwarded_from_field():
     assert forwarded_from({"ForwardedFrom": "918826605360", "ForwardedReason": "UserBusy", "ForwardedCause": "302"}) == "+918826605360"
     assert forwarded_from({"ForwardedFrom": ""}) is None
+
+
+def test_shared_telephony_org_is_only_set_by_the_server_flag():
+    from types import SimpleNamespace as NS
+
+    from api.services.telephony.factory import shared_telephony_org
+
+    mine = NS(initial_context={"forwarded_from_personal_number": True, "telephony_organization_id": 7})
+    assert shared_telephony_org(mine) == 7
+    assert shared_telephony_org(NS(initial_context={"telephony_organization_id": 7})) is None  # no flag: ignored
+    assert shared_telephony_org(NS(initial_context={})) is None
+    assert shared_telephony_org(None) is None

@@ -27,6 +27,38 @@ from api.services.telephony import registry
 from api.services.telephony.base import TelephonyProvider
 
 
+def shared_telephony_org(workflow_run) -> Optional[int]:
+    """For a My Number call, the organisation that owns the shared phone number's provider settings.
+
+    The customer's agent runs in the customer's own organisation, but the phone line belongs to the company. The server writes
+    this value itself when it accepts the call; nothing a user sends can set it.
+    """
+    ctx = (getattr(workflow_run, "initial_context", None) or {}) if workflow_run is not None else {}
+    if ctx.get("forwarded_from_personal_number") and ctx.get("telephony_organization_id"):
+        try:
+            return int(ctx["telephony_organization_id"])
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+async def _config_for_current_my_number_run(config_id: int):
+    """The provider config of the call being handled right now, when it is a My Number call and this is exactly the config it was stamped with."""
+    try:
+        from pipecat.utils.run_context import get_current_run_id
+
+        rid = get_current_run_id()
+        if not rid:
+            return None
+        run = await db_client.get_workflow_run_by_id(int(rid))
+        org = shared_telephony_org(run)
+        if org is None or int((run.initial_context or {}).get("telephony_configuration_id", -1)) != int(config_id):
+            return None
+        return await db_client.get_telephony_configuration_for_org(int(config_id), org)
+    except Exception:  # noqa: BLE001
+        return None
+
+
 async def load_telephony_config_by_id(
     telephony_configuration_id: int | str | None,
     organization_id: int,
@@ -49,6 +81,8 @@ async def load_telephony_config_by_id(
     row = await db_client.get_telephony_configuration_for_org(
         resolved_cfg_id, organization_id
     )
+    if not row:
+        row = await _config_for_current_my_number_run(resolved_cfg_id)
     if not row:
         raise ValueError(
             f"Telephony configuration {resolved_cfg_id} not found "
@@ -144,6 +178,7 @@ async def get_telephony_provider_for_run(
     still resolve.
     """
     cfg_id = (workflow_run.initial_context or {}).get("telephony_configuration_id")
+    organization_id = shared_telephony_org(workflow_run) or organization_id
     if cfg_id is not None:
         return await get_telephony_provider_by_id(cfg_id, organization_id)
     return await get_default_telephony_provider(organization_id)
