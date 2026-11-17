@@ -317,6 +317,8 @@ async def update(raw: dict, ctx: Ctx = Depends(get_ctx)):
             ProductAgentModel.public_id == body.default_agent_id, ProductAgentModel.workspace_id == ctx.workspace.id))
         if agent is None:
             raise product_error(404, "agent_not_found", "We couldn't find that agent.")
+        if agent.live_workflow_id is None:
+            raise product_error(400, "agent_not_live", "That agent isn't live yet. Publish it first, then choose it for My Number.")
         row.default_agent_id = agent.public_id
     if body.mode is not None:
         row.mode = body.mode
@@ -329,6 +331,10 @@ async def update(raw: dict, ctx: Ctx = Depends(get_ctx)):
     if body.enabled is not None:
         if body.enabled and (row.consent is None or not row.default_agent_id):
             raise product_error(400, "setup_incomplete", "Choose an agent and accept the consent before turning this on.")
+        if body.enabled:
+            current = await ctx.session.scalar(select(ProductAgentModel).where(ProductAgentModel.public_id == row.default_agent_id))
+            if current is None or current.live_workflow_id is None:
+                raise product_error(400, "agent_not_live", "Your agent isn't live yet. Publish it first, then turn on My Number.")
         row.enabled = body.enabled
         row.status = "active" if body.enabled or row.status == "active" else row.status
     await ctx.session.commit()
