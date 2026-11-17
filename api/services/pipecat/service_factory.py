@@ -758,6 +758,13 @@ def create_llm_service_from_provider(
         if base_url:
             _validate_runtime_service_url(base_url, "base_url")
             kwargs["base_url"] = base_url
+        if str(model).startswith("gpt-6"):
+            # GPT-6: function calling on Chat Completions only works with reasoning effort "none", and sampling settings are not accepted otherwise.
+            return OpenAILLMService(
+                api_key=api_key,
+                settings=OpenAILLMSettings(model=model, extra={"reasoning_effort": "none"}),
+                **kwargs,
+            )
         if "gpt-5" in model:
             return OpenAILLMService(
                 api_key=api_key,

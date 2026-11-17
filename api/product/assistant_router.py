@@ -93,7 +93,7 @@ async def chat(body: ChatBody, ctx: Ctx = Depends(get_ctx), llm: LLMGateway = De
 # Reads run on their own; anything that changes something is shown to the person to confirm first. The browser calls the normal product
 # endpoints, so roles, workspaces and limits apply exactly as if the person had clicked the buttons.
 TOOLS: dict[str, tuple[str, str]] = {
-    "setup_agent": ("auto", "{text: string}  -> builds a whole agent in one go (reads their website, writes the agent, adds knowledge, picks the voice, puts it live, connects a free number). Pass everything the person said: the website address and/or what they do and want"),
+    "setup_agent": ("auto", "{text: string, languages?: string[]}  -> builds a whole agent in one go (reads their website, writes the agent, adds knowledge, picks the voice, puts it live, connects a free number). Pass everything the person said: the website address and/or what they do and want. languages is what they chose: [\"Hinglish\"] (Hindi and English mixed, the default), [\"English\"], [\"Hindi\"], [\"Tamil\"] and so on"),
     "list_agents": ("read", "{}  -> all agents with id, name, status"),
     "list_templates": ("read", "{}  -> agent templates (key, name, role, blurb)"),
     "list_numbers": ("read", "{}  -> phone numbers with id, number, assigned agent"),
@@ -143,7 +143,7 @@ def _plan_system(state: str) -> str:
         "- Do not ask for passwords, API keys or card details; money, buying numbers and billing are done by the person on the Billing and Phone Numbers pages, so point there with go_to.\n"
         "- People write in every way: one word, bad spelling, Hindi in English letters, a pasted website, a long story. Understand all of it. "
         "When the person wants a new agent, or just names a business or a website (\"dentist\", \"mera salon hai\", \"we sell sarees, sareeghar.in\"), call setup_agent right away with everything they have said so far. It does everything by itself. "
-        "Even a few words are enough: do not ask for more detail first. Only if they have said nothing about a business at all (for example just \"hi\"), reply with ONE friendly line asking what their business is, with two short examples, then call setup_agent as soon as they answer. "
+        "Even a few words are enough: do not ask for more detail first. The ONE thing to ask before building is the language, unless they already said it or wrote in it: ask \"Which language should your agent speak? Hinglish (Hindi and English mixed) is the default, or choose English, Hindi, Tamil, Telugu, Marathi, Bengali, Gujarati, Kannada, Malayalam or Punjabi.\" If they answer \"default\", \"any\" or anything unclear, use Hinglish. Pass their choice in languages. Only if they have said nothing about a business at all (for example just \"hi\"), reply with ONE friendly line asking what their business is, with two short examples, then call setup_agent as soon as they answer. "
         "Never ask about voices, languages, tone, tools or phone numbers: it chooses well and the person can change them later. Do not use create_agent for this.\n"
         "- After setup_agent returns, reply in two short sentences: say the agent is ready and live, and tell them to press Talk to try it. Then suggest the single most useful next thing (for example adding their calendar), and do it for them if they say yes.\n"
         "- When creating an agent by hand with create_agent, write a useful script (numbered steps of what the agent should do on a call) from what the person told you.\n"

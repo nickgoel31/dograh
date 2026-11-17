@@ -222,7 +222,7 @@ def pick_voice(catalogue: list, usable, languages: list[str], limit: int = 3) ->
         "google": "A Gemini voice that handles many languages in one call.",
     }.get(best.engine, "A voice that speaks the right language.")
     others = [v for v in pool[1:] if v.id != best.id][:limit]
-    return {"id": best.id, "name": best.name, "language": best.language, "engine": best.engine, "reason": why, "alternatives": [{"id": v.id, "name": v.name, "language": v.language} for v in others]}
+    return {"id": best.id, "name": best.name, "language": best.language, "engine": best.engine, "gender": getattr(best, "gender", None), "reason": why, "alternatives": [{"id": v.id, "name": v.name, "language": v.language} for v in others]}
 
 
 def tool_suggestions(usecase: str, connected: set[str]) -> list[dict]:

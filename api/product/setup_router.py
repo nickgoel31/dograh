@@ -47,6 +47,7 @@ class AutoBody(BaseModel):
     url: str = Field(default="", max_length=300)
     usecase: str = Field(default="", max_length=40)  # a template key, when the person picked one of the suggestions
     publish: bool = True
+    languages: list[str] = Field(default_factory=list, max_length=4)  # what the person chose (Hinglish, English, Tamil...); empty means Hinglish unless they wrote in another language
 
 
 @router.post("/auto")
@@ -55,7 +56,7 @@ async def auto(body: AutoBody, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE)), k
     """Build a whole agent from one message, with no further questions: read the site, write the agent, add knowledge, pick the voice, go live, connect a free number."""
     await rate_limit.enforce(f"pauto:{ctx.user.id}", 8, 600, "You're going quickly. Give it a minute and try again.")
     url, rest = (body.url, body.text) if body.url.strip() else setup_auto.split_input(body.text)
-    return await setup_auto.run(ctx, kb=kb, gw=gw, llm=llm, fetch=fetch, tools=tools, url=url, text=rest, publish=body.publish, usecase=body.usecase)
+    return await setup_auto.run(ctx, kb=kb, gw=gw, llm=llm, fetch=fetch, tools=tools, url=url, text=rest, publish=body.publish, usecase=body.usecase, languages=body.languages)
 
 
 @router.get("/state")
@@ -98,10 +99,10 @@ async def research(body: ResearchBody, ctx: Ctx = Depends(get_ctx), llm: LLMGate
 async def plan(body: PlanBody, ctx: Ctx = Depends(get_ctx), llm: LLMGateway = Depends(get_llm)):
     """What will be set up for this job: the agent (written from the profile), its voice, the services it needs and the knowledge it gets."""
     await rate_limit.enforce(f"psetup:{ctx.user.id}", 24, 600, "You're going quickly. Give it a minute and try again.")
-    langs = [x for x in body.languages if x in LANGUAGES][:2] or [x for x in (body.profile.get("languages") or []) if x in LANGUAGES][:2] or ["English"]
+    langs = setup_auto.clean_languages(body.languages) or setup_auto.languages_in("", (body.profile or {}).get("languages") or [])
     profile = setup_flow.clean_profile(body.profile or {}, {"languages": langs})
     notes = "\n\n".join(x for x in (setup_flow.profile_text(profile, body.website), body.wishes.strip()) if x)
-    draft, generated = await agent_writer.write_agent(llm, ctx.workspace.test_org_id, ctx.user.id, usecase=body.usecase, description=notes, industry=profile["industry"] if profile["industry"] != "General" else "", language=langs[0])
+    draft, generated = await agent_writer.write_agent(llm, ctx.workspace.test_org_id, ctx.user.id, usecase=body.usecase, description=notes, industry=profile["industry"] if profile["industry"] != "General" else "", languages=langs)
     if profile["business"]:
         draft["business"] = profile["business"][:60]
     cat, usable = await setup_flow.usable_voices(ctx.session, ctx.user.email)

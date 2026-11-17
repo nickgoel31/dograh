@@ -362,7 +362,7 @@ async def handle(session, ws, s, a: ProductChatAgentModel, sess, text: str, *, l
     knowledge = await knowledge_for(kb, ws, text) if a.use_knowledge else ""
     reply, failed = "", False
     try:
-        reply = (await llm.complete(ws.live_org_id, ws.owner_user_id, system_prompt(a, ws.name, turn.state["vars"], knowledge, sess.channel), messages, platform=True, model=chat_catalog.model_or_default(a.model), temperature=a.temperature) or "").strip()
+        reply = (await llm.complete(ws.live_org_id, ws.owner_user_id, system_prompt(a, ws.name, turn.state["vars"], knowledge, sess.channel), messages, platform=True, model=chat_catalog.model_or_default(a.model), temperature=a.temperature, reasoning="none") or "").strip()
     except Exception:  # noqa: BLE001 - never leave the visitor with silence
         log.warning("chat agent %s failed for session %s", a.id, sess.id, exc_info=True)
         failed = True

@@ -22,6 +22,7 @@ type Item =
   | { k: 'ai'; text: string }
   | { k: 'built'; data: Built }
   | { k: 'building'; text: string }
+  | { k: 'language'; msg: string }
   | { k: 'plan'; call: Call; status: 'pending' | 'running' | 'done' | 'skipped' | 'failed'; note?: string; link?: string }
 type Msg = { role: 'user' | 'assistant'; content: string }
 
@@ -49,6 +50,9 @@ const STARTERS = [
   { emoji: '\u{1F393}', label: 'Coaching institute', prompt: 'I run a coaching institute. Answer enquiries about courses and fees and book demo classes.' },
   { emoji: '\u{1F6CD}\uFE0F', label: 'Online store', prompt: 'I run an online store. Answer customer calls about orders, delivery and returns.' },
 ]
+// The one thing asked before an agent is built: which language it should speak. Hinglish (Hindi and English mixed) is the default.
+const LANGS = ['Hinglish', 'English', 'Hindi', 'Marathi', 'Tamil', 'Telugu', 'Bengali', 'Gujarati', 'Kannada', 'Malayalam', 'Punjabi']
+const SAID_LANGUAGE = /\b(hinglish|english|hindi|marathi|tamil|telugu|bengali|gujarati|kannada|malayalam|punjabi|urdu|odia)\b|[\u0900-\u097F\u0980-\u0DFF]/i
 const STAGES: [number, string][] = [[0, 'Reading about your business'], [7, 'Writing how your agent talks'], [16, 'Choosing the best voice'], [23, 'Adding what it should know'], [30, 'Putting it live']]
 const SpeechRec = typeof window !== 'undefined' ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) : undefined
 
@@ -81,7 +85,8 @@ async function execute(c: Call, nav: (to: string) => void): Promise<{ result: un
       nav(p); return { result: { opened: p } }
     }
     case 'setup_agent': {
-      const r = await http<Built>('/assistant/setup/auto', { method: 'POST', json: { text: String(a.text ?? '').slice(0, 4000) }, timeoutMs: 180000 })
+      const langs = Array.isArray(a.languages) ? (a.languages as unknown[]).map(String).slice(0, 2) : undefined
+      const r = await http<Built>('/assistant/setup/auto', { method: 'POST', json: { text: String(a.text ?? '').slice(0, 4000), languages: langs }, timeoutMs: 180000 })
       return { result: { agent: r.agent, steps: r.steps.map((x) => `${x.status}: ${x.label}`) }, link: `/agents/${r.agent.id}`, built: r }
     }
     case 'create_agent': {
@@ -245,13 +250,12 @@ export default function AssistantHome() {
     await think()
   }
 
-  const build = async (msg: string) => {
+  const build = async (msg: string, languages?: string[]) => {
     round.current = 0
-    history.current.push({ role: 'user', content: msg.slice(0, 2000) })
-    setItems((xs) => [...xs, { k: 'user', text: msg }, { k: 'building', text: msg }])
+    setItems((xs) => [...xs, { k: 'building', text: msg }])
     setBusy(true)
     try {
-      const r = await http<Built>('/assistant/setup/auto', { method: 'POST', json: { text: msg.slice(0, 4000) }, timeoutMs: 180000 })
+      const r = await http<Built>('/assistant/setup/auto', { method: 'POST', json: { text: msg.slice(0, 4000), languages }, timeoutMs: 180000 })
       const live = r.agent.status === 'live'
       const ai = `${r.agent.name} is ready${live ? ' and live' : ''}. Press **Talk to ${r.agent.name}** to hear it. Want me to connect your calendar or WhatsApp next?`
       setItems((xs) => [...xs.filter((x) => x.k !== 'building'), { k: 'built', data: r }, { k: 'ai', text: ai }])
@@ -260,6 +264,20 @@ export default function AssistantHome() {
     } catch (e) {
       setItems((xs) => [...xs.filter((x) => x.k !== 'building'), { k: 'ai', text: (e instanceof Error ? e.message : 'Something went wrong.') + ' Try again, or tell me a bit more about your business.' }])
     } finally { setBusy(false) }
+  }
+
+  /** A business or website was described: ask the language once (unless they already said it), then build. */
+  const startBuild = async (msg: string) => {
+    history.current.push({ role: 'user', content: msg.slice(0, 2000) })
+    setItems((xs) => [...xs, { k: 'user', text: msg }])
+    if (SAID_LANGUAGE.test(msg)) return build(msg)
+    setItems((xs) => [...xs, { k: 'language', msg }])
+  }
+  const pickLanguage = (it: Extract<Item, { k: 'language' }>, lang: string) => {
+    if (busy) return
+    setItems((xs) => xs.map((x) => (x === it ? { k: 'user', text: lang === 'Hinglish' ? 'Hinglish (Hindi and English mixed)' : lang } : x)))
+    history.current.push({ role: 'user', content: `Language: ${lang}` })
+    void build(it.msg, [lang])
   }
 
   const [listening, setListening] = React.useState(false)
@@ -279,7 +297,7 @@ export default function AssistantHome() {
   const send = async (t: string) => {
     const msg = t.trim()
     if (!msg || busy) return
-    if (!USE_MOCKS && !items.length && (WANTS_AGENT.test(msg) || URLISH.test(msg) || (BUSINESS.test(msg) && !QUESTION.test(msg)))) { setText(''); await build(msg); return } // a business or a website builds the agent at once
+    if (!USE_MOCKS && !items.length && (WANTS_AGENT.test(msg) || URLISH.test(msg) || (BUSINESS.test(msg) && !QUESTION.test(msg)))) { setText(''); await startBuild(msg); return } // a business or a website builds the agent (after one question: the language)
     setText('')
     round.current = 0
     history.current.push({ role: 'user', content: msg.slice(0, 2000) })
@@ -451,6 +469,14 @@ export default function AssistantHome() {
           <div key={i} className="flex gap-3">
             <MeshBadge className="mt-0.5 h-7 w-7 rounded-lg"><Sparkles size={13} /></MeshBadge>
             <div className="min-w-0 flex-1 whitespace-pre-wrap pt-0.5 text-[14.5px] leading-relaxed"><Rich text={it.text} go={nav} /></div>
+          </div>
+        ) : it.k === 'language' ? (
+          <div key={i} className="ml-10 rounded-2xl border bg-surface p-4 animate-fade-in sm:p-5">
+            <div className="text-[14.5px] font-semibold">Which language should your agent speak?</div>
+            <p className="mt-1 text-[13px] text-soft">Hinglish is Hindi and English mixed, the way most people talk. Pick one and I will build it.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {LANGS.map((l) => <button key={l} onClick={() => pickLanguage(it, l)} className={cn('rounded-full border px-3.5 py-1.5 text-[13px] transition', l === 'Hinglish' ? 'border-accent bg-accent-soft/60 font-semibold text-accent hover:bg-accent-soft' : 'bg-surface hover:border-accent/50 hover:bg-accent-soft/40')}>{l === 'Hinglish' ? 'Hinglish (recommended)' : l}</button>)}
+            </div>
           </div>
         ) : it.k === 'building' ? (
           <Building key={i} />

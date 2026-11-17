@@ -54,6 +54,19 @@ HINGLISH = {"hai", "hain", "mera", "meri", "mere", "hum", "humara", "humari", "c
 _SCRIPTS = {"Hindi": ("ऀ", "ॿ"), "Bengali": ("ঀ", "৿"), "Tamil": ("஀", "௿"), "Telugu": ("ఀ", "౿"), "Gujarati": ("઀", "૿"), "Kannada": ("ಀ", "೿"), "Malayalam": ("ഀ", "ൿ"), "Punjabi": ("਀", "੿")}
 
 
+HINGLISH = ["Hindi", "English"]  # Hindi and English mixed: the default when nothing else is asked for
+
+
+def clean_languages(names: list[str] | None) -> list[str]:
+    """The languages the person picked (up to two). \"Hinglish\" means Hindi and English."""
+    out: list[str] = []
+    for x in names or []:
+        for n in (HINGLISH if str(x).strip().lower() == "hinglish" else [str(x).strip().title()]):
+            if n in LANGUAGES and n not in out:
+                out.append(n)
+    return out[:2]
+
+
 def languages_in(text: str, fallback: list[str]) -> list[str]:
     """The languages the person asked for by name, else the one they wrote in (its own script, or Hinglish), else what the website suggests."""
     hits = sorted((m.start(), n) for n in LANGUAGES for m in [re.search(rf"\b{n}\b", text or "", re.I)] if m)  # in the order they were said
@@ -65,7 +78,8 @@ def languages_in(text: str, fallback: list[str]) -> list[str]:
     words = re.findall(r"[a-z]+", (text or "").lower())
     if len(words) >= 3 and sum(1 for w in words if w in HINGLISH) >= max(2, len(words) // 6):
         return ["Hindi", "English"]
-    return (fallback or ["English"])[:2]
+    own = [n for n in (fallback or []) if n in LANGUAGES and n not in ("English", "Hindi")]
+    return own[:2] or HINGLISH  # a website in Tamil or Bengali keeps its language; anything else is Hinglish
 
 
 def split_input(text: str) -> tuple[str, str]:
@@ -86,7 +100,7 @@ class Steps(list):
         self.append({"id": id, "label": label, "status": status, "note": note})
 
 
-async def run(ctx, *, kb, gw, llm, fetch, tools, url: str, text: str, publish: bool = True, usecase: str = "") -> dict:
+async def run(ctx, *, kb, gw, llm, fetch, tools, url: str, text: str, publish: bool = True, usecase: str = "", languages: list[str] | None = None) -> dict:
     """Build the agent. ``url`` and ``text`` come from one message (see split_input). Raises only when the agent itself cannot be made."""
     from api.product import knowledge_router as kr
 
@@ -116,9 +130,12 @@ async def run(ctx, *, kb, gw, llm, fetch, tools, url: str, text: str, publish: b
     picked, wishes = pick_usecase(text, profile)
     usecase = usecase if usecase in BY_KEY else picked
     wishes = "" if usecase in BY_KEY else wishes
-    langs = languages_in(text, profile["languages"])
+    langs = clean_languages(languages) or languages_in(text, profile["languages"])
+    cat, usable = await setup_flow.usable_voices(ctx.session, ctx.user.email)
+    voice = setup_flow.pick_voice(cat, usable, langs)  # chosen first: its gender decides the agent's name and the way it speaks about itself
     notes = "\n\n".join(x for x in (setup_flow.profile_text(profile, pages[0].url if pages else site_url or None), wishes) if x)
-    draft, generated = await agent_writer.write_agent(llm, org, uid, usecase=wishes or usecase, description=notes, industry=profile["industry"] if profile["industry"] != "General" else "", language=langs[0])
+    draft, generated = await agent_writer.write_agent(llm, org, uid, usecase=wishes or usecase, description=notes, industry=profile["industry"] if profile["industry"] != "General" else "", languages=langs,
+                                                      voice_gender=voice.get("gender") if voice else None, voice_name=voice["name"] if voice else None)
     draft["business"] = (profile["business"] or draft["business"])[:60]
 
     # 3. knowledge
@@ -157,15 +174,18 @@ async def run(ctx, *, kb, gw, llm, fetch, tools, url: str, text: str, publish: b
                                          what_you_do=draft["what_you_do"], tone=draft["tone"], script=draft["script"], emoji=draft["emoji"])
     await ctx.session.commit()
     steps.add("agent", f"Created {agent.name}, {draft['role']}")
-    cat, usable = await setup_flow.usable_voices(ctx.session, ctx.user.email)
-    voice = setup_flow.pick_voice(cat, usable, langs)
-    changes: dict = {"style": {"languages": langs}}
+    own_style = {k: v for k, v in {"greeting": draft.get("greeting"), "qa": draft.get("qa"), "vocabulary": draft.get("vocabulary"), **(draft.get("style") or {})}.items() if v not in (None, "", [])}
+    changes: dict = {"style": {"languages": langs, **own_style}, "brain": draft.get("brain") or "balanced"}
     if voice:
         changes["voice_id"] = voice["id"]
     try:
         await agent_svc.update_agent(ctx.session, gw, ctx.workspace, agent, changes, None, ctx.user.email)
         await ctx.session.commit()
-        steps.add("voice", f"Chose the {voice['name']} voice ({voice['language']}) and set it to speak {' and '.join(langs)}" if voice else f"Set it to speak {' and '.join(langs)}")
+        speaks = "Hinglish" if langs == HINGLISH else " and ".join(langs)
+        steps.add("voice", f"Chose the {voice['name']} voice ({voice['language']}) and set it to speak {speaks}" if voice else f"Set it to speak {speaks}")
+        extras = [x for x in (f"{len(draft.get('qa') or [])} ready answers" if draft.get("qa") else "", "an opening line in its own language" if draft.get("greeting") else "", "the words to listen for" if draft.get("vocabulary") else "") if x]
+        if extras:
+            steps.add("polish", "Wrote " + ", ".join(extras))
     except Exception as e:  # noqa: BLE001
         steps.add("voice", "Choose a voice", "fail", getattr(e, "detail", {}).get("message") if isinstance(getattr(e, "detail", None), dict) else "Pick one on the Voice tab")
 

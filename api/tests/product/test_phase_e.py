@@ -139,8 +139,27 @@ async def test_the_assistant_uses_the_platform_key_but_other_features_do_not(mon
     monkeypatch.setattr(sf, "create_llm_service_from_provider", fake_service)
     monkeypatch.setattr(qa, "_run_llm_inference", fake_inference)
     monkeypatch.setenv("PRODUCT_ASSISTANT_OPENAI_KEY", "sk-platform")
+    class Svc:
+        def __init__(self, api_key, settings):
+            seen["gpt6"] = (api_key, settings.model, settings.extra)
+
+    class Settings:
+        def __init__(self, model, extra=None):
+            self.model, self.extra = model, extra
+
+    monkeypatch.setattr(sf, "OpenAILLMService", Svc)
+    monkeypatch.setattr(sf, "OpenAILLMSettings", Settings)
     out = await llm_gateway.CoreLLM().complete(1, 1, "sys", [{"role": "user", "content": "x"}], platform=True)
-    assert out == "hi" and seen["cfg"] == ("openai", "gpt-4.1-mini", "sk-platform")
+    # the platform's helper runs on GPT-6 Luna with a low reasoning effort and no sampling settings (OpenAI only takes them with effort "none")
+    assert out == "hi" and seen["gpt6"] == ("sk-platform", "gpt-6-luna", {"reasoning_effort": "low"}) and "cfg" not in seen
+    await llm_gateway.CoreLLM().complete(1, 1, "sys", [{"role": "user", "content": "x"}], platform=True, reasoning="medium", temperature=0.9)
+    assert seen["gpt6"][2] == {"reasoning_effort": "medium"}
+    await llm_gateway.CoreLLM().complete(1, 1, "sys", [{"role": "user", "content": "x"}], platform=True, reasoning="bogus")
+    assert seen["gpt6"][2] == {"reasoning_effort": "low"}
+    monkeypatch.setenv("PRODUCT_ASSISTANT_MODEL", "gpt-4.1-mini")  # the owner can still pick an older model without a release
+    seen.clear()
+    await llm_gateway.CoreLLM().complete(1, 1, "sys", [{"role": "user", "content": "x"}], platform=True)
+    assert seen["cfg"] == ("openai", "gpt-4.1-mini", "sk-platform") and "gpt6" not in seen
 
 
 class FakePlivoCompliance:

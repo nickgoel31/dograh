@@ -240,12 +240,12 @@ async def get_agent(agent_id: str) -> Any:
 
 
 @mcp.tool(annotations=_WRITE)
-async def setup_agent(text: str, publish: bool = True) -> Any:
+async def setup_agent(text: str, publish: bool = True, languages: list[str] | None = None) -> Any:
     """Build a whole agent from one message with no further questions. Pass the business's website and/or a few words about the business and what the agent should do
-    (and languages if they matter), for example "We run Sunrise Dental in Pune, sunrisedental.in. Answer calls in Hindi and English and book check-ups".
+    (languages: Hinglish is the default; ask the person which language the agent should speak unless they said), for example "We run Sunrise Dental in Pune, sunrisedental.in. Answer calls in Hindi and English and book check-ups".
     It reads the website, writes the agent and its call script, adds knowledge, picks the best available voice, publishes it (unless publish=false) and connects a free number.
     Returns each step's result."""
-    return await _call("POST", "/assistant/setup/auto", json={"text": text, "publish": publish})
+    return await _call("POST", "/assistant/setup/auto", json=_drop_none({"text": text, "publish": publish, "languages": languages}))
 
 
 @mcp.tool(annotations=_WRITE)

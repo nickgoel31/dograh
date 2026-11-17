@@ -50,6 +50,11 @@ async def list_agents(session: AsyncSession, ws: ProductWorkspaceModel) -> list[
     return list(rows)
 
 
+def _greeting(a: ProductAgentModel) -> str:
+    s = a.style or {}
+    return prompts.compile_greeting(business=a.business, custom=s.get("greeting"), languages=s.get("languages"))
+
+
 def _compile(a: ProductAgentModel) -> str:
     text = prompts.compile_prompt(
         business=a.business, what_you_do=a.what_you_do, role=a.role, tone=a.tone, script=a.script or ""
@@ -95,7 +100,7 @@ async def create_agent(
     graph = defn.build_definition(
         name=agent.name,
         prompt=_compile(agent),
-        greeting=prompts.compile_greeting(business=agent.business),
+        greeting=_greeting(agent),
     )
     agent.test_workflow_id = await gw.create_agent(ws.test_org_id, user_id, agent.name, graph)
     session.add(agent)
@@ -149,7 +154,7 @@ async def update_agent(
             graph,
             name=agent.name,
             prompt=_compile(agent),
-            greeting=prompts.compile_greeting(business=agent.business),
+            greeting=_greeting(agent),
         )
     elif new_style is not None and "languages" in new_style:  # a hand-edited prompt keeps its own text; only the language paragraph is brought up to date
         graph = defn.with_prompt(graph, name=agent.name, prompt=style_mod.with_language_rule(defn.get_prompt(graph) or "", agent.style.get("languages")))
@@ -183,7 +188,7 @@ async def duplicate_agent(
     session: AsyncSession, gw: PlatformGateway, ws: ProductWorkspaceModel, user_id: int, src: ProductAgentModel
 ) -> ProductAgentModel:
     graph = await gw.working_definition(ws.test_org_id, src.test_workflow_id) or defn.build_definition(
-        name=src.name, prompt=_compile(src), greeting=prompts.compile_greeting(business=src.business)
+        name=src.name, prompt=_compile(src), greeting=_greeting(src)
     )
     copy = ProductAgentModel(
         public_id=new_public_id("agt"),

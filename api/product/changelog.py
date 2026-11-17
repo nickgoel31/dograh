@@ -2,6 +2,12 @@
 
 # kind: new | improved | fixed
 CHANGELOG: list[dict] = [
+    {"date": "2026-11-17", "title": "Agents that sound like people", "items": [
+        ("new", "Agents are now written much more fully: who the agent is, how it sounds, a detailed step-by-step call, how to handle tricky moments, ready answers to common questions and the words to listen for."),
+        ("new", "Hinglish is the default language, and the assistant asks which language your agent should speak before it builds."),
+        ("new", "Every agent gets its own opening line in its own language, and a name and way of speaking that match its voice."),
+        ("improved", "The assistant, agent writer, website reader and call summaries now run on a newer, sharper AI model."),
+    ]},
     {"date": "2026-11-16", "title": "Chat agents", "items": [
         ("new", "Chat agents: make as many as you need, one for each job (support, sales, bookings, FAQs, orders), each with its own website chat."),
         ("new", "Change a chat agent by telling it what to change, in your own words. Every change can be undone."),

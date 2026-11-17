@@ -81,6 +81,8 @@ def clean(raw: dict | None) -> dict:
             out[k] = bool(v)
         elif k == "vocabulary":
             out[k] = str(v).strip()[:300]
+        elif k == "greeting":
+            out[k] = str(v).strip()[:300]  # the first thing the agent says; blank means the default for its language
         elif k == "model":
             if v and v not in allowed_models():
                 raise ValueError("That AI model isn't available.")
@@ -175,10 +177,15 @@ def language_rule(langs: list[str] | None) -> str:
     first = (
         f"You speak {names[0]}." if len(names) == 1 else f"You speak {names[0]} and {names[1]}. Answer in the language the caller uses, and start in {names[0]} if you cannot tell."
     )
+    mix = (
+        "Speak natural Hinglish, the way educated urban Indians talk: Hindi sentence structure with everyday English words (appointment, booking, time, price, confirm, details, offer, slot). "
+        "Keep it simple and warm, never formal textbook Hindi. "
+        if names[:2] == ["Hindi", "English"] else ""
+    )
     return (
         f"Languages: {first} ALWAYS write every language in its own native script, never in another script: {per}. "
         "For example, never write Hindi in English letters. If you mix two languages in one sentence, write each word in its own language's script "
-        "(English words in Latin letters, inside a sentence written in the other language's script). Do not use emoji."
+        f"(English words in Latin letters, inside a sentence written in the other language's script). {mix}Do not use emoji."
     )
 
 

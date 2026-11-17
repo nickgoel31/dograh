@@ -49,5 +49,10 @@ def compile_prompt(*, business: str, what_you_do: str, role: str, tone: str, scr
     return "\n".join(lines)
 
 
-def compile_greeting(*, business: str) -> str:
+def compile_greeting(*, business: str, custom: str | None = None, languages: list[str] | None = None) -> str:
+    """What the agent says first: the one written for it, else a friendly line in its language (Hindi and English means Hinglish)."""
+    if custom and custom.strip():
+        return custom.strip()
+    if languages and "Hindi" in languages:
+        return f"नमस्ते! {business.strip() or 'हमारे'} में आपका स्वागत है। बताइए, आपकी क्या help की जा सकती है?"
     return f"Hello, thanks for calling {business.strip() or 'us'}! How can I help you today?"

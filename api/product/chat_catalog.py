@@ -11,6 +11,7 @@ import os
 
 # key -> (label, provider, model id, tier, price per AI reply, who it suits)
 _MODELS: list[tuple[str, str, str, str, float, str]] = [
+    ("gpt-6-luna", "Luna", "openai", "fast", 0.30, "OpenAI's newest efficient model. Sharp answers at a low price. Creativity is set by the model."),
     ("gpt-4.1-nano", "Swift", "openai", "fast", 0.25, "Very quick and cheap. Good for simple questions and menus."),
     ("gpt-4.1-mini", "Balanced", "openai", "balanced", 0.60, "The best mix of quality, speed and price. A good default."),
     ("gpt-4o-mini", "Everyday", "openai", "balanced", 0.60, "Friendly and fast. Strong at short, natural replies."),

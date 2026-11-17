@@ -244,8 +244,10 @@ async def test_autopilot_still_makes_the_agent_when_there_is_no_site_number_or_a
 def test_the_language_follows_how_the_person_writes():
     assert setup_auto.languages_in("mera salon hai, customers ke calls lena chahiye", ["English"]) == ["Hindi", "English"]  # Hinglish
     assert setup_auto.languages_in("मेरी दुकान है और ग्राहकों के फोन उठाने हैं", ["English"]) == ["Hindi", "English"]  # Devanagari
-    assert setup_auto.languages_in("I run a dental clinic in Pune", ["English"]) == ["English"]
-    assert setup_auto.languages_in("dentist", ["Hindi", "English"]) == ["Hindi", "English"]  # one word: keep what the website said
+    assert setup_auto.languages_in("I run a dental clinic in Pune", ["English"]) == ["Hindi", "English"]  # nothing asked for: Hinglish
+    assert setup_auto.languages_in("dentist", []) == ["Hindi", "English"]
+    assert setup_auto.languages_in("a Tamil school", ["Tamil"]) == ["Tamil"]  # a website in another Indian language keeps it
+    assert setup_auto.clean_languages(["Hinglish"]) == ["Hindi", "English"] and setup_auto.clean_languages(["tamil", "english", "bogus"]) == ["Tamil", "English"] and setup_auto.clean_languages(None) == []
 
 
 @pytest.mark.asyncio
@@ -266,3 +268,82 @@ def test_the_compiled_prompt_asks_for_a_human_voice_and_real_facts():
     p = prompt.compile_prompt(business="Sunrise Dental", what_you_do="Dental clinic in Pune, open 9 to 7.", role="book appointments", tone="Friendly", script="1. Greet.")
     for needle in ("real person", "acknowledgement", "digit by digit", "Never invent", "Sunrise Dental", "Dental clinic in Pune", "Let me check with the team"):
         assert needle in p, needle
+
+
+# ---------------------------------------------------------------- the agent writer
+class CapturingLLM:
+    def __init__(self, reply):
+        self.reply, self.seen = reply, []
+
+    async def complete(self, org_id, user_id, system, messages, **kw):
+        self.seen.append((system, messages[0]["content"], kw))
+        return self.reply
+
+
+async def test_the_writer_defaults_to_hinglish_knows_the_voice_and_checks_every_choice():
+    from api.product import agent_writer
+
+    reply = json.dumps({"name": "Priya Sharma", "emoji": "🦷", "role": "book dental visits", "tone": "Friendly", "business": "Sunrise Dental", "what_you_do": "A dental clinic in Pune.",
+                        "greeting": "नमस्ते! Sunrise Dental में आपका स्वागत है। बताइए, क्या help चाहिए?", "script": "1. WHO YOU ARE ...",
+                        "qa": [{"q": "Timing kya hai?", "a": "सोमवार से शनिवार, 10 से 6."}, {"q": "", "a": "x"}, "junk"], "vocabulary": "Sunrise Dental, Kothrud",
+                        "brain": "genius", "style": {"pace": 5, "patience": "quick", "steering": "weird", "fillers": True, "max_minutes": 6, "bogus": 1}})
+    llm = CapturingLLM(reply)
+    draft, generated = await agent_writer.write_agent(llm, 1, 1, usecase="dental", description="We run Sunrise Dental in Kothrud.", voice_gender="Female", voice_name="Priya")
+    system, brief, kw = llm.seen[0]
+    assert generated and "Hinglish" in brief and "Devanagari" in brief and "Female" not in brief and "(female)" in brief and "feminine" in brief  # no language chosen: Hinglish; the voice is female
+    assert kw["reasoning"] == "medium" and "WHO YOU ARE" in system and "HANDLING SITUATIONS" in system and "pace: speaking speed" in system  # it is told every setting it can choose
+    assert draft["name"] == "Priya" and draft["greeting"].startswith("नमस्ते") and draft["vocabulary"] == "Sunrise Dental, Kothrud"
+    assert draft["qa"] == [{"q": "Timing kya hai?", "a": "सोमवार से शनिवार, 10 से 6."}]  # blank and junk pairs are dropped
+    assert draft["brain"] == "balanced"  # an invalid choice falls back
+    assert draft["style"]["patience"] == "quick" and draft["style"]["fillers"] is True and draft["style"]["max_minutes"] == 6
+    assert "pace" not in draft["style"] and "steering" not in draft["style"] and "bogus" not in draft["style"]  # each bad value is dropped on its own
+    english = CapturingLLM(reply)
+    await agent_writer.write_agent(english, 1, 1, usecase="dental", description="x", languages=["English"])
+    assert "Indian English" in english.seen[0][1]
+    tamil = CapturingLLM(reply)
+    await agent_writer.write_agent(tamil, 1, 1, usecase="dental", description="x", languages=["Tamil", "English"])
+    assert "Tamil and English" in tamil.seen[0][1] and "own script" in tamil.seen[0][1]
+
+
+async def test_without_the_ai_the_agent_still_greets_in_hinglish_with_the_right_gender():
+    from api.product import agent_writer
+
+    class Down:
+        async def complete(self, *a, **k):
+            raise RuntimeError("no model")
+
+    d, generated = await agent_writer.write_agent(Down(), 1, 1, usecase="dental", description="Sunrise Dental in Pune. Open daily.", voice_gender="Female")
+    assert not generated and d["greeting"] == "नमस्ते! Sunrise Dental in Pune में आपका स्वागत है। बताइए, मैं आपकी क्या help कर सकती हूँ?"
+    assert "सकता हूँ" in agent_writer.default_greeting("Acme", None, "male") and "की जा सकती" in agent_writer.default_greeting("Acme", ["Hindi", "English"], None)
+    assert agent_writer.default_greeting("Acme", ["English"]).startswith("Hello, thanks for calling Acme")
+
+
+@pytest.mark.asyncio
+async def test_the_autopilot_builds_a_detailed_hinglish_agent_and_applies_everything_the_writer_chose(client):
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    client.llm.draft = json.dumps({"name": "Ananya", "emoji": "🦷", "role": "book dental visits", "tone": "Friendly", "business": "Sunrise Dental", "what_you_do": "Dental clinic in Pune, open Mon-Sat 10-6.",
+                                   "greeting": "नमस्ते! Sunrise Dental में आपका स्वागत है। बताइए, मैं आपकी क्या help कर सकती हूँ?", "script": "1. WHO YOU ARE: warm.\n2. HOW YOU SOUND: जी बिल्कुल.",
+                                   "qa": [{"q": "Timing kya hai?", "a": "सोमवार से शनिवार, 10 से 6."}], "vocabulary": "Sunrise Dental, Kothrud", "brain": "smartest",
+                                   "style": {"patience": "patient", "pace": 0.95, "fillers": True, "backchannel": True, "max_minutes": 8}})
+    r = await client.post("/product/assistant/setup/auto", json={"text": "We run Sunrise Dental in Kothrud, Pune. Answer calls and book check-ups.", "publish": False}, headers=h)
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert any(s["id"] == "voice" and "Hinglish" in s["label"] for s in d["steps"]) and any(s["id"] == "polish" and "1 ready answers" in s["label"] for s in d["steps"])
+    a = (await client.get(f"/product/agents/{d['agent']['id']}", headers=h)).json()
+    st = a["style"]
+    assert st["languages"] == ["Hindi", "English"] and st["greeting"].startswith("नमस्ते") and st["vocabulary"] == "Sunrise Dental, Kothrud"
+    assert st["qa"][0]["q"] == "Timing kya hai?" and st["patience"] == "patient" and st["pace"] == 0.95 and st["max_minutes"] == 8 and a["brain"] == "smartest"
+    assert "WHO YOU ARE" in a["script"] and "HOW YOU SOUND" in a["script"]
+
+
+@pytest.mark.asyncio
+async def test_a_chosen_language_wins_and_hinglish_is_the_default(client):
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    eng = (await client.post("/product/assistant/setup/auto", json={"text": "We run a small tailoring shop in Pune and want to take orders.", "languages": ["English"], "publish": False}, headers=h)).json()
+    assert (await client.get(f"/product/agents/{eng['agent']['id']}", headers=h)).json()["style"]["languages"] == ["English"]
+    default = (await client.post("/product/assistant/setup/auto", json={"text": "We run a small tailoring shop in Pune and want to take orders.", "publish": False}, headers=h)).json()
+    assert (await client.get(f"/product/agents/{default['agent']['id']}", headers=h)).json()["style"]["languages"] == ["Hindi", "English"]
+    hinglish = (await client.post("/product/assistant/setup/auto", json={"text": "We run a salon in Pune.", "languages": ["Hinglish"], "publish": False}, headers=h)).json()
+    assert (await client.get(f"/product/agents/{hinglish['agent']['id']}", headers=h)).json()["style"]["languages"] == ["Hindi", "English"]
