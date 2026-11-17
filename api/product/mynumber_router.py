@@ -188,11 +188,19 @@ async def _stats(session: AsyncSession, row: ProductLinkedNumberModel) -> dict:
     return {"calls_tonight": 0, "minutes_tonight": 0, "spend_tonight": 0.0}
 
 
+def _target(r: ProductLinkedNumberModel) -> str | None:
+    """The number the operator should forward to. Shared-pool customers always follow the CURRENT pool number, so changing it
+    never leaves people forwarding to an old one; dedicated-number customers keep the number stored for them."""
+    if r.routing == "dedicated":
+        return r.forward_target or forward_pool_number()
+    return forward_pool_number() or r.forward_target
+
+
 async def _out(session: AsyncSession, r: ProductLinkedNumberModel) -> NumberOut:
     return NumberOut(
         id=r.public_id, e164=r.e164, operator=r.operator, verified=r.verified_at is not None, default_agent_id=r.default_agent_id,
         mode=r.mode, schedule=r.schedule or DEFAULT_SCHEDULE, vip_count=r.vip_count, forwarding_status=r.forwarding_status or {},
-        routing=r.routing, forward_target=r.forward_target or forward_pool_number(), enabled=r.enabled,
+        routing=r.routing, forward_target=_target(r), enabled=r.enabled,
         paused_until=r.paused_until.isoformat() if r.paused_until else None, status=r.status, stats=await _stats(session, r))
 
 
