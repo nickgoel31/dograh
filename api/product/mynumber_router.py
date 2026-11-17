@@ -491,5 +491,43 @@ async def notify_call_summary(session: AsyncSession, user_id: int, caller: str, 
     await send_push(session, user_id, f"AI answered a call from {caller}", summary[:140] or "Tap for the summary", f"/call/{call_id}")
 
 
+async def after_forwarded_call(workflow_run_id: int) -> None:
+    """Runs once a call has been billed. For a call forwarded from a customer's own number: push its summary (linking to the call),
+    and warn the moment the wallet drops under 3 minutes. Never raises, and never sends twice for the same call."""
+    try:
+        from api.db import db_client
+        from api.product.ids import encode_call_id
+        from api.product.payments import CoreWallet
+        from api.services.billing.wallet_service import _duration_from_run
+
+        run = await db_client.get_workflow_run_by_id(workflow_run_id)
+        ctx = (run.initial_context or {}) if run else {}
+        if not run or not ctx.get("forwarded_from_personal_number"):
+            return
+        gathered = dict(run.gathered_context or {})
+        if gathered.get("my_number_notified"):
+            return
+        secs = float(_duration_from_run(run.cost_info, run.usage_info) or 0)
+        async with db_client.async_session() as s:
+            link = await s.scalar(select(ProductLinkedNumberModel).where(
+                ProductLinkedNumberModel.e164 == ctx.get("forwarded_from"), ProductLinkedNumberModel.status == "active"))
+            if link is None:
+                return
+            agent = await s.scalar(select(ProductAgentModel).where(ProductAgentModel.public_id == link.default_agent_id)) if link.default_agent_id else None
+            caller = ctx.get("original_caller") or ctx.get("caller_number") or "an unknown number"
+            if secs >= 1:  # a call nobody spoke on is not worth a notification
+                m, sec = divmod(int(secs), 60)
+                await notify_call_summary(s, link.user_id, caller, f"{agent.name if agent else 'Your AI'} handled it for {m}:{sec:02d}. Tap to see what was said.", encode_call_id(workflow_run_id))
+            workflow = await db_client.get_workflow_by_id(run.workflow_id)
+            if workflow is not None and workflow.organization_id is not None:
+                left = float((await CoreWallet().summary(workflow.organization_id)).get("minutes_available") or 0)
+                if left < 3 <= left + secs / 60:  # just crossed the line: say it once, not on every call after
+                    await notify_low_wallet(s, link.user_id, left)
+        gathered["my_number_notified"] = True
+        await db_client.update_workflow_run(workflow_run_id, gathered_context=gathered)
+    except Exception as e:  # noqa: BLE001 - a notification problem must never touch billing or the call
+        log.warning("my-number post-call notification skipped for run %s: %s", workflow_run_id, e)
+
+
 async def notify_low_wallet(session: AsyncSession, user_id: int, minutes_left: float) -> None:
     await send_push(session, user_id, "Your wallet is almost empty", f"About {int(minutes_left)} minutes left. Callers will hear an unavailable message at zero.", "/more/billing")

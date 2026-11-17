@@ -247,5 +247,13 @@ async def calculate_workflow_run_cost(workflow_run_id: int):
     except Exception as e:
         logger.error(f"Wallet billing failed for workflow run {workflow_run_id}: {e}")
 
+    # My Number: summary push and low-wallet warning for calls forwarded from a customer's own phone. Best effort.
+    try:
+        from api.product.mynumber_router import after_forwarded_call
+
+        await after_forwarded_call(workflow_run_id)
+    except Exception as e:
+        logger.warning(f"My Number post-call notification failed for run {workflow_run_id}: {e}")
+
     if cost_error is not None:
         raise cost_error
