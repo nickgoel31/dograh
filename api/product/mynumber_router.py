@@ -56,9 +56,13 @@ def feature_dedicated_number() -> bool:
     return os.getenv("PRODUCT_FEATURE_DEDICATED_MYNUMBER", "0") == "1"
 
 
+# The company's shared Plivo number that every My Number customer forwards to. Override with PRODUCT_MYNUMBER_POOL_NUMBER.
+DEFAULT_POOL_NUMBER = "+918065493136"
+
+
 def forward_pool_number() -> str | None:
     """The shared Swarvo number operators forward to when a user has no dedicated DID."""
-    return os.getenv("PRODUCT_MYNUMBER_POOL_NUMBER") or None
+    return os.getenv("PRODUCT_MYNUMBER_POOL_NUMBER") or DEFAULT_POOL_NUMBER
 
 
 # ---------------------------------------------------------------- mobile auth ----
@@ -403,10 +407,13 @@ def forwarded_from(headers: dict[str, str]) -> str | None:
     """The number a call was forwarded from, from SIP `Diversion` (RFC 5806) or the first `History-Info` entry (RFC 7044)."""
     lower = {k.lower(): v for k, v in headers.items()}
     for h in ("diversion", "history-info", "p-asserted-identity-diverted"):
-        m = _DIVERSION.search(lower.get(h, ""))
-        if m:
-            n = m.group(1)
-            return n if n.startswith("+") else "+" + n
+        # Providers prefix passed-through SIP headers (for example `sip-h-diversion` or `x-ph-diversion`), so match on the ending too.
+        for key, value in lower.items():
+            if key == h or key.endswith("-" + h) or key.endswith("_" + h):
+                m = _DIVERSION.search(str(value))
+                if m:
+                    n = m.group(1)
+                    return n if n.startswith("+") else "+" + n
     return None
 
 

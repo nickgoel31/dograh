@@ -472,6 +472,7 @@ async def _create_inbound_workflow_run(
     normalized_data,
     telephony_configuration_id: int,
     from_phone_number_id: Optional[int] = None,
+    extra_context: Optional[dict] = None,
 ) -> int:
     """Create workflow run for inbound call and return run ID"""
     call_id = normalized_data.call_id
@@ -490,6 +491,7 @@ async def _create_inbound_workflow_run(
             "direction": "inbound",
             "provider": provider,
             "telephony_configuration_id": telephony_configuration_id,
+            **(extra_context or {}),
         },
         gathered_context={
             "call_id": call_id,
@@ -683,6 +685,46 @@ async def _handle_telephony_websocket(
         )
 
 
+async def _resolve_my_number(normalized_data, webhook_data: dict, headers: dict):
+    """Returns (workflow_id, call context, agent status) when this call was forwarded from a My Number customer, else (None, None, None).
+
+    Also logs which fields the provider sent on every inbound call, so we can see whether the forwarded-from number arrives.
+    Never raises: routing problems fall back to the number's normal workflow.
+    """
+    try:
+        from sqlalchemy import select
+
+        from api.db.product_models import ProductAgentModel
+        from api.product.mynumber_router import forward_pool_number, forwarded_from, resolve_forwarded_call
+
+        # Only calls to the shared My Number forwarding number are looked at; every other call (the web app's numbers) is untouched.
+        def _tail(n: str | None) -> str:
+            return "".join(ch for ch in (n or "") if ch.isdigit())[-10:]
+
+        pool = forward_pool_number()
+        if not pool or _tail(normalized_data.to_number) != _tail(pool):
+            return None, None, None
+
+        merged = {**{str(k): str(v) for k, v in headers.items()}, **{str(k): str(v) for k, v in (webhook_data or {}).items()}}
+        hints = {k: v for k, v in merged.items() if any(w in k.lower() for w in ("diver", "forward", "history", "redirect", "sip-h", "x-ph"))}
+        logger.info(
+            f"/inbound/run my-number probe to={normalized_data.to_number} from={normalized_data.from_number} "
+            f"pool={forward_pool_number()} forwarded_from={forwarded_from(merged)} fields={sorted(webhook_data or {})} hints={hints}"
+        )
+        async with db_client.async_session() as s:
+            routed = await resolve_forwarded_call(s, normalized_data.to_number, normalized_data.from_number, merged)
+            if routed is None or not routed.agent_public_id:
+                return None, None, None
+            agent = await s.scalar(select(ProductAgentModel).where(ProductAgentModel.public_id == routed.agent_public_id))
+            wf = (agent.live_workflow_id if agent else None) or None
+            if not wf:
+                return None, None, None
+            return wf, routed.context, agent.status
+    except Exception as e:  # noqa: BLE001 - never block a call because routing failed
+        logger.warning(f"/inbound/run my-number routing skipped: {e}")
+        return None, None, None
+
+
 @router.post("/inbound/run")
 async def handle_inbound_run(request: Request):
     """Workflow-agnostic inbound dispatcher.
@@ -753,7 +795,12 @@ async def handle_inbound_run(request: Request):
         config, phone_row = match
         telephony_configuration_id = config.id
 
-        if not phone_row.inbound_workflow_id:
+        # My Number: a call forwarded to the shared Swarvo number belongs to whichever personal number it came from.
+        routed_workflow_id, routed_context, routed_status = await _resolve_my_number(
+            normalized_data, webhook_data, headers
+        )
+
+        if not routed_workflow_id and not phone_row.inbound_workflow_id:
             logger.warning(
                 f"/inbound/run: number {normalized_data.to_number} has no "
                 f"inbound_workflow_id assigned"
@@ -762,10 +809,14 @@ async def handle_inbound_run(request: Request):
                 TelephonyError.WORKFLOW_NOT_FOUND
             )
 
-        workflow_id = phone_row.inbound_workflow_id
-        workflow = await db_client.get_workflow(
-            workflow_id, organization_id=config.organization_id
-        )
+        workflow_id = routed_workflow_id or phone_row.inbound_workflow_id
+        if routed_workflow_id:
+            # The customer's agent lives in the customer's own organisation, not the one that owns the shared number.
+            workflow = await db_client.get_workflow_by_id(workflow_id)
+        else:
+            workflow = await db_client.get_workflow(
+                workflow_id, organization_id=config.organization_id
+            )
         if not workflow:
             logger.warning(
                 f"/inbound/run: workflow not found {workflow_id} for org {config.organization_id}"
@@ -778,7 +829,12 @@ async def handle_inbound_run(request: Request):
         # Product gate: opening hours and paused agents. Fails open.
         from api.product.hours import inbound_gate
 
-        closed_msg = await inbound_gate(phone_row)
+        if routed_workflow_id:
+            from api.product.hours import DEFAULT_PAUSED
+
+            closed_msg = DEFAULT_PAUSED if routed_status == "paused" else None
+        else:
+            closed_msg = await inbound_gate(phone_row)
         if closed_msg:
             return provider_class.generate_error_response("UNAVAILABLE", closed_msg)
 
@@ -815,17 +871,18 @@ async def handle_inbound_run(request: Request):
         from api.services.campaign.campaign_call_dispatcher import campaign_call_dispatcher
         from api.services.campaign.rate_limiter import rate_limiter
 
-        org_limit = await campaign_call_dispatcher.get_org_concurrent_limit(config.organization_id)
+        slot_org_id = (workflow.organization_id if routed_workflow_id else None) or config.organization_id
+        org_limit = await campaign_call_dispatcher.get_org_concurrent_limit(slot_org_id)
         wf_limit = await campaign_call_dispatcher.get_workflow_concurrent_limit(workflow_id)
 
         slot_id = None
         slot_id = await rate_limiter.try_acquire_concurrent_slot(
-            config.organization_id, workflow_id, org_limit, wf_limit
+            slot_org_id, workflow_id, org_limit, wf_limit
         )
 
         if not slot_id:
             logger.warning(
-                f"Inbound call rejected due to concurrency limits for org {config.organization_id}, workflow {workflow_id}"
+                f"Inbound call rejected due to concurrency limits for org {slot_org_id}, workflow {workflow_id}"
             )
             return provider_class.generate_validation_error_response(
                 TelephonyError.CONCURRENCY_EXCEEDED
@@ -839,11 +896,12 @@ async def handle_inbound_run(request: Request):
             normalized_data,
             telephony_configuration_id=telephony_configuration_id,
             from_phone_number_id=phone_row.id,
+            extra_context=routed_context,
         )
 
         # Store slot mapping so it's released on completion
         await rate_limiter.store_workflow_slot_mapping(
-            workflow_run_id, config.organization_id, workflow_id, slot_id
+            workflow_run_id, slot_org_id, workflow_id, slot_id
         )
 
         backend_endpoint, wss_backend_endpoint = await get_backend_endpoints()
@@ -861,12 +919,12 @@ async def handle_inbound_run(request: Request):
 
     except ValueError as e:
         if slot_id:
-            await rate_limiter.release_concurrent_slot(config.organization_id, workflow_id, slot_id)
+            await rate_limiter.release_concurrent_slot(slot_org_id, workflow_id, slot_id)
         logger.error(f"/inbound/run request parsing error: {e}")
         return generic_hangup_response()
     except Exception as e:
         if slot_id:
-            await rate_limiter.release_concurrent_slot(config.organization_id, workflow_id, slot_id)
+            await rate_limiter.release_concurrent_slot(slot_org_id, workflow_id, slot_id)
         logger.error(f"/inbound/run unexpected error: {e}")
         return generic_hangup_response()
 
