@@ -501,7 +501,7 @@ async def test_swarvo_voices_are_coming_soon_until_the_owner_turns_them_on(clien
     assert r.status_code == 400 and r.json()["detail"]["code"] == "voice_coming_soon"
     assert (await client.get(f"/product/voices/{rows[0]['id']}/sample", headers=h)).status_code in (404, 502)
     pricing = (await client.get("/product/billing/pricing", headers=h)).json()
-    assert pricing["voice_discounts"] == [{"id": "swarvo", "label": "swarvo-tts 2.5 voices", "percent": 20, "available": False}]
+    assert [d for d in pricing["voice_discounts"] if d["id"] == "swarvo"] == [{"id": "swarvo", "label": "swarvo-tts 2.5 voices", "percent": 20, "available": False}]
 
 
 async def test_the_owner_can_switch_swarvo_on_for_one_workspace_or_everyone(client, monkeypatch):

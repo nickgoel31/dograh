@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Protocol
 
 # Provider names are aliased so customers never see the real vendor.
-PROVIDER_ALIASES = {"sarvam": "Engine A", "inworld": "Studio", "google": "Gemini", "swarvo": "Swarvo", "murf": "Falcon"}
+PROVIDER_ALIASES = {"sarvam": "Engine A", "inworld": "Studio", "google": "Gemini", "swarvo": "Swarvo", "murf": "Falcon", "plivo": "Koyal"}
 
 LANGUAGE_NAMES = {
     "hi": "Hindi", "en": "English", "bn": "Bengali", "gu": "Gujarati", "kn": "Kannada",
@@ -183,6 +183,21 @@ class MurfAdapter:
         return out
 
 
+class PlivoAdapter:
+    """Plivo Koyal voices: English (US, UK, India, Australia), Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati and Kannada. Each voice speaks one language.
+    Like Falcon and Swarvo they only speak, so they run the listen > think > speak pipeline."""
+
+    def list(self) -> list[Voice]:
+        from api.services.configuration.options.plivo import PLIVO_LANGUAGES, PLIVO_VOICES
+
+        out = []
+        for name, vid, gender, code in PLIVO_VOICES:
+            lang = language_name(code) if code.startswith("en-") else PLIVO_LANGUAGES[code]  # English keeps its region: English (India)
+            out.append(Voice(id=voice_id("plivo", "koyal", vid), name=name, language=lang, style="Koyal", provider=PROVIDER_ALIASES["plivo"], gender=gender,
+                             tts={"engine": "plivo", "voice": vid, "lang": code, "description": f"Natural voice for phone calls. Speaks {lang}."}))
+        return out
+
+
 _MURF_GENDERS: dict = {"at": 0.0, "map": {}}
 
 
@@ -207,11 +222,11 @@ def murf_genders() -> dict[str, str]:
     return _MURF_GENDERS["map"]
 
 
-ENGINES = {"inworld": InworldAdapter, "google": GoogleAdapter, "swarvo": SwarvoAdapter, "murf": MurfAdapter, "sarvam": SarvamAdapter}
+ENGINES = {"inworld": InworldAdapter, "google": GoogleAdapter, "swarvo": SwarvoAdapter, "murf": MurfAdapter, "plivo": PlivoAdapter, "sarvam": SarvamAdapter}
 
 
 def _adapters() -> list[VoiceAdapter]:
-    names = [n.strip() for n in os.getenv("PRODUCT_VOICE_ENGINES", "inworld,google,swarvo,murf").split(",") if n.strip() in ENGINES]
+    names = [n.strip() for n in os.getenv("PRODUCT_VOICE_ENGINES", "inworld,google,swarvo,murf,plivo").split(",") if n.strip() in ENGINES]
     return [ENGINES[n]() for n in names]
 
 

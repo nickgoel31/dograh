@@ -42,6 +42,7 @@ from .sarvam import (
 )
 from .speechmatics import SPEECHMATICS_STT_LANGUAGES
 from .murf import MURF_REGIONS, MURF_TTS_LOCALES, MURF_TTS_MODELS, MURF_TTS_VOICES
+from .plivo import PLIVO_TTS_LOCALES, PLIVO_TTS_MODELS, PLIVO_TTS_VOICES
 from .inworld import (
     INWORLD_REALTIME_MODELS,
     INWORLD_REALTIME_VOICES,

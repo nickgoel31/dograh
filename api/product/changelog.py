@@ -2,6 +2,12 @@
 
 # kind: new | improved | fixed
 CHANGELOG: list[dict] = [
+    {"date": "2026-11-19", "title": "Koyal voices", "items": [
+        ("new", "Koyal voices: 33 natural voices for English (US, UK, India, Australia), Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati and Kannada, built for voice agents."),
+        ("new", "15% off every minute spoken with a Koyal voice, for everyone."),
+        ("improved", "Knowledge sources are now read on our own servers, so websites, PDFs, text and Q&A no longer get stuck on Needs a look."),
+        ("improved", "Make a tool is rebuilt: add the information it needs, see exactly what it will send, add headers and test it."),
+    ]},
     {"date": "2026-11-17", "title": "Agents that sound like people", "items": [
         ("new", "Agents are now written much more fully: who the agent is, how it sounds, a detailed step-by-step call, how to handle tricky moments, ready answers to common questions and the words to listen for."),
         ("new", "Hinglish is the default language, and the assistant asks which language your agent should speak before it builds."),

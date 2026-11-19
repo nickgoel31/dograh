@@ -129,10 +129,15 @@ class PriceOut(BaseModel):
 async def _voice_discounts(ctx: Ctx) -> list[dict]:
     from api.product import swarvo_access
 
+    from api.services.billing import voice_discount
+
+    out = []
     pct = swarvo_access.discount_percent()
-    if pct <= 0:
-        return []
-    return [{"id": "swarvo", "label": "swarvo-tts 2.5 voices", "percent": round(pct), "available": await swarvo_access.allowed(ctx.session, ctx.workspace, ctx.user.email)}]
+    if pct > 0:
+        out.append({"id": "swarvo", "label": "swarvo-tts 2.5 voices", "percent": round(pct), "available": await swarvo_access.allowed(ctx.session, ctx.workspace, ctx.user.email)})
+    if voice_discount.koyal_percent() > 0:
+        out.append({"id": "koyal", "label": "Koyal voices", "percent": round(voice_discount.koyal_percent()), "available": True})
+    return out
 
 
 @router.get("/pricing", response_model=PriceOut)

@@ -154,6 +154,39 @@ async def run(email: str) -> int:
             murf = True
     done["murf"] = bool(murf)
 
+    # Plivo Koyal voices (English and Indian languages): speech only, so the same listen > think > speak profile as Falcon, with Plivo speaking.
+    plivo_id, plivo_token = os.getenv("PLIVO_TTS_AUTH_ID", "").strip(), os.getenv("PLIVO_TTS_AUTH_TOKEN", "").strip()
+    profiles = await db_client.list_model_profiles()
+    plivo = next((p for p in profiles if p.slug == "plivo"), None)
+    sw = next((p for p in profiles if p.slug == "swarvo"), None)
+    sw_cfg = (sw.config or {}) if sw else {}
+    if plivo is None and not plivo_token:
+        pass
+    elif not (sw_cfg.get("llm") and sw_cfg.get("stt")):
+        print("The Koyal profile listens and thinks like the swarvo-tts one, so set that up first (it needs the Inworld and AssemblyAI keys).")
+    else:
+        old_tts = dict(((plivo.config or {}).get("tts") or {})) if plivo else {}
+        tts = {"provider": "plivo_tts", "model": "koyal", "voice": "vGOW5Fzss7kzS9IxCObo", "language": "en-IN", **old_tts}
+        if plivo_id:
+            tts["auth_id"] = plivo_id
+        if plivo_token:
+            tts["api_key"] = plivo_token
+        if not tts.get("api_key") or not tts.get("auth_id"):
+            print("The Koyal profile needs both the Plivo Auth ID (PLIVO_TTS_AUTH_ID) and Auth Token (PLIVO_TTS_AUTH_TOKEN).")
+        else:
+            cfg = {"is_realtime": False, "tts": tts, "llm": sw_cfg["llm"], "stt": sw_cfg["stt"]}
+            if sw_cfg.get("embeddings"):
+                cfg["embeddings"] = sw_cfg["embeddings"]
+            cfg = profile_service.normalize_config(cfg)
+            if plivo is None:
+                await db_client.create_model_profile(slug="plivo", display_name="Plivo Koyal", description=None, tier=None, capabilities=[], config=cfg, allowed_org_ids=[], is_active=True)
+                print("Created profile 'plivo' (Plivo Koyal speech, the same listening and thinking as swarvo-tts).")
+            else:
+                await db_client.update_model_profile(plivo.id, config=cfg)
+                print("Updated profile 'plivo'.")
+            plivo = True
+    done["koyal"] = bool(plivo)
+
     # Optional second listening choice for swarvo-tts voices: Deepgram Nova-3 (Hindi and the other Indian languages it supports, very fast).
     dg_key = os.getenv("DEEPGRAM_API_KEY", "").strip()
     dg = next((p for p in await db_client.list_model_profiles() if p.slug == "swarvo_deepgram"), None)

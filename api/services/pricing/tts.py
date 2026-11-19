@@ -28,5 +28,7 @@ TTS_PRICING: Dict[str, Dict[str, CharacterPricingModel]] = {
     },
     # Murf Falcon 2.1: 1 cent per 1,000 characters
     ServiceProviders.MURF_TTS: {"default": CharacterPricingModel(Decimal("0.010") / 1_000)},
+    # Plivo Koyal: about 0.65 INR (0.0065 USD) a minute of speech, roughly 900 characters, so about 0.0072 USD per 1,000 characters (estimate)
+    ServiceProviders.PLIVO_TTS: {"default": CharacterPricingModel(Decimal("0.0072") / 1_000)},
     "default": {"default": CharacterPricingModel(Decimal("0.030") / 1_000)},
 }

@@ -52,6 +52,30 @@ async def make_swarvo(base_url: str | None, api_key: str, voice: str, transport=
     return audio
 
 
+async def make_plivo(auth_id: str, token: str, voice: str, language_code: str, transport=None) -> bytes | None:
+    """WAV bytes of a Plivo Koyal voice, kept on disk after the first time (one plain request, no socket needed)."""
+    from api.services.pipecat.plivo_tts import auth_header, batch_url
+
+    text = sample_text(language_code)
+    path = CACHE / ("pl_" + hashlib.sha256(f"{voice}:{language_code}:{text}".encode()).hexdigest()[:24] + ".wav")
+    if path.exists():
+        return path.read_bytes()
+    try:
+        async with httpx.AsyncClient(timeout=60, transport=transport) as c:
+            r = await c.post(batch_url(auth_id), headers=auth_header(auth_id, token), json={
+                "voice_id": voice, "text": text, "language": language_code, "output_format": {"container": "wav", "encoding": "pcm_s16le", "sample_rate": 24000}})
+        audio = r.content if r.status_code == 200 and len(r.content) > 2000 else None
+    except Exception:  # noqa: BLE001
+        return None
+    if audio:
+        try:
+            CACHE.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(audio)
+        except OSError:
+            pass
+    return audio
+
+
 async def make(api_key: str, voice: str, language_code: str, transport=None) -> bytes | None:
     """MP3 bytes for the voice, from disk if already made. None when the engine can't produce one."""
     path = CACHE / (hashlib.sha256(f"{voice}:{sample_text(language_code)}".encode()).hexdigest()[:24] + ".mp3")

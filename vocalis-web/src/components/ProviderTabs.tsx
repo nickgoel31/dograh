@@ -4,11 +4,12 @@ import { cn } from '@/lib/utils'
 /** Voices come from a few providers. Tabs keep them apart, with a line on what each one is good for. */
 export const PROVIDER_INFO: Record<string, { title: string; blurb: string }> = {
   Falcon: { title: 'Falcon', blurb: 'Natural voices for Indian languages: Hindi, Tamil, Telugu, Marathi, Bengali and more. Fast, built for phone calls.' },
+  Koyal: { title: 'Koyal', blurb: 'Plivo Koyal voices for English and seven Indian languages, built for voice agents. 15% off every minute.' },
   Studio: { title: 'Studio', blurb: 'Expressive voices that listen, think and speak in one step. Best for lively, human conversations.' },
   Gemini: { title: 'Gemini', blurb: 'Google live voices that handle many languages in the same call.' },
   Swarvo: { title: 'Swarvo', blurb: 'Our own voices for natural Hindi on calls, and 20% off every minute. Coming soon.' },
 }
-const ORDER = ['Falcon', 'Studio', 'Gemini', 'Swarvo']
+const ORDER = ['Falcon', 'Koyal', 'Studio', 'Gemini', 'Swarvo']
 export const providerRank = (p?: string) => ORDER.includes(p ?? '') ? ORDER.indexOf(p ?? '') : 99
 const rank = (p: string) => { const i = ORDER.indexOf(p); return i < 0 ? 99 : i }
 

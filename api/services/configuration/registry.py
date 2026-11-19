@@ -53,6 +53,9 @@ from api.services.configuration.options import (
     MURF_TTS_LOCALES,
     MURF_TTS_MODELS,
     MURF_TTS_VOICES,
+    PLIVO_TTS_LOCALES,
+    PLIVO_TTS_MODELS,
+    PLIVO_TTS_VOICES,
     SMALLEST_TTS_LANGUAGES,
     SMALLEST_TTS_MODELS,
     SMALLEST_TTS_PRO_VOICES,
@@ -105,6 +108,7 @@ class ServiceProviders(str, Enum):
     INWORLD_TTS = "inworld_tts"
     SWARVO_TTS = "swarvo_tts"
     MURF_TTS = "murf_tts"
+    PLIVO_TTS = "plivo_tts"
     INWORLD_STT = "inworld_stt"
     INWORLD_LLM = "inworld_llm"
 
@@ -140,6 +144,7 @@ class BaseServiceConfiguration(BaseModel):
         ServiceProviders.INWORLD_TTS,
         ServiceProviders.SWARVO_TTS,
         ServiceProviders.MURF_TTS,
+        ServiceProviders.PLIVO_TTS,
         ServiceProviders.INWORLD_STT,
         ServiceProviders.INWORLD_LLM,
     ]
@@ -313,6 +318,11 @@ MURF_TTS_PROVIDER_MODEL_CONFIG = provider_model_config(
     "Murf Falcon",
     description="Murf Falcon 2.1 streaming text-to-speech with Indian-language voices.",
     provider_docs_url="https://murf.ai/api/docs/text-to-speech-models/falcon-2-1",
+)
+PLIVO_TTS_PROVIDER_MODEL_CONFIG = provider_model_config(
+    "Plivo Koyal",
+    description="Plivo Koyal text-to-speech: English and seven Indian languages, built for voice agents.",
+    provider_docs_url="https://www.plivo.com/docs/models/text-to-speech/overview",
 )
 INWORLD_TTS_PROVIDER_MODEL_CONFIG = provider_model_config(
     "Inworld TTS",
@@ -1439,6 +1449,18 @@ class MurfTTSConfiguration(BaseTTSConfiguration):
 
 
 @register_tts
+class PlivoTTSConfiguration(BaseTTSConfiguration):
+    model_config = PLIVO_TTS_PROVIDER_MODEL_CONFIG
+    provider: Literal[ServiceProviders.PLIVO_TTS] = ServiceProviders.PLIVO_TTS
+    model: str = Field(default="koyal", description="Plivo Koyal.", json_schema_extra={"examples": PLIVO_TTS_MODELS})
+    auth_id: str = Field(default="", description="Plivo Auth ID. The API key above is the Auth Token.")
+    voice: str = Field(default="vGOW5Fzss7kzS9IxCObo", description="Plivo voice id (from the voices list).", json_schema_extra={"examples": PLIVO_TTS_VOICES, "allow_custom_input": True})
+    language: str = Field(default="en-IN", description="Language code the voice speaks, like hi, en-IN or ta.", json_schema_extra={"examples": PLIVO_TTS_LOCALES, "allow_custom_input": True})
+    pace: float = Field(default=1.0, ge=0.7, le=1.2, description="Speaking speed (0.7 to 1.2).")
+    volume: float = Field(default=1.0, ge=0.5, le=2.0, description="Volume (0.5 to 2.0).")
+
+
+@register_tts
 class AzureSpeechTTSConfiguration(BaseTTSConfiguration):
     model_config = AZURE_SPEECH_PROVIDER_MODEL_CONFIG
     provider: Literal[ServiceProviders.AZURE_SPEECH] = ServiceProviders.AZURE_SPEECH
@@ -1496,6 +1518,7 @@ TTSConfig = Annotated[
         AzureSpeechTTSConfiguration,
         SwarvoTTSConfiguration,
         MurfTTSConfiguration,
+        PlivoTTSConfiguration,
     ],
     Field(discriminator="provider"),
 ]

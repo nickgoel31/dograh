@@ -691,6 +691,21 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
+    elif user_config.tts.provider == ServiceProviders.PLIVO_TTS.value:
+        from api.services.pipecat.plivo_tts import PlivoKoyalTTSService
+
+        return PlivoKoyalTTSService(
+            auth_id=getattr(user_config.tts, "auth_id", "") or "",
+            api_key=user_config.tts.api_key,
+            pace=getattr(user_config.tts, "pace", 1.0),
+            volume=getattr(user_config.tts, "volume", 1.0),
+            settings=PlivoKoyalTTSService.Settings(
+                model=user_config.tts.model, voice=getattr(user_config.tts, "voice", None) or "vGOW5Fzss7kzS9IxCObo", language=getattr(user_config.tts, "language", None) or "en-IN"
+            ),
+            text_filters=[xml_function_tag_filter],
+            skip_aggregator_types=["recording_router", "recording"],
+            silence_time_s=1.0,
+        )
     elif user_config.tts.provider == ServiceProviders.SWARVO_TTS.value:
         from api.services.pipecat.swarvo_tts import SwarvoTTSService
 

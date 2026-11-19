@@ -193,6 +193,10 @@ def _supports(v, language: str) -> bool:
     if v.engine == "murf":
         loc = models_config._LANG_LOCALE.get(language)
         return bool(loc and loc in v.tts.get("locales", ()))
+    if v.engine == "plivo":
+        from api.services.configuration.options.plivo import PLIVO_LANGUAGES
+
+        return PLIVO_LANGUAGES.get(v.tts.get("lang", "")) == language
     if v.engine == "swarvo":
         return language == "Hindi"
     if v.engine == "google":
@@ -206,7 +210,7 @@ def pick_voice(catalogue: list, usable, languages: list[str], limit: int = 3) ->
     pool = [v for v in catalogue if usable(v) and _supports(v, lang)]
     if not pool:
         return None
-    order = ("murf", "swarvo", "inworld", "google") if lang in INDIAN else ("inworld", "murf", "google", "swarvo")
+    order = ("murf", "plivo", "swarvo", "inworld", "google") if lang in INDIAN else ("inworld", "murf", "plivo", "google", "swarvo")
     rank = {e: i for i, e in enumerate(order)}
 
     def key(v):
@@ -217,6 +221,7 @@ def pick_voice(catalogue: list, usable, languages: list[str], limit: int = 3) ->
     best = pool[0]
     why = {
         "murf": f"A Falcon voice that speaks {lang} and is built for fast phone conversations.",
+        "plivo": f"A Koyal voice that speaks {lang}, built for voice agents, and 15% off every minute.",
         "swarvo": "A Swarvo voice, tuned for natural Hindi on calls.",
         "inworld": f"A natural {lang} voice with expressive delivery.",
         "google": "A Gemini voice that handles many languages in one call.",

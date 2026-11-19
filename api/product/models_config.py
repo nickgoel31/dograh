@@ -45,7 +45,7 @@ def inworld_model(brain: str) -> str:
 
 
 # Voices that only speak: the agent listens (AssemblyAI or Deepgram) and thinks (Inworld router) as separate services.
-SEPARATE_ENGINES = ("swarvo", "murf")
+SEPARATE_ENGINES = ("swarvo", "murf", "plivo")
 
 _LANG_LOCALE = {"Hindi": "hi-IN", "English": "en-IN", "Marathi": "mr-IN", "Gujarati": "gu-IN", "Tamil": "ta-IN", "Telugu": "te-IN", "Kannada": "kn-IN",
                 "Malayalam": "ml-IN", "Bengali": "bn-IN", "Punjabi": "pa-IN", "Odia": "or-IN"}
@@ -70,7 +70,8 @@ async def engine_ready(session: AsyncSession, engine: str) -> bool:
     prof = await engine_profile(session, engine)
     if engine in SEPARATE_ENGINES:  # a normal listen > think > speak profile: needs the speech key, a thinking model and a listening model
         c = (prof.config or {}) if prof else {}
-        return bool((c.get("tts") or {}).get("api_key") and c.get("llm") and c.get("stt"))
+        tts = c.get("tts") or {}
+        return bool(tts.get("api_key") and (tts.get("auth_id") or engine != "plivo") and c.get("llm") and c.get("stt"))
     rt = (prof.config or {}).get("realtime") if prof else None
     return bool(rt and rt.get("api_key"))
 
@@ -139,6 +140,8 @@ async def build_overrides(session: AsyncSession, *, brain: str, voice_id: str | 
         tts["voice"] = voice.tts["voice"]
         if voice.engine == "murf":
             tts["language"] = murf_locale(voice.tts["locales"], (style or {}).get("languages"))
+        elif voice.engine == "plivo":
+            tts["language"] = voice.tts["lang"]  # a Koyal voice speaks one language
         else:
             tts["language"] = voice.tts.get("lang", tts.get("language", "hi"))
             tts.pop("speed", None)  # no speed is ever sent to swarvo-tts: any change from 1.0 is signal-processed by the service (echo and slower)
