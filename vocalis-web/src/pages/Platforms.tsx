@@ -2,7 +2,8 @@ import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, BookOpen, CheckCircle2, Code2, Coins, Key, MessageCircle, Mic, Sparkles, Terminal } from '@/components/icons'
-import { Badge, Button, Card, Chip, Tab, TabPanel, Tabs, TabsList } from '@/components/ui'
+import { Badge, Button, Card, Chip, Select, Slider, Tab, TabPanel, Tabs, TabsList, Textarea } from '@/components/ui'
+import { toast } from 'sonner'
 import { CodeBlock, PageHeader } from '@/components/shared'
 import { MeshBadge } from '@/layout/Shell'
 import { http } from '@/lib/api/http'
@@ -49,7 +50,8 @@ export function ApiOverviewPage() {
   }
   const cards = [
     { to: '/developers', icon: Key, t: 'API keys and webhooks', d: 'Create keys, set up webhooks and see recent requests.' },
-    { to: '/swarvo-api/docs', icon: BookOpen, t: 'Documentation', d: 'Every endpoint with an example you can copy.' },
+    { to: 'https://docs.swarvoai.com', icon: BookOpen, t: 'Documentation', d: 'Every endpoint with an example you can copy.' },
+    { to: '/swarvo-api/playground', icon: Mic, t: 'Playground', d: 'Type text and hear it in Swarvo TTS 3.' },
     { to: '/swarvo-api/models', icon: Sparkles, t: 'Models', d: 'Swarvo TTS 3, our own text to speech model.' },
     { to: '/swarvo-api/pricing', icon: Coins, t: 'Pricing', d: 'Prices for voice agents and for Swarvo TTS 3.' },
   ]
@@ -58,7 +60,7 @@ export function ApiOverviewPage() {
       <PageHeader title="Swarvo API" subtitle="Connect your own apps to your agents and calls." actions={<Link to="/developers"><Button variant="primary"><Key size={15} />Create an API key</Button></Link>} />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((c) => (
-          <Link key={c.to} to={c.to} className="group rounded-2xl border bg-surface p-5 transition hover:bg-muted/40">
+          <Link key={c.to} to={c.to} {...(c.to.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})} className="group rounded-2xl border bg-surface p-5 transition hover:bg-muted/40">
             <c.icon size={18} className="text-soft group-hover:text-ink" />
             <div className="mt-4 flex items-center gap-1.5 text-[14px] font-semibold">{c.t}<ArrowRight size={13} className="text-soft opacity-0 transition group-hover:opacity-100" /></div>
             <p className="mt-1 text-[13px] leading-snug text-soft">{c.d}</p>
@@ -120,6 +122,65 @@ export function ApiDocsPage() {
   )
 }
 
+/* ---------- Swarvo API: TTS playground ---------- */
+type TtsInfo = { available: boolean; voices: { name: string; gender: string | null }[]; languages: { code: string; name: string }[]; max_chars: number }
+const SAMPLES: Record<string, string> = {
+  hi: 'नमस्ते! मैं आपकी कैसे मदद कर सकती हूँ? बताइए, आपको किस चीज़ की जानकारी चाहिए?',
+  en: 'Hello! Thanks for calling. How can I help you today?',
+}
+export function ApiPlaygroundPage() {
+  const info = useQuery({ queryKey: ['tts-info'], queryFn: () => http<TtsInfo>('/swarvo-api/tts/voices') })
+  const [text, setText] = React.useState(SAMPLES.hi)
+  const [voice, setVoice] = React.useState('')
+  const [lang, setLang] = React.useState('hi')
+  const [mode, setMode] = React.useState<'chat' | 'read'>('chat')
+  const [speed, setSpeed] = React.useState(100)
+  const [busy, setBusy] = React.useState(false)
+  const [url, setUrl] = React.useState<string | null>(null)
+  const audio = React.useRef<HTMLAudioElement>(null)
+  const d = info.data
+  const chosen = voice || d?.voices[0]?.name || ''
+  React.useEffect(() => () => { if (url) URL.revokeObjectURL(url) }, [url])
+  const run = async () => {
+    if (!text.trim() || busy) return
+    setBusy(true)
+    try {
+      const blob = await http<Blob>('/swarvo-api/tts', { method: 'POST', json: { text, voice: chosen, lang, mode, speed: speed / 100 }, blob: true, timeoutMs: 120000 })
+      const u = URL.createObjectURL(blob)
+      setUrl(u)
+      setTimeout(() => audio.current?.play().catch(() => {}), 50)
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'We could not make that audio.') } finally { setBusy(false) }
+  }
+  const code = `curl -X POST ${base()}/swarvo-api/tts \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify({ text: text.slice(0, 60) + (text.length > 60 ? '...' : ''), voice: chosen, lang, mode, speed: speed / 100 })}' \\\n  --output speech.wav`
+  return (
+    <>
+      <PageHeader title="Playground" subtitle="Type something and hear it in Swarvo TTS 3." />
+      {d && !d.available && <Card className="mb-4 border-accent/30 bg-accent-soft/40 p-4 text-sm">Swarvo TTS 3 is coming soon for customers. <Link to="/help" className="font-medium text-accent underline underline-offset-2">Ask for early access</Link>.</Card>}
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <Card className="p-5">
+          <div className="mb-2 flex items-center justify-between"><label className="text-[13px] font-medium" htmlFor="tts-text">Text</label><span className="num text-xs text-soft">{text.length} / {d?.max_chars ?? 500}</span></div>
+          <Textarea id="tts-text" className="min-h-[170px]" maxLength={d?.max_chars ?? 500} value={text} onChange={(e) => setText(e.target.value)} />
+          <div className="mt-3 flex flex-wrap gap-2">{d?.languages.map((l) => <Chip key={l.code} active={lang === l.code} onClick={() => { setLang(l.code); setText(SAMPLES[l.code] ?? text) }}>Try {l.name}</Chip>)}</div>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Button variant="primary" onClick={run} disabled={busy || !text.trim() || !d?.available}>{busy ? 'Making audio…' : 'Generate speech'}</Button>
+            {url && <><audio ref={audio} src={url} controls className="h-10 max-w-full" /><a href={url} download="swarvo-tts-3.wav" className="text-[13px] font-medium text-accent underline underline-offset-2">Download</a></>}
+          </div>
+        </Card>
+        <Card className="space-y-4 p-5">
+          <div><label className="mb-1.5 block text-[13px] font-medium" htmlFor="tts-voice">Voice</label>
+            <Select id="tts-voice" value={chosen} onChange={(e) => setVoice(e.target.value)}>{d?.voices.map((v) => <option key={v.name} value={v.name}>{v.name}{v.gender ? ` (${v.gender})` : ''}</option>)}</Select></div>
+          <div><div className="mb-1.5 text-[13px] font-medium">Style</div>
+            <div className="flex gap-2">{([['chat', 'Chat'], ['read', 'Read']] as const).map(([k, l]) => <Chip key={k} active={mode === k} onClick={() => setMode(k)}>{l}</Chip>)}</div>
+            <p className="mt-1.5 text-xs text-soft">{mode === 'chat' ? 'Natural pauses and little fillers, like a person talking.' : 'Clean, even reading of the text.'}</p></div>
+          <div><div className="mb-1.5 flex justify-between text-[13px] font-medium"><span>Speed</span><span className="num text-soft">{(speed / 100).toFixed(2)}x</span></div>
+            <Slider value={speed} onChange={setSpeed} min={70} max={150} step={5} label="Speed" /></div>
+        </Card>
+      </div>
+      <Card className="mt-4 p-5"><h3 className="text-[15px] font-semibold">Use it in your own code</h3><p className="mt-1 text-[13px] text-soft">The same request, ready to copy. Use an API key from <Link to="/developers" className="font-medium text-accent underline underline-offset-2">API keys</Link>.</p><div className="mt-3"><CodeBlock code={code} /></div></Card>
+    </>
+  )
+}
+
 /* ---------- Swarvo API: models ---------- */
 export function ApiModelsPage() {
   const facts = [['Type', 'Text to speech'], ['Status', 'Coming soon'], ['Price', `From ${fmt(TTS_STEPS[0].rate)} down to ${fmt(TTS_STEPS[TTS_STEPS.length - 1].rate)} a minute`]]
@@ -138,7 +199,8 @@ export function ApiModelsPage() {
         </div>
         <dl className="relative mt-6 grid gap-4 sm:grid-cols-3">{facts.map(([k, v]) => <div key={k} className="rounded-xl border bg-surface/70 p-4"><dt className="text-xs text-soft">{k}</dt><dd className="mt-1 text-[14px] font-medium">{v}</dd></div>)}</dl>
         <div className="relative mt-6 flex flex-wrap gap-2">
-          <Link to="/swarvo-api/pricing"><Button variant="primary">See pricing</Button></Link>
+          <Link to="/swarvo-api/playground"><Button variant="primary">Open the playground</Button></Link>
+          <Link to="/swarvo-api/pricing"><Button>See pricing</Button></Link>
           <Link to="/help"><Button>Ask for early access</Button></Link>
         </div>
       </Card>

@@ -10,7 +10,7 @@ export class ApiError extends Error {
 const FALLBACK = 'Something went wrong on our side. Please try again in a moment.'
 
 /** Every request carries the session cookie plus the active workspace and Test/Live mode. */
-export async function http<T>(path: string, init: RequestInit & { json?: unknown; timeoutMs?: number } = {}): Promise<T> {
+export async function http<T>(path: string, init: RequestInit & { json?: unknown; timeoutMs?: number; blob?: boolean } = {}): Promise<T> {
   const { workspaceId, mode } = useUI.getState()
   const headers = new Headers(init.headers)
   if (!headers.has('X-Environment')) headers.set('X-Environment', mode)
@@ -44,6 +44,7 @@ export async function http<T>(path: string, init: RequestInit & { json?: unknown
     throw new ApiError(res.status, code, message)
   }
   if (res.status === 204 || res.status === 205) return undefined as T // "done, nothing to send back" (deleting something)
+  if (init.blob) return (await res.blob()) as T // audio and other files
   const text = await res.text()
   return (text ? JSON.parse(text) : undefined) as T
 }

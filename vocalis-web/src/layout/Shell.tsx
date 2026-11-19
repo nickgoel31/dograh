@@ -37,7 +37,7 @@ const build = [{ to: '/developers', label: 'Developers', icon: Code2 }, { to: '/
 const all = Object.fromEntries([...main, ...build].map((n) => [n.to, n])) as Record<string, (typeof main)[number]>
 const extra = [
   { to: '/chat', label: 'Overview', icon: MessageCircle }, { to: '/chat/agents', label: 'Agents', icon: Bot }, { to: '/chat/inbox', label: 'Inbox', icon: Mail }, { to: '/chat/channels', label: 'Channels', icon: Globe }, { to: '/chat/pricing', label: 'Pricing', icon: Coins }, { to: '/swarvo-api', label: 'Overview', icon: Code2 },
-  { to: '/swarvo-api/docs', label: 'Documentation', icon: BookOpen }, { to: '/swarvo-api/models', label: 'Models', icon: Sparkles }, { to: '/swarvo-api/pricing', label: 'Pricing', icon: Coins },
+  { to: 'https://docs.swarvoai.com', label: 'Documentation', icon: BookOpen }, { to: '/swarvo-api/playground', label: 'Playground', icon: Mic2 }, { to: '/swarvo-api/models', label: 'Models', icon: Sparkles }, { to: '/swarvo-api/pricing', label: 'Pricing', icon: Coins },
   { to: '/developers', label: 'API keys & webhooks', icon: Key },
 ]
 for (const n of extra) if (!all[n.to] || n.to === '/developers') all[n.to] = n.to === '/developers' ? all[n.to] : n
@@ -54,7 +54,7 @@ const GROUPS: Record<'voice' | 'chat' | 'api', Group[]> = {
   chat: CHAT_LIVE ? [{ items: pick('/chat') }, { title: 'Build', items: pick('/chat/agents', '/knowledge') }, { title: 'Conversations', items: pick('/chat/inbox') }, { title: 'Set up', items: pick('/chat/channels') }, { title: 'Account', items: pick('/chat/pricing', '/billing') }] : [{ items: [{ to: '/chat', label: 'Chat Agents', icon: MessageCircle }] }],
   api: [
     { items: pick('/swarvo-api') },
-    { title: 'Build', items: [{ to: '/developers', label: 'API keys & webhooks', icon: Key }, ...pick('/swarvo-api/docs')] },
+    { title: 'Build', items: [{ to: '/developers', label: 'API keys & webhooks', icon: Key }, ...pick('https://docs.swarvoai.com', '/swarvo-api/playground')] },
     { title: 'Platform', items: pick('/swarvo-api/models', '/swarvo-api/pricing') },
     { title: 'Account', items: pick('/billing') },
   ],
@@ -105,6 +105,14 @@ function hexToHsl(hex: string): string | null {
 }
 
 function NavItem({ to, label, icon: Icon, collapsed, onClick }: (typeof main)[number] & { collapsed: boolean; onClick?: () => void }) {
+  if (to.startsWith('http')) { // outside the app (the docs site): opens in a new tab
+    return (
+      <a href={to} target="_blank" rel="noopener noreferrer" onClick={onClick} title={collapsed ? label : undefined}
+        className="flex items-center gap-3 rounded-[10px] px-3 py-2 text-[13px] font-medium text-soft transition duration-150 hover:bg-muted/60 hover:text-ink">
+        <Icon size={16} strokeWidth={1.75} className="shrink-0" />{!collapsed && label}
+      </a>
+    )
+  }
   return (
     <NavLink to={to} end={to === '/'} onClick={onClick} title={collapsed ? label : undefined}
       className={({ isActive }) => cn('flex items-center gap-3 rounded-[10px] px-3 py-2 text-[13px] font-medium transition duration-150', isActive ? 'bg-[hsl(228_22%_93%)] text-ink dark:bg-[#262628] dark:text-white' : 'text-soft hover:bg-muted/60 hover:text-ink')}>
@@ -271,7 +279,6 @@ function Topbar({ openNav }: { openNav: () => void }) {
           <MenuSep />
           <MenuItem onSelect={() => set({ theme: theme === 'dark' ? 'light' : 'dark' })}>{theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}{theme === 'dark' ? 'Light mode' : 'Dark mode'}</MenuItem>
           <MenuItem onSelect={() => nav('/settings')}><Settings size={15} />Settings</MenuItem>
-          {!USE_MOCKS && CLASSIC_URL && <MenuItem onSelect={switchToClassic}>Switch to classic UI</MenuItem>}
           <MenuItem onSelect={signOut}>Sign out</MenuItem>
         </MenuContent>
       </Menu>

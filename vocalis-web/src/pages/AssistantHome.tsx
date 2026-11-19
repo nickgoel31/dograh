@@ -355,10 +355,6 @@ export default function AssistantHome() {
         className="block max-h-40 w-full resize-none bg-transparent px-1.5 py-1 text-[15px] outline-none placeholder:text-soft/70" aria-label="Message" />
       <div className="mt-2 flex items-center justify-between">
         <span className="flex items-center gap-1.5 px-1.5 text-xs text-soft">
-          {SpeechRec && <>
-            <button type="button" onClick={listen} aria-label={listening ? 'Stop listening' : 'Speak instead of typing'} className={cn('flex h-8 w-8 items-center justify-center rounded-full border transition', listening ? 'animate-pulse border-bad/40 bg-bad/10 text-bad' : 'bg-surface text-soft hover:bg-muted hover:text-ink')}><Mic size={15} /></button>
-            <button type="button" onClick={() => setVlang((l) => (l === 'en-IN' ? 'hi-IN' : 'en-IN'))} aria-label="Speaking language" className="rounded-full border bg-surface px-2 py-1 text-[11px] font-medium hover:bg-muted">{vlang === 'en-IN' ? 'English' : '\u0939\u093F\u0902\u0926\u0940'}</button>
-          </>}
           {listening ? 'Listening…' : <><Check size={12} />Builds instantly, no questions</>}
         </span>
         <button onClick={() => void send(text)} disabled={!text.trim() || busy} aria-label="Send"

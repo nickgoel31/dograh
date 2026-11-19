@@ -46,6 +46,7 @@ from api.product.notifications import router as product_notifications_router
 from api.product.tools_router import router as product_tools_router
 from api.product.numbers_router import router as product_numbers_router
 from api.product.voices_router import router as product_voices_router
+from api.product.swarvo_tts_router import router as product_swarvo_tts_router
 from api.product.router import router as product_router
 from api.services.integrations import all_routers
 
@@ -86,6 +87,7 @@ router.include_router(reseller_router)
 router.include_router(product_router)
 router.include_router(product_agents_router)
 router.include_router(product_voices_router)
+router.include_router(product_swarvo_tts_router)
 router.include_router(product_calls_router)
 router.include_router(product_conversations_router)
 router.include_router(product_numbers_router)

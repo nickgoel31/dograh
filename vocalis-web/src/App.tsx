@@ -12,7 +12,7 @@ import { useData } from '@/store/data'
 import { agentsApi, toAgent } from '@/lib/api/agents'
 import Shell from '@/layout/Shell'
 import Home from '@/pages/Home'
-import { ApiDocsPage, ApiModelsPage, ApiOverviewPage, ApiPricingPage, ChatAgentsPage } from '@/pages/Platforms'
+import { ApiDocsPage, ApiModelsPage, ApiOverviewPage, ApiPlaygroundPage, ApiPricingPage, ChatAgentsPage } from '@/pages/Platforms'
 import { CHAT_LIVE } from '@/config/features'
 import { ChatChannelsPage, ChatInboxPage, ChatOverviewPage } from '@/pages/Chat'
 import { ChatAgentEditorPage, ChatAgentsListPage, ChatPricingPage } from '@/pages/ChatAgents'
@@ -142,6 +142,7 @@ export default function App() {
           <Route path="chat/channels" element={CHAT_LIVE ? <ChatLock><ChatChannelsPage /></ChatLock> : <ChatAgentsPage />} />
           <Route path="swarvo-api" element={<ApiOverviewPage />} />
           <Route path="swarvo-api/docs" element={<ApiDocsPage />} />
+          <Route path="swarvo-api/playground" element={<ApiPlaygroundPage />} />
           <Route path="swarvo-api/models" element={<ApiModelsPage />} />
           <Route path="swarvo-api/pricing" element={<ApiPricingPage />} />
           <Route path="developers" element={USE_MOCKS ? <Developers /> : <DevelopersReal />} />
