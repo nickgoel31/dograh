@@ -21,10 +21,12 @@ read -r $S -p "AssemblyAI API key, used to listen for swarvo-tts voices (press E
 read -r $S -p "Deepgram API key, for the second listening choice (press Enter to skip / keep the current one): " DG_KEY; echo
 read -r $S -p "Murf API key, for the Falcon 2.1 Indian voices (press Enter to skip / keep the current one): " MURF_KEY; echo
 read -r -p "Murf region (in, global, us-east, ...; press Enter to keep the current one, default in): " MURF_REGION
-echo "Got ${#MURF_KEY} characters for the Murf key."
+read -r -p "Plivo Auth ID, for the Koyal voices (press Enter to skip / keep the current one): " PLIVO_ID
+read -r $S -p "Plivo Auth Token, for the Koyal voices (press Enter to skip / keep the current one): " PLIVO_TOKEN; echo
+echo "Got ${#MURF_KEY} characters for the Murf key, ${#PLIVO_ID} for the Plivo Auth ID and ${#PLIVO_TOKEN} for the Plivo Auth Token."
 echo "Got ${#INWORLD_KEY} characters for the Inworld key, ${#GOOGLE_KEY} for the Google key, ${#SWARVO_KEY} for the swarvo-tts key, ${#AAI_KEY} for the AssemblyAI key and ${#DG_KEY} for the Deepgram key."
 
-sudo docker exec -e INWORLD_API_KEY="$INWORLD_KEY" -e GOOGLE_API_KEY="$GOOGLE_KEY" -e SWARVO_TTS_KEY="$SWARVO_KEY" -e ASSEMBLYAI_API_KEY="$AAI_KEY" -e DEEPGRAM_API_KEY="$DG_KEY" -e MURF_API_KEY="$MURF_KEY" -e MURF_REGION="$MURF_REGION" -e SWARVO_TTS_BASE_URL="$SWARVO_URL" dograh-api-1 python -m api.product.make_profile --email "$EMAIL"
+sudo docker exec -e INWORLD_API_KEY="$INWORLD_KEY" -e GOOGLE_API_KEY="$GOOGLE_KEY" -e SWARVO_TTS_KEY="$SWARVO_KEY" -e ASSEMBLYAI_API_KEY="$AAI_KEY" -e DEEPGRAM_API_KEY="$DG_KEY" -e MURF_API_KEY="$MURF_KEY" -e MURF_REGION="$MURF_REGION" -e PLIVO_TTS_AUTH_ID="$PLIVO_ID" -e PLIVO_TTS_AUTH_TOKEN="$PLIVO_TOKEN" -e SWARVO_TTS_BASE_URL="$SWARVO_URL" dograh-api-1 python -m api.product.make_profile --email "$EMAIL"
 
 set_env() { if grep -q "^$1=" .env; then sed -i "s|^$1=.*|$1=$2|" .env; else echo "$1=$2" >> .env; fi; }
 [ -z "$SWARVO_URL" ] || set_env SWARVO_TTS_BASE_URL "$SWARVO_URL"
