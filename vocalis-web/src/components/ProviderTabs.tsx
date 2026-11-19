@@ -9,7 +9,7 @@ export const PROVIDER_INFO: Record<string, { title: string; blurb: string }> = {
   Gemini: { title: 'Gemini', blurb: 'Google live voices that handle many languages in the same call.' },
   Swarvo: { title: 'Swarvo', blurb: 'Our own voices for natural Hindi on calls, and 20% off every minute. Coming soon.' },
 }
-const ORDER = ['Falcon', 'Koyal', 'Studio', 'Gemini', 'Swarvo']
+const ORDER = ['Studio', 'Falcon', 'Koyal', 'Gemini', 'Swarvo']
 export const providerRank = (p?: string) => ORDER.includes(p ?? '') ? ORDER.indexOf(p ?? '') : 99
 const rank = (p: string) => { const i = ORDER.indexOf(p); return i < 0 ? 99 : i }
 

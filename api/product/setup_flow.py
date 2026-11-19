@@ -210,7 +210,8 @@ def pick_voice(catalogue: list, usable, languages: list[str], limit: int = 3) ->
     pool = [v for v in catalogue if usable(v) and _supports(v, lang)]
     if not pool:
         return None
-    order = ("murf", "plivo", "swarvo", "inworld", "google") if lang in INDIAN else ("inworld", "murf", "plivo", "google", "swarvo")
+    # Studio (Inworld) voices come first in every language that has one; the others follow, and the many-language Gemini voices are the last resort.
+    order = ("inworld", "murf", "plivo", "swarvo", "google") if lang in INDIAN else ("inworld", "murf", "plivo", "google", "swarvo")
     rank = {e: i for i, e in enumerate(order)}
 
     def key(v):
