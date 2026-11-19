@@ -21,6 +21,7 @@ from loguru import logger
 from api.db import db_client
 from api.db.models import KnowledgeBaseChunkModel
 from api.services.configuration.registry import ServiceProviders
+from api.services import knowledge_local
 from api.services.gen_ai import AzureOpenAIEmbeddingService, OpenAIEmbeddingService
 from api.services.mps_service_key_client import mps_service_key_client
 from api.services.storage import storage_fs
@@ -111,15 +112,26 @@ async def _ingest_local_file(
         )
 
     logger.info(f"Delegating document processing to MPS (mode={retrieval_mode})")
-    mps_response = await mps_service_key_client.process_document(
-        file_path=temp_file_path,
-        filename=filename,
-        content_type=mime_type or "application/octet-stream",
-        retrieval_mode=retrieval_mode,
-        max_tokens=max_tokens,
-        organization_id=organization_id,
-        created_by=created_by_provider_id,
-    )
+    try:
+        mps_response = await mps_service_key_client.process_document(
+            file_path=temp_file_path,
+            filename=filename,
+            content_type=mime_type or "application/octet-stream",
+            retrieval_mode=retrieval_mode,
+            max_tokens=max_tokens,
+            organization_id=organization_id,
+            created_by=created_by_provider_id,
+        )
+    except Exception as e:  # noqa: BLE001
+        # No document service for this account (no service key, or it is down): read it here instead.
+        logger.warning(f"Document {document_id}: MPS unavailable ({e}); reading it locally")
+        try:
+            mps_response = knowledge_local.process(
+                temp_file_path, filename, mime_type or "application/octet-stream", retrieval_mode, max_tokens
+            )
+        except Exception as local_error:  # noqa: BLE001
+            await fail(f"We couldn't read this file: {local_error}")
+            return "failed"
     docling_metadata = mps_response.get("docling_metadata", {})
 
     if retrieval_mode == "full_document":

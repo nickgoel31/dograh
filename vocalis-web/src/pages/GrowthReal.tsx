@@ -13,6 +13,7 @@ import { CalendarCard } from '@/pages/CalendarCard'
 import { ConnectorGrid } from '@/components/ConnectorCards'
 import { useData } from '@/store/data'
 import { useUI } from '@/store/ui'
+import { cn } from '@/lib/utils'
 import { useMe } from '@/lib/useMe'
 import { money } from '@/lib/utils'
 import type { components } from '@/lib/api/schema'
@@ -120,13 +121,7 @@ export function ToolsReal() {
   const qc = useQueryClient()
   const tools = useQuery({ queryKey: ['tools'], queryFn: () => http<S['ToolOut'][]>('/tools') })
   const [open, setOpen] = React.useState(false)
-  const [f, setF] = React.useState({ name: '', description: '', url: '', method: 'POST', auth: '', params: '' })
-  const [res, setRes] = React.useState<string | null>(null)
   const refresh = () => qc.invalidateQueries({ queryKey: ['tools'] })
-  const params = f.params.split(',').map((p) => p.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_')).filter(Boolean).map((name) => ({ name, type: 'string', description: `The ${name.replace(/_/g, ' ')}`, required: true }))
-  const headers = f.auth.trim() ? { Authorization: f.auth.trim() } : {}
-  const save = async () => { try { await http('/tools', { method: 'POST', json: { name: f.name, description: f.description, url: f.url, method: f.method, headers, parameters: params } }); toast.success('Tool saved!'); setOpen(false); setF({ name: '', description: '', url: '', method: 'POST', auth: '', params: '' }); refresh() } catch (e) { say(e) } }
-  const test = async () => { try { const r = await http<{ ok: boolean; status: number; ms: number; response: string }>('/tools/test', { method: 'POST', json: { url: f.url, method: f.method, headers, sample: Object.fromEntries(params.map((p) => [p.name, 'test'])) } }); setRes(`${r.ok ? '✓' : '✗'} ${r.status} in ${r.ms} ms. ${r.response.slice(0, 200)}`) } catch (e) { setRes(e instanceof Error ? e.message : 'Test failed') } }
   return (
     <>
       <PageHeader title="Tools & Integrations" subtitle="Connect the apps your agent should work with." actions={<Button variant="primary" onClick={() => setOpen(true)}><Plus size={16} />Make a tool</Button>} />
@@ -137,18 +132,102 @@ export function ToolsReal() {
       {tools.data && tools.data.length === 0 ? <p className="text-sm text-soft">You haven’t made any tools yet.</p> : (
         <div className="space-y-2">{tools.data?.map((t) => <Card key={t.id} className="flex items-center gap-3 p-4"><div className="flex-1"><div className="font-medium">{t.name}</div><div className="text-[13px] text-soft">{t.description}</div><div className="mt-1 truncate text-xs text-soft">{t.method} {t.url}</div></div>
           <Button size="sm" variant="ghost" className="text-bad" onClick={async () => { if (window.confirm(`Delete “${t.name}”?`)) try { await http(`/tools/${t.id}`, { method: 'DELETE' }); refresh() } catch (e) { say(e) } }}><Trash2 size={14} /></Button></Card>)}</div>)}
-      <Dialog open={open} onOpenChange={setOpen} title="Make a tool" description="Your agent can call any web address (like a Zapier or n8n webhook) during a call.">
-        <div className="space-y-3">
-          <Field label="Name"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Notify the team" /></Field>
-          <Field label="What does it do, and when should the agent use it?"><Textarea value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Use this when a caller books an appointment, to tell the team." /></Field>
-          <Field label="What information does it need? (comma separated)"><Input value={f.params} onChange={(e) => setF({ ...f, params: e.target.value })} placeholder="caller name, phone number, time" /></Field>
-          <div className="grid grid-cols-[110px_1fr] gap-2"><Select value={f.method} onChange={(e) => setF({ ...f, method: e.target.value })}>{['POST', 'GET', 'PUT', 'PATCH'].map((m) => <option key={m}>{m}</option>)}</Select><Input value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} placeholder="https://hooks.zapier.com/…" /></div>
-          <Field label="Secret key (optional)"><Input type="password" value={f.auth} onChange={(e) => setF({ ...f, auth: e.target.value })} placeholder="Bearer …  (hidden after saving)" /></Field>
-          {res && <p className="rounded-lg bg-muted p-3 text-xs">{res}</p>}
-          <div className="flex gap-2"><Button onClick={test} disabled={!f.url}>Test this tool</Button><Button variant="primary" className="flex-1" onClick={save} disabled={!f.name || !f.description || !f.url}>Save</Button></div>
-        </div>
-      </Dialog>
+      <MakeToolDialog open={open} onClose={() => setOpen(false)} onSaved={refresh} />
     </>
+  )
+}
+
+/* ---------------- Make a tool ---------------- */
+type ToolParam = { name: string; type: 'string' | 'number' | 'boolean'; description: string; required: boolean; sample: string }
+const EMPTY_TOOL = { name: '', description: '', url: '', method: 'POST', auth: '' }
+const snake = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').replace(/^[0-9]+/, '').slice(0, 40)
+const sampleFor = (p: ToolParam) => (p.sample.trim() || (p.type === 'number' ? '1' : p.type === 'boolean' ? 'true' : 'test'))
+const typed = (p: ToolParam) => { const v = sampleFor(p); return p.type === 'number' ? (Number.isFinite(Number(v)) ? Number(v) : 0) : p.type === 'boolean' ? v === 'true' : v }
+
+function MakeToolDialog({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
+  const [f, setF] = React.useState(EMPTY_TOOL)
+  const [params, setParams] = React.useState<ToolParam[]>([])
+  const [hdrs, setHdrs] = React.useState<{ k: string; v: string }[]>([])
+  const [res, setRes] = React.useState<{ ok: boolean; text: string } | null>(null)
+  const [busy, setBusy] = React.useState<'save' | 'test' | null>(null)
+  const urlOk = /^https?:\/\/[^\s/]+\.[^\s/]+/i.test(f.url.trim()) || /^https?:\/\/localhost/i.test(f.url.trim())
+  const urlProblem = f.url.trim() && !urlOk ? 'Enter the full web address, starting with https://' : ''
+  const clean = params.filter((x) => snake(x.name)).map((x) => ({ ...x, name: snake(x.name) }))
+  const dup = new Set(clean.map((x) => x.name)).size !== clean.length
+  const headers: Record<string, string> = {}
+  if (f.auth.trim()) headers.Authorization = /\s/.test(f.auth.trim()) ? f.auth.trim() : `Bearer ${f.auth.trim()}`
+  for (const h of hdrs) if (h.k.trim() && h.v.trim()) headers[h.k.trim()] = h.v.trim()
+  const sample = Object.fromEntries(clean.map((x) => [x.name, typed(x)]))
+  const query = f.method === 'GET' || f.method === 'DELETE'
+  const preview = clean.length === 0 ? 'Nothing is sent with the request.' : query ? `?${clean.map((x) => `${x.name}=${sampleFor(x)}`).join('&')}` : JSON.stringify(sample, null, 2)
+  const reset = () => { setF(EMPTY_TOOL); setParams([]); setHdrs([]); setRes(null) }
+  const setP = (i: number, patch: Partial<ToolParam>) => setParams((xs) => xs.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+  const save = async () => {
+    setBusy('save')
+    try {
+      await http('/tools', { method: 'POST', json: { name: f.name.trim(), description: f.description.trim(), url: f.url.trim(), method: f.method, headers, parameters: clean.map(({ sample: _s, ...x }) => ({ ...x, description: x.description.trim() || `The ${x.name.replace(/_/g, ' ')}` })) } })
+      toast.success('Tool saved!'); reset(); onSaved(); onClose()
+    } catch (e) { say(e) } finally { setBusy(null) }
+  }
+  const test = async () => {
+    setBusy('test'); setRes(null)
+    try {
+      const r = await http<{ ok: boolean; status: number; ms: number; response: string }>('/tools/test', { method: 'POST', json: { url: f.url.trim(), method: f.method, headers, sample }, timeoutMs: 30000 })
+      setRes({ ok: r.ok, text: `${r.ok ? 'Worked' : 'The address answered with an error'}: ${r.status} in ${r.ms} ms.${r.response ? `\n${r.response.slice(0, 600)}` : ''}` })
+    } catch (e) { setRes({ ok: false, text: e instanceof Error ? e.message : 'The test failed.' }) } finally { setBusy(null) }
+  }
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }} title="Make a tool" description="Your agent can call any web address (like a Zapier or n8n webhook) during a call.">
+      <form className="space-y-4" autoComplete="off" onSubmit={(e) => e.preventDefault()}>
+        <Field label="Name"><Input name="tool-name" autoComplete="off" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Notify the team" /></Field>
+        <Field label="What does it do, and when should the agent use it?"><Textarea value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Use this when a caller books an appointment, to tell the team." /></Field>
+        <div>
+          <div className="mb-1.5 text-[13px] font-medium">Where should it send the information?</div>
+          <div className="grid grid-cols-[110px_1fr] gap-2">
+            <Select value={f.method} onChange={(e) => setF({ ...f, method: e.target.value })} aria-label="Method">{['POST', 'GET', 'PUT', 'PATCH', 'DELETE'].map((m) => <option key={m}>{m}</option>)}</Select>
+            <Input name="tool-url" type="url" inputMode="url" autoComplete="off" autoCapitalize="off" spellCheck={false} value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} placeholder="https://hooks.zapier.com/…" aria-label="Web address" />
+          </div>
+          {urlProblem && <p className="mt-1 text-xs text-bad">{urlProblem}</p>}
+        </div>
+        <div>
+          <div className="mb-1 text-[13px] font-medium">What information does it need?</div>
+          <p className="mb-2 text-xs text-soft">The agent asks the caller for these and sends them. {query ? 'They go in the web address.' : 'They are sent as JSON.'}</p>
+          <div className="space-y-2">
+            {params.map((x, i) => (
+              <div key={i} className="rounded-xl border p-3">
+                <div className="grid grid-cols-[1fr_110px] gap-2">
+                  <Input autoComplete="off" value={x.name} onChange={(e) => setP(i, { name: e.target.value })} placeholder="caller name" aria-label="Field name" />
+                  <Select value={x.type} onChange={(e) => setP(i, { type: e.target.value as ToolParam['type'] })} aria-label="Type"><option value="string">Text</option><option value="number">Number</option><option value="boolean">Yes / no</option></Select>
+                </div>
+                <Input className="mt-2" autoComplete="off" value={x.description} onChange={(e) => setP(i, { description: e.target.value })} placeholder="What the agent should put here, e.g. the caller's full name" aria-label="Description" />
+                <div className="mt-2 flex items-center gap-2">
+                  <Input autoComplete="off" value={x.sample} onChange={(e) => setP(i, { sample: e.target.value })} placeholder="Example value for testing" aria-label="Test value" />
+                  <label className="flex shrink-0 items-center gap-1.5 text-xs text-soft"><input type="checkbox" checked={x.required} onChange={(e) => setP(i, { required: e.target.checked })} />Required</label>
+                  <button type="button" onClick={() => setParams((xs) => xs.filter((_, j) => j !== i))} className="shrink-0 rounded-md p-1.5 text-soft hover:bg-muted hover:text-bad" aria-label="Remove field"><Trash2 size={14} /></button>
+                </div>
+              </div>))}
+          </div>
+          <Button type="button" size="sm" className="mt-2" onClick={() => setParams((xs) => [...xs, { name: '', type: 'string', description: '', required: true, sample: '' }])}><Plus size={14} />Add information</Button>
+          {dup && <p className="mt-1 text-xs text-bad">Two fields have the same name.</p>}
+          <div className="mt-3"><div className="mb-1 text-xs font-medium text-soft">What gets sent ({f.method})</div><pre className="max-h-32 overflow-auto rounded-lg bg-muted p-3 text-xs">{preview}</pre></div>
+        </div>
+        <Field label="Secret key (optional)"><Input type="password" name="tool-secret" autoComplete="new-password" value={f.auth} onChange={(e) => setF({ ...f, auth: e.target.value })} placeholder="Your key, or Bearer … (hidden after saving)" /></Field>
+        <div>
+          {hdrs.map((h, i) => (
+            <div key={i} className="mb-2 grid grid-cols-[1fr_1fr_auto] gap-2">
+              <Input autoComplete="off" value={h.k} onChange={(e) => setHdrs((xs) => xs.map((x, j) => (j === i ? { ...x, k: e.target.value } : x)))} placeholder="Header name" aria-label="Header name" />
+              <Input type="password" autoComplete="new-password" value={h.v} onChange={(e) => setHdrs((xs) => xs.map((x, j) => (j === i ? { ...x, v: e.target.value } : x)))} placeholder="Value" aria-label="Header value" />
+              <button type="button" onClick={() => setHdrs((xs) => xs.filter((_, j) => j !== i))} className="rounded-md p-1.5 text-soft hover:bg-muted hover:text-bad" aria-label="Remove header"><Trash2 size={14} /></button>
+            </div>))}
+          {hdrs.length < 8 && <Button type="button" size="sm" variant="ghost" className="-ml-2" onClick={() => setHdrs((xs) => [...xs, { k: '', v: '' }])}><Plus size={14} />Add another header</Button>}
+        </div>
+        {res && <pre className={cn('whitespace-pre-wrap break-words rounded-lg p-3 text-xs', res.ok ? 'bg-ok/10 text-ok' : 'bg-bad/10 text-bad')}>{res.text}</pre>}
+        <div className="flex gap-2">
+          <Button type="button" onClick={test} disabled={!urlOk || busy !== null || dup}>{busy === 'test' ? 'Testing…' : 'Test this tool'}</Button>
+          <Button type="button" variant="primary" className="flex-1" onClick={save} disabled={!f.name.trim() || !f.description.trim() || !urlOk || dup || busy !== null}>{busy === 'save' ? 'Saving…' : 'Save'}</Button>
+        </div>
+      </form>
+    </Dialog>
   )
 }
 
