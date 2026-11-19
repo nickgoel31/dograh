@@ -31,3 +31,8 @@
 - `vocalis-web/src/pages/Developers.tsx:40` (demo) shows `data-color` and a fake CDN address in the widget snippet; the real snippet (`PlatformReal.tsx:106`) uses `data-app`, `data-agent`, `data-mode`.
 - `api/product/export_openapi.py`: generating with every router produced duplicate operation IDs when the lab router is added twice (docs script avoids this).
 - Starlight prints a harmless "Entry docs → 404 was not found" warning at build; adding a 404 page of our own conflicts with the built-in one.
+
+## Swarvo TTS 3 (added 19 Nov 2026)
+- Documented from `api/product/swarvo_tts_router.py`, which was uncommitted when read. It is a signed-in-session endpoint under `/api/v1/product/swarvo-api`; API-key (`sk_`) access is not implemented.
+- The backend names the voices "swarvo-tts 2.5" (`voices.py`, `swarvo_access.py`); the app and these docs say "Swarvo TTS 3".
+- The TTS price steps (₹2.00 to ₹0.80) exist only in `vocalis-web/src/pages/Platforms.tsx`, not in billing code.

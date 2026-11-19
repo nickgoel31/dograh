@@ -30,16 +30,8 @@ cd docs-site && npx playwright install chromium && npm run screens
 ```
 Images land in `src/assets/screens/`. Use `<Shot name="agents" alt="..." caption="..." />` in a page.
 
-## Regenerate the API reference
-```bash
-npm run gen:api   # from the repo root's perspective: python docs-site/scripts/export_openapi_full.py
-```
-`scripts/export_openapi_full.py` builds an OpenAPI file with **every** product router (the shipped `export_openapi` leaves out developers, team, the public API and others). Run it from the repo root:
-
-```bash
-python docs-site/scripts/export_openapi_full.py
-python -m api.product.export_openapi vocalis-web/openapi.json   # the app's own, smaller file
-```
+## API reference
+The **Swarvo API reference** section (`src/content/docs/swarvo-api/`) documents Swarvo TTS 3 by hand, from `api/product/swarvo_tts_router.py`. The sidebar switcher between *Swarvo app* and *Swarvo API reference* comes from `starlight-sidebar-topics` in `astro.config.mjs`. The generated product OpenAPI reference was removed from the site; `scripts/export_openapi_full.py` is kept in case it is wanted again.
 
 ## Deploy (operator)
 The site is plain static files. Run `npm run build` and serve the `dist/` folder from any static host or from your existing nginx under `docs.swarvoai.com` (compare `deploy/templates/nginx.remote.conf.template`, which serves the app). You need a DNS record and certificate for the new name. Set `DOCS_SITE_URL` when building if the address differs, and replace the placeholder edit-link address `https://github.com/OWNER/REPO/...` in `astro.config.mjs`. No Docker files are included.

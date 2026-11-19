@@ -1,0 +1,29 @@
+---
+title: "Authentication"
+description: "How to authenticate requests to the Swarvo TTS 3 endpoints."
+sidebar:
+  order: 2
+audience: developer
+readingTime: "1 min"
+---
+
+The TTS endpoints use your **signed-in session**, the same one the app uses. Send it as a bearer token, or let the browser send the sign-in cookie.
+
+```http
+Authorization: Bearer YOUR_SESSION_TOKEN
+X-Workspace: ws_xxx
+```
+
+| Header | Meaning |
+|---|---|
+| `Authorization` | Your session token, as `Bearer ...` |
+| `X-Workspace` | The workspace to use. Optional; your default workspace is used if you leave it out. A workspace you are not in answers "We couldn't find that workspace." |
+| `X-Environment` | `test` (default) or `live` |
+
+:::caution[API keys are not accepted yet]
+Keys starting `sk_test_` and `sk_live_` work only with the [read-only public API](/developers/public-api/). Whether Swarvo TTS 3 will accept API keys has not been decided in the code, so server-to-server use is not available today. This is listed in `UNVERIFIED.md`.
+:::
+
+If the workspace has **allowed networks** turned on, requests from other networks are refused ([Sign-in security](/team/security/)).
+
+Access is checked on every request: the workspace must be switched on for Swarvo TTS 3.

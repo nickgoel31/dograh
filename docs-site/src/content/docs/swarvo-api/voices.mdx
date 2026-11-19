@@ -1,0 +1,43 @@
+---
+title: "Voices and languages"
+description: "GET /tts/voices: the voices, languages and text limit, and whether your workspace has access."
+sidebar:
+  order: 4
+audience: developer
+readingTime: "2 min"
+---
+
+`GET /api/v1/product/swarvo-api/tts/voices`
+
+```bash
+curl "https://YOUR-API-ADDRESS/api/v1/product/swarvo-api/tts/voices" -H "Authorization: Bearer $TOKEN"
+```
+
+## Response
+```json
+{
+  "available": true,
+  "voices": [{ "name": "Ahana", "gender": "Female" }],
+  "languages": [{ "code": "hi", "name": "Hindi" }, { "code": "en", "name": "English" }],
+  "max_chars": 500
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `available` | `true` when your workspace may use Swarvo TTS 3 |
+| `voices` | Voice names and gender |
+| `languages` | Language codes you can send as `lang` |
+| `max_chars` | Longest `text` in one request |
+
+## The voices
+Names are case sensitive.
+
+| Gender | Voices |
+|---|---|
+| Female | Ahana, Vaidehi, Malini, Charvi, Jahnavi, Nivedita, Ishwari, Vrinda, Kayal, Tanushree |
+| Male | Anirban, Nakul, Vasant, Siddhant, Satvik, Abhay, Ritvik, Sreekar, Shaunak, Akshat |
+
+:::note
+These voices were tested in Hindi. Try each language before relying on it.
+:::

@@ -1,0 +1,28 @@
+---
+title: "Errors and limits"
+description: "Error format, error codes and the rate limit for the Swarvo TTS 3 endpoints."
+sidebar:
+  order: 5
+audience: developer
+readingTime: "1 min"
+---
+
+Every error is JSON: `{"detail": {"code": "coming_soon", "message": "..."}}`. `code` is stable; `message` is for people.
+
+| Status | `code` | Message | What to do |
+|---|---|---|---|
+| 400 | `bad_choice` | "Pick one of the listed voices, languages and modes." | Use values from `GET /tts/voices`; `mode` is `chat` or `read` |
+| 400 | `bad_environment` | "Environment must be 'test' or 'live'." | Fix `X-Environment` |
+| 403 | `coming_soon` | "Swarvo TTS 3 is coming soon. Ask us for early access." | Ask for access |
+| 403 | `no_workspace` | "You don't belong to a workspace yet." | Join or create a workspace |
+| 403 | `network_not_allowed` | "This workspace can only be used from approved networks. Ask a workspace owner to add yours." | Add your network |
+| 404 | `workspace_not_found` | "We couldn't find that workspace." | Check `X-Workspace` |
+| 422 | | | `text` empty or over 500 characters, `speed` outside 0.7 to 1.5 |
+| 429 | | "You're going quickly. Give it a minute and try again." | Wait and retry |
+| 502 | `tts_unavailable` | "The voice engine isn't available right now. Please try again later." (also "...didn't answer..." and "We couldn't make that audio...") | Retry later |
+
+## Limits
+- **Text:** 1 to 500 characters per request.
+- **Speed:** 0.7 to 1.5.
+- **Rate:** 20 requests per 10 minutes per person.
+- **Timeout:** allow up to 120 seconds for a response.

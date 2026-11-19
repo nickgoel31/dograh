@@ -1,0 +1,40 @@
+---
+title: "Swarvo TTS 3 overview"
+description: "Swarvo TTS 3 is Swarvo's own text-to-speech model. What it does, its status and the endpoints."
+sidebar:
+  order: 1
+audience: developer
+readingTime: "2 min"
+---
+
+**Swarvo TTS 3** turns text into speech. Send text, a voice and a language, and you get back a WAV audio file.
+
+:::caution[Status: coming soon]
+In the app, Swarvo TTS 3 is marked **coming soon** for customers. Until your workspace is switched on, the speak endpoint answers `403` with the code `coming_soon`: "Swarvo TTS 3 is coming soon. Ask us for early access."
+:::
+
+## Endpoints
+Base address: `https://YOUR-API-ADDRESS/api/v1/product/swarvo-api`
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/tts/voices` | Lists voices, languages, the text limit and whether you have access |
+| POST | `/tts` | Turns text into speech and returns `audio/wav` |
+
+## At a glance
+| | |
+|---|---|
+| Type | Text to speech |
+| Output | WAV audio |
+| Languages | Hindi (`hi`), English (`en`) |
+| Voices | 20 (10 female, 10 male) |
+| Longest text | 500 characters per request |
+| Speed | 0.7 to 1.5 |
+| Modes | `chat` (natural pauses and fillers), `read` (plain reading) |
+
+## Next steps
+- [Authentication](/swarvo-api/authentication/)
+- [Text to speech](/swarvo-api/text-to-speech/)
+- [Voices and languages](/swarvo-api/voices/)
+- [Errors and limits](/swarvo-api/errors-and-limits/)
+- [Pricing](/swarvo-api/pricing/)

@@ -1,0 +1,78 @@
+---
+title: "Text to speech"
+description: "POST /tts: turn text into WAV audio with Swarvo TTS 3. Parameters, examples in curl, Python and JavaScript."
+sidebar:
+  order: 3
+audience: developer
+readingTime: "4 min"
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+`POST /api/v1/product/swarvo-api/tts`
+
+Returns the audio as `audio/wav`. The response is not cached (`Cache-Control: no-store`).
+
+## Request body (JSON)
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `text` | string | Yes | 1 to 500 characters |
+| `voice` | string | Yes | A voice name from [`GET /tts/voices`](/swarvo-api/voices/). Names are case sensitive. |
+| `lang` | string | No | `hi` (default) or `en` |
+| `mode` | string | No | `chat` (default): natural pauses and fillers. `read`: plain reading. |
+| `speed` | number | No | 0.7 to 1.5, default 1.0 |
+
+## Examples
+<Tabs>
+<TabItem label="curl">
+
+```bash
+curl -X POST "https://YOUR-API-ADDRESS/api/v1/product/swarvo-api/tts" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"text":"Namaste, aap kaise hain?","voice":"Ahana","lang":"hi","mode":"chat","speed":1.0}' \
+  --output speech.wav
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```python
+import requests
+
+r = requests.post(
+    "https://YOUR-API-ADDRESS/api/v1/product/swarvo-api/tts",
+    headers={"Authorization": f"Bearer {TOKEN}"},
+    json={"text": "Namaste, aap kaise hain?", "voice": "Ahana", "lang": "hi", "mode": "chat", "speed": 1.0},
+    timeout=120,
+)
+r.raise_for_status()
+open("speech.wav", "wb").write(r.content)
+```
+
+</TabItem>
+<TabItem label="JavaScript">
+
+```js
+const res = await fetch("https://YOUR-API-ADDRESS/api/v1/product/swarvo-api/tts", {
+  method: "POST",
+  headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
+  body: JSON.stringify({ text: "Namaste, aap kaise hain?", voice: "Ahana", lang: "hi", mode: "chat", speed: 1.0 }),
+});
+if (!res.ok) throw new Error((await res.json()).detail.message);
+const audio = new Blob([await res.arrayBuffer()], { type: "audio/wav" });
+```
+
+</TabItem>
+</Tabs>
+
+## Responses
+| Status | Meaning |
+|---|---|
+| `200` | WAV audio in the body |
+| `400` `bad_choice` | A voice, language or mode is not in the lists |
+| `403` `coming_soon` | Your workspace is not switched on yet |
+| `429` | Too many requests |
+| `502` `tts_unavailable` | The voice engine is not available or did not answer |
+
+See [Errors and limits](/swarvo-api/errors-and-limits/).
