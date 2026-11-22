@@ -1,8 +1,9 @@
 import * as React from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { LucideIcon } from '@/components/icons'
-import { AlertCircle, ArrowLeft, ArrowRight, Check, Eye, EyeOff, Lock, Mail, ShieldCheck, User } from '@/components/icons'
+import { AlertCircle, ArrowLeft, ArrowRight, Check, Eye, EyeOff, Lock, Mail, Mic, ShieldCheck, User } from '@/components/icons'
 import { ApiError, authApi } from '@/lib/api'
+import { pixelsApi } from '@/lib/api/pixels'
 import { BRAND } from '@/config/brand'
 import { CLASSIC_URL } from '@/lib/api/env'
 import { Button } from '@/components/ui'
@@ -49,6 +50,8 @@ export default function AuthPage() {
   const [code, setCode] = React.useState('')
   const [show, setShow] = React.useState(false)
   const [notEnabled, setNotEnabled] = React.useState(false)
+  const [deviceMode, setDeviceMode] = React.useState(false)
+  const [dev, setDev] = React.useState({ id: '', code: '' })
   const cfg = useQuery({ queryKey: ['auth-config'], queryFn: authApi.config, retry: false })
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value })
 
@@ -65,6 +68,13 @@ export default function AuthPage() {
       setNotEnabled(err instanceof ApiError && err.code === 'not_enabled')
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
     } finally { setBusy(false) }
+  }
+  async function submitDevice(e: React.FormEvent) {
+    e.preventDefault(); setBusy(true); setError(null)
+    try {
+      await pixelsApi.login(dev.id.trim(), dev.code.trim())
+      window.location.assign(`${import.meta.env.BASE_URL}devices`) // the device's own account opens on its Devices page
+    } catch (err) { setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.'); setBusy(false) }
   }
   async function sendReset(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setError(null)
@@ -92,7 +102,17 @@ export default function AuthPage() {
             <img src={`${import.meta.env.BASE_URL}swarvo-logo.webp`} alt="" className="h-10 w-10 rounded-xl object-contain dark:invert" />{BRAND}
           </div>
 
-          {forgot ? (<>
+          {deviceMode ? (<>
+            <h1 className="mt-12 text-[32px] font-extrabold leading-tight tracking-[-0.03em]">Sign in with your device</h1>
+            <p className="mt-2 text-[15px] text-soft">Type the device id and activation code from the card that came with your Swarvo Pixel. The first time, this creates its account.</p>
+            <form onSubmit={submitDevice} className="mt-8 space-y-3.5">
+              <Field icon={Mic} placeholder="Device id, e.g. SWARVO-0001" value={dev.id} onChange={(e) => setDev({ ...dev, id: e.target.value })} required autoComplete="off" autoCapitalize="characters" spellCheck={false} />
+              <Field icon={Lock} placeholder="Activation code, e.g. K7QM-4XPD-9TRW-2NHV" value={dev.code} onChange={(e) => setDev({ ...dev, code: e.target.value })} required autoComplete="off" autoCapitalize="characters" spellCheck={false} />
+              {err}
+              <Button variant="primary" size="lg" className="h-12 w-full rounded-xl text-[15px]" disabled={busy || !dev.id.trim() || dev.code.replace(/[^A-Za-z0-9]/g, '').length < 8}>{busy ? 'Please wait…' : 'Continue'}{!busy && <ArrowRight size={16} />}</Button>
+            </form>
+            <button type="button" onClick={() => { setDeviceMode(false); setError(null) }} className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-accent hover:underline"><ArrowLeft size={14} />Back to sign in</button>
+          </>) : forgot ? (<>
             <h1 className="mt-12 text-[32px] font-extrabold leading-tight tracking-[-0.03em]">Forgot your password?</h1>
             <p className="mt-2 text-[15px] text-soft">Enter your email and we'll send you a link to choose a new one.</p>
             {sent ? <p className="mt-8 flex items-start gap-2 rounded-xl border border-accent/20 bg-accent-soft px-4 py-3 text-sm"><Check size={16} className="mt-0.5 shrink-0 text-accent" />{sent}</p> : (
@@ -132,6 +152,7 @@ export default function AuthPage() {
               {err}
               <Button variant="primary" size="lg" className="h-12 w-full rounded-xl text-[15px]" disabled={busy}>{busy ? 'Please wait…' : signup ? 'Create account' : 'Sign in'}{!busy && <ArrowRight size={16} />}</Button>
             </form>
+            <p className="mt-5 text-center text-sm text-soft">Have a Swarvo Pixel? <button type="button" onClick={() => { setDeviceMode(true); setError(null) }} className="font-semibold text-accent hover:underline">Sign in with your device</button></p>
             {signup && <p className="mt-4 text-center text-xs text-soft">By creating an account you agree to our terms and privacy policy.</p>}
             <div className="mt-8 flex items-center justify-center gap-5 text-xs text-soft"><span className="inline-flex items-center gap-1.5"><Lock size={12} />Encrypted</span><span className="inline-flex items-center gap-1.5"><ShieldCheck size={12} />Your data stays yours</span></div>
           </>)}

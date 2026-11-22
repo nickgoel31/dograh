@@ -21,6 +21,23 @@ def unregister_ws_sender(workflow_run_id: int) -> None:
     _ws_senders.pop(workflow_run_id, None)
 
 
+# Turn hooks: a device (like the Swarvo Pixel) that must show "thinking" the moment the person stops talking listens here.
+# The callback gets "user_started" or "user_stopped". Nothing is registered for ordinary calls.
+_turn_hooks: Dict[int, Callable[[str], Awaitable[None]]] = {}
+
+
+def register_turn_hook(workflow_run_id: int, hook: Callable[[str], Awaitable[None]]) -> None:
+    _turn_hooks[workflow_run_id] = hook
+
+
+def unregister_turn_hook(workflow_run_id: int) -> None:
+    _turn_hooks.pop(workflow_run_id, None)
+
+
+def get_turn_hook(workflow_run_id: int) -> Optional[Callable[[str], Awaitable[None]]]:
+    return _turn_hooks.get(workflow_run_id)
+
+
 def get_ws_sender(
     workflow_run_id: int,
 ) -> Optional[Callable[[dict], Awaitable[None]]]:

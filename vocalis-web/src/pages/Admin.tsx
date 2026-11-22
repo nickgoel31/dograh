@@ -5,6 +5,7 @@ import { Badge, Button, Card, Dialog, Field, Input, Switch } from '@/components/
 import { EmptyState, PageHeader, SearchPill, StatCard, TableSkeleton } from '@/components/shared'
 import { http } from '@/lib/api/http'
 import { useMe } from '@/lib/useMe'
+import { pixelsApi, type MadePixel } from '@/lib/api/pixels'
 
 /** The owner's view of every customer. Only the platform owner account sees this; the server checks it again on every request. */
 interface Overview { users: number; workspaces: number; new_workspaces_7d: number; agents: number; live_agents: number; calls_24h: number; calls_7d: number; bonus_given: number; bonus_limit: number; phone_verified: number; currency: string }
@@ -13,6 +14,57 @@ interface Detail { swarvo_tts?: boolean; id: string; name: string; created: stri
 const say = (e: unknown) => toast.error(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
 const money = (n: number | null | undefined, cur = 'INR') => (n == null ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency: cur, maximumFractionDigits: 2 }).format(n))
 const day = (d: string | null) => (d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—')
+
+/** Swarvo Pixel devices: make a batch with printed ids and activation codes, switch one off, or give it a new code. Codes are shown once. */
+function PixelAdmin() {
+  const qc = useQueryClient()
+  const list = useQuery({ queryKey: ['admin', 'pixels'], queryFn: pixelsApi.adminList })
+  const [count, setCount] = React.useState('10')
+  const [batch, setBatch] = React.useState('')
+  const [made, setMade] = React.useState<MadePixel[] | null>(null)
+  const refresh = () => qc.invalidateQueries({ queryKey: ['admin', 'pixels'] })
+  const make = useMutation({ mutationFn: () => pixelsApi.adminMake({ count: Number(count), prefix: 'SWARVO', batch }), onSuccess: (r) => { setMade(r); refresh() }, onError: say })
+  const flip = useMutation({ mutationFn: (v: { id: string; on: boolean }) => pixelsApi.adminSwitch(v.id, v.on), onSuccess: () => { toast.success('Saved'); refresh() }, onError: say })
+  const rekey = useMutation({ mutationFn: (id: string) => pixelsApi.adminNewCode(id), onSuccess: (r) => { setMade([r]); refresh() }, onError: say })
+  const csv = () => {
+    const blob = new Blob([`device_id,activation_code\n${(made ?? []).map((m) => `${m.device_id},${m.code}`).join('\n')}\n`], { type: 'text/csv' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `swarvo-pixel-codes-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(a.href)
+  }
+  const rows = list.data ?? []
+  return (
+    <Card className="mt-6 rounded-2xl p-5 shadow-none">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0 flex-1"><div className="text-[15px] font-semibold">Swarvo Pixel devices</div><p className="mt-1 text-[13px] text-soft">Make devices with their ids and activation codes. A customer types the id and code on the sign-in page and gets the device's own account. The codes are shown once, so download them.</p></div>
+        <div className="flex flex-wrap items-end gap-2">
+          <Field label="How many"><Input className="w-24" type="number" min={1} max={500} value={count} onChange={(e) => setCount(e.target.value)} /></Field>
+          <Field label="Batch name (optional)"><Input className="w-44" placeholder="e.g. Expo Nov 2026" value={batch} onChange={(e) => setBatch(e.target.value)} /></Field>
+          <Button variant="primary" disabled={make.isPending || !(Number(count) >= 1)} onClick={() => make.mutate()}>{make.isPending ? 'Making…' : 'Make devices'}</Button>
+        </div>
+      </div>
+      {rows.length > 0 && (
+        <div className="mt-4 max-h-80 overflow-auto rounded-xl border">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead className="sticky top-0 bg-surface text-xs text-soft"><tr><th className="px-3 py-2 font-medium">Device</th><th className="px-3 py-2 font-medium">Status</th><th className="px-3 py-2 font-medium">Batch</th><th className="px-3 py-2 font-medium">Last seen</th><th className="px-3 py-2" /></tr></thead>
+            <tbody>{rows.map((r) => (
+              <tr key={r.device_id} className="border-t">
+                <td className="px-3 py-2 font-medium">{r.device_id}{r.fw && <span className="ml-2 text-xs font-normal text-soft">fw {r.fw}</span>}</td>
+                <td className="px-3 py-2"><Badge tone={r.status === 'revoked' ? 'red' : r.online ? 'green' : 'gray'}>{r.status === 'revoked' ? 'Switched off' : r.online ? 'Online' : r.claimed ? 'Signed in' : 'Not signed in'}</Badge></td>
+                <td className="px-3 py-2 text-soft">{r.batch || '—'}</td>
+                <td className="px-3 py-2 text-soft">{r.last_seen ? new Date(r.last_seen).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '—'}</td>
+                <td className="px-3 py-2 text-right"><div className="flex justify-end gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => flip.mutate({ id: r.device_id, on: r.status === 'revoked' })}>{r.status === 'revoked' ? 'Switch on' : 'Switch off'}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { if (window.confirm(`Give ${r.device_id} a new activation code? The old one stops working at once, on the website and on the device.`)) rekey.mutate(r.device_id) }}>New code</Button>
+                </div></td>
+              </tr>))}</tbody>
+          </table>
+        </div>)}
+      <Dialog open={!!made} onOpenChange={(v) => !v && setMade(null)} title="Activation codes" description="This is the only time these codes are shown. Download them and print them on the cards.">
+        <div className="max-h-72 overflow-auto rounded-xl border"><table className="w-full text-sm"><tbody>{(made ?? []).map((m) => <tr key={m.device_id} className="border-b last:border-0"><td className="px-3 py-2 font-medium">{m.device_id}</td><td className="px-3 py-2 font-mono tracking-wide">{m.code}</td></tr>)}</tbody></table></div>
+        <div className="mt-4 flex gap-2"><Button variant="primary" onClick={csv}>Download CSV</Button><Button onClick={() => { navigator.clipboard?.writeText((made ?? []).map((m) => `${m.device_id}  ${m.code}`).join('\n')); toast.success('Copied') }}>Copy all</Button></div>
+      </Dialog>
+    </Card>
+  )
+}
 
 export default function AdminPage() {
   const me = useMe()
@@ -62,6 +114,8 @@ export default function AdminPage() {
         </div>
         <label className="flex items-center gap-2.5 text-sm font-medium">Everyone<Switch checked={!!swarvo.data?.everyone} onChange={(v) => setEveryone.mutate(v)} label="swarvo-tts for everyone" /></label>
       </Card>
+
+      <PixelAdmin />
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-[15px] font-semibold">Customers</h2>

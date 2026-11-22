@@ -785,3 +785,42 @@ class ProductFunnelEventModel(Base):
     user_id = Column(Integer, nullable=False, index=True)
     step = Column(String(40), nullable=False)
     created_at = Column(DateTime(timezone=True), default=_now)
+
+
+class ProductPixelModel(Base):
+    """A Swarvo Pixel: one physical voice device (ESP32). It has a printed id and activation code. The first sign-in with them creates its account
+    (workspace); from then on the owner picks which agent the device talks to. The code is stored only as a hash."""
+
+    __tablename__ = "product_pixels"
+
+    id = Column(Integer, primary_key=True)
+    device_id = Column(String(40), unique=True, nullable=False, index=True)  # printed on the device, e.g. SWARVO-0001
+    code_hash = Column(String(64), nullable=False)
+    batch = Column(String(60), nullable=False, default="")
+    name = Column(String(120), nullable=False, default="")
+    status = Column(String(12), nullable=False, default="ready")  # ready (not signed in yet) | active | revoked
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="SET NULL"), nullable=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # the device's own account
+    agent_id = Column(Integer, ForeignKey("product_agents.id", ondelete="SET NULL"), nullable=True)
+    fw = Column(String(24), nullable=False, default="")
+    conn_id = Column(String(32), nullable=True)  # the connection that currently owns the device; an older one closes itself
+    last_seen_at = Column(DateTime(timezone=True), nullable=True)
+    claimed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+
+class ProductPixelSessionModel(Base):
+    """One conversation held on a Swarvo Pixel (from touch to end). The call itself is a normal call in Conversations."""
+
+    __tablename__ = "product_pixel_sessions"
+
+    id = Column(Integer, primary_key=True)
+    pixel_id = Column(Integer, ForeignKey("product_pixels.id", ondelete="CASCADE"), nullable=False)
+    workspace_id = Column(Integer, nullable=False)
+    run_id = Column(Integer, nullable=True)
+    started_at = Column(DateTime(timezone=True), default=_now)
+    ended_at = Column(DateTime(timezone=True), nullable=True)
+    seconds = Column(Integer, nullable=False, default=0)
+    end_reason = Column(String(24), nullable=False, default="")
+
+    __table_args__ = (Index("ix_pixel_sessions_pixel_started", "pixel_id", "started_at"),)

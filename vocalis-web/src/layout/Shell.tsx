@@ -13,6 +13,7 @@ import { VerifyPhone, useVerify } from '@/components/VerifyPhone'
 import { BRAND } from '@/config/brand'
 import { useMe } from '@/lib/useMe'
 import { http } from '@/lib/api/http'
+import { pixelsApi } from '@/lib/api/pixels'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { USE_MOCKS, authApi } from '@/lib/api'
 import { BASE, CLASSIC_URL } from '@/lib/api/env'
@@ -123,6 +124,7 @@ function NavItem({ to, label, icon: Icon, collapsed, onClick }: (typeof main)[nu
 
 function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => void }) {
   const { workspace, workspaceId, view, set, platform } = useUI()
+  const pixels = useQuery({ queryKey: ['pixels'], queryFn: pixelsApi.list, enabled: !USE_MOCKS, staleTime: 60000 })
   const nav = useNavigate()
   const here = PLATFORMS.find((x) => x.id === platform) ?? PLATFORMS[0]
   const advancedOnly = new Set(['/developers', '/testing']) // shown only in Advanced view
@@ -149,7 +151,7 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
         </Menu>
       )}
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Main">
-        {GROUPS[platform].map((g, gi) => {
+        {(platform === 'voice' && (pixels.data?.length ?? 0) > 0 ? GROUPS.voice.map((g) => (g.title === 'Reach' ? { ...g, items: [...g.items, { to: '/devices', label: 'Devices', icon: Zap }] } : g)) : GROUPS[platform]).map((g, gi) => {
           const shown = g.items.filter((n) => view === 'advanced' || !advancedOnly.has(n.to))
           if (!shown.length) return null
           return (

@@ -25,6 +25,7 @@ import Campaigns, { CampaignDetail, NewCampaign } from '@/pages/Campaigns'
 import Knowledge from '@/pages/Knowledge'
 import Tools from '@/pages/Tools'
 import Voices from '@/pages/Voices'
+import DevicesPage from '@/pages/Devices'
 import Testing from '@/pages/Testing'
 import Analytics from '@/pages/Analytics'
 import Developers from '@/pages/Developers'
@@ -132,6 +133,7 @@ export default function App() {
           <Route path="knowledge" element={<Knowledge />} />
           <Route path="tools" element={<Tools />} />
           <Route path="voices" element={<Voices />} />
+          <Route path="devices" element={<DevicesPage />} />
           <Route path="testing" element={<Testing />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="chat" element={CHAT_LIVE ? <ChatLock><ChatOverviewPage /></ChatLock> : <ChatAgentsPage />} />

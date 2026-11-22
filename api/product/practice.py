@@ -36,7 +36,7 @@ async def charge_practice_calls(session, wallet, now: datetime | None = None, li
             seconds = conv.duration_seconds(r.cost_info, r.usage_info) or 0
             minutes = pricing.billed_minutes(seconds)
             try:
-                amount = await wallet.charge(ws.live_org_id, minutes, round(rate * voice_discount.multiplier_for_usage(r.usage_info), 4), f"Practice call #{r.id}", f"practice:{r.id}") if minutes else 0.0
+                amount = await wallet.charge(ws.live_org_id, minutes, round(rate * voice_discount.multiplier_for_usage(r.usage_info), 4), (f"Swarvo Pixel call #{r.id}" if (r.initial_context or {}).get("pixel") else f"Practice call #{r.id}"), f"practice:{r.id}") if minutes else 0.0
             except Exception as e:  # noqa: BLE001 - one call that can't be charged must not stop the others or the scheduled job; it is tried again next time
                 log.warning("practice call %s could not be charged: %s", r.id, e)
                 continue

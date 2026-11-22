@@ -305,8 +305,23 @@ def register_turn_log_handlers(
     calls — independent of WebSocket availability.
     """
 
+    from api.services.pipecat.ws_sender_registry import get_turn_hook
+
+    async def _tell_hook(what: str) -> None:
+        hook = get_turn_hook(getattr(logs_buffer, "_workflow_run_id", -1))
+        if hook is not None:
+            try:
+                await hook(what)
+            except Exception as e:  # noqa: BLE001 - a device hook must never break the call
+                logger.debug(f"turn hook failed: {e}")
+
+    @user_aggregator.event_handler("on_user_turn_started")
+    async def on_user_turn_started(aggregator, strategy):
+        await _tell_hook("user_started")
+
     @user_aggregator.event_handler("on_user_turn_stopped")
     async def on_user_turn_stopped(aggregator, strategy, message):
+        await _tell_hook("user_stopped")
         logs_buffer.increment_turn()
         try:
             await logs_buffer.append(
