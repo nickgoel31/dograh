@@ -21,6 +21,7 @@ import { QAEditor } from '@/components/QAEditor'
 import { TryAgent } from '@/components/TryAgent'
 import { BrainModel } from '@/pages/BrainModel'
 import { useUI } from '@/store/ui'
+import { useMe } from '@/lib/useMe'
 import { api } from '@/lib/api'
 import { useAsync } from '@/components/shared'
 import { knowledge, numbers } from '@/mock/misc'
@@ -102,6 +103,7 @@ export function VoicePick({ voices, value, onPick }: { voices: import('@/mock/ty
 }
 
 export default function AgentDetail() {
+  const meNow = useMe().data
   const { id } = useParams()
   const nav = useNavigate()
   const [sp, setSp] = useSearchParams()
@@ -218,7 +220,7 @@ export default function AgentDetail() {
       </div>
       </>)}
       <Tabs value={tab} onValueChange={(t) => setSp({ tab: t })}>
-        {tab !== 'flow' && <TabsList>{['personality', 'voice', 'brain', 'knowledge', 'qa', 'tools', 'behavior', 'phone', 'test', 'versions', 'publish'].filter((t) => (t !== 'brain' || voice.brainLevels !== false) && (advanced || !['behavior', 'versions'].includes(t) || t === tab)).map((t) => <Tab key={t} value={t} className="capitalize">{t === 'qa' ? 'Q&A' : t}</Tab>)}</TabsList>}
+        {tab !== 'flow' && <TabsList>{['personality', 'voice', 'brain', 'knowledge', 'qa', 'tools', 'behavior', 'phone', 'test', 'versions', 'publish'].filter((t) => (t !== 'brain' || voice.brainLevels !== false) && !(t === 'phone' && meNow?.device) && (advanced || !['behavior', 'versions'].includes(t) || t === tab)).map((t) => <Tab key={t} value={t} className="capitalize">{t === 'qa' ? 'Q&A' : t}</Tab>)}</TabsList>}
 
         <TabPanel value="personality"><SimpleAdvanced
           simple={<Q title="Who is your agent?" hint="Just fill in the blanks. We write the instructions for you.">

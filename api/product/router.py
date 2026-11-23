@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.db.models import UserModel
 from api.db.product_models import ProductUserProfileModel
-from api.product import config, emailer, rollout, totp
+from api.product import config, emailer, pixels, rollout, totp
 from api.product.deps import Ctx, get_ctx, get_session, get_user_only
 from api.product.errors import product_error
 from api.product.ids import user_public_id
@@ -87,6 +87,7 @@ async def _me(session: AsyncSession, user: UserModel, workspace_id: str | None, 
         feature_flags={"sso": False, "ip_allowlist": False, "voice_cloning": False},
         brand=config.PRODUCT_NAME,
         is_admin=_is_admin(user),
+        device=await pixels.is_device_account(session, user.id),
     )
 
 

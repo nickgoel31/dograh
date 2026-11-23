@@ -211,7 +211,9 @@ async def run(ctx, *, kb, gw, llm, fetch, tools, url: str, text: str, publish: b
         except Exception as e:  # noqa: BLE001
             msg = getattr(e, "detail", {}).get("message") if isinstance(getattr(e, "detail", None), dict) else None
             steps.add("live", "Put it live", "skip", msg or "It is saved as a draft. Open it to finish going live.")
-    if went_live:
+    from api.product import pixels as _pixels
+
+    if went_live and not await _pixels.is_device_account(ctx.session, ctx.user.id):  # a device account has no phone numbers
         row = await ctx.session.scalar(select(TelephonyPhoneNumberModel).where(
             TelephonyPhoneNumberModel.organization_id == ctx.workspace.live_org_id, TelephonyPhoneNumberModel.is_active.is_(True), TelephonyPhoneNumberModel.inbound_workflow_id.is_(None)).order_by(TelephonyPhoneNumberModel.id).limit(1))
         if row is not None:

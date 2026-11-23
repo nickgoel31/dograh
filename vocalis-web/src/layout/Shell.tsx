@@ -128,6 +128,7 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
   const nav = useNavigate()
   const here = PLATFORMS.find((x) => x.id === platform) ?? PLATFORMS[0]
   const advancedOnly = new Set(['/developers', '/testing']) // shown only in Advanced view
+  const deviceHides = new Set(['/numbers', '/campaigns', '/contacts', '/live', '/testing', '/developers']) // a Swarvo Pixel's account has no phone lines to manage
   const { data: me } = useMe()
   // Real mode: the user's actual workspaces. Mock mode: the demo list.
   const list = USE_MOCKS ? demoWorkspaces.map((n, i) => ({ id: String(i), name: n })) : (me?.workspaces ?? [])
@@ -152,7 +153,7 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
       )}
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Main">
         {(platform === 'voice' && (pixels.data?.length ?? 0) > 0 ? GROUPS.voice.map((g) => (g.title === 'Reach' ? { ...g, items: [...g.items, { to: '/devices', label: 'Devices', icon: Zap }] } : g)) : GROUPS[platform]).map((g, gi) => {
-          const shown = g.items.filter((n) => view === 'advanced' || !advancedOnly.has(n.to))
+          const shown = g.items.filter((n) => (view === 'advanced' || !advancedOnly.has(n.to)) && !(me?.device && deviceHides.has(n.to)))
           if (!shown.length) return null
           return (
             <div key={gi} className="flex flex-col gap-1">

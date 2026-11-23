@@ -73,6 +73,13 @@ async def test_the_owner_makes_devices_and_a_device_signs_in_to_its_own_account(
     assert me["user"]["email"] == "swarvo-0001@devices.swarvoai.com" and me["current_workspace"]["name"] == "Swarvo Pixel SWARVO-0001" and me["current_workspace"]["role"] == "owner"
     token = r.cookies.get("swarvo_session") or next(iter(r.cookies.values()))
     h = bearer(token)
+    # a device account is not a person signing up: no WhatsApp check, no welcome bonus, and the app knows to hide phone lines
+    client.mp.setenv("PRODUCT_REQUIRE_PHONE_VERIFY", "1")
+    assert (await client.get("/product/verify", headers=h)).json()["required"] is False
+    assert (await client.get("/product/me", headers=h)).json()["device"] is True
+    person = bearer((await signup(client, "person@x.com"))[1])
+    assert (await client.get("/product/me", headers=person)).json()["device"] is False
+    assert (await client.get("/product/verify", headers=person)).json()["required"] is True  # the check is really on: a person still gets asked
     mine = (await client.get("/product/pixels", headers=h)).json()
     assert len(mine) == 1 and mine[0]["id"] == "SWARVO-0001" and mine[0]["status"] == "active" and mine[0]["online"] is False and mine[0]["agent_id"] is None
     # signing in again is the same account, not a second one

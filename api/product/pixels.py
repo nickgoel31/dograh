@@ -18,7 +18,7 @@ from sqlalchemy import func, select
 
 from api.constants import OSS_JWT_SECRET
 from api.db.models import UserModel
-from api.db.product_models import ProductPixelModel, ProductPixelSessionModel, ProductUserProfileModel
+from api.db.product_models import ProductBillingSettingsModel, ProductPixelModel, ProductPixelSessionModel, ProductUserProfileModel
 from api.utils.auth import hash_password
 
 ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"  # no 0/O/1/I/L: easy to read off a sticker
@@ -92,11 +92,19 @@ async def sign_in(session, device: ProductPixelModel) -> UserModel:
     session.add(ProductUserProfileModel(user_id=user.id, display_name=name))
     ws = await create_workspace(session, user, name)
     device.user_id, device.workspace_id = user.id, ws.id
+    # A device account is made by the owner's hardware, not by a person signing up: no WhatsApp number check and no welcome bonus or free minutes.
+    now = datetime.now(UTC)
+    session.add(ProductBillingSettingsModel(workspace_id=ws.id, auto_topup_enabled=False, first_grant_done=True, phone_verified_at=now, signup_bonus_at=now))
     device.name = device.name or name
     device.status = "active"
     device.claimed_at = datetime.now(UTC)
     await session.flush()
     return user
+
+
+async def is_device_account(session, user_id: int) -> bool:
+    """True for the account a Swarvo Pixel signed in to: the app hides phone numbers, campaigns and the like there."""
+    return await session.scalar(select(ProductPixelModel.id).where(ProductPixelModel.user_id == user_id).limit(1)) is not None
 
 
 def is_online(device: ProductPixelModel, now: datetime | None = None) -> bool:

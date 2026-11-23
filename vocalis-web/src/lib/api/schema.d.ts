@@ -2147,6 +2147,8 @@ export interface components {
             brand: string;
             /** Is Admin */
             is_admin?: boolean;
+            /** Device */
+            device?: boolean;
         };
         /** ModelOut */
         ModelOut: {
