@@ -59,6 +59,8 @@ async def main(a) -> None:
                     break
         finally:
             mic_task.cancel()
+        if ws.close_code is not None:  # the server closed the connection: say why (1008 bad_credentials means a wrong id or code)
+            print(f"connection closed by the server: code {ws.close_code}, reason {ws.close_reason!r}")
     if a.out and heard:
         with wave.open(a.out, "wb") as w:
             w.setnchannels(1), w.setsampwidth(2), w.setframerate(RATE)

@@ -181,7 +181,8 @@ async def rig(monkeypatch):
             async def summary(self, org_id):
                 return {"balance": 50.0, "minutes_available": 10.0}
 
-        monkeypatch.setattr(pixel_ws, "deps", SimpleNamespace(session_factory=c.session_factory, start_run=start_run, runner=pipe, wallet=lambda: W()))
+        strict = __import__('sqlalchemy.ext.asyncio', fromlist=['async_sessionmaker']).async_sessionmaker(c.session_factory.kw['bind'], expire_on_commit=True)  # like production: a row cannot be read after a commit without a refresh
+        monkeypatch.setattr(pixel_ws, "deps", SimpleNamespace(session_factory=strict, start_run=start_run, runner=pipe, wallet=lambda: W()))
         monkeypatch.setattr(pixel_ws, "GREETING_GRACE_SECONDS", 0.2)
         c.rig = SimpleNamespace(dev=dev, h=h, runs=runs, pipe=pipe, calls=calls, W=W)
         yield c

@@ -244,8 +244,10 @@ class PixelConnection:
             run_id = await D().start_run(test_org, owner_id, workflow_id, {"pixel": self.device_id})
             row = ProductPixelSessionModel(pixel_id=pixel_pk, workspace_id=workspace_id, run_id=run_id, started_at=_now())
             s.add(row)
+            await s.flush()  # the row's id is read before the commit: a committed row can't be read again here without a refresh
+            row_id = row.id
             await s.commit()
-            return PixelSession(self, run_id, row.id, workflow_id, owner_id)
+            return PixelSession(self, run_id, row_id, workflow_id, owner_id)
 
     async def session_over(self, session: PixelSession) -> None:
         """The pipeline finished (the person left, a cap was hit, or the agent hung up): record it and tell the device."""
