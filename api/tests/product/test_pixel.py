@@ -382,6 +382,10 @@ def test_the_endpoint_checks_hello_and_runs_a_conversation_end_to_end(monkeypatc
     app = FastAPI()
     app.include_router(pixel_ws.router)
     with TestClient(app) as tc:
+        with tc.websocket_connect("/api/v1/ws/device") as ws:  # switched on: hello only. No conversation, no call, nothing started
+            ws.send_text(json.dumps({"type": "hello", "device_id": device_id, "token": code, "fw": "0.1"}))
+            ws.send_bytes(b"\x00\x00" * 320)  # even a stray microphone packet starts nothing
+        assert started == []
         for path in ("/api/v1/ws/device", "/ws/device"):
             with tc.websocket_connect(path) as ws:
                 ws.send_text(json.dumps({"type": "hello", "device_id": device_id, "token": "WRONG-WRONG-WRONG-WRONG", "fw": "0.1"}))

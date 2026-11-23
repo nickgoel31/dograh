@@ -187,6 +187,8 @@ def duration_seconds(cost_info: dict | None, usage_info: dict | None) -> float |
 def caller_of(initial: dict | None, gathered: dict | None) -> tuple[str, str | None]:
     """(display name, phone)."""
     initial, gathered = initial or {}, gathered or {}
+    if initial.get("pixel"):
+        return f"Swarvo Pixel {initial['pixel']}", None
     phone = initial.get("caller_number") or gathered.get("caller_number") or initial.get("phone_number")
     name = initial.get("caller_name") or initial.get("customer_name") or initial.get("name")
     if name:

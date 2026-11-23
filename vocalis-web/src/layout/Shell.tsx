@@ -389,6 +389,8 @@ export default function Shell() {
   }, [brand?.color, brand?.name, theme])
   React.useEffect(() => { const pl = platformOf(pathname); if (pl && pl !== useUI.getState().platform) set({ platform: pl }) }, [pathname, set])
   React.useEffect(() => { set({ mobileNav: false }); document.getElementById('app-scroll')?.scrollTo(0, 0) }, [pathname, set])
+  const meForMode = useMe().data
+  React.useEffect(() => { if (meForMode?.device && useUI.getState().mode !== 'test') set({ mode: 'test' }) }, [meForMode?.device, set])
   const verify = useVerify()
   if (verify.data?.required) return <><VerifyPhone status={verify.data} /><Toaster position="top-center" closeButton theme={theme === 'dark' ? 'dark' : 'light'} /></>
   return (

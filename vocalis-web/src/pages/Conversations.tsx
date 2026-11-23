@@ -11,6 +11,7 @@ import { USE_MOCKS } from '@/lib/api/env'
 import { AdvancedOnly, EmptyState, PageHeader, SearchPill, StatusBadge, TableSkeleton, WaveformPlayer, sentimentEmoji, useAsync } from '@/components/shared'
 import { api } from '@/lib/api'
 import { useUI } from '@/store/ui'
+import { useMe } from '@/lib/useMe'
 import { callSearch } from '@/lib/api/calls'
 import { RecordingPlayer } from '@/components/RecordingPlayer'
 import { useData } from '@/store/data'
@@ -20,7 +21,8 @@ import type { Call } from '@/mock/types'
 const outcomes = ['booked', 'resolved', 'qualified', 'transferred', 'voicemail', 'failed', 'no-answer']
 
 export default function ConversationsPage() {
-  const practice = new URLSearchParams(window.location.search).get('practice') === '1'
+  const isDevice = !!useMe().data?.device
+  const practice = isDevice || new URLSearchParams(window.location.search).get('practice') === '1' // a device account's conversations are on its test copy
   const agents = useData((s) => s.agents)
   const nav = useNavigate()
   const [sp, setSp] = useSearchParams()
@@ -60,7 +62,7 @@ export default function ConversationsPage() {
         <Select className="h-10 w-auto rounded-full px-4" value={outcome} onChange={(e) => setOutcome(e.target.value)} aria-label="Result"><option value="">Any result</option>{outcomes.map((o) => <option key={o}>{o}</option>)}</Select>
         <Input className="w-56" placeholder="Search what was said" aria-label="Search what was said" value={said} onChange={(e) => setSaid(e.target.value)} />
         <Chip active={failedOnly} onClick={() => setSp(failedOnly ? {} : { failed: '1' })}>Failed only</Chip>
-        <Chip active={practice} onClick={() => setSp(practice ? {} : { practice: '1' })}>Practice calls</Chip>
+        {!isDevice && <Chip active={practice} onClick={() => setSp(practice ? {} : { practice: '1' })}>Practice calls</Chip>}
       </div>
       <Card className="overflow-hidden">
         {loading ? <TableSkeleton /> : rows.length === 0 ? <div className="p-6"><EmptyState emoji="📭" title="No calls match" text="Try clearing a filter to see more calls." action={<Button variant="primary" size="lg" onClick={() => { setQ(''); setAgent(''); setOutcome(''); setSp({}) }}>Clear filters</Button>} /></div> : (
