@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 
 from loguru import logger
 from starlette.websockets import WebSocketState
@@ -107,7 +108,43 @@ class PixelFrameSerializer(FrameSerializer):
         return None
 
 
+HEAD_START_SECONDS = 1.0  # audio sent in one burst at the start of each reply, so the device has a buffer before playback
+NEW_REPLY_GAP = 0.3  # a pause this long in the audio stream means a new reply (or a stall) begins
+PACE_FACTOR = 2.0  # after the head start, send at least this much faster than real time
+
+
+def _install_pacing(transport: FastAPIWebsocketTransport) -> None:
+    """Replace the transport's 'simulate playback' sleep: a 1 s head start per reply, then faster than real time, never slower."""
+    out = transport.output()
+    state = {"credit": 0.0, "last": 0.0}
+
+    async def pace() -> None:
+        now = time.monotonic()
+        if now - state["last"] > NEW_REPLY_GAP or out._next_send_time == 0:
+            state["credit"] = HEAD_START_SECONDS
+            out._next_send_time = 0
+        state["last"] = now
+        chunk_s = out.audio_chunk_size / out.sample_rate / 2  # seconds of audio in the chunk just sent (16-bit samples)
+        if state["credit"] > 0:
+            state["credit"] -= chunk_s
+            return  # head start: no sleep
+        wait = max(0.0, out._next_send_time - time.monotonic())
+        if wait:
+            await asyncio.sleep(wait)
+            out._next_send_time += chunk_s / PACE_FACTOR
+        else:
+            out._next_send_time = time.monotonic() + chunk_s / PACE_FACTOR
+
+    out._write_audio_sleep = pace
+
+
 def create_pixel_transport(socket: PixelSocket) -> FastAPIWebsocketTransport:
+    transport = _make_pixel_transport(socket)
+    _install_pacing(transport)
+    return transport
+
+
+def _make_pixel_transport(socket: PixelSocket) -> FastAPIWebsocketTransport:
     return FastAPIWebsocketTransport(
         websocket=socket,
         params=FastAPIWebsocketParams(
