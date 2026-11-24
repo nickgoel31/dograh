@@ -871,3 +871,41 @@ class ProductIvrCallModel(Base):
     amount = Column(Float, nullable=False, default=0.0)
 
     __table_args__ = (Index("ix_ivr_calls_ivr_started", "ivr_id", "started_at"),)
+
+
+class ProductFollowupModel(Base):
+    """A message to send on WhatsApp after a call, for one AI agent, one IVR menu, or all of them."""
+
+    __tablename__ = "product_followups"
+
+    id = Column(Integer, primary_key=True)
+    public_id = Column(String(24), unique=True, nullable=False, index=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(120), nullable=False)
+    enabled = Column(Boolean, nullable=False, default=False)
+    source = Column(String(8), nullable=False, default="all")  # all | agent | ivr
+    source_id = Column(String(32), nullable=True)  # the agent's or the menu's public id
+    trigger = Column(String(16), nullable=False, default="any")  # any | answered | booked | qualified | resolved | transferred | voicemail | no-answer | agent
+    message = Column(String(600), nullable=False, default="")
+    link = Column(String(300), nullable=True)
+    delay_minutes = Column(Integer, nullable=False, default=0)
+    cooldown_hours = Column(Integer, nullable=False, default=24)  # the same person gets this message at most once in this time
+    consent = Column(Boolean, nullable=False, default=False)  # the owner confirmed callers are told they will get this message
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+
+class ProductFollowupSendModel(Base):
+    """One attempt to send a follow-up for one call (also what stops the same call being messaged twice)."""
+
+    __tablename__ = "product_followup_sends"
+
+    id = Column(Integer, primary_key=True)
+    followup_id = Column(Integer, ForeignKey("product_followups.id", ondelete="CASCADE"), nullable=False)
+    workspace_id = Column(Integer, nullable=False)
+    call_key = Column(String(24), nullable=False)  # "run:123" for an AI call, "ivr:45" for a menu call
+    phone = Column(String(20), nullable=False)
+    status = Column(String(8), nullable=False)  # sent | failed | skipped
+    reason = Column(String(60), nullable=False, default="")
+    at = Column(DateTime(timezone=True), default=_now)
+
+    __table_args__ = (UniqueConstraint("followup_id", "call_key", name="uq_followup_call"), Index("ix_followup_sends_ws_at", "workspace_id", "at"))

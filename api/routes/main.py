@@ -48,6 +48,7 @@ from api.product.numbers_router import router as product_numbers_router
 from api.product.voices_router import router as product_voices_router
 from api.product.pixels_router import admin as product_pixels_admin_router
 from api.product.pixels_router import router as product_pixels_router
+from api.product.followups_router import router as product_followups_router
 from api.product.ivr_router import public as ivr_callbacks_router
 from api.product.ivr_router import router as product_ivr_router
 from api.product.swarvo_tts_router import router as product_swarvo_tts_router
@@ -93,6 +94,7 @@ router.include_router(product_agents_router)
 router.include_router(product_voices_router)
 router.include_router(product_pixels_router)
 router.include_router(product_ivr_router)
+router.include_router(product_followups_router)
 router.include_router(ivr_callbacks_router)
 router.include_router(product_pixels_admin_router)
 router.include_router(product_swarvo_tts_router)
