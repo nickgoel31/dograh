@@ -30,7 +30,7 @@ VOICES = [
     {"id": "Polly.Amy", "label": "Amy (woman, UK English)", "languages": ["en-GB"]},
 ]
 LANGUAGES = {"en-IN": "English (India)", "hi-IN": "Hindi", "en-US": "English (US)", "en-GB": "English (UK)"}
-DEFAULT_SETTINGS = {"voice": "Polly.Aditi", "language": "en-IN", "pulse": 60, "hours": None, "paused_message": "Sorry, this line isn't taking calls right now. Please try again later."}
+DEFAULT_SETTINGS = {"voice": "Polly.Aditi", "language": "en-IN", "pulse": 60, "hours": None, "max_seconds": None, "paused_message": "Sorry, this line isn't taking calls right now. Please try again later."}
 LIVE_FOR = timedelta(seconds=90)  # a call with no step for this long is over; it is billed then
 
 
@@ -61,6 +61,11 @@ def clean_settings(raw: dict, current: dict) -> dict:
         if int(raw["pulse"]) not in (30, 60):
             raise eng.FlowError("Billing is either every 30 seconds or every 60 seconds.")
         s["pulse"] = int(raw["pulse"])
+    if "max_seconds" in raw:
+        v = raw["max_seconds"]
+        if v is not None and (not isinstance(v, int) or not 10 <= v <= 14400):
+            raise eng.FlowError("Cut the call after between 10 seconds and 4 hours, or leave it empty for no limit.")
+        s["max_seconds"] = v
     if "hours" in raw:
         s["hours"] = hours_mod.validate_hours(raw["hours"]) if raw["hours"] else None
     if "paused_message" in raw:
@@ -98,8 +103,21 @@ def open_checker(settings: dict, now: datetime | None = None):
     return lambda hrs: hours_mod.is_open(hrs, now)
 
 
-def xml(step: eng.Step, settings: dict, base: str, pid: str, caller_id: str = "") -> str:
-    return '<?xml version="1.0" encoding="UTF-8"?>' + eng.to_xml(step, voice=settings["voice"], language=settings["language"], url=make_url(base, pid), caller_id=caller_id)
+def seconds_left(call: ProductIvrCallModel, settings: dict, now: datetime | None = None) -> int | None:
+    """How long this call may still last under the menu's time limit (None = no limit)."""
+    limit = settings.get("max_seconds")
+    if not limit:
+        return None
+    now = now or datetime.now(UTC)
+    started = call.started_at if call.started_at.tzinfo else call.started_at.replace(tzinfo=UTC)
+    return int(limit - (now - started).total_seconds())
+
+
+TIME_UP = "We've reached the time limit for this call. Thank you for calling. Goodbye."
+
+
+def xml(step: eng.Step, settings: dict, base: str, pid: str, caller_id: str = "", left: int | None = None) -> str:
+    return '<?xml version="1.0" encoding="UTF-8"?>' + eng.to_xml(step, voice=settings["voice"], language=settings["language"], url=make_url(base, pid), caller_id=caller_id, left=left)
 
 
 def say_and_hangup(text: str, settings: dict | None = None) -> str:
@@ -122,7 +140,7 @@ async def begin(session, ivr: ProductIvrModel, *, org_id: int, number_id: int | 
     st = eng.step(flow, flow["start"], vars=call.vars, is_open=open_checker(s), hours=s.get("hours"))
     _log(call, st, "start")
     await session.commit()
-    return xml(st, s, base, ivr.public_id, caller_id=to_number)
+    return xml(st, s, base, ivr.public_id, caller_id=to_number, left=s.get("max_seconds"))
 
 
 def _log(call: ProductIvrCallModel, st: eng.Step, event: str, **extra) -> None:
@@ -136,6 +154,13 @@ async def carry_on(session, ivr: ProductIvrModel, call: ProductIvrCallModel, kin
     """The caller answered (or the phone network reported back). Returns the next Step and its XML."""
     s = settings_of(ivr)
     flow, nodes = ivr.flow, ivr.flow["nodes"]
+    left = seconds_left(call, s)
+    if left is not None and left <= 0 and kind != "agent":  # the time limit is up: say so and hang up, whatever the caller was doing
+        st = eng.Step(say=[TIME_UP], then={"kind": "hangup"}, trail=[node] if node in nodes else [])
+        _log(call, st, "time_limit")
+        call.outcome = "time_limit"
+        await session.commit()
+        return st, xml(st, s, base, ivr.public_id, caller_id=call.to_number)
     common = dict(is_open=open_checker(s), hours=s.get("hours"))
     vars_ = dict(call.vars or {})
     n = nodes.get(node)
@@ -163,7 +188,7 @@ async def carry_on(session, ivr: ProductIvrModel, call: ProductIvrCallModel, kin
     else:
         st = eng.Step(say=[eng.DEFAULT_GOODBYE])
     await session.commit()
-    return st, xml(st, s, base, ivr.public_id, caller_id=call.to_number)
+    return st, xml(st, s, base, ivr.public_id, caller_id=call.to_number, left=left)
 
 
 def duration_seconds(call: ProductIvrCallModel) -> int:

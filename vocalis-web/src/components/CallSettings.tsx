@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Button, Card, Input, Select, Switch } from '@/components/ui'
 import { http } from '@/lib/api/http'
 import { useData } from '@/store/data'
+import { CallLimit } from '@/pages/Ivr'
 import { agentsApi, toAgent } from '@/lib/api/agents'
 import type { Agent } from '@/mock/types'
 import type { components } from '@/lib/api/schema'
@@ -109,9 +110,8 @@ export function CallSettings({ agent, separate = false }: { agent: Agent; separa
       <div className="space-y-4 border-t pt-5">
         <H t="Call Management" d="Configure call duration limits and idle timeout settings." />
         <div className="grid gap-4 sm:grid-cols-2">
-          <div><Lbl>Max Call Duration (seconds)</Lbl>
-            <Input type="number" min={1} step={1} value={f.maxSecs} className="font-mono" onChange={(e) => num(e.target.value, (s) => parseInt(s, 10), (n) => n > 0 && n <= 14400, (n) => set({ maxSecs: n }))} />
-            <Hint>Default: 900 (15 minutes)</Hint></div>
+          <div><CallLimit alwaysOn min={1} seconds={f.maxSecs} onChange={(s) => set({ maxSecs: s ?? 900 })} />
+            <Hint>The call is cut automatically after this time. Default: 15 minutes.</Hint></div>
           <div><Lbl>Max User Idle Timeout (seconds)</Lbl>
             <Input type="number" min={1} step={1} value={f.idleSecs} className="font-mono" onChange={(e) => num(e.target.value, (s) => parseInt(s, 10), (n) => n > 0 && n <= 3600, (n) => set({ idleSecs: n }))} />
             <Hint>Default: 10 seconds</Hint></div>

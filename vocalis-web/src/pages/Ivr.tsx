@@ -21,7 +21,7 @@ const TYPE: Record<IvrNode['type'], { name: string; hint: string }> = {
   hangup: { name: 'End the call', hint: 'Says goodbye and hangs up' },
 }
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const OUTCOME: Record<string, string> = { menu: 'Hung up in the menu', transferred: 'Transferred', agent: 'AI agent', voicemail: 'Voicemail', hangup: 'Finished' }
+const OUTCOME: Record<string, string> = { time_limit: 'Cut at the time limit', menu: 'Hung up in the menu', transferred: 'Transferred', agent: 'AI agent', voicemail: 'Voicemail', hangup: 'Finished' }
 const mins = (s: number) => (s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${s % 60} s`)
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '')
 const rate = (n: number) => '₹' + n.toFixed(2)
@@ -177,6 +177,21 @@ function Tester({ ivr, flow }: { ivr: Ivr; flow: IvrFlow }) {
   )
 }
 
+/** "Cut the call after ..." : a number with a seconds or minutes choice. Stored in seconds; empty means no limit. */
+export function CallLimit({ seconds, onChange, max = 14400, min = 10, alwaysOn }: { seconds: number | null; onChange: (s: number | null) => void; max?: number; min?: number; alwaysOn?: boolean }) {
+  const [unit, setUnit] = React.useState<'s' | 'm'>(seconds && seconds % 60 === 0 ? 'm' : 's')
+  const on = seconds != null || !!alwaysOn
+  const shown = seconds == null ? '' : unit === 'm' ? String(seconds / 60) : String(seconds)
+  const set = (raw: string, u = unit) => { const n = Math.round(Number(raw) * (u === 'm' ? 60 : 1)); onChange(raw === '' || !Number.isFinite(n) ? null : Math.min(max, Math.max(min, n))) }
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-medium">Cut the call automatically after a set time</span>{!alwaysOn && <Switch checked={on} onChange={(v) => onChange(v ? 300 : null)} label="Cut calls after a set time" />}</div>
+      {on && <div className="flex gap-2"><Input type="number" min={1} value={shown} onChange={(e) => set(e.target.value)} aria-label="Time" /><Select value={unit} onChange={(e) => { const u = e.target.value as 's' | 'm'; setUnit(u); set(u === 'm' ? String(Math.max(1, Math.round((seconds ?? 300) / 60))) : String(seconds ?? 300), u) }} className="w-32"><option value="s">seconds</option><option value="m">minutes</option></Select></div>}
+      <p className="mt-1 text-xs text-soft">{on ? 'Callers hear a short goodbye, then the call ends. Transfers and voicemail never run past it.' : 'No limit: calls last until the caller hangs up.'}</p>
+    </div>
+  )
+}
+
 function SettingsPanel({ s, onChange, locked }: { s: IvrSettings; onChange: (p: Partial<IvrSettings>) => void; locked?: boolean }) {
   const opts = useQuery({ queryKey: ['ivr-options'], queryFn: ivrApi.options, staleTime: 600000 })
   const h = s.hours ?? { enabled: false, tz: 'Asia/Kolkata', windows: [{ days: [0, 1, 2, 3, 4], start: '09:00', end: '18:00' }], closed_message: '' }
@@ -199,6 +214,7 @@ function SettingsPanel({ s, onChange, locked }: { s: IvrSettings; onChange: (p: 
             </button>))}
         </div>
       </Field>
+      <CallLimit seconds={s.max_seconds ?? null} onChange={(v) => onChange({ max_seconds: v })} />
       <div>
         <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-medium">Business hours <span className="font-normal text-soft">(used by “Open or closed?” steps)</span></span><Switch checked={h.enabled} onChange={(v) => setH({ enabled: v })} label="Use business hours" /></div>
         {h.enabled && <div className="space-y-3">

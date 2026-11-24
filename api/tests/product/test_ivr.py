@@ -257,3 +257,50 @@ async def test_a_draft_menu_does_not_answer_and_other_workspaces_cannot_touch_it
     await client.patch(f"/product/ivr/{p2}", json={"flow": {"start": "a", "nodes": {"a": {"type": "say", "say": "hi", "next": None}, "z": {"type": "hangup"}}}}, headers=h)
     r = await client.post(f"/product/ivr/{p2}/status?status=live", headers=h)
     assert r.status_code == 400 and r.json()["detail"]["code"] == "not_ready"
+
+
+def test_time_limit_is_checked_and_caps_transfers_and_voicemail():
+    cur = ivr_mod.settings_of(type("R", (), {"settings": {}})())
+    assert cur["max_seconds"] is None
+    assert ivr_mod.clean_settings({"max_seconds": 120}, cur)["max_seconds"] == 120
+    assert ivr_mod.clean_settings({"max_seconds": None}, {**cur, "max_seconds": 120})["max_seconds"] is None
+    for bad in (5, 99999, "60"):
+        with pytest.raises(eng.FlowError):
+            ivr_mod.clean_settings({"max_seconds": bad}, cur)
+    s = {**cur, "max_seconds": 100}
+    call = type("C", (), {"started_at": datetime.now(UTC) - timedelta(seconds=70)})()
+    assert 25 <= ivr_mod.seconds_left(call, s) <= 30 and ivr_mod.seconds_left(call, cur) is None
+    # a transfer cannot ring past the limit, and voicemail cannot record past it
+    d = xml_of(eng.step(FLOW, "xfer"))
+    assert d.find("Dial").get("timeLimit") is None
+    url = lambda kind, node, tries: "https://x.test/step"  # noqa: E731
+    dial = ET.fromstring(eng.to_xml(eng.step(FLOW, "xfer"), voice="v", language="en-IN", url=url, left=28))
+    assert dial.find("Dial").get("timeLimit") == "28"
+    rec = ET.fromstring(eng.to_xml(eng.step(FLOW, "vm"), voice="v", language="en-IN", url=url, left=12))
+    assert rec.find("Record").get("maxLength") == "12"  # asked for 30 s, only 12 s left
+
+
+@pytest.mark.asyncio
+async def test_a_call_past_its_time_limit_is_ended(client):
+    _, tok = await signup(client, "a@x.com")
+    h = bearer(tok)
+    pid = (await client.post("/product/ivr", json={"name": "Limited"}, headers=h)).json()["id"]
+    assert (await client.patch(f"/product/ivr/{pid}", json={"settings": {"max_seconds": 60}}, headers=h)).json()["settings"]["max_seconds"] == 60
+    assert (await client.patch(f"/product/ivr/{pid}", json={"settings": {"max_seconds": 3}}, headers=h)).status_code == 400
+    _, ws_id, org_id, num_row_id, cfg_id = await _number(client)
+    await client.post(f"/product/ivr/{pid}/status?status=live", headers=h)
+    async with client.session_factory() as s:
+        ivr = (await s.execute(select(product_models.ProductIvrModel))).scalar_one()
+        body = await ivr_mod.begin(s, ivr, org_id=org_id, number_id=num_row_id, config_id=cfg_id, call_uuid="u-9", from_number="+91", to_number="+14155550100", base="https://api.test")
+    gi = ET.fromstring(body.split("?>", 1)[1]).find("GetInput")
+    path = gi.get("action").replace("https://api.test/api/v1", "")
+    ok = await client.post(path, data={"CallUUID": "u-9", "Digits": "1"})
+    assert "time limit" not in ok.text  # still inside the limit
+    async with client.session_factory() as s:
+        c = (await s.execute(select(product_models.ProductIvrCallModel))).scalar_one()
+        c.started_at = datetime.now(UTC) - timedelta(seconds=90)
+        await s.commit()
+    late = await client.post(path, data={"CallUUID": "u-9", "Digits": "2"})
+    assert "time limit" in late.text and ET.fromstring(late.text.split("?>", 1)[-1]).find("Hangup") is not None
+    calls = (await client.get(f"/product/ivr/{pid}/calls", headers=h)).json()
+    assert calls[0]["outcome"] == "time_limit"

@@ -255,8 +255,9 @@ def _speak(text: str, voice: str, language: str) -> str:
     return f"<Speak voice={quoteattr(voice)} language={quoteattr(language)}>{escape(text)}</Speak>" if text.strip() else ""
 
 
-def to_xml(s: Step, *, voice: str, language: str, url, caller_id: str = "") -> str:
-    """Plivo XML for a Step. `url(kind, node, tries)` makes the signed callback address for what happens next."""
+def to_xml(s: Step, *, voice: str, language: str, url, caller_id: str = "", left: int | None = None) -> str:
+    """Plivo XML for a Step. `url(kind, node, tries)` makes the signed callback address for what happens next.
+    `left` is how many seconds the call may still last (the menu's time limit): transfers and recordings never run past it."""
     say = "".join(_speak(t, voice, language) for t in s.say)
     a = s.then
     kind = a["kind"]
@@ -269,9 +270,11 @@ def to_xml(s: Step, *, voice: str, language: str, url, caller_id: str = "") -> s
         return f'<Response>{body}<Redirect method="POST">{escape(url("noinput", a["node"], a["tries"]))}</Redirect></Response>'
     if kind == "dial":
         cid = f" callerId={quoteattr(caller_id)}" if caller_id else ""
-        return f'<Response>{say}<Dial action={quoteattr(url("dial", a["node"], 0))} method="POST" timeout="30"{cid}><Number>{escape(a["number"])}</Number></Dial></Response>'
+        limit = f' timeLimit="{max(left, 1)}"' if left is not None else ""
+        return f'<Response>{say}<Dial action={quoteattr(url("dial", a["node"], 0))} method="POST" timeout="30"{cid}{limit}><Number>{escape(a["number"])}</Number></Dial></Response>'
     if kind == "record":
-        return (f'<Response>{say}{_speak(a["prompt"], voice, language)}<Record action={quoteattr(url("record", a["node"], 0))} method="POST" maxLength="{a["seconds"]}"'
+        longest = min(a["seconds"], max(left, 1)) if left is not None else a["seconds"]
+        return (f'<Response>{say}{_speak(a["prompt"], voice, language)}<Record action={quoteattr(url("record", a["node"], 0))} method="POST" maxLength="{longest}"'
                 f' playBeep="true" finishOnKey="#" redirect="true"/></Response>')
     if kind == "agent":
         return f'<Response>{say}<Redirect method="POST">{escape(url("agent", a["node"], 0))}</Redirect></Response>'
