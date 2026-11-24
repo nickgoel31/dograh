@@ -744,6 +744,30 @@ async def _resolve_my_number(normalized_data, webhook_data: dict, headers: dict)
         return None, None, None
 
 
+async def _answer_with_ivr(request, provider_class, normalized_data, webhook_data, headers, raw_body, config, phone_row, ivr_public_id):
+    from sqlalchemy import select
+
+    from api.db.product_models import ProductIvrModel, ProductWorkspaceModel
+    from api.product import ivr as ivr_mod
+
+    provider_instance = await get_telephony_provider_by_id(config.id, config.organization_id)
+    if not await provider_instance.verify_inbound_signature(await get_public_request_url(request), webhook_data, headers, raw_body):
+        return provider_class.generate_validation_error_response(TelephonyError.SIGNATURE_VALIDATION_FAILED)
+    async with db_client.async_session() as s:
+        ws = await s.scalar(select(ProductWorkspaceModel).where(ProductWorkspaceModel.live_org_id == config.organization_id))
+        ivr = await s.scalar(select(ProductIvrModel).where(ProductIvrModel.public_id == ivr_public_id, ProductIvrModel.workspace_id == (ws.id if ws else -1)))
+        if ivr is None:
+            return provider_class.generate_validation_error_response(TelephonyError.WORKFLOW_NOT_FOUND)
+        base, _ = await get_backend_endpoints()
+        body = await ivr_mod.begin(
+            s, ivr, org_id=config.organization_id, number_id=phone_row.id, config_id=config.id,
+            call_uuid=normalized_data.call_id, from_number=normalized_data.from_number, to_number=normalized_data.to_number, base=base,
+        )
+    from fastapi import Response
+
+    return Response(content=body, media_type="application/xml")
+
+
 @router.post("/inbound/run")
 async def handle_inbound_run(request: Request):
     """Workflow-agnostic inbound dispatcher.
@@ -816,6 +840,13 @@ async def handle_inbound_run(request: Request):
 
         config, phone_row = match
         telephony_configuration_id = config.id
+
+        # Swarvo IVR: a number that points at a phone menu is answered by the menu, not by an agent.
+        ivr_public_id = (phone_row.extra_metadata or {}).get("ivr_id")
+        if ivr_public_id:
+            return await _answer_with_ivr(
+                request, provider_class, normalized_data, webhook_data, headers, raw_body, config, phone_row, ivr_public_id
+            )
 
         # My Number: a call forwarded to the shared Swarvo number belongs to whichever personal number it came from.
         routed_workflow_id, routed_context, routed_status = await _resolve_my_number(

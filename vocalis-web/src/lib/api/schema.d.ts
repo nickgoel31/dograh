@@ -2185,6 +2185,8 @@ export interface components {
         };
         /** NumberOut */
         NumberOut: {
+            /** Ivr Id */
+            ivr_id?: string | null;
             /** Id */
             id: string;
             /** Number */

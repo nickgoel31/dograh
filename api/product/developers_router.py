@@ -302,6 +302,13 @@ async def ops_tick(x_ops_secret: str | None = Header(default=None), session=Depe
         await session.rollback()
         out["practice_charged"] = -1
     try:
+        from api.product import ivr as ivr_billing
+
+        out["ivr_charged"] = await ivr_billing.charge_calls(session, wallet)
+    except Exception:  # noqa: BLE001 - the rest of the job still runs
+        await session.rollback()
+        out["ivr_charged"] = -1
+    try:
         from api.product import chat_engine
 
         out["chat_settled"] = await chat_engine.settle_pending(session, wallet)

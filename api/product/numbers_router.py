@@ -39,6 +39,7 @@ class NumberOut(BaseModel):
     hours: dict | None
     fallback: str | None
     sandbox: bool
+    ivr_id: str | None = None
 
 
 class OfferOut(BaseModel):
@@ -84,7 +85,7 @@ def _out(row: TelephonyPhoneNumberModel, agents: dict[int, ProductAgentModel]) -
         type=KINDS.get(m.get("kind", "local"), "Local"), agent_id=a.public_id if a else None,
         agent_name=a.name if a else None, status="active" if row.is_active else "pending",
         monthly=float(m.get("monthly") or 0), reputation=m.get("reputation", "unknown"),
-        hours=m.get("hours"), fallback=m.get("fallback"), sandbox=bool(m.get("sandbox")),
+        hours=m.get("hours"), fallback=m.get("fallback"), sandbox=bool(m.get("sandbox")), ivr_id=m.get("ivr_id"),
     )
 
 
@@ -308,6 +309,8 @@ async def bring(body: BringBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE)
 @router.post("/{number_id}/assign", response_model=NumberOut)
 async def assign(number_id: str, body: AssignBody, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE))):
     row = await _row(ctx, number_id)
+    if (row.extra_metadata or {}).get("ivr_id"):  # a number answers with an agent or with a menu, never both
+        row.extra_metadata = {k: v for k, v in row.extra_metadata.items() if k != "ivr_id"}
     if body.agent_id is None:
         row.inbound_workflow_id = None
     else:
@@ -319,6 +322,32 @@ async def assign(number_id: str, body: AssignBody, ctx: Ctx = Depends(require(Pe
         if wid is None:
             raise product_error(400, "not_live_yet", "Put this agent live first, then connect a real number to it.")
         row.inbound_workflow_id = wid
+    await ctx.session.commit()
+    return _out(row, await _agents_by_workflow(ctx))
+
+
+class IvrBody(BaseModel):
+    ivr_id: str | None = None
+
+
+@router.post("/{number_id}/ivr", response_model=NumberOut)
+async def assign_ivr(number_id: str, body: IvrBody, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE))):
+    """Answer this number with a Swarvo IVR menu (or stop doing so)."""
+    from api.db.product_models import ProductIvrModel
+
+    row = await _row(ctx, number_id)
+    meta = dict(row.extra_metadata or {})
+    if body.ivr_id is None:
+        meta.pop("ivr_id", None)
+    else:
+        ivr = await ctx.session.scalar(select(ProductIvrModel).where(ProductIvrModel.public_id == body.ivr_id, ProductIvrModel.workspace_id == ctx.workspace.id))
+        if ivr is None:
+            raise product_error(404, "ivr_not_found", "We couldn't find that menu.")
+        if meta.get("sandbox"):
+            raise product_error(400, "live_number", "Menus answer real phone numbers. Connect a real number first.")
+        meta["ivr_id"] = ivr.public_id
+        row.inbound_workflow_id = None
+    row.extra_metadata = meta
     await ctx.session.commit()
     return _out(row, await _agents_by_workflow(ctx))
 

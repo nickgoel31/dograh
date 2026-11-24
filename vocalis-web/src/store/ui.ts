@@ -6,7 +6,7 @@ interface UI {
   view: 'simple' | 'advanced'
   theme: 'light' | 'dark'
   collapsed: boolean
-  platform: 'voice' | 'chat' | 'api'
+  platform: 'voice' | 'chat' | 'api' | 'ivr'
   mobileNav: boolean
   palette: boolean
   guide: boolean // opens the setup guide

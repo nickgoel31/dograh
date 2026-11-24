@@ -824,3 +824,48 @@ class ProductPixelSessionModel(Base):
     end_reason = Column(String(24), nullable=False, default="")
 
     __table_args__ = (Index("ix_pixel_sessions_pixel_started", "pixel_id", "started_at"),)
+
+
+class ProductIvrModel(Base):
+    """A Swarvo IVR: a phone menu a workspace builds. Numbers point at it with extra_metadata["ivr_id"]; callers walk its flow (see ivr_engine)."""
+
+    __tablename__ = "product_ivrs"
+
+    id = Column(Integer, primary_key=True)
+    public_id = Column(String(24), unique=True, nullable=False, index=True)
+    workspace_id = Column(Integer, ForeignKey("product_workspaces.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(120), nullable=False)
+    status = Column(String(10), nullable=False, default="draft")  # draft | live | paused
+    flow = Column(JSON, nullable=False, default=dict)
+    settings = Column(JSON, nullable=False, default=dict)  # voice, language, pulse (30 or 60 seconds), hours
+    created_at = Column(DateTime(timezone=True), default=_now)
+    updated_at = Column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class ProductIvrCallModel(Base):
+    """One call into an IVR: the path the caller took, what they typed, and what it cost."""
+
+    __tablename__ = "product_ivr_calls"
+
+    id = Column(Integer, primary_key=True)
+    ivr_id = Column(Integer, ForeignKey("product_ivrs.id", ondelete="CASCADE"), nullable=False)
+    workspace_id = Column(Integer, nullable=False, index=True)
+    org_id = Column(Integer, nullable=False)
+    number_id = Column(Integer, nullable=True)
+    config_id = Column(Integer, nullable=True)
+    call_uuid = Column(String(64), unique=True, nullable=False)
+    from_number = Column(String(32), nullable=False, default="")
+    to_number = Column(String(32), nullable=False, default="")
+    started_at = Column(DateTime(timezone=True), default=_now)
+    last_at = Column(DateTime(timezone=True), default=_now)
+    outcome = Column(String(16), nullable=False, default="menu")  # menu | transferred | agent | voicemail | hangup
+    trail = Column(JSON, nullable=False, default=list)
+    vars = Column(JSON, nullable=False, default=dict)
+    voicemail_url = Column(String(500), nullable=True)
+    run_id = Column(Integer, nullable=True)  # the AI call, when the IVR handed over to an agent
+    seconds = Column(Integer, nullable=False, default=0)
+    billed = Column(Boolean, nullable=False, default=False)
+    minutes = Column(Float, nullable=False, default=0.0)
+    amount = Column(Float, nullable=False, default=0.0)
+
+    __table_args__ = (Index("ix_ivr_calls_ivr_started", "ivr_id", "started_at"),)

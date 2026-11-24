@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Card, Dialog, Field, Input, Select, Switch, Textarea } from '@/components/ui'
 import { EmptyState, PageHeader, StatusBadge, TableSkeleton } from '@/components/shared'
 import { http } from '@/lib/api/http'
+import { ivrApi } from '@/lib/api/ivr'
 import type { components } from '@/lib/api/schema'
 import { useData } from '@/store/data'
 import { useUI } from '@/store/ui'
@@ -50,7 +51,7 @@ export default function RealNumbers() {
             <tbody>{list.map((n) => (
               <tr key={n.id} className="border-b last:border-0">
                 <td className="px-4 py-3"><div className="num font-medium">{n.number}</div><div className="text-xs text-soft">{n.country} · {n.type}{n.sandbox && ' · practice'}</div></td>
-                <td className="px-4 py-3">{n.agent_name ?? <span className="text-soft">Nobody yet</span>}</td>
+                <td className="px-4 py-3">{n.agent_name ?? (n.ivr_id ? <span>Phone menu</span> : <span className="text-soft">Nobody yet</span>)}</td>
                 <td className="px-4 py-3"><StatusBadge status={n.status as never} /></td>
                 <td className="px-4 py-3"><span className="inline-flex items-center gap-1 text-soft" title="We don't check this yet"><ShieldQuestion size={14} />Not monitored yet</span></td>
                 <td className="num px-4 py-3">{n.monthly ? money(n.monthly) : '—'}</td>
@@ -119,14 +120,19 @@ function BuyDialog({ open, onClose, onBought, onKyc }: { open: boolean; onClose:
 }
 
 function SettingsDialog({ n, agents, onClose, onSaved }: { n: N; agents: { id: string; name: string }[]; onClose: () => void; onSaved: () => void }) {
-  const [agent, setAgent] = React.useState(n.agent_id ?? '')
+  const [agent, setAgent] = React.useState(n.ivr_id ? `ivr:${n.ivr_id}` : (n.agent_id ?? ''))
+  const menus = useQuery({ queryKey: ['ivrs'], queryFn: ivrApi.list })
   const [h, setH] = React.useState(toHours(n.hours))
   const [fallback, setFallback] = React.useState(n.fallback ?? '')
   const [busy, setBusy] = React.useState(false)
   const save = async () => {
     setBusy(true)
     try {
-      if ((n.agent_id ?? '') !== agent) await http(`/numbers/${n.id}/assign`, { method: 'POST', json: { agent_id: agent || null } })
+      const before = n.ivr_id ? `ivr:${n.ivr_id}` : (n.agent_id ?? '')
+      if (before !== agent) {
+        if (agent.startsWith('ivr:')) await ivrApi.attach(n.id, agent.slice(4))
+        else await http(`/numbers/${n.id}/assign`, { method: 'POST', json: { agent_id: agent || null } })
+      }
       const hours = { enabled: h.enabled, tz: h.tz, windows: h.enabled ? [{ days: h.days.flatMap((on, i) => (on ? [i] : [])), start: h.start, end: h.end }] : [], closed_message: h.closed }
       await http(`/numbers/${n.id}`, { method: 'PATCH', json: { hours, ...(fallback.trim() ? { fallback: fallback.replace(/[\s-]/g, '') } : { clear_fallback: true }) } })
       toast.success('Saved!'); onSaved(); onClose()
@@ -139,7 +145,7 @@ function SettingsDialog({ n, agents, onClose, onSaved }: { n: N; agents: { id: s
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()} side title={n.number} description="Settings for this number">
       <div className="space-y-6">
-        <Field label="Answered by"><Select value={agent} onChange={(e) => setAgent(e.target.value)}><option value="">Nobody yet</option>{agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select></Field>
+        <Field label="Answered by"><Select value={agent} onChange={(e) => setAgent(e.target.value)}><option value="">Nobody yet</option><optgroup label="AI voice agents">{agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</optgroup>{!!menus.data?.length && <optgroup label="Phone menus (Swarvo IVR)">{menus.data.map((m) => <option key={m.id} value={`ivr:${m.id}`}>{m.name}{m.status !== 'live' ? ' (not live yet)' : ''}</option>)}</optgroup>}</Select></Field>
         <div>
           <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-medium">Business hours</span><Switch checked={h.enabled} onChange={(v) => setH({ ...h, enabled: v })} label="Use business hours" /></div>
           {h.enabled && <div className="space-y-3">

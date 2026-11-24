@@ -28,6 +28,8 @@ TABLES = [
     product_models.ProductVoiceFavoriteModel.__table__,
     product_models.ProductPixelModel.__table__,
     product_models.ProductPixelSessionModel.__table__,
+    product_models.ProductIvrModel.__table__,
+    product_models.ProductIvrCallModel.__table__,
     models.ModelProfileModel.__table__,
     models.WorkflowModel.__table__,
     models.WorkflowRunModel.__table__,

@@ -5,7 +5,7 @@ import { Command } from 'cmdk'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   AlertCircle, AlertTriangle, CheckCircle2, Coins, Globe, Info, Key, Loader2, Mail, BarChart3, BookOpen, Bell, Bot, ChevronDown, ChevronRight, Code2, CreditCard, FlaskConical, HelpCircle, Home, Megaphone, Menu as MenuIcon,
-  MessageCircle, Mic2, Moon, Plus, Users, Wallet, PanelLeftClose, PanelLeftOpen, Phone, PhoneCall, Plug, Search, Settings, Sparkles, Sun, Check, ChevronsUpDown, Zap,
+  GitBranch, MessageCircle, Mic2, Moon, Plus, Users, Wallet, PanelLeftClose, PanelLeftOpen, Phone, PhoneCall, Plug, Search, Settings, Sparkles, Sun, Check, ChevronsUpDown, Zap,
 } from '@/components/icons'
 import { Toaster, toast } from 'sonner'
 import { Bubble } from '@typebot.io/react'
@@ -40,11 +40,12 @@ const extra = [
   { to: '/chat', label: 'Overview', icon: MessageCircle }, { to: '/chat/agents', label: 'Agents', icon: Bot }, { to: '/chat/inbox', label: 'Inbox', icon: Mail }, { to: '/chat/channels', label: 'Channels', icon: Globe }, { to: '/chat/pricing', label: 'Pricing', icon: Coins }, { to: '/swarvo-api', label: 'Overview', icon: Code2 },
   { to: 'https://docs.swarvoai.com', label: 'Documentation', icon: BookOpen }, { to: '/swarvo-api/playground', label: 'Playground', icon: Mic2 }, { to: '/swarvo-api/models', label: 'Models', icon: Sparkles }, { to: '/swarvo-api/pricing', label: 'Pricing', icon: Coins },
   { to: '/developers', label: 'API keys & webhooks', icon: Key },
+  { to: '/ivr', label: 'Menus', icon: GitBranch }, { to: '/ivr/calls', label: 'Calls', icon: PhoneCall }, { to: '/ivr/pricing', label: 'Pricing', icon: Coins },
 ]
 for (const n of extra) if (!all[n.to] || n.to === '/developers') all[n.to] = n.to === '/developers' ? all[n.to] : n
 const pick = (...paths: string[]) => paths.map((p) => all[p])
 type Group = { title?: string; items: (typeof main)[number][] }
-const GROUPS: Record<'voice' | 'chat' | 'api', Group[]> = {
+const GROUPS: Record<'voice' | 'chat' | 'api' | 'ivr', Group[]> = {
   voice: [
     { items: pick('/') },
     { title: 'Build', items: pick('/agents', '/voices', '/knowledge', '/tools', '/testing') },
@@ -53,6 +54,12 @@ const GROUPS: Record<'voice' | 'chat' | 'api', Group[]> = {
     { title: 'Account', items: pick('/billing', '/developers') },
   ],
   chat: CHAT_LIVE ? [{ items: pick('/chat') }, { title: 'Build', items: pick('/chat/agents', '/knowledge') }, { title: 'Conversations', items: pick('/chat/inbox') }, { title: 'Set up', items: pick('/chat/channels') }, { title: 'Account', items: pick('/chat/pricing', '/billing') }] : [{ items: [{ to: '/chat', label: 'Chat Agents', icon: MessageCircle }] }],
+  ivr: [
+    { items: pick('/ivr') },
+    { title: 'Set up', items: pick('/numbers') },
+    { title: 'Data', items: pick('/ivr/calls') },
+    { title: 'Account', items: pick('/ivr/pricing', '/billing') },
+  ],
   api: [
     { items: pick('/swarvo-api') },
     { title: 'Build', items: [{ to: '/developers', label: 'API keys & webhooks', icon: Key }, ...pick('https://docs.swarvoai.com', '/swarvo-api/playground')] },
@@ -63,11 +70,13 @@ const GROUPS: Record<'voice' | 'chat' | 'api', Group[]> = {
 export const PLATFORMS = [
   { id: 'voice' as const, label: 'Voice Agents', blurb: 'Answer and make phone calls', icon: Mic2, home: '/' },
   { id: 'chat' as const, label: 'Chat Agents', blurb: CHAT_LIVE ? 'Website and WhatsApp chat' : 'Coming soon', icon: MessageCircle, home: '/chat' },
+  { id: 'ivr' as const, label: 'Swarvo IVR', blurb: 'Phone menus: press 1, press 2, or talk to AI', icon: GitBranch, home: '/ivr' },
   { id: 'api' as const, label: 'Swarvo API', blurb: 'Keys, docs, models and pricing', icon: Code2, home: '/swarvo-api' },
 ]
 /** Pages that belong to one platform only. Billing, settings and help are shared, so they keep whichever platform you are in. */
-export const platformOf = (path: string): 'voice' | 'chat' | 'api' | null => {
+export const platformOf = (path: string): 'voice' | 'chat' | 'api' | 'ivr' | null => {
   if (path.startsWith('/chat')) return 'chat'
+  if (path.startsWith('/ivr')) return 'ivr'
   if (path.startsWith('/swarvo-api') || path.startsWith('/developers')) return 'api'
   if (['/billing', '/settings', '/help', '/welcome', '/invite', '/admin'].some((p) => path.startsWith(p))) return null
   return 'voice'
@@ -186,7 +195,7 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
   )
 }
 
-const crumbNames: Record<string, string> = { agents: 'Agents', conversations: 'Conversations', live: 'Live calls', contacts: 'Contacts', numbers: 'Phone Numbers', campaigns: 'Campaigns', knowledge: 'Knowledge', tools: 'Tools & Integrations', voices: 'Voices', testing: 'Testing Lab', analytics: 'Analytics', developers: 'Developers', billing: 'Billing & Usage', 'swarvo-api': 'Swarvo API', chat: 'Chat Agents', inbox: 'Inbox', channels: 'Channels', docs: 'Documentation', models: 'Models', pricing: 'Pricing', settings: 'Team & Settings', help: 'Help', new: 'New', templates: 'Templates' }
+const crumbNames: Record<string, string> = { agents: 'Agents', conversations: 'Conversations', live: 'Live calls', contacts: 'Contacts', numbers: 'Phone Numbers', campaigns: 'Campaigns', knowledge: 'Knowledge', tools: 'Tools & Integrations', voices: 'Voices', testing: 'Testing Lab', analytics: 'Analytics', developers: 'Developers', billing: 'Billing & Usage', 'swarvo-api': 'Swarvo API', ivr: 'Swarvo IVR', calls: 'Calls', chat: 'Chat Agents', inbox: 'Inbox', channels: 'Channels', docs: 'Documentation', models: 'Models', pricing: 'Pricing', settings: 'Team & Settings', help: 'Help', new: 'New', templates: 'Templates' }
 function Breadcrumbs() {
   const { pathname } = useLocation()
   const agents = useData((s) => s.agents)
