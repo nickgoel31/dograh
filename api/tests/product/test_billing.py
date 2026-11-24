@@ -250,6 +250,10 @@ async def test_charge_takes_money_when_only_the_balance_is_left(monkeypatch):
     async def credit(org_id, amount, description=None, idempotency_key=None):
         calls["credits"].append(amount)
 
+    async def no_parent(org_id):  # an ordinary account: it pays from its own wallet
+        return None
+
+    monkeypatch.setattr(payments, "shared_owner", no_parent)
     monkeypatch.setattr(ws, "get_summary", summary)
     monkeypatch.setattr(ws, "remove_minutes", remove)
     monkeypatch.setattr(ws, "credit_money", credit)

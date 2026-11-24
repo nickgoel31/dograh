@@ -41,6 +41,8 @@ async def sync_org_rate(session, ws: ProductWorkspaceModel) -> float:
     """Point the Live wallet's rate at the slab its balance is in (brought-over organizations keep their own rate)."""
     rate = await workspace_rate(session, ws)
     org = await session.get(OrganizationModel, ws.live_org_id)
+    if ws.billing_mode == "shared":
+        return rate  # the parent's price and cycle apply
     if org is not None and org.wallet_enabled and not ws.adopted:
         s = await session.get(ProductBillingSettingsModel, ws.id)
         if s is not None and (not s.locked_rate or rate < s.locked_rate):

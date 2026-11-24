@@ -65,7 +65,15 @@ async def list_workspaces(session: AsyncSession, user_id: int) -> list[Workspace
         .where(ProductMembershipModel.user_id == user_id)
         .order_by(ProductWorkspaceModel.id)
     )
-    return [WorkspaceView(ws, role) for ws, role in rows.all()]
+    views = [WorkspaceView(ws, role) for ws, role in rows.all()]
+    # Owners and admins of a parent account administer its sub-accounts, without being added to each one.
+    have = {v.workspace.id for v in views}
+    parents = [v.workspace.id for v in views if v.role in (Role.OWNER.value, Role.ADMIN.value) and v.workspace.parent_workspace_id is None]
+    if parents:
+        kids = (await session.scalars(select(ProductWorkspaceModel).where(ProductWorkspaceModel.parent_workspace_id.in_(parents)).order_by(ProductWorkspaceModel.id))).all()
+        views += [WorkspaceView(k, Role.ADMIN.value) for k in kids if k.id not in have]
+        views.sort(key=lambda v: v.workspace.id)
+    return views
 
 
 async def get_display_name(session: AsyncSession, user_id: int) -> str | None:

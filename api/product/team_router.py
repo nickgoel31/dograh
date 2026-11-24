@@ -348,8 +348,11 @@ async def sub_accounts(ctx: Ctx = Depends(get_ctx)):
 
 @router.post("/sub-accounts", status_code=201)
 async def new_sub_account(body: SubBody, ctx: Ctx = Depends(require(Perm.WORKSPACE_CREATE_CHILD))):
-    ws = await create_workspace(ctx.session, ctx.user, body.name.strip(), parent_id=ctx.workspace.id)
-    await audit.record(ctx.session, ctx.workspace.id, ctx.user.id, "sub_account.created", ws.public_id, {"name": ws.name})
+    from api.product import subaccounts
+
+    if ctx.workspace.parent_workspace_id is not None:
+        raise product_error(400, "not_a_parent", "Sub-accounts can only be created from the main account.")
+    ws = await subaccounts.create(ctx.session, ctx.workspace, ctx.user, body.name.strip(), mode="shared")
     await ctx.session.commit()
     return {"id": ws.public_id, "name": ws.name}
 

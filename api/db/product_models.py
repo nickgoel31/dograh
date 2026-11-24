@@ -40,6 +40,8 @@ class ProductWorkspaceModel(Base):
     )
     # True when an existing organization was brought over as the Live side (its billing and models are left as they were).
     adopted = Column(Boolean, nullable=False, default=False)
+    billing_mode = Column(String(8), nullable=False, default="own")  # sub-accounts: "shared" (pays from the parent's wallet) or "own"
+    suspended = Column(Boolean, nullable=False, default=False)  # a suspended sub-account takes no new calls
     created_at = Column(DateTime(timezone=True), default=_now)
 
 

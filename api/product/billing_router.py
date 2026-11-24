@@ -257,6 +257,8 @@ def _provider() -> PaymentProvider:
 
 @router.post("/topups", response_model=TopupOut)
 async def start_topup(body: TopupBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE))):
+    if ctx.workspace.billing_mode == "shared":
+        raise product_error(400, "shared_wallet", "This account uses its parent account's wallet. Ask your account owner to add money.")
     if ctx.environment == "test":
         raise product_error(400, "test_is_free", "Test mode is free, so there's nothing to pay for. Switch to Live to add money.")
     if not MIN_TOPUP <= body.amount <= MAX_TOPUP:

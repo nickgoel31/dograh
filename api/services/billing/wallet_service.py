@@ -333,6 +333,9 @@ async def record_usage(
                 ledger_id=existing.id,
             )
 
+        if org.wallet_org_id:  # a sub-account: its calls are paid from the shared wallet
+            return await _record_shared(session, org, workflow_run_id, duration_seconds, now, rate_multiplier)
+
         pulse = org.billing_pulse or 60
         billed = billed_seconds_for(duration_seconds, pulse)
         minutes = billed / 60.0
@@ -376,11 +379,70 @@ async def record_usage(
         )
 
 
+async def _record_shared(session, org: OrganizationModel, workflow_run_id: int, duration_seconds: float, now: datetime, rate_multiplier: float) -> UsageResult:
+    """Bill a sub-account's call to the shared wallet (the parent's), at the parent's price and billing cycle.
+
+    The sub-account's own ledger gets a "usage" row with the billed time and price but no money, so its usage reports work and its
+    (empty) wallet still adds up. The parent's ledger gets the "shared" row that actually moves minutes and money. Lock order is
+    sub-account then parent, like wholesale billing."""
+    owner = await _prepare(session, org.wallet_org_id, now)
+    pulse = owner.billing_pulse or 60
+    billed = billed_seconds_for(duration_seconds, pulse)
+    minutes = billed / 60.0
+    rate = float(owner.billing_rate or 0.0) * rate_multiplier
+    taken: list[dict] = []
+    from_buckets = overage = charge = 0.0
+    if owner.wallet_enabled and minutes > 0:
+        from_buckets, overage, taken = await _consume(session, owner.id, minutes, now)
+        if overage > EPS and rate > 0:
+            charge = _r(overage * rate, 4)
+            owner.balance = _r((owner.balance or 0.0) - charge, 4)  # may go negative
+    entry = await _add_ledger(
+        session, org, now, "usage", workflow_run_id=workflow_run_id, billed_seconds=billed, rate_snapshot=rate, pulse_snapshot=pulse,
+        description=f"Call #{workflow_run_id} (shared wallet)",
+        details={"shared_wallet_org": owner.id, "minutes_from_buckets": _r(from_buckets), "money_charged": charge, "raw_duration_seconds": round(float(duration_seconds or 0), 3)},
+    )
+    await _add_ledger(
+        session, owner, now, "shared", workflow_run_id=workflow_run_id, source_org_id=org.id, minutes_delta=_r(-from_buckets), money_delta=_r(-charge, 4),
+        overage_minutes=_r(overage), billed_seconds=billed, rate_snapshot=rate, pulse_snapshot=pulse, description=f"Sub-account call #{workflow_run_id}",
+        details={"buckets": taken, "minutes": _r(minutes)},
+    )
+    await session.commit()
+    return UsageResult(billed_seconds=billed, minutes_from_buckets=from_buckets, overage_minutes=overage, money_charged=charge, ledger_id=entry.id)
+
+
+async def month_usage(session, organization_id: int, now: datetime) -> tuple[float, float]:
+    """(minutes, value at the price) this calendar month, from the organization's usage rows."""
+    start = datetime(now.year, now.month, 1, tzinfo=UTC)
+    secs, value = (await session.execute(
+        select(
+            func.coalesce(func.sum(WalletLedgerModel.billed_seconds), 0),
+            func.coalesce(func.sum(WalletLedgerModel.billed_seconds * func.coalesce(WalletLedgerModel.rate_snapshot, 0.0)), 0.0),
+        ).where(WalletLedgerModel.organization_id == organization_id, WalletLedgerModel.entry_type == "usage", WalletLedgerModel.created_at >= start)
+    )).one()
+    return _r((secs or 0) / 60.0, 4), _r((value or 0.0) / 60.0, 4)
+
+
 async def check_can_start_call(organization_id: int, *, now: datetime | None = None) -> CallAdmission:
     """Admission control: may this organization start another call right now?"""
     now = now or _now()
     async with _session() as session:
         org = await _prepare(session, organization_id, now)
+        if org.calls_paused:
+            await session.commit()
+            return CallAdmission(False, "Calling is paused for this account. Please contact your account owner.")
+        if org.wallet_org_id:
+            used_min, used_val = await month_usage(session, org.id, now)
+            pulse_min = (org.billing_pulse or 60) / 60.0
+            await session.commit()
+            if org.wallet_cap_minutes is not None and used_min + pulse_min > org.wallet_cap_minutes + EPS:
+                return CallAdmission(False, "This account has used its monthly minutes. Please contact your account owner.")
+            if org.wallet_cap_value is not None and used_val >= org.wallet_cap_value - EPS:
+                return CallAdmission(False, "This account has reached its monthly spending limit. Please contact your account owner.")
+            admission = await check_can_start_call(org.wallet_org_id, now=now)
+            if not admission.allowed:
+                return CallAdmission(False, "The shared wallet has no remaining balance. Please contact your account owner.")
+            return admission
         minutes = await _active_minutes(session, org.id, now)
         money = float(org.balance or 0.0)
         rate = float(org.billing_rate or 0.0)

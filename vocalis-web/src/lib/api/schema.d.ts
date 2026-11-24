@@ -2689,6 +2689,8 @@ export interface components {
         };
         /** WorkspaceOut */
         WorkspaceOut: {
+            /** Sub Account */
+            sub_account?: boolean;
             /** Id */
             id: string;
             /** Name */

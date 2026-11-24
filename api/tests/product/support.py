@@ -39,6 +39,7 @@ TABLES = [
     models.CampaignModel.__table__,
     models.TelephonyPhoneNumberModel.__table__,
     models.WalletLedgerModel.__table__,
+    models.WalletBucketModel.__table__,
     product_models.ProductBillingSettingsModel.__table__,
     product_models.ProductPaymentModel.__table__,
     product_models.ProductInvoiceModel.__table__,

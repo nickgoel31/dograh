@@ -40,7 +40,7 @@ const extra = [
   { to: '/chat', label: 'Overview', icon: MessageCircle }, { to: '/chat/agents', label: 'Agents', icon: Bot }, { to: '/chat/inbox', label: 'Inbox', icon: Mail }, { to: '/chat/channels', label: 'Channels', icon: Globe }, { to: '/chat/pricing', label: 'Pricing', icon: Coins }, { to: '/swarvo-api', label: 'Overview', icon: Code2 },
   { to: 'https://docs.swarvoai.com', label: 'Documentation', icon: BookOpen }, { to: '/swarvo-api/playground', label: 'Playground', icon: Mic2 }, { to: '/swarvo-api/models', label: 'Models', icon: Sparkles }, { to: '/swarvo-api/pricing', label: 'Pricing', icon: Coins },
   { to: '/developers', label: 'API keys & webhooks', icon: Key },
-  { to: '/followups', label: 'WhatsApp follow-ups', icon: MessageCircle }, { to: '/ivr', label: 'Menus', icon: GitBranch }, { to: '/ivr/calls', label: 'Calls', icon: PhoneCall }, { to: '/ivr/pricing', label: 'Pricing', icon: Coins },
+  { to: '/followups', label: 'WhatsApp follow-ups', icon: MessageCircle }, { to: '/sub-accounts', label: 'Sub-accounts', icon: Users }, { to: '/ivr', label: 'Menus', icon: GitBranch }, { to: '/ivr/calls', label: 'Calls', icon: PhoneCall }, { to: '/ivr/pricing', label: 'Pricing', icon: Coins },
 ]
 for (const n of extra) if (!all[n.to] || n.to === '/developers') all[n.to] = n.to === '/developers' ? all[n.to] : n
 const pick = (...paths: string[]) => paths.map((p) => all[p])
@@ -51,7 +51,7 @@ const GROUPS: Record<'voice' | 'chat' | 'api' | 'ivr', Group[]> = {
     { title: 'Build', items: pick('/agents', '/voices', '/knowledge', '/tools', '/testing') },
     { title: 'Data', items: pick('/conversations', '/live', '/contacts', '/analytics') },
     { title: 'Reach', items: pick('/numbers', '/campaigns', '/followups') },
-    { title: 'Account', items: pick('/billing', '/developers') },
+    { title: 'Account', items: pick('/billing', '/sub-accounts', '/developers') },
   ],
   chat: CHAT_LIVE ? [{ items: pick('/chat') }, { title: 'Build', items: pick('/chat/agents', '/knowledge') }, { title: 'Conversations', items: pick('/chat/inbox') }, { title: 'Set up', items: pick('/chat/channels') }, { title: 'Account', items: pick('/chat/pricing', '/billing') }] : [{ items: [{ to: '/chat', label: 'Chat Agents', icon: MessageCircle }] }],
   ivr: [
@@ -78,7 +78,7 @@ export const platformOf = (path: string): 'voice' | 'chat' | 'api' | 'ivr' | nul
   if (path.startsWith('/chat')) return 'chat'
   if (path.startsWith('/ivr')) return 'ivr'
   if (path.startsWith('/swarvo-api') || path.startsWith('/developers')) return 'api'
-  if (['/billing', '/settings', '/help', '/welcome', '/invite', '/admin', '/followups'].some((p) => path.startsWith(p))) return null
+  if (['/billing', '/settings', '/help', '/welcome', '/invite', '/admin', '/followups', '/sub-accounts'].some((p) => path.startsWith(p))) return null
   return 'voice'
 }
 const bottom = [{ to: '/settings', label: 'Settings', icon: Settings }, { to: '/help', label: 'Help', icon: HelpCircle }]
@@ -195,7 +195,7 @@ function SidebarBody({ collapsed, close }: { collapsed: boolean; close?: () => v
   )
 }
 
-const crumbNames: Record<string, string> = { agents: 'Agents', conversations: 'Conversations', live: 'Live calls', contacts: 'Contacts', numbers: 'Phone Numbers', campaigns: 'Campaigns', knowledge: 'Knowledge', tools: 'Tools & Integrations', voices: 'Voices', testing: 'Testing Lab', analytics: 'Analytics', developers: 'Developers', billing: 'Billing & Usage', 'swarvo-api': 'Swarvo API', followups: 'WhatsApp follow-ups', ivr: 'Swarvo IVR', calls: 'Calls', chat: 'Chat Agents', inbox: 'Inbox', channels: 'Channels', docs: 'Documentation', models: 'Models', pricing: 'Pricing', settings: 'Team & Settings', help: 'Help', new: 'New', templates: 'Templates' }
+const crumbNames: Record<string, string> = { agents: 'Agents', conversations: 'Conversations', live: 'Live calls', contacts: 'Contacts', numbers: 'Phone Numbers', campaigns: 'Campaigns', knowledge: 'Knowledge', tools: 'Tools & Integrations', voices: 'Voices', testing: 'Testing Lab', analytics: 'Analytics', developers: 'Developers', billing: 'Billing & Usage', 'swarvo-api': 'Swarvo API', followups: 'WhatsApp follow-ups', 'sub-accounts': 'Sub-accounts', ivr: 'Swarvo IVR', calls: 'Calls', chat: 'Chat Agents', inbox: 'Inbox', channels: 'Channels', docs: 'Documentation', models: 'Models', pricing: 'Pricing', settings: 'Team & Settings', help: 'Help', new: 'New', templates: 'Templates' }
 function Breadcrumbs() {
   const { pathname } = useLocation()
   const agents = useData((s) => s.agents)

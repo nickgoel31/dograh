@@ -28,6 +28,7 @@ class WorkspaceOut(BaseModel):
     id: str
     name: str
     role: str
+    sub_account: bool = False  # runs under a parent account
 
 
 class BrandingOut(BaseModel):

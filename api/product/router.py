@@ -76,10 +76,10 @@ async def _me(session: AsyncSession, user: UserModel, workspace_id: str | None, 
             name=await get_display_name(session, user.id),
         ),
         workspaces=[
-            WorkspaceOut(id=v.workspace.public_id, name=v.workspace.name, role=v.role) for v in views
+            WorkspaceOut(id=v.workspace.public_id, name=v.workspace.name, role=v.role, sub_account=v.workspace.parent_workspace_id is not None) for v in views
         ],
         current_workspace=WorkspaceOut(
-            id=cur.workspace.public_id, name=cur.workspace.name, role=cur.role
+            id=cur.workspace.public_id, name=cur.workspace.name, role=cur.role, sub_account=cur.workspace.parent_workspace_id is not None
         ),
         environment=env,
         permissions=sorted(p.value for p in MATRIX[Role(cur.role)]),

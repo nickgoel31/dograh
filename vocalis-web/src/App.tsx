@@ -13,6 +13,7 @@ import { agentsApi, toAgent } from '@/lib/api/agents'
 import Shell from '@/layout/Shell'
 import Home from '@/pages/Home'
 import { FollowupsPage } from '@/pages/Followups'
+import { SubAccountsPage } from '@/pages/SubAccounts'
 import { IvrBuilderPage, IvrCallsPage, IvrOverviewPage, IvrPricingPage } from '@/pages/Ivr'
 import { ApiDocsPage, ApiModelsPage, ApiOverviewPage, ApiPlaygroundPage, ApiPricingPage, ChatAgentsPage } from '@/pages/Platforms'
 import { CHAT_LIVE } from '@/config/features'
@@ -145,6 +146,7 @@ export default function App() {
           <Route path="chat/inbox" element={CHAT_LIVE ? <ChatLock><ChatInboxPage /></ChatLock> : <ChatAgentsPage />} />
           <Route path="chat/channels" element={CHAT_LIVE ? <ChatLock><ChatChannelsPage /></ChatLock> : <ChatAgentsPage />} />
           <Route path="followups" element={<FollowupsPage />} />
+          <Route path="sub-accounts" element={<SubAccountsPage />} />
           <Route path="ivr" element={<IvrOverviewPage />} />
           <Route path="ivr/calls" element={<IvrCallsPage />} />
           <Route path="ivr/pricing" element={<IvrPricingPage />} />

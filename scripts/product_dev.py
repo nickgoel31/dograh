@@ -66,10 +66,11 @@ app.include_router(connectors_router.hooks, prefix="/api/v1")
 app.include_router(kyc_router.ops_router, prefix="/api/v1")
 app.include_router(kyc_router.hooks_router, prefix="/api/v1")
 from api.product import chat_agents_router  # noqa: E402
-from api.product import followups_router, ivr_router  # noqa: E402
+from api.product import followups_router, ivr_router, subaccounts_router  # noqa: E402
 
 app.include_router(ivr_router.router, prefix="/api/v1")
 app.include_router(followups_router.router, prefix="/api/v1")
+app.include_router(subaccounts_router.router, prefix="/api/v1")
 app.include_router(ivr_router.public, prefix="/api/v1")
 
 for r in (chat_agents_router.router, chat_router.router, chat_router.public, chat_router.hooks, chat_router.chat_js):

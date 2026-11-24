@@ -173,6 +173,12 @@ class OrganizationModel(Base):
     )
 
     whatsapp_enabled = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+
+    # Sub-accounts (see api/product/subaccounts.py): a sub-account has no wallet of its own; its calls are paid from this organization's wallet.
+    wallet_org_id = Column(Integer, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True)
+    wallet_cap_value = Column(Float, nullable=True)  # most the shared wallet may pay for this organization in a calendar month (money at the price)
+    wallet_cap_minutes = Column(Float, nullable=True)  # most minutes the shared wallet may pay for this organization in a calendar month
+    calls_paused = Column(Boolean, nullable=False, default=False, server_default=text("false"))  # no new calls while true
     whatsapp_phone_number_id = Column(String, nullable=True)
     whatsapp_access_token = Column(String, nullable=True)
     whatsapp_business_account_id = Column(String, nullable=True)

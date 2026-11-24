@@ -99,22 +99,43 @@ class WalletGateway(Protocol):
         ...
 
 
+class SharedWalletError(Exception):
+    """Money cannot be added to a sub-account: it uses its parent's wallet."""
+
+
+async def shared_owner(org_id: int) -> int | None:
+    """The organization whose wallet this one uses, or None when it has its own."""
+    from api.db.models import OrganizationModel
+    from api.services.billing import wallet_service
+
+    async with wallet_service._session() as s:
+        org = await s.get(OrganizationModel, org_id)
+        return org.wallet_org_id if org is not None else None
+
+
 class CoreWallet:
-    """The platform's wallet (opens its own database sessions)."""
+    """The platform's wallet (opens its own database sessions). A sub-account reads and spends its parent's wallet."""
 
     async def summary(self, org_id):
         from api.services.billing import wallet_service
 
+        owner = await shared_owner(org_id)
+        if owner:
+            return {**(await wallet_service.get_summary(owner)), "shared": True}
         return await wallet_service.get_summary(org_id)
 
     async def credit(self, org_id, amount, description, key):
         from api.services.billing import wallet_service
 
+        if await shared_owner(org_id):
+            raise SharedWalletError("This account uses its parent's wallet.")
         await wallet_service.credit_money(org_id, amount, description=description, idempotency_key=key)
 
     async def grant_minutes(self, org_id, minutes, description, key):
         from api.services.billing import wallet_service
 
+        if await shared_owner(org_id):
+            raise SharedWalletError("This account uses its parent's wallet.")
         await wallet_service.grant_minutes(org_id, minutes, kind="grant", description=description, idempotency_key=key)
 
 
@@ -127,6 +148,8 @@ def get_wallet() -> WalletGateway:
 
 async def _core_charge(self, org_id, minutes, rate, description, key):
     from api.services.billing import wallet_service
+
+    org_id = await shared_owner(org_id) or org_id  # a sub-account's practice calls, menus and chats are paid by the parent
 
     # Free minutes only: "minutes_available" also counts the minutes the money balance could buy, which can't be removed.
     have = float((await wallet_service.get_summary(org_id)).get("minutes_remaining", 0) or 0)

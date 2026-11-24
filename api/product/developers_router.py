@@ -302,6 +302,13 @@ async def ops_tick(x_ops_secret: str | None = Header(default=None), session=Depe
         await session.rollback()
         out["practice_charged"] = -1
     try:
+        from api.product import subaccounts as subaccounts_job
+
+        out["sub_cap_alerts"] = await subaccounts_job.cap_alerts(session)
+    except Exception:  # noqa: BLE001 - the rest of the job still runs
+        await session.rollback()
+        out["sub_cap_alerts"] = -1
+    try:
         from api.product import followups as followups_job
 
         out.update({f"followup_{k}": v for k, v in (await followups_job.run_followups(session)).items()})

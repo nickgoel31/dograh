@@ -184,3 +184,48 @@ async def test_model_profile_applies_in_memory_only(db_session):
 
     assert applied.llm is not None and applied.llm.model == "gpt-4.1"
     assert stored.llm is None  # never persisted on the tenant's own config
+
+
+async def test_sub_account_calls_are_paid_from_the_shared_wallet_with_caps_and_pause(db_session):
+    parent = await _org(db_session, provider_id="org_shared_parent", monthly_minutes_limit=1.0, balance=50.0, billing_rate=2.0)
+    child = await _org(db_session, provider_id="org_shared_child", wallet_enabled=False, billing_rate=9.0, wallet_org_id=parent.id)
+    run_id = await _run(db_session, child.id)
+
+    res = await wallet_service.record_usage(child.id, run_id, 150)  # 150 s -> 3 minutes at the parent's price
+    assert res.billed_seconds == 180 and res.money_charged == pytest.approx(4.0)  # 1 free minute, 2 minutes at 2.0
+    assert (await wallet_service.record_usage(child.id, run_id, 150)).already_recorded
+    p = await wallet_service.get_summary(parent.id)
+    c = await wallet_service.get_summary(child.id)
+    assert p["balance"] == pytest.approx(46.0) and c["balance"] == 0  # the child has nothing of its own
+
+    async with db_session.async_session() as s:
+        child_row = (await s.execute(select(WalletLedgerModel).where(WalletLedgerModel.organization_id == child.id, WalletLedgerModel.entry_type == "usage"))).scalar_one()
+        parent_row = (await s.execute(select(WalletLedgerModel).where(WalletLedgerModel.organization_id == parent.id, WalletLedgerModel.entry_type == "shared"))).scalar_one()
+        assert child_row.billed_seconds == 180 and float(child_row.money_delta or 0) == 0 and parent_row.source_org_id == child.id
+        minutes, value = await wallet_service.month_usage(s, child.id, datetime.now(UTC))
+    assert minutes == pytest.approx(3.0) and value == pytest.approx(6.0)
+    assert (await wallet_service.audit_org(child.id))["money_drift"] == 0 and (await wallet_service.audit_org(parent.id))["money_drift"] == 0
+
+    assert (await wallet_service.check_can_start_call(child.id)).allowed
+    async with db_session.async_session() as s:
+        row = await s.get(OrganizationModel, child.id)
+        row.wallet_cap_minutes = 3.0
+        await s.commit()
+    capped = await wallet_service.check_can_start_call(child.id)
+    assert not capped.allowed and "monthly minutes" in capped.reason
+    async with db_session.async_session() as s:
+        row = await s.get(OrganizationModel, child.id)
+        row.wallet_cap_minutes, row.wallet_cap_value = None, 6.0
+        await s.commit()
+    assert "spending limit" in (await wallet_service.check_can_start_call(child.id)).reason
+    async with db_session.async_session() as s:
+        row = await s.get(OrganizationModel, child.id)
+        row.wallet_cap_value, row.calls_paused = None, True
+        await s.commit()
+    assert "paused" in (await wallet_service.check_can_start_call(child.id)).reason
+    async with db_session.async_session() as s:
+        (await s.get(OrganizationModel, child.id)).calls_paused = False
+        (await s.get(OrganizationModel, parent.id)).balance = 0.0
+        await s.commit()
+    broke = await wallet_service.check_can_start_call(child.id)
+    assert not broke.allowed and "shared wallet" in broke.reason  # the parent ran out: the sub-account is told without seeing the parent's numbers
