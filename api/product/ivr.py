@@ -15,7 +15,7 @@ from urllib.parse import urlencode
 from sqlalchemy import select
 
 from api.constants import OSS_JWT_SECRET
-from api.db.product_models import ProductAgentModel, ProductIvrCallModel, ProductIvrModel, ProductWorkspaceModel
+from api.db.product_models import ProductAgentModel, ProductBillingSettingsModel, ProductIvrCallModel, ProductIvrModel, ProductWorkspaceModel
 from api.product import hours as hours_mod
 from api.product import ivr_engine as eng
 
@@ -35,10 +35,10 @@ LIVE_FOR = timedelta(seconds=90)  # a call with no step for this long is over; i
 
 
 def rate_per_minute(pulse: int) -> float:
-    """Price of one IVR minute. Billing every 30 seconds costs a little more per minute than billing every 60."""
+    """Price of one IVR minute: ₹1 a minute when billed every 60 seconds, ₹0.50 for each 30 seconds (also ₹1 a minute)."""
     if pulse == 30:
-        return float(os.getenv("PRODUCT_IVR_RATE_30", "1.65"))
-    return float(os.getenv("PRODUCT_IVR_RATE_60", "1.5"))
+        return float(os.getenv("PRODUCT_IVR_RATE_30", "1.0"))
+    return float(os.getenv("PRODUCT_IVR_RATE_60", "1.0"))
 
 
 def settings_of(ivr: ProductIvrModel) -> dict:
@@ -190,7 +190,8 @@ async def charge_calls(session, wallet, now: datetime | None = None, limit: int 
         if ivr is None or ws is None:
             c.billed = True
             continue
-        pulse = settings_of(ivr)["pulse"]
+        owner = await session.get(ProductBillingSettingsModel, c.workspace_id)
+        pulse = owner.ivr_pulse if owner is not None and owner.ivr_pulse in (30, 60) else settings_of(ivr)["pulse"]
         c.seconds = duration_seconds(c)
         minutes = seconds_billed(c.seconds, pulse)
         rate = rate_per_minute(pulse)

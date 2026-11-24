@@ -8,7 +8,7 @@ export type IvrNode = {
 }
 export type IvrFlow = { start: string; nodes: Record<string, IvrNode> }
 export type IvrSettings = { voice: string; language: string; pulse: 30 | 60; hours: { enabled: boolean; tz: string; windows: { days: number[]; start: string; end: string }[]; closed_message: string } | null; paused_message: string }
-export type Ivr = { id: string; name: string; status: 'draft' | 'live' | 'paused'; flow: IvrFlow; settings: IvrSettings; problems: string[]; numbers: string[]; calls: number; updated: string | null }
+export type Ivr = { id: string; name: string; status: 'draft' | 'live' | 'paused'; flow: IvrFlow; settings: IvrSettings; problems: string[]; numbers: string[]; calls: number; pulse_locked?: boolean; updated: string | null }
 export type IvrOptions = { voices: { id: string; label: string; languages: string[] }[]; languages: Record<string, string>; types: string[]; pricing: { pulse: number; per_minute: number }[] }
 export type IvrCall = { id: number; ivr: string; ivr_id: string; from: string; to: string; started: string | null; seconds: number; outcome: string; path: string[]; voicemail_url: string | null; cost: number; billed: boolean }
 export type IvrStep = { say: string[]; then: { kind: string; node?: string; prompt?: string; digits?: boolean; speech?: boolean; number?: string; agent_id?: string; tries?: number }; trail: string[] }

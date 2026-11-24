@@ -142,6 +142,8 @@ class ProductBillingSettingsModel(Base):
     billing_address = Column(String(400), nullable=True)
     first_grant_done = Column(Boolean, nullable=False, default=False)
     signup_bonus_at = Column(DateTime(timezone=True), nullable=True)  # set when the sign-up bonus was given
+    voice_pulse = Column(Integer, nullable=True)  # set by the platform owner: bill AI voice calls every 30 or 60 seconds (empty = 60)
+    ivr_pulse = Column(Integer, nullable=True)  # set by the platform owner: bill IVR every 30 or 60 seconds (empty = the customer chooses per menu)
     human_cost_per_min = Column(Float, nullable=True)  # what a person would cost per minute, for the 'money saved' estimate
     # WhatsApp number check: a number can belong to one workspace only (unique), so one person cannot claim the sign-up bonus many times.
     verified_phone = Column(String(20), nullable=True, unique=True)

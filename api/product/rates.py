@@ -46,7 +46,7 @@ async def sync_org_rate(session, ws: ProductWorkspaceModel) -> float:
         if s is not None and (not s.locked_rate or rate < s.locked_rate):
             s.locked_rate = rate  # remember the cheapest slab reached
         org.billing_rate = rate
-        org.billing_pulse = 60  # billed per minute, rounded up
+        org.billing_pulse = 30 if s is not None and s.voice_pulse == 30 else 60  # per minute, rounded up, unless the owner chose every 30 seconds
     return rate
 
 

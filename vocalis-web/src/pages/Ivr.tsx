@@ -25,6 +25,7 @@ const OUTCOME: Record<string, string> = { menu: 'Hung up in the menu', transferr
 const mins = (s: number) => (s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${s % 60} s`)
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '')
 const rate = (n: number) => '₹' + n.toFixed(2)
+const perUnit = (pulse: number, perMin: number) => (pulse === 30 ? `${rate(perMin / 2)} per 30 seconds` : `${rate(perMin)} per minute`)
 const newId = () => 's' + Math.random().toString(36).slice(2, 6)
 
 /* ---------------- overview ---------------- */
@@ -176,7 +177,7 @@ function Tester({ ivr, flow }: { ivr: Ivr; flow: IvrFlow }) {
   )
 }
 
-function SettingsPanel({ s, onChange }: { s: IvrSettings; onChange: (p: Partial<IvrSettings>) => void }) {
+function SettingsPanel({ s, onChange, locked }: { s: IvrSettings; onChange: (p: Partial<IvrSettings>) => void; locked?: boolean }) {
   const opts = useQuery({ queryKey: ['ivr-options'], queryFn: ivrApi.options, staleTime: 600000 })
   const h = s.hours ?? { enabled: false, tz: 'Asia/Kolkata', windows: [{ days: [0, 1, 2, 3, 4], start: '09:00', end: '18:00' }], closed_message: '' }
   const w = h.windows[0] ?? { days: [0, 1, 2, 3, 4], start: '09:00', end: '18:00' }
@@ -189,12 +190,12 @@ function SettingsPanel({ s, onChange }: { s: IvrSettings; onChange: (p: Partial<
         <Field label="Voice"><Select value={s.voice} onChange={(e) => onChange({ voice: e.target.value })}>{(opts.data?.voices ?? [{ id: s.voice, label: s.voice, languages: [] }]).map((v) => <option key={v.id} value={v.id}>{v.label}</option>)}</Select></Field>
         <Field label="Language"><Select value={s.language} onChange={(e) => onChange({ language: e.target.value })}>{Object.entries(opts.data?.languages ?? { [s.language]: s.language }).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></Field>
       </div>
-      <Field label="How you are billed">
+      <Field label={locked ? 'How you are billed (set by Swarvo for your account)' : 'How you are billed'}>
         <div className="grid gap-2 sm:grid-cols-2">
           {([60, 30] as const).map((p) => (
-            <button key={p} type="button" onClick={() => onChange({ pulse: p })} aria-pressed={s.pulse === p} className={cn('rounded-xl border p-3 text-left text-sm transition', s.pulse === p ? 'border-accent bg-accent-soft' : 'hover:bg-muted/40')}>
+            <button key={p} type="button" disabled={locked} onClick={() => onChange({ pulse: p })} aria-pressed={s.pulse === p} className={cn('rounded-xl border p-3 text-left text-sm transition', s.pulse === p ? 'border-accent bg-accent-soft' : 'hover:bg-muted/40')}>
               <div className="flex items-center justify-between font-medium">{p === 60 ? 'Per minute' : 'Per 30 seconds'}{s.pulse === p && <Check size={14} />}</div>
-              <div className="mt-0.5 text-xs text-soft">{price(p) != null ? `${rate(price(p)!)} a minute` : ''} · {p === 60 ? 'Rounded up to the next minute' : 'Rounded up to the next 30 seconds. Cheaper for short calls.'}</div>
+              <div className="mt-0.5 text-xs text-soft">{price(p) != null ? perUnit(p, price(p)!) : ''} · {p === 60 ? 'Rounded up to the next minute' : 'Rounded up to the next 30 seconds. Cheaper for short calls.'}</div>
             </button>))}
         </div>
       </Field>
@@ -269,7 +270,7 @@ export function IvrBuilderPage() {
         </div>
         <div className="space-y-4 xl:sticky xl:top-4 xl:self-start">
           <Tester ivr={ivr} flow={flow} />
-          <SettingsPanel s={settings} onChange={(p) => { setSettings({ ...settings, ...p }); setDirty(true) }} />
+          <SettingsPanel locked={ivr.pulse_locked} s={settings} onChange={(p) => { setSettings({ ...settings, ...p }); setDirty(true) }} />
           <Button variant="ghost" className="w-full text-bad" onClick={del}>Delete this menu</Button>
         </div>
       </div>
@@ -307,7 +308,7 @@ export function IvrPricingPage() {
       <PageHeader title="IVR pricing" subtitle="You pay for the time callers spend in your menus. Calls that an AI agent takes over are billed at your normal agent rate from that moment." />
       <div className="grid gap-4 md:grid-cols-2">
         {[{ p: 60, t: 'Per minute', d: 'Every started minute counts as a full minute.' }, { p: 30, t: 'Per 30 seconds', d: 'Every started 30 seconds counts. Best for short calls and quick menus.' }].map((x) => (
-          <Card key={x.p} className="p-5"><div className="text-sm text-soft">{x.t}</div><div className="num mt-1 text-3xl font-semibold">{o.data ? rate(o.data.pricing.find((r) => r.pulse === x.p)?.per_minute ?? 0) : '…'}<span className="text-base font-normal text-soft"> / minute</span></div><p className="mt-2 text-[13px] text-soft">{x.d}</p></Card>))}
+          <Card key={x.p} className="p-5"><div className="text-sm text-soft">{x.t}</div><div className="num mt-1 text-3xl font-semibold">{o.data ? rate((o.data.pricing.find((r) => r.pulse === x.p)?.per_minute ?? 0) / (x.p === 30 ? 2 : 1)) : '…'}<span className="text-base font-normal text-soft"> {x.p === 30 ? '/ 30 seconds' : '/ minute'}</span></div><p className="mt-2 text-[13px] text-soft">{x.d}</p></Card>))}
       </div>
       <p className="mt-4 text-sm text-soft">Choose how you are billed for each menu, in the menu’s settings. Free minutes and your wallet work the same as for agent calls. Playing with “Try it” in the builder is free.</p>
     </>

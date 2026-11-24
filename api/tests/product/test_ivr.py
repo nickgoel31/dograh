@@ -115,7 +115,7 @@ def test_billing_every_30_or_60_seconds():
     assert ivr_mod.seconds_billed(0, 60) == 0
     assert ivr_mod.seconds_billed(1, 60) == 1 and ivr_mod.seconds_billed(61, 60) == 2
     assert ivr_mod.seconds_billed(1, 30) == 0.5 and ivr_mod.seconds_billed(31, 30) == 1.0 and ivr_mod.seconds_billed(95, 30) == 2.0
-    assert ivr_mod.rate_per_minute(30) > ivr_mod.rate_per_minute(60)
+    assert ivr_mod.rate_per_minute(30) == ivr_mod.rate_per_minute(60) == 1.0  # Rs 1 a minute, or Rs 0.50 for each 30 seconds
 
 
 def test_settings_are_checked():

@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 
-from api.db.models import UserModel, WorkflowModel, WorkflowRunModel
+from api.db.models import OrganizationModel, UserModel, WorkflowModel, WorkflowRunModel
 from api.product import audit, config, phone_verify, swarvo_access
 from api.product import billing as bl
 from api.product.deps import get_user_only
@@ -138,7 +138,36 @@ async def workspace_detail(public_id: str, base=Depends(require_admin), wallet: 
         "members": [{"email": e, "role": r} for e, r in members],
         "agents": [{"id": a.public_id, "name": a.name, "status": a.status, "voice": a.voice_id} for a in agents],
         "swarvo_tts": ws.public_id in await swarvo_access.workspace_ids_with_access(session),
+        "voice_pulse": s.voice_pulse if s.voice_pulse in (30, 60) else 60, "ivr_pulse": s.ivr_pulse if s.ivr_pulse in (30, 60) else None,
     }
+
+
+class CycleIn(BaseModel):
+    voice: int | None = Field(default=None)  # 30 or 60: AI voice agent calls
+    ivr: int | None = Field(default=None)  # 30 or 60 forces it; None lets the customer choose per menu
+    set_ivr: bool = False  # true to apply `ivr` (so that None can mean "let the customer choose")
+
+
+@router.put("/workspaces/{public_id}/billing-cycle")
+async def billing_cycle(public_id: str, body: CycleIn, base=Depends(require_admin)):
+    """Bill this customer's AI voice calls and IVR every 30 or every 60 seconds."""
+    session, admin = base
+    ws = await _workspace(session, public_id)
+    if body.voice is not None and body.voice not in (30, 60):
+        raise product_error(400, "bad_cycle", "Choose 30 or 60 seconds.")
+    if body.set_ivr and body.ivr not in (None, 30, 60):
+        raise product_error(400, "bad_cycle", "Choose 30 or 60 seconds.")
+    s = await bl.get_settings(session, ws)
+    if body.voice is not None:
+        s.voice_pulse = body.voice
+        org = await session.get(OrganizationModel, ws.live_org_id)
+        if org is not None and not ws.adopted:
+            org.billing_pulse = body.voice
+    if body.set_ivr:
+        s.ivr_pulse = body.ivr
+    await audit.record(session, ws.id, admin.id, "admin.billing_cycle", None, {"voice": body.voice, "ivr": body.ivr if body.set_ivr else "unchanged", "by": admin.email})
+    await session.commit()
+    return {"voice_pulse": s.voice_pulse if s.voice_pulse in (30, 60) else 60, "ivr_pulse": s.ivr_pulse if s.ivr_pulse in (30, 60) else None}
 
 
 class SwarvoIn(BaseModel):

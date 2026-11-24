@@ -142,5 +142,13 @@ async def test_only_the_platform_owner_sees_the_admin_area_and_can_adjust_balanc
         assert out["balance"] == before + 50
         assert (await client.post(f"/product/admin/workspaces/{wid}/balance", headers=owner, json={"amount": 0, "note": "nothing"})).status_code == 400
         assert (await client.post(f"/product/admin/workspaces/{wid}/balance", headers=cust, json={"amount": 5, "note": "sneaky"})).status_code == 403
+        # the owner picks how this customer is billed: voice every 30 or 60 seconds, IVR 30, 60 or "customer chooses"
+        assert det["voice_pulse"] == 60 and det["ivr_pulse"] is None
+        c = (await client.put(f"/product/admin/workspaces/{wid}/billing-cycle", headers=owner, json={"voice": 30, "ivr": 30, "set_ivr": True})).json()
+        assert c == {"voice_pulse": 30, "ivr_pulse": 30}
+        assert (await client.get(f"/product/admin/workspaces/{wid}", headers=owner)).json()["voice_pulse"] == 30
+        assert (await client.put(f"/product/admin/workspaces/{wid}/billing-cycle", headers=owner, json={"ivr": None, "set_ivr": True})).json()["ivr_pulse"] is None
+        assert (await client.put(f"/product/admin/workspaces/{wid}/billing-cycle", headers=owner, json={"voice": 45})).status_code == 400
+        assert (await client.put(f"/product/admin/workspaces/{wid}/billing-cycle", headers=cust, json={"voice": 30})).status_code == 403
     finally:
         os.environ.pop("PRODUCT_ADMIN_EMAILS", None)

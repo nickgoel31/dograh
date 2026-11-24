@@ -10,7 +10,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
-from api.db.product_models import ProductAgentModel, ProductIvrCallModel, ProductIvrModel
+from api.db.product_models import ProductAgentModel, ProductBillingSettingsModel, ProductIvrCallModel, ProductIvrModel
 from api.product import ivr as ivr_mod
 from api.product import ivr_engine as eng
 from api.product.deps import Ctx, get_ctx, get_session, require
@@ -46,6 +46,7 @@ class IvrOut(BaseModel):
     problems: list[str]
     numbers: list[str]
     calls: int
+    pulse_locked: bool = False  # the platform owner set this customer's IVR billing cycle
     updated: str | None
 
 
@@ -85,7 +86,12 @@ async def _numbers_of(ctx: Ctx, public_id: str) -> list[str]:
 
 async def _out(ctx: Ctx, r: ProductIvrModel) -> IvrOut:
     calls = await ctx.session.scalar(select(func.count(ProductIvrCallModel.id)).where(ProductIvrCallModel.ivr_id == r.id)) or 0
-    return IvrOut(id=r.public_id, name=r.name, status=r.status, flow=r.flow or {}, settings=ivr_mod.settings_of(r), problems=eng.problems(r.flow) if r.flow else [],
+    owner = await ctx.session.get(ProductBillingSettingsModel, ctx.workspace.id)
+    st = ivr_mod.settings_of(r)
+    locked = owner is not None and owner.ivr_pulse in (30, 60)
+    if locked:
+        st["pulse"] = owner.ivr_pulse
+    return IvrOut(id=r.public_id, name=r.name, status=r.status, flow=r.flow or {}, settings=st, pulse_locked=locked, problems=eng.problems(r.flow) if r.flow else [],
                   numbers=await _numbers_of(ctx, r.public_id), calls=int(calls), updated=r.updated_at.isoformat() if r.updated_at else None)
 
 
