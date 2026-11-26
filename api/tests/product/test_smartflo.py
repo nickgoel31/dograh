@@ -340,3 +340,51 @@ async def test_a_customer_brings_smartflo_numbers_and_gets_the_setup_addresses(c
     async with client.session_factory() as s:
         cfg = (await s.execute(select(models.TelephonyConfigurationModel).where(models.TelephonyConfigurationModel.provider == "smartflo", models.TelephonyConfigurationModel.id == cfgs[0].id))).scalar_one()
         assert cfg.credentials["from_numbers"] == ["+918000000001"] and "+918000000002" not in cfg.credentials["click_to_call_keys"]
+
+
+# ---------- the stream, over a real WebSocket ----------
+def test_stream_handshake_over_a_real_websocket(monkeypatch):
+    from fastapi import WebSocket
+    from starlette.testclient import TestClient
+    from starlette.websockets import WebSocketDisconnect
+
+    from api.services.telephony.providers.smartflo import provider as provider_mod
+
+    db = FakeDB()
+    captured = {}
+
+    async def fake_pipeline(websocket, **kw):
+        captured.update(kw)
+        await websocket.send_text(json.dumps({"event": "media", "streamSid": kw["transport_kwargs"]["stream_id"], "media": {"payload": base64.b64encode(b"\xff" * 160).decode(), "chunk": 1}}))
+
+    async def _async_run(i):
+        return SimpleNamespace(gathered_context={"smartflo_ref_id": "R-1", "call_id": "R-1"})
+
+    db.get_workflow_run = _async_run
+    monkeypatch.setattr(provider_mod, "db_client", db)
+    monkeypatch.setattr("api.services.pipecat.run_pipeline.run_pipeline_telephony", fake_pipeline)
+    provider = SmartfloProvider({"account_token": "tok", "from_numbers": ["+918000000001"]})
+    app = FastAPI()
+
+    @app.websocket("/ws/{wf}/{user}/{run}")
+    async def ws_route(websocket: WebSocket, wf: int, user: int, run: int):
+        await websocket.accept()
+        await provider.handle_websocket(websocket, wf, user, run)
+
+    start = {"event": "start", "sequenceNumber": "1", "start": {"accountSid": "AC1", "streamSid": "MZ9", "callSid": "CSID", "from": "9800000001", "to": "8000000001", "direction": "outbound",
+                                                                  "mediaFormat": {"encoding": "audio/x-mulaw", "sampleRate": 8000, "bitRate": 64, "bitDepth": 8}, "customParameters": {}}, "streamSid": "MZ9"}
+    with TestClient(app) as c:
+        with c.websocket_connect(f"/ws/3/9/7?token={pl.ws_token(7)}") as s:
+            s.send_text(json.dumps({"event": "connected"}))  # Smartflo sends `connected`, then `start`
+            s.send_text(json.dumps(start))
+            assert s.receive_json()["event"] == "media"
+        # no token, or a token for another call: closed before anything is read
+        for url in ("/ws/3/9/7", f"/ws/3/9/7?token={pl.ws_token(8)}"):
+            with c.websocket_connect(url) as s:
+                with pytest.raises(WebSocketDisconnect) as e:
+                    s.receive_json()
+                assert e.value.code == 4401
+    assert captured["provider_name"] == "smartflo" and captured["workflow_run_id"] == 7 and captured["call_id"] == "R-1"  # the outbound call keeps Smartflo's reference as its id
+    assert captured["transport_kwargs"] == {"stream_id": "MZ9", "call_id": "CSID", "ref_id": "R-1"}
+    saved = db.updates[7]["gathered_context"]
+    assert saved["smartflo_call_sid"] == "CSID" and saved["smartflo_stream_sid"] == "MZ9" and saved["smartflo_connected"] is True
