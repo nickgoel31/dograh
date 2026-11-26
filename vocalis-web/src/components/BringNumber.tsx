@@ -5,7 +5,21 @@ import { Button, Dialog, Field, Input, Select, Textarea } from './ui'
 import { CopyButton } from './shared'
 import { http } from '@/lib/api/http'
 
+export type SmartfloSetup = { endpoint_url: string; webhook_url: string; steps: string[] }
 type Carrier = { id: string; name: string; auto: boolean; inbound_url: string; fields: { key: string; label: string; secret: boolean; optional: boolean }[] }
+
+/** What to set up in the Tata Smartflo portal: the two addresses (each carries the account's secret key) and the steps. */
+export function SmartfloSetupPanel({ setup }: { setup: SmartfloSetup }) {
+  return (
+    <div className="space-y-3 text-[13px]">
+      <ol className="list-decimal space-y-1.5 pl-5 text-soft">{setup.steps.map((t) => <li key={t}>{t}</li>)}</ol>
+      {([['Endpoint address (Voice Bot, dynamic)', setup.endpoint_url], ['Webhook address (call details and recordings)', setup.webhook_url]] as const).map(([label, url]) => (
+        <div key={label}><div className="mb-1 font-medium">{label}</div><div className="flex items-center gap-2"><code className="min-w-0 flex-1 break-all rounded bg-muted px-2 py-1 text-xs">{url}</code><CopyButton text={url} /></div></div>
+      ))}
+      <p className="text-xs text-soft">Keep these addresses private: the secret in them is what lets Smartflo reach your agent.</p>
+    </div>
+  )
+}
 
 /** Use a phone number the customer already owns, with their own carrier account. */
 export function BringNumber({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: () => void }) {
@@ -14,12 +28,24 @@ export function BringNumber({ open, onClose, onDone }: { open: boolean; onClose:
   const [number, setNumber] = React.useState('')
   const [d, setD] = React.useState<Record<string, string>>({})
   const [busy, setBusy] = React.useState(false)
+  const [setup, setSetup] = React.useState<SmartfloSetup | null>(null)
   const c = q.data?.find((x) => x.id === id)
   const missing = !number || (c?.fields ?? []).some((f) => !f.optional && !(d[f.key] ?? '').trim())
   const go = async () => {
     setBusy(true)
-    try { await http('/numbers/bring', { method: 'POST', json: { carrier: id, number: number.replace(/[\s()-]/g, ''), details: d } }); toast.success('Number connected!'); setD({}); onDone(); onClose() }
+    try {
+      const r = await http<{ setup?: SmartfloSetup | null }>('/numbers/bring', { method: 'POST', json: { carrier: id, number: number.replace(/[\s()-]/g, ''), details: d } })
+      toast.success('Number connected!'); setD({}); onDone()
+      if (r.setup) setSetup(r.setup); else onClose()
+    }
     catch (e) { toast.error(e instanceof Error ? e.message : 'We could not connect that number.') } finally { setBusy(false) }
+  }
+  if (open && setup) {
+    return (
+      <Dialog open onOpenChange={(o) => { if (!o) { setSetup(null); onClose() } }} title="Last step: set it up in Tata Smartflo" description="Your number is saved. Point Smartflo at your agent with these addresses.">
+        <div className="space-y-4"><SmartfloSetupPanel setup={setup} /><Button variant="primary" className="w-full" onClick={() => { setSetup(null); onClose() }}>Done</Button></div>
+      </Dialog>
+    )
   }
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()} title="Bring your own number" description="Keep your number with your own carrier or phone system. Incoming calls reach your agent, and you pay your carrier directly.">
@@ -32,7 +58,7 @@ export function BringNumber({ open, onClose, onDone }: { open: boolean; onClose:
               : <Input type={f.secret ? 'password' : 'text'} autoComplete="off" value={d[f.key] ?? ''} onChange={(e) => setD({ ...d, [f.key]: e.target.value })} />}
           </Field>
         ))}
-        {c && !c.auto && (
+        {c && !c.auto && c.id !== 'smartflo' && (
           <div className="rounded-lg bg-muted p-3 text-[13px] text-soft">
             <div className="mb-1 font-medium text-ink">One step on your side</div>
             In {c.name}, set the incoming-call (answer) address for this number to:
@@ -40,6 +66,7 @@ export function BringNumber({ open, onClose, onDone }: { open: boolean; onClose:
           </div>
         )}
         <Button variant="primary" className="w-full" disabled={busy || missing} onClick={go}>{busy ? 'Connecting…' : 'Connect my number'}</Button>
+        {c?.id === 'smartflo' && <div className="rounded-lg bg-muted p-3 text-[13px] text-soft"><div className="mb-1 font-medium text-ink">Where to find these in Smartflo</div>The Account API Token is under API Connect in your Smartflo dashboard. The Click to Call API Key is under API Connect &gt; Click to Call Support API, and is only needed for calls your agent makes. After you connect, we show the two addresses to give Smartflo.</div>}
         <p className="text-xs text-soft">{c?.auto ? `We check the details with ${c.name} and set this number's incoming-call address for you.` : 'We save these details and check them where the carrier allows. Removing the number here never touches your carrier.'}</p>
       </div>
     </Dialog>

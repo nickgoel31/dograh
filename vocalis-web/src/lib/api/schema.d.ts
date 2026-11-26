@@ -2185,6 +2185,10 @@ export interface components {
         };
         /** NumberOut */
         NumberOut: {
+            /** Carrier */
+            carrier?: string | null;
+            /** Setup */
+            setup?: { [key: string]: unknown } | null;
             /** Ivr Id */
             ivr_id?: string | null;
             /** Id */

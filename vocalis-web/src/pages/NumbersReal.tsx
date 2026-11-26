@@ -8,6 +8,7 @@ import { Badge, Button, Card, Dialog, Field, Input, Select, Switch, Textarea } f
 import { EmptyState, PageHeader, StatusBadge, TableSkeleton } from '@/components/shared'
 import { http } from '@/lib/api/http'
 import { ivrApi } from '@/lib/api/ivr'
+import { SmartfloSetupPanel, type SmartfloSetup } from '@/components/BringNumber'
 import type { components } from '@/lib/api/schema'
 import { useData } from '@/store/data'
 import { useUI } from '@/store/ui'
@@ -122,6 +123,8 @@ function BuyDialog({ open, onClose, onBought, onKyc }: { open: boolean; onClose:
 function SettingsDialog({ n, agents, onClose, onSaved }: { n: N; agents: { id: string; name: string }[]; onClose: () => void; onSaved: () => void }) {
   const [agent, setAgent] = React.useState(n.ivr_id ? `ivr:${n.ivr_id}` : (n.agent_id ?? ''))
   const menus = useQuery({ queryKey: ['ivrs'], queryFn: ivrApi.list })
+  const [sf, setSf] = React.useState<SmartfloSetup | null>(null)
+  const showSf = async () => { try { setSf(await http<SmartfloSetup>(`/numbers/${n.id}/smartflo-setup`)) } catch (e) { say(e) } }
   const [h, setH] = React.useState(toHours(n.hours))
   const [fallback, setFallback] = React.useState(n.fallback ?? '')
   const [busy, setBusy] = React.useState(false)
@@ -155,6 +158,7 @@ function SettingsDialog({ n, agents, onClose, onSaved }: { n: N; agents: { id: s
             <Field label="What callers hear when you're closed"><Textarea value={h.closed} onChange={(e) => setH({ ...h, closed: e.target.value })} placeholder="We're closed right now. Please call back during our opening hours." /></Field>
           </div>}
         </div>
+        {n.carrier === 'smartflo' && <div className="rounded-xl border p-3"><div className="flex items-center justify-between gap-2"><div><div className="text-[13px] font-medium">Tata Smartflo</div><p className="text-xs text-soft">The addresses to give Smartflo for this number.</p></div><Button size="sm" variant="secondary" onClick={showSf}>{sf ? 'Refresh' : 'Show setup'}</Button></div>{sf && <div className="mt-3"><SmartfloSetupPanel setup={sf} /></div>}</div>}
         <Field label="If the agent can’t help, call a human on"><Input value={fallback} onChange={(e) => setFallback(e.target.value)} placeholder="+919876543210" /></Field>
         <div className="flex gap-2"><Button variant="primary" className="flex-1" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save'}</Button><Button variant="ghost" className="text-bad" onClick={release}>Release number</Button></div>
       </div>

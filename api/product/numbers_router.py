@@ -40,6 +40,8 @@ class NumberOut(BaseModel):
     fallback: str | None
     sandbox: bool
     ivr_id: str | None = None
+    carrier: str | None = None  # set for numbers brought from another carrier
+    setup: dict | None = None  # how to point the carrier at us (Tata Smartflo), shown after the number is brought over
 
 
 class OfferOut(BaseModel):
@@ -85,7 +87,7 @@ def _out(row: TelephonyPhoneNumberModel, agents: dict[int, ProductAgentModel]) -
         type=KINDS.get(m.get("kind", "local"), "Local"), agent_id=a.public_id if a else None,
         agent_name=a.name if a else None, status="active" if row.is_active else "pending",
         monthly=float(m.get("monthly") or 0), reputation=m.get("reputation", "unknown"),
-        hours=m.get("hours"), fallback=m.get("fallback"), sandbox=bool(m.get("sandbox")), ivr_id=m.get("ivr_id"),
+        hours=m.get("hours"), fallback=m.get("fallback"), sandbox=bool(m.get("sandbox")), ivr_id=m.get("ivr_id"), carrier=m.get("carrier"),
     )
 
 
@@ -217,6 +219,7 @@ CARRIERS: dict[str, dict] = {
     "telnyx": {"name": "Telnyx", "auto": False, "fields": [("api_key", "API key", True, False), ("connection_id", "Connection ID", False, True)]},
     "vonage": {"name": "Vonage", "auto": False, "fields": [("api_key", "API key", False, False), ("api_secret", "API secret", True, False), ("application_id", "Application ID", False, False), ("private_key", "Private key", True, False)]},
     "cloudonix": {"name": "Cloudonix", "auto": False, "fields": [("bearer_token", "Bearer token", True, False), ("domain_id", "Domain ID", False, False)]},
+    "smartflo": {"name": "Tata Smartflo", "auto": False, "fields": [("account_token", "Account API Token", True, False), ("click_to_call_key", "Click to Call API Key (for outgoing calls)", True, True)]},
     "ari": {"name": "Asterisk (SIP)", "auto": False, "fields": [("ari_endpoint", "Asterisk address (ARI)", False, False), ("app_name", "ARI application name", False, False), ("app_password", "ARI password", True, False), ("ws_client_name", "WebSocket client name", False, True)]},
 }
 
@@ -246,6 +249,30 @@ def make_carrier(carrier: str, details: dict):
     return providers.PlivoNumbers(details["auth_id"], details["auth_token"])
 
 
+async def smartflo_check(token: str) -> tuple[bool, str]:
+    """Seam for tests: does Smartflo accept this account token?"""
+    from api.services.telephony.providers.smartflo import api_client
+
+    return await api_client.token_works(token)
+
+
+def smartflo_setup(key: str) -> dict:
+    """What the customer sets up in the Smartflo portal: the two addresses (they carry the account's secret key) and the steps."""
+    from api.constants import BACKEND_API_ENDPOINT
+
+    base = f"{BACKEND_API_ENDPOINT}/api/v1/telephony/smartflo"
+    return {
+        "endpoint_url": f"{base}/dynamic/{key}", "webhook_url": f"{base}/webhook/{key}",
+        "steps": [
+            "In Smartflo, open Settings > Channels > Voice Bot (Voice Streaming) and choose Add an Endpoint.",
+            "Pick the Dynamic option, method POST, and paste the Endpoint address below as the URL.",
+            "For incoming calls: open My Numbers, choose your number, click Configure Destination, pick that Voice Bot endpoint and save.",
+            "For outgoing calls: open API Connect > Click to Call Support API, create or edit a key, choose this number, set its destination to that Voice Bot endpoint, and paste the key here.",
+            "Optional, for call details and recordings: open API Connect > Webhook, add a webhook with the Webhook address below, a Call hangup trigger, and your number. Tata's support must switch webhooks on for your account first.",
+        ],
+    }
+
+
 async def _verify_other(carrier: str, details: dict, number: str) -> None:
     """A quick real check where the carrier makes one easy. The rest are saved as given and work once the carrier is pointed at us."""
     import httpx
@@ -258,6 +285,12 @@ async def _verify_other(carrier: str, details: dict, number: str) -> None:
                     raise providers.NumberError("Telnyx did not accept that API key.")
                 if r.status_code == 200 and not r.json().get("data"):
                     raise providers.NumberError("That number isn't on this Telnyx account.")
+            elif carrier == "smartflo":
+                from api.services.telephony.providers.smartflo import api_client
+
+                good, why = await smartflo_check(details["account_token"])
+                if not good:
+                    raise providers.NumberError(why)
             elif carrier == "ari":
                 r = await c.get(f"{details['ari_endpoint'].rstrip('/')}/ari/asterisk/info", auth=(details["app_name"], details["app_password"]))
                 if r.status_code >= 400:
@@ -295,15 +328,54 @@ async def bring(body: BringBody, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE)
             await _verify_other(body.carrier, details, body.number)
     except providers.NumberError as e:
         raise product_error(400, "bring_failed", str(e))
-    creds = {**{k: v for k, v in details.items() if v}, "from_numbers": [body.number]}
-    cfg = TelephonyConfigurationModel(organization_id=ctx.org_id, name=f"Your {spec['name']} account", provider=body.carrier, credentials=creds, is_default_outbound=False)
-    ctx.session.add(cfg)
-    await ctx.session.flush()
+    setup = None
+    if body.carrier == "smartflo":
+        cfg = await _smartflo_config(ctx, details, body.number)
+        setup = smartflo_setup(cfg.credentials["endpoint_key"])
+    else:
+        creds = {**{k: v for k, v in details.items() if v}, "from_numbers": [body.number]}
+        cfg = TelephonyConfigurationModel(organization_id=ctx.org_id, name=f"Your {spec['name']} account", provider=body.carrier, credentials=creds, is_default_outbound=False)
+        ctx.session.add(cfg)
+        await ctx.session.flush()
     row = TelephonyPhoneNumberModel(organization_id=ctx.org_id, telephony_configuration_id=cfg.id, address=body.number, address_normalized=n.canonical, address_type=n.address_type, country_code=n.country_code,
                                     is_active=True, extra_metadata={"kind": "local", "byo": True, "carrier": body.carrier, "sandbox": False, "monthly": 0.0, "reputation": "unknown"})
     ctx.session.add(row)
     await ctx.session.commit()
-    return _out(row, await _agents_by_workflow(ctx))
+    out = _out(row, await _agents_by_workflow(ctx))
+    out.setup = setup
+    return out
+
+
+async def _smartflo_config(ctx: Ctx, details: dict, number: str) -> TelephonyConfigurationModel:
+    """One Smartflo connection per account token: a second number joins the first one's, so the customer sets up one endpoint, not one per number."""
+    import secrets
+
+    token, key = details["account_token"], details.get("click_to_call_key") or None
+    existing = (await ctx.session.scalars(select(TelephonyConfigurationModel).where(TelephonyConfigurationModel.organization_id == ctx.org_id, TelephonyConfigurationModel.provider == "smartflo"))).all()
+    for cfg in existing:
+        creds = dict(cfg.credentials or {})
+        if creds.get("account_token") == token:
+            creds["from_numbers"] = [*dict.fromkeys([*(creds.get("from_numbers") or []), number])]
+            if key:
+                creds["click_to_call_keys"] = {**(creds.get("click_to_call_keys") or {}), number: key}
+                creds["click_to_call_key"] = creds.get("click_to_call_key") or key
+            cfg.credentials = creds  # a new dict, so the change is saved
+            return cfg
+    creds = {"account_token": token, "click_to_call_key": key, "click_to_call_keys": {number: key} if key else {}, "endpoint_key": secrets.token_urlsafe(24), "from_numbers": [number]}
+    cfg = TelephonyConfigurationModel(organization_id=ctx.org_id, name="Your Tata Smartflo account" if not existing else f"Your Tata Smartflo account {len(existing) + 1}", provider="smartflo", credentials=creds, is_default_outbound=False)
+    ctx.session.add(cfg)
+    await ctx.session.flush()
+    return cfg
+
+
+@router.get("/{number_id}/smartflo-setup")
+async def smartflo_setup_for(number_id: str, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE))):
+    """The addresses and steps for a Tata Smartflo number, so they can be looked at again later."""
+    row = await _row(ctx, number_id)
+    if (row.extra_metadata or {}).get("carrier") != "smartflo":
+        raise product_error(404, "not_smartflo", "This isn't a Tata Smartflo number.")
+    cfg = await ctx.session.get(TelephonyConfigurationModel, row.telephony_configuration_id)
+    return smartflo_setup((cfg.credentials or {}).get("endpoint_key", ""))
 
 
 @router.post("/{number_id}/assign", response_model=NumberOut)
@@ -345,6 +417,8 @@ async def assign_ivr(number_id: str, body: IvrBody, ctx: Ctx = Depends(require(P
             raise product_error(404, "ivr_not_found", "We couldn't find that menu.")
         if meta.get("sandbox"):
             raise product_error(400, "live_number", "Menus answer real phone numbers. Connect a real number first.")
+        if meta.get("carrier") == "smartflo":
+            raise product_error(400, "no_menu_on_smartflo", "Phone menus run on Plivo numbers. A Tata Smartflo number can be answered by an AI agent, or you can build the menu inside Smartflo.")
         meta["ivr_id"] = ivr.public_id
         row.inbound_workflow_id = None
     row.extra_metadata = meta
@@ -383,5 +457,12 @@ async def release(number_id: str, ctx: Ctx = Depends(require(Perm.BILLING_MANAGE
             await _provider(ctx).release(ref)
         except providers.NumberError as e:
             raise product_error(502, "release_failed", str(e))
+    if (row.extra_metadata or {}).get("carrier") == "smartflo":
+        cfg = await ctx.session.get(TelephonyConfigurationModel, row.telephony_configuration_id)
+        if cfg is not None:
+            creds = dict(cfg.credentials or {})
+            creds["from_numbers"] = [n for n in creds.get("from_numbers", []) if n != row.address]
+            creds["click_to_call_keys"] = {n: k for n, k in (creds.get("click_to_call_keys") or {}).items() if n != row.address}
+            cfg.credentials = creds
     await ctx.session.delete(row)
     await ctx.session.commit()
