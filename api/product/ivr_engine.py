@@ -262,10 +262,10 @@ def to_xml(s: Step, *, voice: str, language: str, url, caller_id: str = "", left
     a = s.then
     kind = a["kind"]
     if kind == "gather":
-        types = ",".join(x for x, on in (("dtmf", a["digits"]), ("speech", a["speech"])) if on) or "dtmf"
+        types = " ".join(x for x, on in (("dtmf", a["digits"]), ("speech", a["speech"])) if on) or "dtmf"
         nd = f' numDigits="{a["num_digits"]}"' if a.get("num_digits") else ' finishOnKey="#"'
         body = (f'<GetInput action={quoteattr(url("input", a["node"], a["tries"]))} method="POST" inputType="{types}" executionTimeout="8" digitEndTimeout="3"'
-                f' speechEndTimeout="2" language={quoteattr(language)} redirect="false"{nd}>{say}{_speak(a["prompt"], voice, language)}</GetInput>')
+                f' speechEndTimeout="2" language={quoteattr(language)}{nd}>{say}{_speak(a["prompt"], voice, language)}</GetInput>')
         # no input at all: Plivo runs the next element, which asks again
         return f'<Response>{body}<Redirect method="POST">{escape(url("noinput", a["node"], a["tries"]))}</Redirect></Response>'
     if kind == "dial":

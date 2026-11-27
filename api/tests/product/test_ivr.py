@@ -89,7 +89,9 @@ def test_menus_with_dead_ends_are_flagged():
 def test_plivo_xml_shapes():
     g = xml_of(eng.step(FLOW, "main"))
     gi = g.find("GetInput")
-    assert gi.get("inputType") == "dtmf,speech" and gi.get("numDigits") is None and gi.get("action").endswith("tries=0")
+    assert gi.get("inputType") == "dtmf speech" and gi.get("numDigits") is None and gi.get("action").endswith("tries=0")  # Plivo writes both input types with a space
+    # Plivo waits for our answer to the key press only when `redirect` is left at its default (true); "false" sends the key in the background and runs the next step, which asked again
+    assert gi.get("redirect") is None
     assert gi.find("Speak").get("voice") == "Polly.Aditi" and g.find("Redirect") is not None  # asks again if nobody answers
     d = xml_of(eng.step(FLOW, "xfer"), caller_id="+14155550100")
     assert d.find("Dial/Number").text == "+919876543210" and d.find("Dial").get("callerId") == "+14155550100"
