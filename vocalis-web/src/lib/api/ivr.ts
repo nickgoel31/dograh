@@ -24,6 +24,7 @@ export const ivrApi = {
   status: (id: string, status: 'live' | 'paused' | 'draft') => http<Ivr>(`/ivr/${id}/status?status=${status}`, { method: 'POST' }),
   remove: (id: string) => http<void>(`/ivr/${id}`, { method: 'DELETE' }),
   simulate: (id: string, b: { node?: string; digits?: string; speech?: string; tries?: number; vars?: Record<string, string>; open?: boolean }) => http<IvrStep>(`/ivr/${id}/simulate`, { method: 'POST', json: b }),
+  testCall: (id: string, number: string, mine: boolean) => http<{ ok: boolean; from: string }>(`/ivr/${id}/test-call`, { method: 'POST', json: { number, mine } }),
   calls: (id?: string) => http<IvrCall[]>(id ? `/ivr/${id}/calls` : '/ivr/calls'),
   attach: (numberId: string, ivrId: string | null) => http(`/numbers/${numberId}/ivr`, { method: 'POST', json: { ivr_id: ivrId } }),
 }

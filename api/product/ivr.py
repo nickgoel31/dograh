@@ -126,21 +126,57 @@ def say_and_hangup(text: str, settings: dict | None = None) -> str:
 
 
 # ---------------- a call's life ----------------
-async def begin(session, ivr: ProductIvrModel, *, org_id: int, number_id: int | None, config_id: int | None, call_uuid: str, from_number: str, to_number: str, base: str) -> str:
-    """A call arrived on a number that points at this IVR. Returns the XML for the first step."""
+def start_url(base: str, pid: str, config_id: int, number_id: int) -> str:
+    """The address Plivo asks for the first step when a test call is answered. The ids it carries are part of the signature."""
+    node = f"{config_id}:{number_id}"
+    q = urlencode({"cfg": config_id, "num": number_id, "sig": _sig(pid, "start", node, 0)})
+    return f"{base}/api/v1/ivr/plivo/{pid}/start?{q}"
+
+
+def start_sig_ok(pid: str, config_id: int, number_id: int, sig: str) -> bool:
+    return sig_ok(pid, "start", f"{config_id}:{number_id}", 0, sig)
+
+
+async def caller_number(session, ws: ProductWorkspaceModel, ivr: ProductIvrModel):
+    """The workspace's own Plivo number a test call is placed from (the one this menu answers, else any): (configuration, number row), or (None, None)."""
+    from api.db.models import TelephonyConfigurationModel, TelephonyPhoneNumberModel
+
+    rows = (await session.execute(
+        select(TelephonyPhoneNumberModel, TelephonyConfigurationModel)
+        .join(TelephonyConfigurationModel, TelephonyConfigurationModel.id == TelephonyPhoneNumberModel.telephony_configuration_id)
+        .where(TelephonyPhoneNumberModel.organization_id == ws.live_org_id, TelephonyPhoneNumberModel.is_active.is_(True), TelephonyConfigurationModel.provider == "plivo")
+        .order_by(TelephonyPhoneNumberModel.id))).all()
+    for row, cfg in rows:
+        if (row.extra_metadata or {}).get("ivr_id") == ivr.public_id:
+            return cfg, row
+    return (rows[0][1], rows[0][0]) if rows else (None, None)
+
+
+async def dial_out(config, from_number: str, to_number: str, answer_url: str) -> None:
+    """Place a call with Plivo that asks `answer_url` what to do when answered (a seam for tests)."""
+    from api.services.telephony.factory import get_telephony_provider_by_id
+
+    provider = await get_telephony_provider_by_id(config.id, config.organization_id)
+    if not getattr(provider, "from_numbers", None):
+        provider.from_numbers = [from_number]
+    await provider.initiate_call(to_number=to_number, webhook_url=answer_url, workflow_run_id=None, from_number=from_number)
+
+
+async def begin(session, ivr: ProductIvrModel, *, org_id: int, number_id: int | None, config_id: int | None, call_uuid: str, from_number: str, to_number: str, base: str, test: bool = False) -> str:
+    """A call arrived on a number that points at this IVR (or a test call to the owner). Returns the XML for the first step."""
     s = settings_of(ivr)
-    if ivr.status != "live":
+    if ivr.status != "live" and not test:  # a test call may try a menu that is still a draft
         return say_and_hangup(s["paused_message"], s)
-    flow = ivr.flow
+    flow, pid, ivr_pk, ws_id = ivr.flow, ivr.public_id, ivr.id, ivr.workspace_id  # read now: a commit expires loaded values on the platform's sessions
     call = await session.scalar(select(ProductIvrCallModel).where(ProductIvrCallModel.call_uuid == call_uuid))
     if call is None:
-        call = ProductIvrCallModel(ivr_id=ivr.id, workspace_id=ivr.workspace_id, org_id=org_id, number_id=number_id, config_id=config_id, call_uuid=call_uuid,
+        call = ProductIvrCallModel(ivr_id=ivr_pk, workspace_id=ws_id, org_id=org_id, number_id=number_id, config_id=config_id, call_uuid=call_uuid,
                                    from_number=from_number, to_number=to_number, trail=[], vars={"caller": "".join(c for c in from_number if c.isdigit())[-10:]})
         session.add(call)
     st = eng.step(flow, flow["start"], vars=call.vars, is_open=open_checker(s), hours=s.get("hours"))
     _log(call, st, "start")
     await session.commit()
-    return xml(st, s, base, ivr.public_id, caller_id=to_number, left=s.get("max_seconds"))
+    return xml(st, s, base, pid, caller_id=to_number, left=s.get("max_seconds"))
 
 
 def _log(call: ProductIvrCallModel, st: eng.Step, event: str, **extra) -> None:
@@ -153,14 +189,14 @@ def _log(call: ProductIvrCallModel, st: eng.Step, event: str, **extra) -> None:
 async def carry_on(session, ivr: ProductIvrModel, call: ProductIvrCallModel, kind: str, node: str, tries: int, form: dict, base: str) -> tuple[eng.Step, str]:
     """The caller answered (or the phone network reported back). Returns the next Step and its XML."""
     s = settings_of(ivr)
-    flow, nodes = ivr.flow, ivr.flow["nodes"]
+    flow, nodes, pid, to_num = ivr.flow, ivr.flow["nodes"], ivr.public_id, call.to_number
     left = seconds_left(call, s)
     if left is not None and left <= 0 and kind != "agent":  # the time limit is up: say so and hang up, whatever the caller was doing
         st = eng.Step(say=[TIME_UP], then={"kind": "hangup"}, trail=[node] if node in nodes else [])
         _log(call, st, "time_limit")
         call.outcome = "time_limit"
         await session.commit()
-        return st, xml(st, s, base, ivr.public_id, caller_id=call.to_number)
+        return st, xml(st, s, base, pid, caller_id=to_num)
     common = dict(is_open=open_checker(s), hours=s.get("hours"))
     vars_ = dict(call.vars or {})
     n = nodes.get(node)
@@ -188,7 +224,7 @@ async def carry_on(session, ivr: ProductIvrModel, call: ProductIvrCallModel, kin
     else:
         st = eng.Step(say=[eng.DEFAULT_GOODBYE])
     await session.commit()
-    return st, xml(st, s, base, ivr.public_id, caller_id=call.to_number, left=left)
+    return st, xml(st, s, base, pid, caller_id=to_num, left=left)
 
 
 def duration_seconds(call: ProductIvrCallModel) -> int:

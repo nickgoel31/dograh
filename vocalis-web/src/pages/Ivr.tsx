@@ -8,25 +8,15 @@ import { ArrowRight, Check, Phone, Plus, Trash2 } from '@/components/icons'
 import { http } from '@/lib/api/http'
 import { ivrApi, type Ivr, type IvrFlow, type IvrNode, type IvrSettings, type IvrStep } from '@/lib/api/ivr'
 import { cn, money } from '@/lib/utils'
+import { IvrFlowEditor, StepEditor, removeStep, TYPE, type Change } from '@/components/IvrFlowEditor'
 
 const say = (e: unknown) => toast.error(e instanceof Error ? e.message : 'Something went wrong. Please try again.')
-const TYPE: Record<IvrNode['type'], { name: string; hint: string }> = {
-  menu: { name: 'Menu', hint: 'Callers press a key or say a word' },
-  say: { name: 'Message', hint: 'Plays a message, then moves on' },
-  hours: { name: 'Open or closed?', hint: 'Sends callers on by your business hours' },
-  collect: { name: 'Ask for a number', hint: 'Callers type digits, like an account number' },
-  transfer: { name: 'Call a person', hint: 'Rings another phone number' },
-  voicemail: { name: 'Voicemail', hint: 'Records a message' },
-  agent: { name: 'AI voice agent', hint: 'An AI agent takes over the call' },
-  hangup: { name: 'End the call', hint: 'Says goodbye and hangs up' },
-}
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const OUTCOME: Record<string, string> = { time_limit: 'Cut at the time limit', menu: 'Hung up in the menu', transferred: 'Transferred', agent: 'AI agent', voicemail: 'Voicemail', hangup: 'Finished' }
 const mins = (s: number) => (s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${s % 60} s`)
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '')
 const rate = (n: number) => '₹' + n.toFixed(2)
 const perUnit = (pulse: number, perMin: number) => (pulse === 30 ? `${rate(perMin / 2)} per 30 seconds` : `${rate(perMin)} per minute`)
-const newId = () => 's' + Math.random().toString(36).slice(2, 6)
 
 /* ---------------- overview ---------------- */
 export function IvrOverviewPage() {
@@ -80,72 +70,15 @@ export function IvrOverviewPage() {
 /* ---------------- builder ---------------- */
 type Agent = { id: string; name: string; status: string }
 
-function Link2({ flow, value, onChange, self, none = 'Hang up' }: { flow: IvrFlow; value?: string | null; onChange: (v: string | null) => void; self: string; none?: string }) {
-  return (
-    <Select value={value ?? ''} onChange={(e) => onChange(e.target.value || null)} aria-label="Go to">
-      <option value="">{none}</option>
-      {Object.entries(flow.nodes).filter(([k]) => k !== self).map(([k, n]) => <option key={k} value={k}>{n.label || TYPE[n.type].name}</option>)}
-    </Select>
-  )
-}
-
-function KeyRow({ flow, self, k, v, onKey, onTo, onDel, keyLabel }: { flow: IvrFlow; self: string; k: string; v: string; onKey: (k: string) => void; onTo: (v: string) => void; onDel: () => void; keyLabel: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <Input className="w-24 shrink-0 text-center" value={k} onChange={(e) => onKey(e.target.value)} aria-label={keyLabel} placeholder={keyLabel === 'Key' ? '1' : 'sales, price'} />
-      <ArrowRight size={14} className="shrink-0 text-soft" />
-      <div className="min-w-0 flex-1"><Link2 flow={flow} value={v} self={self} onChange={(x) => onTo(x ?? '')} /></div>
-      <button type="button" onClick={onDel} className="rounded-md p-1.5 text-soft hover:bg-muted hover:text-bad" aria-label="Remove"><Trash2 size={14} /></button>
-    </div>
-  )
-}
-
-function NodeCard({ id, n, flow, agents, isStart, set, remove, setStart }: { id: string; n: IvrNode; flow: IvrFlow; agents: Agent[]; isStart: boolean; set: (p: Partial<IvrNode>) => void; remove: () => void; setStart: () => void }) {
-  const opts = Object.entries(n.options ?? {})
-  const kws = Object.entries(n.keywords ?? {})
-  const setMap = (name: 'options' | 'keywords', entries: [string, string][]) => set({ [name]: Object.fromEntries(entries.filter(([k]) => k !== '')) } as Partial<IvrNode>)
-  return (
-    <Card className={cn('p-4', isStart && 'ring-1 ring-accent/40')}>
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge>{TYPE[n.type].name}</Badge>
-        {isStart ? <span className="text-xs font-medium text-accent">First step</span> : <button type="button" onClick={setStart} className="text-xs text-soft hover:text-ink">Make this the first step</button>}
-        <Input className="ml-auto h-8 max-w-[220px] text-[13px]" value={n.label ?? ''} onChange={(e) => set({ label: e.target.value })} placeholder="Name this step" aria-label="Step name" />
-        <button type="button" onClick={remove} className="rounded-md p-1.5 text-soft hover:bg-muted hover:text-bad" aria-label="Delete step"><Trash2 size={14} /></button>
-      </div>
-      <div className="mt-3 space-y-3">
-        {['menu', 'say', 'collect', 'transfer', 'voicemail', 'agent', 'hangup'].includes(n.type) && (
-          <Field label={n.type === 'menu' ? 'What callers hear' : n.type === 'collect' ? 'What to ask' : n.type === 'voicemail' ? 'Before the beep' : 'What callers hear'}>
-            <Textarea rows={2} value={n.say ?? ''} onChange={(e) => set({ say: e.target.value })} placeholder={n.type === 'menu' ? 'For sales, press 1. For support, press 2.' : 'Say something…'} />
-          </Field>)}
-        {n.type === 'menu' && <>
-          <div className="space-y-2"><div className="text-[13px] font-medium">When they press a key</div>
-            {opts.map(([k, v], i) => <KeyRow key={i} flow={flow} self={id} k={k} v={v} keyLabel="Key" onKey={(x) => setMap('options', opts.map((o, j) => (j === i ? [x.slice(0, 1), o[1]] : o)))} onTo={(x) => setMap('options', opts.map((o, j) => (j === i ? [o[0], x] : o)))} onDel={() => setMap('options', opts.filter((_, j) => j !== i))} />)}
-            <Button size="sm" variant="ghost" onClick={() => setMap('options', [...opts, [String(Math.min(opts.length + 1, 9)), Object.keys(flow.nodes).find((k) => k !== id) ?? '']])}><Plus size={13} />Add a key</Button></div>
-          <div className="space-y-2"><div className="text-[13px] font-medium">When they say a word <span className="font-normal text-soft">(separate words with commas)</span></div>
-            {kws.map(([k, v], i) => <KeyRow key={i} flow={flow} self={id} k={k} v={v} keyLabel="Words" onKey={(x) => setMap('keywords', kws.map((o, j) => (j === i ? [x, o[1]] : o)))} onTo={(x) => setMap('keywords', kws.map((o, j) => (j === i ? [o[0], x] : o)))} onDel={() => setMap('keywords', kws.filter((_, j) => j !== i))} />)}
-            <Button size="sm" variant="ghost" onClick={() => setMap('keywords', [...kws, ['', Object.keys(flow.nodes).find((k) => k !== id) ?? '']])}><Plus size={13} />Add words</Button></div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="If they say something else, let an AI agent answer"><Select value={n.agent_id ?? ''} onChange={(e) => set({ agent_id: e.target.value || null })}><option value="">No, ask again</option>{agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select></Field>
-            <Field label="If nobody answers after asking again"><Link2 flow={flow} value={n.on_fail} self={id} onChange={(v) => set({ on_fail: v })} /></Field>
-          </div>
-        </>}
-        {n.type === 'say' && <Field label="Then"><Link2 flow={flow} value={n.next} self={id} onChange={(v) => set({ next: v })} /></Field>}
-        {n.type === 'hours' && <div className="grid gap-3 sm:grid-cols-2"><Field label="When you are open"><Link2 flow={flow} value={n.open} self={id} onChange={(v) => set({ open: v })} none="Choose…" /></Field><Field label="When you are closed"><Link2 flow={flow} value={n.closed} self={id} onChange={(v) => set({ closed: v })} none="Choose…" /></Field></div>}
-        {n.type === 'collect' && <div className="grid gap-3 sm:grid-cols-3"><Field label="How many digits"><Input type="number" min={1} max={20} value={n.digits ?? 4} onChange={(e) => set({ digits: Number(e.target.value) })} /></Field><Field label="Call it"><Input value={n.var ?? 'code'} onChange={(e) => set({ var: e.target.value })} /></Field><Field label="Then"><Link2 flow={flow} value={n.next} self={id} onChange={(v) => set({ next: v })} /></Field></div>}
-        {n.type === 'transfer' && <div className="grid gap-3 sm:grid-cols-2"><Field label="Phone number"><Input value={n.number ?? ''} onChange={(e) => set({ number: e.target.value })} placeholder="+919876543210" /></Field><Field label="If they don't pick up, go to"><Link2 flow={flow} value={n.on_fail} self={id} onChange={(v) => set({ on_fail: v })} /></Field><Field label="What callers hear if it fails"><Input value={n.fail_say ?? ''} onChange={(e) => set({ fail_say: e.target.value })} placeholder="Sorry, nobody is free right now." /></Field></div>}
-        {n.type === 'voicemail' && <div className="grid gap-3 sm:grid-cols-2"><Field label="Longest message (seconds)"><Input type="number" min={10} max={180} value={n.seconds ?? 60} onChange={(e) => set({ seconds: Number(e.target.value) })} /></Field><Field label="Then"><Link2 flow={flow} value={n.next} self={id} onChange={(v) => set({ next: v })} /></Field></div>}
-        {n.type === 'agent' && <Field label="Which agent takes the call"><Select value={n.agent_id ?? ''} onChange={(e) => set({ agent_id: e.target.value })}><option value="">Choose an agent…</option>{agents.map((a) => <option key={a.id} value={a.id}>{a.name}{a.status !== 'live' ? ' (not live yet)' : ''}</option>)}</Select></Field>}
-      </div>
-    </Card>
-  )
-}
-
-function Tester({ ivr, flow }: { ivr: Ivr; flow: IvrFlow }) {
+function Tester({ ivr, flow, dirty }: { ivr: Ivr; flow: IvrFlow; dirty: boolean }) {
   const [log, setLog] = React.useState<{ who: 'menu' | 'you'; text: string }[]>([])
   const [cur, setCur] = React.useState<IvrStep['then'] | null>(null)
   const [tries, setTries] = React.useState(0)
   const [word, setWord] = React.useState('')
   const [open, setOpen] = React.useState(true)
+  const [phone, setPhone] = React.useState(() => { try { return localStorage.getItem('ivr-test-number') ?? '' } catch { return '' } })
+  const [mine, setMine] = React.useState(false)
+  const [calling, setCalling] = React.useState(false)
   const run = async (b: Parameters<typeof ivrApi.simulate>[1], youSaid?: string) => {
     try {
       const r = await ivrApi.simulate(ivr.id, { open, ...b })
@@ -156,24 +89,40 @@ function Tester({ ivr, flow }: { ivr: Ivr; flow: IvrFlow }) {
     } catch (e) { say(e) }
   }
   const start = () => { setLog([]); setCur(null); void run({}) }
+  const callMe = async () => {
+    setCalling(true)
+    try { await ivrApi.testCall(ivr.id, phone, mine); try { localStorage.setItem('ivr-test-number', phone) } catch { /* private window */ } toast.success('Calling you now. Pick up to hear your menu.') } catch (e) { say(e) } finally { setCalling(false) }
+  }
   const waiting = cur?.kind === 'gather'
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between"><div className="text-[14px] font-semibold">Try it</div><label className="flex items-center gap-2 text-xs text-soft"><Switch checked={open} onChange={setOpen} label="Pretend we are open" />We are open</label></div>
-      <p className="mt-1 text-xs text-soft">Test the saved menu here, free. Save your changes first.</p>
-      <div className="mt-3 max-h-72 space-y-1.5 overflow-y-auto rounded-xl bg-muted/40 p-3 text-[13px]" aria-live="polite">
-        {log.length === 0 && <span className="text-soft">Press “Start a call”.</span>}
-        {log.map((m, i) => <div key={i} className={m.who === 'you' ? 'text-right font-medium text-accent' : ''}>{m.text}</div>)}
-      </div>
-      {!cur || cur.kind !== 'gather' ? <Button className="mt-3 w-full" variant="primary" onClick={start}><Phone size={14} />{log.length ? 'Call again' : 'Start a call'}</Button> : (
-        <div className="mt-3 space-y-2">
-          {cur.digits && <div className="grid grid-cols-6 gap-1.5">{['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '*', '#'].map((d) => <Button key={d} size="sm" variant="secondary" onClick={() => run({ node: cur.node, digits: d, tries }, `Pressed ${d}`)}>{d}</Button>)}</div>}
-          {cur.speech && <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (word.trim()) { void run({ node: cur.node, speech: word, tries }, `“${word}”`); setWord('') } }}><Input value={word} onChange={(e) => setWord(e.target.value)} placeholder="Say something…" /><Button type="submit" variant="secondary">Say</Button></form>}
-          <Button size="sm" variant="ghost" className="w-full" onClick={() => run({ node: cur.node, tries }, 'Said nothing')}>Say nothing</Button>
-        </div>)}
-      {!waiting && cur && <div className="mt-2 text-center text-xs text-soft">{cur.kind === 'hangup' ? 'The call has ended.' : 'The call carries on outside this test.'}</div>}
-      <span className="sr-only">{Object.keys(flow.nodes).length} steps</span>
-    </Card>
+    <div className="space-y-4">
+      <Card className="p-4">
+        <div className="flex items-start justify-between gap-3"><div><div className="text-[14px] font-semibold">Get a real call</div><p className="mt-0.5 text-xs text-soft">We ring your phone and play this menu, so you hear exactly what callers hear.</p></div></div>
+        <div className="mt-3 space-y-2.5">
+          <Input type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" aria-label="Your phone number" />
+          <label className="flex items-start gap-2 text-xs text-soft"><input type="checkbox" className="mt-0.5" checked={mine} onChange={(e) => setMine(e.target.checked)} />This is my own number</label>
+          <Button variant="primary" className="w-full" disabled={calling || !mine || phone.replace(/\D/g, '').length < 8 || dirty} onClick={callMe}><Phone size={14} />{calling ? 'Calling…' : 'Call me'}</Button>
+          {dirty && <p className="text-xs text-soft">Save your changes first. The call plays the saved menu.</p>}
+          <p className="text-[11.5px] leading-snug text-soft">Billed like any menu call. It rings from one of your own phone numbers; if you have none yet, get one in Phone Numbers.</p>
+        </div>
+      </Card>
+      <Card className="p-4">
+        <div className="flex items-center justify-between"><div className="text-[14px] font-semibold">Try it here, free</div><label className="flex items-center gap-2 text-xs text-soft"><Switch checked={open} onChange={setOpen} label="Pretend we are open" />We are open</label></div>
+        <p className="mt-1 text-xs text-soft">Press keys on the screen. No phone call. Uses the saved menu.</p>
+        <div className="mt-3 max-h-64 space-y-1.5 overflow-y-auto rounded-xl bg-muted/40 p-3 text-[13px]" aria-live="polite">
+          {log.length === 0 && <span className="text-soft">Press “Start”.</span>}
+          {log.map((m, i) => <div key={i} className={m.who === 'you' ? 'text-right font-medium text-accent' : ''}>{m.text}</div>)}
+        </div>
+        {!cur || cur.kind !== 'gather' ? <Button className="mt-3 w-full" variant="secondary" onClick={start}><Phone size={14} />{log.length ? 'Start again' : 'Start'}</Button> : (
+          <div className="mt-3 space-y-2">
+            {cur.digits && <div className="grid grid-cols-6 gap-1.5">{['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '*', '#'].map((d) => <Button key={d} size="sm" variant="secondary" onClick={() => run({ node: cur.node, digits: d, tries }, `Pressed ${d}`)}>{d}</Button>)}</div>}
+            {cur.speech && <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (word.trim()) { void run({ node: cur.node, speech: word, tries }, `“${word}”`); setWord('') } }}><Input value={word} onChange={(e) => setWord(e.target.value)} placeholder="Say something…" /><Button type="submit" variant="secondary">Say</Button></form>}
+            <Button size="sm" variant="ghost" className="w-full" onClick={() => run({ node: cur.node, tries }, 'Said nothing')}>Say nothing</Button>
+          </div>)}
+        {!waiting && cur && <div className="mt-2 text-center text-xs text-soft">{cur.kind === 'hangup' ? 'The call has ended.' : 'The call carries on outside this test.'}</div>}
+        <span className="sr-only">{Object.keys(flow.nodes).length} steps</span>
+      </Card>
+    </div>
   )
 }
 
@@ -238,13 +187,15 @@ export function IvrBuilderPage() {
   const [name, setName] = React.useState('')
   const [dirty, setDirty] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
-  const [add, setAdd] = React.useState(false)
+  const [selected, setSelected] = React.useState('')
+  const [tab, setTab] = React.useState<'step' | 'try' | 'settings'>('try')
   React.useEffect(() => { if (q.data && !dirty) { setFlow(q.data.flow); setSettings(q.data.settings); setName(q.data.name) } }, [q.data, dirty])
   if (q.isPending || !flow || !settings || !q.data) return <TableSkeleton rows={4} />
   const ivr = q.data
   const agents = agentsQ.data ?? []
-  const touch = <T,>(fn: (f: IvrFlow) => T) => { setFlow((f) => { const c = structuredClone(f!); fn(c); return c }); setDirty(true) }
-  const order = (() => { const seen: string[] = []; const todo = [flow.start]; while (todo.length) { const k = todo.shift()!; if (!k || seen.includes(k) || !flow.nodes[k]) continue; seen.push(k); const n = flow.nodes[k]; todo.push(...Object.values(n.options ?? {}), ...Object.values(n.keywords ?? {}), n.next ?? '', n.open ?? '', n.closed ?? '', n.on_fail ?? '') } return [...seen, ...Object.keys(flow.nodes).filter((k) => !seen.includes(k))] })()
+  const cur = flow.nodes[selected] ? selected : flow.start
+  const change: Change = (fn) => { const c = structuredClone(flow); const r = fn(c); setFlow(c); setDirty(true); return r }
+  const pick = (k: string) => { setSelected(k); setTab('step') }
   const save = async () => {
     setBusy(true)
     try { const r = await ivrApi.change(id, { name, flow, settings }); qc.setQueryData(['ivr', id], r); setDirty(false); qc.invalidateQueries({ queryKey: ['ivrs'] }); toast.success('Saved') } catch (e) { say(e) } finally { setBusy(false) }
@@ -253,17 +204,8 @@ export function IvrBuilderPage() {
     try { if (dirty) await save(); const r = await ivrApi.status(id, status); qc.setQueryData(['ivr', id], r); qc.invalidateQueries({ queryKey: ['ivrs'] }); toast.success(status === 'live' ? 'Your menu is live' : 'Paused') } catch (e) { say(e) }
   }
   const del = async () => { if (!window.confirm('Delete this menu? Numbers that use it will stop answering.')) return; try { await ivrApi.remove(id); qc.invalidateQueries({ queryKey: ['ivrs'] }); nav('/ivr') } catch (e) { say(e) } }
-  const addNode = (type: IvrNode['type']) => {
-    const k = newId()
-    const base: Record<IvrNode['type'], IvrNode> = {
-      menu: { type: 'menu', say: 'Press 1 to continue.', options: {}, keywords: {}, retries: 2 }, say: { type: 'say', say: '', next: null }, hours: { type: 'hours' },
-      collect: { type: 'collect', say: 'Please type your number, then press hash.', digits: 4, var: 'code', next: null }, transfer: { type: 'transfer', number: '', say: 'Connecting you now.' },
-      voicemail: { type: 'voicemail', say: 'Please leave a message after the beep.', seconds: 60, next: null }, agent: { type: 'agent', agent_id: '', say: '' }, hangup: { type: 'hangup', say: 'Goodbye.' },
-    }
-    touch((f) => { f.nodes[k] = { ...base[type], label: TYPE[type].name } })
-    setAdd(false)
-  }
   const issues = dirty ? [] : ivr.problems
+  const TABS = [['step', 'Step'], ['try', 'Try it'], ['settings', 'Settings']] as const
   return (
     <>
       <PageHeader title={name || 'Menu'} subtitle={ivr.numbers.length ? `Answers ${ivr.numbers.join(', ')}` : 'Connect a number in Phone Numbers to start taking calls.'}
@@ -271,28 +213,20 @@ export function IvrBuilderPage() {
           <Button variant="secondary" disabled={!dirty || busy} onClick={save}>{busy ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}</Button>
           {ivr.status === 'live' ? <Button variant="secondary" onClick={() => go('paused')}>Pause</Button> : <Button variant="primary" onClick={() => go('live')}>Go live</Button>}</div>} />
       {issues.length > 0 && <div className="mb-4 rounded-xl border border-bad/30 bg-bad/5 p-3 text-[13px] text-bad">{issues.map((m) => <div key={m}>{m}</div>)}</div>}
-      <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
-        <div className="space-y-3">
+      <div className="grid gap-5 xl:grid-cols-[1fr_390px]">
+        <div className="min-w-0 space-y-4">
           <Field label="Menu name"><Input value={name} onChange={(e) => { setName(e.target.value); setDirty(true) }} /></Field>
-          {order.map((k, i) => (
-            <React.Fragment key={k}>
-              {i > 0 && <div className="flex justify-center text-soft" aria-hidden>↓</div>}
-              <NodeCard id={k} n={flow.nodes[k]} flow={flow} agents={agents} isStart={k === flow.start}
-                set={(p) => touch((f) => { f.nodes[k] = { ...f.nodes[k], ...p } })}
-                setStart={() => touch((f) => { f.start = k })}
-                remove={() => { if (Object.keys(flow.nodes).length < 2) return say(new Error('A menu needs at least one step.')); touch((f) => { delete f.nodes[k]; if (f.start === k) f.start = Object.keys(f.nodes)[0]; for (const n of Object.values(f.nodes)) { for (const m of [n.options, n.keywords]) if (m) for (const [a, b] of Object.entries(m)) if (b === k) delete m[a]; for (const p of ['next', 'open', 'closed', 'on_fail'] as const) if (n[p] === k) n[p] = null } }) }} />
-            </React.Fragment>))}
-          <Button variant="secondary" className="w-full" onClick={() => setAdd(true)}><Plus size={15} />Add a step</Button>
+          <IvrFlowEditor flow={flow} agents={agents} selected={cur} onSelect={pick} onChange={change} />
         </div>
-        <div className="space-y-4 xl:sticky xl:top-4 xl:self-start">
-          <Tester ivr={ivr} flow={flow} />
-          <SettingsPanel locked={ivr.pulse_locked} s={settings} onChange={(p) => { setSettings({ ...settings, ...p }); setDirty(true) }} />
-          <Button variant="ghost" className="w-full text-bad" onClick={del}>Delete this menu</Button>
+        <div className="space-y-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:self-start xl:overflow-y-auto">
+          <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1" role="tablist">
+            {TABS.map(([k, label]) => <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cn('rounded-lg px-3 py-1.5 text-[13px] font-medium transition', tab === k ? 'bg-surface shadow-sm' : 'text-soft hover:text-ink')}>{label}</button>)}
+          </div>
+          {tab === 'step' && <Card className="p-4"><StepEditor id={cur} flow={flow} agents={agents} onChange={change} onRemove={(k) => { if (removeStep(change, k)) setSelected(flow.start) }} /></Card>}
+          {tab === 'try' && <Tester ivr={ivr} flow={flow} dirty={dirty} />}
+          {tab === 'settings' && <><SettingsPanel locked={ivr.pulse_locked} s={settings} onChange={(p) => { setSettings({ ...settings, ...p }); setDirty(true) }} /><Button variant="ghost" className="w-full text-bad" onClick={del}>Delete this menu</Button></>}
         </div>
       </div>
-      <Dialog open={add} onOpenChange={setAdd} title="Add a step" description="What should happen next?">
-        <div className="grid gap-2">{(Object.keys(TYPE) as IvrNode['type'][]).map((t) => <button key={t} type="button" onClick={() => addNode(t)} className="rounded-xl border p-3 text-left transition hover:bg-muted/50"><div className="text-[14px] font-medium">{TYPE[t].name}</div><div className="text-xs text-soft">{TYPE[t].hint}</div></button>)}</div>
-      </Dialog>
     </>
   )
 }

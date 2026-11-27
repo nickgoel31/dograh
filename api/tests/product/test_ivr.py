@@ -304,3 +304,61 @@ async def test_a_call_past_its_time_limit_is_ended(client):
     assert "time limit" in late.text and ET.fromstring(late.text.split("?>", 1)[-1]).find("Hangup") is not None
     calls = (await client.get(f"/product/ivr/{pid}/calls", headers=h)).json()
     assert calls[0]["outcome"] == "time_limit"
+
+
+@pytest.mark.asyncio
+async def test_answering_a_call_works_on_the_platforms_database_sessions(client):
+    """Production sessions forget loaded values after a commit. Starting a call read the menu's id after saving, which broke every real call
+    (Plivo got a 500). The other tests use a forgiving session, so this one uses the strict kind."""
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    _, tok = await signup(client, "strict@x.com")
+    h = bearer(tok)
+    pid = (await client.post("/product/ivr", json={"name": "Strict"}, headers=h)).json()["id"]
+    await client.post(f"/product/ivr/{pid}/status?status=live", headers=h)
+    _, ws_id, org_id, num_row_id, cfg_id = await _number(client)
+    strict = async_sessionmaker(client.session_factory.kw["bind"], expire_on_commit=True)
+    async with strict() as s:
+        ivr = (await s.execute(select(product_models.ProductIvrModel))).scalar_one()
+        body = await ivr_mod.begin(s, ivr, org_id=org_id, number_id=num_row_id, config_id=cfg_id, call_uuid="u-strict", from_number="+919800000001", to_number="+14155550100", base="https://api.test")
+    gi = ET.fromstring(body.split("?>", 1)[1]).find("GetInput")
+    assert gi is not None and f"/ivr/plivo/{pid}/step" in gi.get("action")
+
+
+@pytest.mark.asyncio
+async def test_try_it_rings_the_number_the_person_typed(client):
+    _, tok = await signup(client, "tester@x.com")
+    h = bearer(tok)
+    pid = (await client.post("/product/ivr", json={"name": "Try"}, headers=h)).json()["id"]  # still a draft: a test may try it
+    placed = []
+
+    async def fake_dial(config, from_number, to_number, answer_url):
+        placed.append((from_number, to_number, answer_url))
+
+    client.mp.setattr(ivr_mod, "dial_out", fake_dial)
+    url = f"/product/ivr/{pid}/test-call"
+    good = {"number": "+91 98765-43210", "mine": True}
+    assert (await client.post(url, json={**good, "mine": False}, headers=h)).json()["detail"]["code"] == "confirm_number"
+    assert (await client.post(url, json={**good, "number": "98765"}, headers=h)).json()["detail"]["code"] == "bad_number"
+    assert (await client.post(url, json=good, headers=h)).json()["detail"]["code"] == "no_number"  # no phone number of their own yet: nothing to call from
+
+    _, ws_id, org_id, num_row_id, cfg_id = await _number(client)
+    ok = (await client.post(url, json=good, headers=h)).json()
+    assert ok == {"ok": True, "from": "+14155550100"} and len(placed) == 1
+    from_number, to_number, answer_url = placed[0]
+    assert to_number == "+919876543210" and "/api/v1/ivr/plivo/" + pid + "/start?" in answer_url
+
+    # when the person answers, Plivo asks that address for the first step; the menu starts for them
+    path = answer_url.replace("https://api.test/api/v1", "")
+    r = await client.post(path, data={"CallUUID": "t-1", "From": "+14155550100", "To": "+919876543210", "Direction": "outbound"})
+    assert ET.fromstring(r.text.split("?>", 1)[1]).find("GetInput") is not None  # a draft menu still plays for a test call
+    calls = (await client.get(f"/product/ivr/{pid}/calls", headers=h)).json()
+    assert calls[0]["from"] == "+919876543210"  # the person who was rung is the caller
+    # a forged or altered address does nothing
+    forged = await client.post(path.replace("sig=", "sig=00"), data={"CallUUID": "t-2", "From": "x", "To": "y"})
+    assert "went wrong" in forged.text
+    other = await client.post(path.replace(f"num={num_row_id}", f"num={num_row_id + 5}"), data={"CallUUID": "t-3", "From": "x", "To": "y"})
+    assert "went wrong" in other.text
+    # someone else's menu cannot be used
+    h2 = bearer((await signup(client, "other@x.com"))[1])
+    assert (await client.post(url, json=good, headers=h2)).status_code == 404

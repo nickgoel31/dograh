@@ -61,6 +61,11 @@ class ChangeBody(BaseModel):
     settings: dict | None = None
 
 
+class TestCallBody(BaseModel):
+    number: str = Field(max_length=24)
+    mine: bool = False  # the person confirms the number is theirs
+
+
 class SimBody(BaseModel):
     node: str | None = None
     digits: str = ""
@@ -205,6 +210,43 @@ async def simulate(ivr_id: str, body: SimBody, ctx: Ctx = Depends(get_ctx)):
     return {"say": st.say, "then": st.then, "trail": st.trail}
 
 
+@router.post("/{ivr_id}/test-call")
+async def test_call(ivr_id: str, body: TestCallBody, ctx: Ctx = Depends(require(Perm.AGENTS_WRITE))):
+    """Ring the number the person typed with this menu, as a real call from one of their own numbers. It is billed like any menu call."""
+    import re
+
+    from api.product import audit
+    from api.product import contacts as ct
+    from api.utils import rate_limit
+    from api.utils.common import get_backend_endpoints
+
+    row = await _get(ctx, ivr_id)
+    number = re.sub(r"[\s()-]", "", body.number)
+    if not re.fullmatch(r"\+[1-9]\d{7,14}", number):
+        raise product_error(400, "bad_number", "Enter your number with its country code, like +919876543210.")
+    if not body.mine:
+        raise product_error(400, "confirm_number", "Tick the box to confirm this number is yours. We only ring your own phone for a test.")
+    issues = eng.problems(row.flow)
+    if issues:
+        raise product_error(400, "not_ready", "Fix this first: " + issues[0])
+    if ct.normalize(number) in await ct.blocked_set(ctx.session, ctx.workspace.id):
+        raise product_error(400, "blocked_number", "That number is on your do-not-call list.")
+    cfg, num = await ivr_mod.caller_number(ctx.session, ctx.workspace, row)
+    if cfg is None:
+        raise product_error(400, "no_number", "To get a test call you need a phone number first. Get one in Phone Numbers, then try again.")
+    await rate_limit.enforce(f"ivrtest:{ctx.workspace.id}", 5, 3600, "You have asked for a lot of test calls. Please try again in an hour.")
+    base, _ = await get_backend_endpoints()
+    try:
+        await ivr_mod.dial_out(cfg, num.address, number, ivr_mod.start_url(base, row.public_id, cfg.id, num.id))
+    except Exception as e:  # noqa: BLE001
+        detail = getattr(e, "detail", None) or str(e)
+        logger.warning(f"IVR test call failed: {detail}")
+        raise product_error(502, "call_failed", "We couldn't place the call. If your phone provider is on a trial, it may only call numbers you have verified with them.")
+    await audit.record(ctx.session, ctx.workspace.id, ctx.user.id, "ivr.test_call", row.public_id, {"to_last4": number[-4:]})
+    await ctx.session.commit()
+    return {"ok": True, "from": num.address}
+
+
 @router.get("/{ivr_id}/calls")
 async def calls_of(ivr_id: str, limit: int = Query(default=50, le=200), ctx: Ctx = Depends(get_ctx)):
     return await all_calls(ivr=ivr_id, limit=limit, ctx=ctx)
@@ -233,6 +275,26 @@ async def plivo_step(pid: str, request: Request, k: str, node: str = "", tries: 
     if k == "agent":
         return await _hand_to_agent(session, ivr, call, node, form, request)
     st, body = await ivr_mod.carry_on(session, ivr, call, k, node, tries, form, base)
+    return _xml(body)
+
+
+@public.post("/plivo/{pid}/start")
+async def plivo_start(pid: str, request: Request, cfg: int, num: int, sig: str = "", session: AsyncSession = Depends(get_session)):
+    """A test call was answered: begin the menu for the person who was rung."""
+    from api.db.product_models import ProductWorkspaceModel
+    from api.utils.common import get_backend_endpoints
+
+    if not ivr_mod.start_sig_ok(pid, cfg, num, sig):
+        logger.warning(f"IVR test start with a bad signature for {pid}")
+        return _xml(ivr_mod.say_and_hangup("Sorry, something went wrong. Goodbye."))
+    form = dict(await request.form())
+    ivr = await session.scalar(select(ProductIvrModel).where(ProductIvrModel.public_id == pid))
+    ws = await session.get(ProductWorkspaceModel, ivr.workspace_id) if ivr else None
+    if ivr is None or ws is None or not form.get("CallUUID"):
+        return _xml(ivr_mod.say_and_hangup("Sorry, something went wrong. Goodbye."))
+    base, _ = await get_backend_endpoints()
+    body = await ivr_mod.begin(session, ivr, org_id=ws.live_org_id, number_id=num, config_id=cfg, call_uuid=str(form["CallUUID"]),
+                               from_number=str(form.get("To") or ""), to_number=str(form.get("From") or ""), base=base, test=True)
     return _xml(body)
 
 

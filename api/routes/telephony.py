@@ -759,10 +759,14 @@ async def _answer_with_ivr(request, provider_class, normalized_data, webhook_dat
         if ivr is None:
             return provider_class.generate_validation_error_response(TelephonyError.WORKFLOW_NOT_FOUND)
         base, _ = await get_backend_endpoints()
-        body = await ivr_mod.begin(
-            s, ivr, org_id=config.organization_id, number_id=phone_row.id, config_id=config.id,
-            call_uuid=normalized_data.call_id, from_number=normalized_data.from_number, to_number=normalized_data.to_number, base=base,
-        )
+        try:
+            body = await ivr_mod.begin(
+                s, ivr, org_id=config.organization_id, number_id=phone_row.id, config_id=config.id,
+                call_uuid=normalized_data.call_id, from_number=normalized_data.from_number, to_number=normalized_data.to_number, base=base,
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"IVR {ivr_public_id} could not answer a call: {e}")
+            body = ivr_mod.say_and_hangup("Sorry, we could not connect your call right now. Please try again in a moment.")
     from fastapi import Response
 
     return Response(content=body, media_type="application/xml")
@@ -785,6 +789,8 @@ async def handle_inbound_run(request: Request):
     from api.services.telephony import registry as telephony_registry
 
     logger.info("Inbound /run dispatch received")
+
+    slot_id = slot_org_id = workflow_id = None  # the except blocks below read these; a failure before they are set must not become a 500
 
     try:
         webhook_data, raw_body = await parse_webhook_request(request)
